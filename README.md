@@ -16,6 +16,20 @@ number of processes within the Digital Prison Reporting platform.
 
 This project uses gradle which is bundled with the repository.
 
+### Running a job
+
+First, build the jar locally
+
+```
+    ./gradlew clean build
+```
+
+and then execute the job by specifying the fully qualified classname e.g.
+
+```
+    java -cp ./build/libs/digital-prison-reporting-jobs-1.0-SNAPSHOT.jar uk.gov.justice.digital.Placeholder
+```
+
 ### Unit Tests
 
 The unit tests use JUnit5 and Mockito where appropriate. Use the following to
