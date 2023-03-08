@@ -8,3 +8,25 @@ env/
 *.code-workspace
 *.sha256
 terraform.tfstate
+
+# Compiled Java class files
+*.class
+
+# Package files
+*.jar
+
+# Gradle
+.gradle
+build
+
+# Intellij
+.idea
+
+# Spark
+metastore_db/
+
+# Others
+.classpath
+.project
+.settings/
+.vscode
