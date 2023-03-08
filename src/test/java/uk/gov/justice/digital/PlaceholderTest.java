@@ -1,4 +1,4 @@
-package uk.gov.justice.dpr;
+package uk.gov.justice.digital;
 
 import org.junit.jupiter.api.Test;
 

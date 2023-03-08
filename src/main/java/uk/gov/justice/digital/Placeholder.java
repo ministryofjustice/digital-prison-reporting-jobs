@@ -1,4 +1,4 @@
-package uk.gov.justice.dpr;
+package uk.gov.justice.digital;
 
 // Placeholder class with test to facilitate CI/CD setup.
 public class Placeholder {
