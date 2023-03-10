@@ -15,9 +15,9 @@ repositories {
 }
 
 ext {
-  jacksonVersion = '2.13.5'
-  junitVersion = '5.8.1'
-  sparkVersion = '3.3.0'
+    jacksonVersion = '2.13.5'
+    junitVersion = '5.8.1'
+    sparkVersion = '3.3.0'
 }
 
 dependencies {
@@ -39,5 +39,5 @@ test {
 }
 
 shadowJar {
-  zip64 true
+    zip64 true
 }
