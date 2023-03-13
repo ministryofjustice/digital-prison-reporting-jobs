@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id "io.freefair.lombok" version "6.5.1"
 }
 
 group 'uk.gov.justice'
@@ -15,7 +16,7 @@ repositories {
 }
 
 ext {
-    jacksonVersion = '2.13.5'
+    jacksonVersion = '2.14.2'
     junitVersion = '5.8.1'
     sparkVersion = '3.3.0'
 }
@@ -26,6 +27,9 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson:jackson-bom:$jacksonVersion"
+
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
+
     implementation "org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion"
     implementation 'com.amazonaws:amazon-kinesis-client:1.14.10'
     implementation 'com.amazonaws:aws-java-sdk-core:1.12.421'
@@ -41,4 +45,10 @@ test {
 
 shadowJar {
     zip64 true
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += [
+        "-Xlint:deprecation"
+    ]
 }
