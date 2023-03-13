@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.config;
 
+import lombok.val;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.junit.jupiter.api.*;
@@ -36,6 +37,14 @@ class JobParametersTest {
     private static final JobParameters emptyJobParameters = new JobParameters(Collections.emptyMap());
 
     @Test
+    public void shouldRemoveLeadingHyphensFromParameterNames() {
+        val jobParameters = new JobParameters(
+            Collections.singletonMap("--" + AWS_REGION_KEY, AWS_REGION)
+        );
+        assertEquals(AWS_REGION, jobParameters.getAwsRegion());
+    }
+
+    @Test
     public void shouldReturnAwsRegionWhenSet() {
         assertEquals(AWS_REGION, validJobParameters.getAwsRegion());
     }
@@ -52,7 +61,6 @@ class JobParametersTest {
 
     @Test
     public void shouldThrowExceptionWhenKinesisEndpointUrlNotSet() {
-        System.clearProperty(AWS_KINESIS_ENDPOINT_URL_KEY);
         assertThrows(IllegalStateException.class, emptyJobParameters::getAwsKinesisEndpointUrl);
     }
 
@@ -63,7 +71,6 @@ class JobParametersTest {
 
     @Test
     public void shouldThrowExceptionWhenKinesisReaderStreamNameNotSet() {
-        System.clearProperty(KINESIS_READER_STREAM_NAME_KEY);
         assertThrows(IllegalStateException.class, emptyJobParameters::getKinesisReaderStreamName);
     }
 
@@ -75,7 +82,6 @@ class JobParametersTest {
 
     @Test
     public void shouldThrowExceptionWhenKinesisReaderBatchDurationNotSet() {
-        System.clearProperty(KINESIS_READER_BATCH_DURATION_SECONDS_KEY);
         assertThrows(IllegalStateException.class, emptyJobParameters::getKinesisReaderBatchDuration);
     }
 
