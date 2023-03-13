@@ -8,28 +8,29 @@ import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kinesis.KinesisInitialPositions;
 import org.apache.spark.streaming.kinesis.KinesisInputDStream;
 import scala.reflect.ClassTag$;
-import uk.gov.justice.digital.config.Config;
+import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.Properties;
 
 public class KinesisReader {
 
     private final JavaStreamingContext streamingContext;
     private final JavaDStream<byte[]> kinesisStream;
 
-    public KinesisReader() {
-        String jobName = Config.getJobName();
+    public KinesisReader(JobParameters jobParameters) {
+        String jobName = Properties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
             new SparkConf().setAppName(jobName),
-            Config.getKinesisReaderBatchDuration()
+            jobParameters.getKinesisReaderBatchDuration()
         );
 
         // Create kinesis stream and print out simple metrics.
         kinesisStream = JavaDStream.fromDStream(
             KinesisInputDStream.builder()
                 .streamingContext(streamingContext)
-                .endpointUrl(Config.getAwsKinesisEndpointUrl())
-                .regionName(Config.getAwsRegion())
-                .streamName(Config.getKinesisReaderStreamName())
+                .endpointUrl(jobParameters.getAwsKinesisEndpointUrl())
+                .regionName(jobParameters.getAwsRegion())
+                .streamName(jobParameters.getKinesisReaderStreamName())
                 .initialPosition(new KinesisInitialPositions.TrimHorizon())
                 .checkpointAppName(jobName)
                 .build(),
@@ -39,8 +40,8 @@ public class KinesisReader {
 
     }
 
-    public KinesisReader(VoidFunction<JavaRDD<byte[]>> batchProcessor) {
-        this();
+    public KinesisReader(JobParameters jobParameters, VoidFunction<JavaRDD<byte[]>> batchProcessor) {
+        this(jobParameters);
         kinesisStream.foreachRDD(batchProcessor);
     }
 
