@@ -43,8 +43,8 @@ and then execute your job by specifying the fully qualified classname e.g.
 
 ensuring that your job class has a main method that can be executed.
 
->**Note** - On AWS Glue the job class can be specified using the `--class`
->parameter and the script can then be left blank.
+> **Note** - On AWS Glue the job class can be specified using the `--class`
+> parameter and the script can then be left blank.
 
 ### Unit Tests
 
