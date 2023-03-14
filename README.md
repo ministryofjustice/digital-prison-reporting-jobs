@@ -14,7 +14,12 @@ number of processes within the Digital Prison Reporting platform.
 
 ## Local Development
 
-This project uses gradle which is bundled with the repository.
+This project uses gradle which is bundled with the repository and also makes use
+of
+
+- [micronaut](https://micronaut.io/) - for compile time dependency injection
+- [lombok](https://projectlombok.org/) - to reduce boilerplate when creating data classes
+- [jacoco](https://docs.gradle.org/current/userguide/jacoco_plugin.html) - for test coverage reports
 
 ### Packaging
 
@@ -45,6 +50,11 @@ ensuring that your job class has a main method that can be executed.
 
 > **Note** - On AWS Glue the job class can be specified using the `--class`
 > parameter and the script can then be left blank.
+
+## Testing
+
+> **Note** - test coverage reports are enabled by default and after running the
+> tests the report will be written to build/reports/jacoco/test/html
 
 ### Unit Tests
 

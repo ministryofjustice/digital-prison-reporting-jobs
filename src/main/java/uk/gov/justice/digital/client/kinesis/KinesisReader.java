@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.client.kinesis;
 
+import io.micronaut.context.annotation.Bean;
+import jakarta.inject.Inject;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.VoidFunction;
@@ -11,11 +13,13 @@ import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.config.Properties;
 
+@Bean
 public class KinesisReader {
 
     private final JavaStreamingContext streamingContext;
     private final JavaDStream<byte[]> kinesisStream;
 
+    @Inject
     public KinesisReader(JobParameters jobParameters) {
         String jobName = Properties.getSparkJobName();
 
@@ -24,7 +28,6 @@ public class KinesisReader {
             jobParameters.getKinesisReaderBatchDuration()
         );
 
-        // Create kinesis stream and print out simple metrics.
         kinesisStream = JavaDStream.fromDStream(
             KinesisInputDStream.builder()
                 .streamingContext(streamingContext)
@@ -35,18 +38,24 @@ public class KinesisReader {
                 .checkpointAppName(jobName)
                 .build(),
             // We need to pass a Scala classtag which looks a little ugly in Java.
-            ClassTag$.MODULE$.apply(byte[].class)
+            ClassTag$.MODULE$.<byte[]>apply(byte[].class)
+        );
+
+        System.out.println("KinesisReader configuration" +
+            " - endpointUrl: " + jobParameters.getAwsKinesisEndpointUrl() +
+            " - aws region: " + jobParameters.getAwsRegion() +
+            " - stream name: " + jobParameters.getKinesisReaderStreamName() +
+            " - batch duration: " + jobParameters.getKinesisReaderBatchDuration()
         );
 
     }
 
-    public KinesisReader(JobParameters jobParameters, VoidFunction<JavaRDD<byte[]>> batchProcessor) {
-        this(jobParameters);
-        kinesisStream.foreachRDD(batchProcessor);
-    }
-
     public JavaDStream<byte[]> getKinesisStream() {
         return kinesisStream;
+    }
+
+    public void setBatchProcessor(VoidFunction<JavaRDD<byte[]>> batchProcessor) {
+        kinesisStream.foreachRDD(batchProcessor);
     }
 
     public void startAndAwaitTermination() throws InterruptedException {
