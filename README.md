@@ -16,9 +16,10 @@ number of processes within the Digital Prison Reporting platform.
 
 This project uses gradle which is bundled with the repository and also makes use
 of
- * [micronaut](https://micronaut.io/) - for compile time dependency injection
- * [lombok](https://projectlombok.org/) - to reduce boilerplate when creating data classes
- * [jacoco](https://docs.gradle.org/current/userguide/jacoco_plugin.html) - for test coverage reports
+
+- [micronaut](https://micronaut.io/) - for compile time dependency injection
+- [lombok](https://projectlombok.org/) - to reduce boilerplate when creating data classes
+- [jacoco](https://docs.gradle.org/current/userguide/jacoco_plugin.html) - for test coverage reports
 
 ### Packaging
 
