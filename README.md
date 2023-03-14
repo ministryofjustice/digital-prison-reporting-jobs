@@ -16,19 +16,35 @@ number of processes within the Digital Prison Reporting platform.
 
 This project uses gradle which is bundled with the repository.
 
+### Packaging
+
+This project makes use of the [shadow jar plugin](https://github.com/johnrengelman/shadow)
+which takes care of creating a jar containing all dependencies.
+
+The plugin adds the suffix `-all` to the jar file name e.g.
+
+```
+    digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar
+```
+
 ### Running a job
 
 First, build the jar locally
 
 ```
-    ./gradlew clean build
+    ./gradlew clean shadowJar
 ```
 
-and then execute the job by specifying the fully qualified classname e.g.
+and then execute your job by specifying the fully qualified classname e.g.
 
 ```
-    java -cp ./build/libs/digital-prison-reporting-jobs-1.0-SNAPSHOT.jar uk.gov.justice.digital.Placeholder
+    java -cp ./build/libs/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar uk.gov.justice.digital.Placeholder
 ```
+
+ensuring that your job class has a main method that can be executed.
+
+> **Note** - On AWS Glue the job class can be specified using the `--class`
+> parameter and the script can then be left blank.
 
 ### Unit Tests
 

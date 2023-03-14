@@ -18,6 +18,7 @@ terraform.tfstate
 # Gradle
 .gradle
 build
+target
 
 # Intellij
 .idea

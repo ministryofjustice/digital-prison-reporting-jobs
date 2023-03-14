@@ -1,28 +1,37 @@
 plugins {
     id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id "io.freefair.lombok" version "6.5.1"
 }
 
 group 'uk.gov.justice'
 version '1.0-SNAPSHOT'
+
+java {
+    targetCompatibility = "1.8"
+}
 
 repositories {
     mavenCentral()
 }
 
 ext {
-  jacksonVersion = '2.13.5'
-  junitVersion = '5.8.1'
-  sparkVersion = '3.3.1'
+    jacksonVersion = '2.14.2'
+    junitVersion = '5.8.1'
+    sparkVersion = '3.3.0'
 }
 
 dependencies {
-    implementation "org.apache.spark:spark-core_2.12:$sparkVersion"
-    implementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
-    implementation 'com.amazonaws:amazon-kinesis-client:1.14.10'
-    implementation 'com.amazonaws:aws-java-sdk-core:1.12.421'
+    compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
+    compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson:jackson-bom:$jacksonVersion"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
+    implementation "org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion"
+    implementation 'com.amazonaws:amazon-kinesis-client:1.14.10'
+    implementation 'com.amazonaws:aws-java-sdk-core:1.12.421'
+    implementation 'com.amazonaws:aws-java-sdk-glue:1.12.425'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation 'org.mockito:mockito-core:5.1.1'
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -30,4 +39,14 @@ dependencies {
 
 test {
     useJUnitPlatform()
+}
+
+shadowJar {
+    zip64 true
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += [
+        "-Xlint:deprecation"
+    ]
 }
