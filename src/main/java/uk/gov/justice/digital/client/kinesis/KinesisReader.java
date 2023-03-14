@@ -38,7 +38,7 @@ public class KinesisReader {
                 .checkpointAppName(jobName)
                 .build(),
             // We need to pass a Scala classtag which looks a little ugly in Java.
-            ClassTag$.MODULE$.apply(byte[].class)
+            ClassTag$.MODULE$.<byte[]>apply(byte[].class)
         );
 
         System.out.println("KinesisReader configuration" +

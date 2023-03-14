@@ -5,6 +5,7 @@ import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import uk.gov.justice.digital.client.glue.JobClient;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.AbstractMap;
 import java.util.Map;
@@ -16,6 +17,7 @@ public class JobParameters {
 
     private final Map<String, String> config;
 
+    @Inject
     public JobParameters(JobClient jobClient) {
         this(jobClient.getJobParameters());
     }
