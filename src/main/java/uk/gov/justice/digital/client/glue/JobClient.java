@@ -4,10 +4,12 @@ import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import com.amazonaws.services.glue.model.GetJobRequest;
 import com.amazonaws.services.glue.model.GetJobResult;
+import io.micronaut.context.annotation.Bean;
 
 import java.util.Map;
 import java.util.Optional;
 
+@Bean
 public class JobClient {
 
     private static final String SPARK_JOB_NAME_PROPERTY = "spark.glue.JOB_NAME";
@@ -15,8 +17,8 @@ public class JobClient {
     private final AWSGlue glueClient;
     private final String jobName;
 
-    public static JobClient defaultClient() {
-        return new JobClient(AWSGlueClientBuilder.defaultClient());
+    public JobClient() {
+        this(AWSGlueClientBuilder.defaultClient());
     }
 
     private JobClient(AWSGlue client) {
