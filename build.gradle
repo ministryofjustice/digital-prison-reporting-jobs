@@ -20,9 +20,9 @@ repositories {
 ext {
     jacksonVersion = '2.14.2'
     junitVersion = '5.8.1'
+    log4jVersion = '2.20.0'
     micronautVersion = '3.8.7'
     sparkVersion = '3.3.0'
-    logbackVersion = '1.2.11'
 }
 
 // TODO - review deps and fix versions
@@ -35,23 +35,22 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
     implementation "com.fasterxml.jackson:jackson-bom:$jacksonVersion"
-    implementation "io.micronaut:micronaut-runtime:$micronautVersion"
-    implementation("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
-      // We are using logback so this SLF4J binding must be excluded.
-      exclude group: "org.apache.logging.log4j", module: "log4j-slf4j-impl"
-    }
-    implementation 'com.amazonaws:amazon-kinesis-client:1.14.10'
-    implementation 'com.amazonaws:aws-java-sdk-core:1.12.421'
-    implementation 'com.amazonaws:aws-java-sdk-glue:1.12.425'
+    implementation "org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion"
     implementation "info.picocli:picocli"
     implementation "io.micronaut.picocli:micronaut-picocli"
     implementation "io.micronaut:micronaut-jackson-databind"
+    implementation "io.micronaut:micronaut-runtime:$micronautVersion"
     implementation "io.micronaut:micronaut-validation"
     implementation "jakarta.annotation:jakarta.annotation-api"
+    implementation 'com.amazonaws:amazon-kinesis-client:1.14.10'
+    implementation 'com.amazonaws:aws-java-sdk-core:1.12.421'
+    implementation 'com.amazonaws:aws-java-sdk-glue:1.12.425'
+    implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
+    implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
+    implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation 'org.mockito:mockito-core:5.1.1'
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-    implementation "ch.qos.logback:logback-classic:$logbackVersion"
 }
 
 test {
