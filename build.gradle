@@ -25,8 +25,6 @@ ext {
     sparkVersion = '3.3.0'
 }
 
-// TODO - review deps and fix versions
-// TODO - is there an idiomatic gradle way to configure versions?
 dependencies {
     annotationProcessor 'info.picocli:picocli-codegen'
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
