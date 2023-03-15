@@ -22,12 +22,14 @@ ext {
     junitVersion = '5.8.1'
     micronautVersion = '3.8.7'
     sparkVersion = '3.3.0'
+    deltaVersion = '2.2.0'
 }
 
 dependencies {
     annotationProcessor 'info.picocli:picocli-codegen'
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
+
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
@@ -42,7 +44,11 @@ dependencies {
     implementation "io.micronaut:micronaut-jackson-databind"
     implementation "io.micronaut:micronaut-validation"
     implementation "jakarta.annotation:jakarta.annotation-api"
+    implementation "io.delta:delta-core_2.12:$deltaVersion"
+    implementation "io.delta:delta-contribs_2.12:$deltaVersion"
+
     runtimeOnly "ch.qos.logback:logback-classic"
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation 'org.mockito:mockito-core:5.1.1'
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"

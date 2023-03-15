@@ -12,6 +12,7 @@ import org.apache.spark.streaming.kinesis.KinesisInputDStream;
 import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.config.Properties;
+import uk.gov.justice.digital.util.SparkUtils;
 
 @Bean
 public class KinesisReader {
@@ -24,7 +25,8 @@ public class KinesisReader {
         String jobName = Properties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
-            new SparkConf().setAppName(jobName),
+            //new SparkConf().setAppName(jobName),
+            SparkUtils.getSparkConf(jobName),
             jobParameters.getKinesisReaderBatchDuration()
         );
 
