@@ -22,8 +22,11 @@ ext {
     junitVersion = '5.8.1'
     micronautVersion = '3.8.7'
     sparkVersion = '3.3.0'
+    logbackVersion = '1.2.11'
 }
 
+// TODO - review deps and fix versions
+// TODO - is there an idiomatic gradle way to configure versions?
 dependencies {
     annotationProcessor 'info.picocli:picocli-codegen'
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
@@ -33,7 +36,10 @@ dependencies {
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
     implementation "com.fasterxml.jackson:jackson-bom:$jacksonVersion"
     implementation "io.micronaut:micronaut-runtime:$micronautVersion"
-    implementation "org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion"
+    implementation("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
+      // We are using logback so this SLF4J binding must be excluded.
+      exclude group: "org.apache.logging.log4j", module: "log4j-slf4j-impl"
+    }
     implementation 'com.amazonaws:amazon-kinesis-client:1.14.10'
     implementation 'com.amazonaws:aws-java-sdk-core:1.12.421'
     implementation 'com.amazonaws:aws-java-sdk-glue:1.12.425'
@@ -42,12 +48,10 @@ dependencies {
     implementation "io.micronaut:micronaut-jackson-databind"
     implementation "io.micronaut:micronaut-validation"
     implementation "jakarta.annotation:jakarta.annotation-api"
-    runtimeOnly "ch.qos.logback:logback-classic"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation 'org.mockito:mockito-core:5.1.1'
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-    // TODO - do we need a specific version?
-    implementation 'ch.qos.logback:logback-classic'
+    implementation "ch.qos.logback:logback-classic:$logbackVersion"
 }
 
 test {
