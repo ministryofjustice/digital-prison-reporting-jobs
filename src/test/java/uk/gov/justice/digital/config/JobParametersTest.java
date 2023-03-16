@@ -98,6 +98,6 @@ class JobParametersTest {
 
     @Test
     public void shouldReturnRawPathWhenSet() {
-        assertEquals(RAW_S3_PATH_KEY, validJobParameters.getRawPath());
+        assertEquals(RAW_S3_PATH, validJobParameters.getRawPath());
     }
 }
