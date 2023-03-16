@@ -2,6 +2,7 @@ package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
@@ -49,7 +50,7 @@ public class DataHubJob implements Runnable {
     private final VoidFunction<JavaRDD<byte[]>> batchProcessor = batch -> {
         logger.info("inside batchProcessor.. ");
 
-        SparkSession spark = getSparkSession(batch);
+        SparkSession spark = getSparkSession(batch.context().getConf());
 
         JavaRDD<Row> rowRDD = batch.map((Function<byte[], Row>) msg -> RowFactory.create(new String(msg, StandardCharsets.UTF_8)));
 
@@ -67,10 +68,10 @@ public class DataHubJob implements Runnable {
     public Dataset<Row> fromRawDMS_3_4_6(JavaRDD<Row> rowRDD, SparkSession spark) {
         logger.info("Preparing Raw DMS Dataframe..");
 
-        StructType evemtsSchema = new StructType()
+        StructType eventsSchema = new StructType()
                 .add("data", DataTypes.StringType);
 
-        Dataset<Row> df = spark.createDataFrame(rowRDD, evemtsSchema);
+        Dataset<Row> df = spark.createDataFrame(rowRDD, eventsSchema);
         Dataset<Row> df2 = df.withColumn("jsonData", col("data").cast("string"))
                 .withColumn("data", get_json_object(col("jsonData"), "$.data"))
                 .withColumn("metadata", get_json_object(col("jsonData"), "$.metadata"))
@@ -82,8 +83,7 @@ public class DataHubJob implements Runnable {
     }
 
 
-    private static SparkSession getSparkSession(JavaRDD<byte[]> batch) {
-        val sparkConf = batch.context().getConf();
+    private static SparkSession getSparkSession(SparkConf sparkConf) {
         sparkConf.set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")

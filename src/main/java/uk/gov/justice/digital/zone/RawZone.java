@@ -33,16 +33,16 @@ public class RawZone implements Zone {
     public void process(Dataset<Row> df) {
         logger.info("RawZone process started..");
 
-        List<Row> df_tables = df.filter(col("operation").isin("load"))
+        List<Row> sourceReferemceData = df.filter(col("operation").isin("load"))
                 .select("table", "source", "operation")
                 .distinct().collectAsList();
 
         Dataset<Row> df1 = df.drop("source", "table", "operation");
 
-        for(final Row r : df_tables){
-            String table = r.getAs("table");
-            String source = r.getAs("source");
-            String operation = r.getAs("operation");
+        for(final Row row : sourceReferemceData){
+            String table = row.getAs("table");
+            String source = row.getAs("source");
+            String operation = row.getAs("operation");
 
             final String sourceName = SourceReferenceService.getSource(source +"." + table);
             final String tableName = SourceReferenceService.getTable(source +"." + table);
