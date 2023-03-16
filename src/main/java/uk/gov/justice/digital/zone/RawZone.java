@@ -22,7 +22,6 @@ public class RawZone implements Zone {
 
     private static String DELTA_FORMAT = "delta";
     private String rawPath;
-    private JobParameters jobParameters;
 
     @Inject
     public RawZone(JobParameters jobParameters){
@@ -61,7 +60,8 @@ public class RawZone implements Zone {
 
                 System.out.println("Before writing data to S3 raw bucket..");
                 // By Delta lake partition
-                df2.filter(col("table").isin(table))
+                df2.drop("source", "table", "operation")
+                        .filter(col("table").isin(table))
                         .write()
                         .mode(SaveMode.Append)
                         .option("path", getTablePath(rawPath,source,table,operation))
