@@ -7,21 +7,26 @@ import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.util.SourceReference;
+import uk.gov.justice.digital.config.SourceReference;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.List;
 
-import static org.apache.spark.sql.functions.*;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.get_json_object;
+import static org.apache.spark.sql.functions.lower;
 
 @Singleton
 public class RawZone implements Zone {
 
-    private static String DELTA_FORMAT = "delta";
-    private String rawPath;
+    private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
+
+    private final String DELTA_FORMAT = "delta";
+    private final String rawPath;
 
     @Inject
     public RawZone(JobParameters jobParameters){
@@ -30,7 +35,7 @@ public class RawZone implements Zone {
 
     @Override
     public Dataset<Row> process(JavaRDD<Row> rowRDD, SparkSession spark) {
-        System.out.println("RawZone process started..");
+        logger.info("RawZone process started..");
         if(!rowRDD.isEmpty()) {
 
             StructType schema = new StructType()
@@ -51,17 +56,18 @@ public class RawZone implements Zone {
                     .select("table", "source", "operation")
                     .distinct().collectAsList();
 
+            Dataset<Row> df3 = df2.drop("source", "table", "operation");
 
             for(final Row r : df_tables){
-                String table = r.getAs("table").toString().toLowerCase();
+                String table = r.getAs("table");
                 // Internal Source name mapping
-                String source = SourceReference.getInternalSource(r.getAs("source")).toLowerCase();
-                String operation = r.getAs("operation").toString().toLowerCase();
+                String source = SourceReference.getInternalSource(r.getAs("source"));
+                String operation = r.getAs("operation").toString();
 
-                System.out.println("Before writing data to S3 raw bucket..");
+                logger.info("Before writing data to S3 raw bucket..");
                 // By Delta lake partition
-                df2.drop("source", "table", "operation")
-                        .filter(col("table").isin(table))
+                df3.filter(lower(get_json_object(col("metadata"), "$.schema-name")).isin(schema)
+                                .and(lower(get_json_object(col("metadata"), "$.table-name"))).isin(table))
                         .write()
                         .mode(SaveMode.Append)
                         .option("path", getTablePath(rawPath,source,table,operation))

@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 public interface Zone {
-    public default String getTablePath(final String prefix, final String schema, final String table, String operation) {
+    default String getTablePath(final String prefix, final String schema, final String table, String operation) {
         return prefix + "/" + schema + "/" + table + "/" + operation;
     }
 

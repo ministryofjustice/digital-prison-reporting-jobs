@@ -48,7 +48,7 @@ public class JobParameters {
     }
 
     public String getRawPath() {
-        return getMandatoryProperty("s3.raw.path");
+        return getMandatoryProperty("raw.s3.path");
     }
 
     private String getMandatoryProperty(String jobParameter) {

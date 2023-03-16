@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.util;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.config.SourceReference;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 class SourceReferenceTest {
     private final static String OMS_OWNER_INTERNAL_NAME = "nomis";
