@@ -28,6 +28,7 @@ ext {
 
 dependencies {
     annotationProcessor 'info.picocli:picocli-codegen'
+
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
 
@@ -55,7 +56,10 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation 'org.mockito:mockito-core:5.1.1'
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+    testRuntimeOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
+    testRuntimeOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
 }
 
 test {
@@ -77,6 +81,7 @@ micronaut {
 
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += [
-        "-Xlint:deprecation"
+        "-Xlint:all"
     ]
 }
+
