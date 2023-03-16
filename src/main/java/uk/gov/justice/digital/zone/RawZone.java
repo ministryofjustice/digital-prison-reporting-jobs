@@ -22,6 +22,7 @@ public class RawZone implements Zone {
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
     private final String DELTA_FORMAT = "delta";
+    private final String LOAD_OPERATION = "load";
     private final String rawPath;
 
     @Inject
@@ -33,29 +34,44 @@ public class RawZone implements Zone {
     public void process(Dataset<Row> df) {
         logger.info("RawZone process started..");
 
-        List<Row> sourceReferemceData = df.filter(col("operation").isin("load"))
-                .select("table", "source", "operation")
-                .distinct().collectAsList();
+        List<Row> sourceReferenceData = getSourceReferenceData(df);
 
         Dataset<Row> df1 = df.drop("source", "table", "operation");
 
-        for(final Row row : sourceReferemceData){
-            String table = row.getAs("table");
-            String source = row.getAs("source");
-            String operation = row.getAs("operation");
+        for(final Row row : sourceReferenceData){
 
-            final String sourceName = SourceReferenceService.getSource(source +"." + table);
-            final String tableName = SourceReferenceService.getTable(source +"." + table);
+            String operation = row.getAs("operation");
+            String source    = getSourceName(row);
+            String table     = getTableName(row);
 
             logger.info("Before writing data to S3 raw bucket..");
             // By Delta lake partition
-            df1.filter(lower(get_json_object(col("metadata"), "$.schema-name")).isin(sourceName)
+            df1.filter(lower(get_json_object(col("metadata"), "$.schema-name")).isin(source)
                             .and(lower(get_json_object(col("metadata"), "$.table-name"))).isin(table))
                     .write()
                     .mode(SaveMode.Append)
-                    .option("path", getTablePath(rawPath, sourceName, tableName, operation))
+                    .option("path", getTablePath(rawPath, source, table, operation))
                     .format(DELTA_FORMAT)
                     .save();
         }
     }
+
+    public List<Row> getSourceReferenceData(Dataset<Row> df) {
+        return df.filter(col("operation").isin(LOAD_OPERATION))
+                .select("table", "source", "operation")
+                .distinct().collectAsList();
+    }
+
+    public String getSourceName(Row row) {
+        String table = row.getAs("table");
+        String source = row.getAs("source");
+        return SourceReferenceService.getSource(source +"." + table);
+    }
+
+    public String getTableName(Row row) {
+        String table = row.getAs("table");
+        String source = row.getAs("source");
+        return SourceReferenceService.getTable(source +"." + table);
+    }
+
 }
