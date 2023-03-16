@@ -8,6 +8,8 @@ import lombok.val;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.job.model.dms.EventRecord;
@@ -23,6 +25,7 @@ import java.time.Instant;
 @Command(name = "KinesisTestJob")
 public class KinesisTestJob implements Runnable {
 
+    private static final Logger logger = LoggerFactory.getLogger(KinesisTestJob.class);
     private final KinesisReader kinesisReader;
 
     @Inject
@@ -35,7 +38,7 @@ public class KinesisTestJob implements Runnable {
         .readerFor(EventRecord.class);
 
     public static void main(String[] args) {
-        System.out.println("Job started");
+        logger.info("Job started");
         PicocliRunner.run(KinesisTestJob.class);
     }
 
@@ -59,13 +62,16 @@ public class KinesisTestJob implements Runnable {
             val average = timings.stream().reduce(0L, Long::sum) / timings.size();
             val processingTime = System.currentTimeMillis() - startTime;
 
-            System.out.println("Batch: " + batch.id() +
-                " - Processed " + result.count() + " records" +
-                " - skipped " + (batch.count() - result.count()) + " records" +
-                " - timings min: " + min.map(Object::toString).orElse("UNKNOWN") + "ms" +
-                " max: " + max.map(Object::toString).orElse("UNKNOWN") + "ms" +
-                " average: " + average + "ms" +
-                " - processed batch in " + processingTime + "ms"
+            logger.info("Batch: {} - Processed {} records - skipped {} records" +
+                " - timings min: {}ms max: {}ms average: {}ms" +
+                " - processed batch in {}ms",
+                batch.id(),
+                result.count(),
+                batch.count() - result.count(),
+                min.map(Object::toString).orElse("UNKNOWN"),
+                max.map(Object::toString).orElse("UNKNOWN"),
+                average,
+                processingTime
             );
         }
     };
