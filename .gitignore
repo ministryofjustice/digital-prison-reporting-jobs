@@ -31,3 +31,4 @@ metastore_db/
 .project
 .settings/
 .vscode
+*.swp

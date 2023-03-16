@@ -9,12 +9,16 @@ import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.apache.spark.streaming.kinesis.KinesisInitialPositions;
 import org.apache.spark.streaming.kinesis.KinesisInputDStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.config.Properties;
 
 @Bean
 public class KinesisReader {
+
+    private static final Logger logger = LoggerFactory.getLogger(KinesisReader.class);
 
     private final JavaStreamingContext streamingContext;
     private final JavaDStream<byte[]> kinesisStream;
@@ -38,14 +42,14 @@ public class KinesisReader {
                 .checkpointAppName(jobName)
                 .build(),
             // We need to pass a Scala classtag which looks a little ugly in Java.
-            ClassTag$.MODULE$.<byte[]>apply(byte[].class)
+            ClassTag$.MODULE$.apply(byte[].class)
         );
 
-        System.out.println("KinesisReader configuration" +
-            " - endpointUrl: " + jobParameters.getAwsKinesisEndpointUrl() +
-            " - aws region: " + jobParameters.getAwsRegion() +
-            " - stream name: " + jobParameters.getKinesisReaderStreamName() +
-            " - batch duration: " + jobParameters.getKinesisReaderBatchDuration()
+        logger.info("Configuration - endpointUrl: {} awsRegion: {} streamName: {} batchDuration: {}",
+            jobParameters.getAwsKinesisEndpointUrl(),
+            jobParameters.getAwsRegion(),
+            jobParameters.getKinesisReaderStreamName(),
+            jobParameters.getKinesisReaderBatchDuration()
         );
 
     }
@@ -60,9 +64,9 @@ public class KinesisReader {
 
     public void startAndAwaitTermination() throws InterruptedException {
         streamingContext.start();
-        System.out.println("KinesisReader started");
+        logger.info("KinesisReader started");
         streamingContext.awaitTermination();
-        System.out.println("KinesisReader terminated");
+        logger.info("KinesisReader terminated");
     }
 
 }
