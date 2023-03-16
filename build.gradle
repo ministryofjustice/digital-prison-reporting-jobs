@@ -33,7 +33,9 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
     implementation "com.fasterxml.jackson:jackson-bom:$jacksonVersion"
-    implementation "org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion"
+    implementation ("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
+      exclude group: "org.apache.spark", module: "spark-core_2.12"
+    }
     implementation "info.picocli:picocli"
     implementation "io.micronaut.picocli:micronaut-picocli"
     implementation "io.micronaut:micronaut-jackson-databind"
