@@ -7,7 +7,7 @@ plugins {
 }
 
 group 'uk.gov.justice'
-version '1.0-SNAPSHOT'
+version 'delta-3.0-SNAPSHOT'
 
 java {
     targetCompatibility = "1.8"

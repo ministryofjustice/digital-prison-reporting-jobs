@@ -47,6 +47,10 @@ public class JobParameters {
         return Durations.seconds(parsedDuration);
     }
 
+    public String getRawPath() {
+        return getMandatoryProperty("s3.raw.path");
+    }
+
     private String getMandatoryProperty(String jobParameter) {
         return Optional
             .ofNullable(config.get(jobParameter))

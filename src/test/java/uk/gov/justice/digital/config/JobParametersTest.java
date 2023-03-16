@@ -22,6 +22,8 @@ class JobParametersTest {
     private static final String AWS_KINESIS_ENDPOINT_URL = "https://kinesis.example.com";
     private static final String KINESIS_READER_STREAM_NAME = "some-kinesis-stream";
     private static final String KINESIS_READER_BATCH_DURATION_SECONDS = "5";
+    private static final String S3_RAW_PATH_KEY = "s3.raw.path";
+    private static final String S3_RAW_PATH = "s3://rawzone/raw";
 
     private static final Map<String, String> testConfig;
 
@@ -31,6 +33,7 @@ class JobParametersTest {
         testConfig.put(AWS_KINESIS_ENDPOINT_URL_KEY, AWS_KINESIS_ENDPOINT_URL);
         testConfig.put(KINESIS_READER_STREAM_NAME_KEY, KINESIS_READER_STREAM_NAME);
         testConfig.put(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, KINESIS_READER_BATCH_DURATION_SECONDS);
+        testConfig.put(S3_RAW_PATH_KEY, S3_RAW_PATH);
     }
 
     private static final JobParameters validJobParameters = new JobParameters(testConfig);
@@ -91,5 +94,10 @@ class JobParametersTest {
             Collections.singletonMap(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, "this is not a number")
         );
         assertThrows(NumberFormatException.class, jobParameters::getKinesisReaderBatchDuration);
+    }
+
+    @Test
+    public void shouldReturnRawPathWhenSet() {
+        assertEquals(S3_RAW_PATH, validJobParameters.getRawPath());
     }
 }
