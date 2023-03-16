@@ -1,0 +1,270 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "AGY_LOC_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "DESCRIPTION",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AGENCY_LOCATION_TYPE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "DISTRICT_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "UPDATED_ALLOWED_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ABBREVIATION",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "DEACTIVATION_DATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CONTACT_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "PRINT_QUEUE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "JURISDICTION_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BAIL_OFFICE_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "LIST_SEQ",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "HOUSING_LEV_1_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "HOUSING_LEV_2_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "HOUSING_LEV_3_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "HOUSING_LEV_4_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "PROPERTY_LEV_1_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "PROPERTY_LEV_2_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "PROPERTY_LEV_3_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "LAST_BOOKING_NO",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "COMMISSARY_PRIVILEGE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BUSINESS_HOURS",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ADDRESS_TYPE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "SERVICE_REQUIRED_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ACTIVE_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "DISABILITY_ACCESS_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "INTAKE_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "SUB_AREA_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "NOMS_REGION_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "GEOGRAPHIC_REGION_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "JUSTICE_AREA_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CJIT_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "LONG_DESCRIPTION",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CREATE_DATETIME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CREATE_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "MODIFY_DATETIME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "MODIFY_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+
+    {
+      "name": "AUDIT_TIMESTAMP",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_MODULE_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_CLIENT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_CLIENT_IP_ADDRESS",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_CLIENT_WORKSTATION_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_ADDITIONAL_INFO",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    }
+  ]
+}

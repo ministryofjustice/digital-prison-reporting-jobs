@@ -1,0 +1,347 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "OFFENDER_BOOK_ID",
+      "type": "long",
+      "nullable": false,
+      "metadata": {}
+    },
+    {
+      "name": "BOOKING_BEGIN_DATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BOOKING_END_DATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BOOKING_NO",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "OFFENDER_ID",
+      "type": "long",
+      "nullable": false,
+      "metadata": {}
+    },
+    {
+      "name": "AGY_LOC_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "LIVING_UNIT_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "DISCLOSURE_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "IN_OUT_STATUS",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ACTIVE_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BOOKING_STATUS",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "YOUTH_ADULT_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "FINGERPRINTED_STAFF_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "SEARCH_STAFF_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "PHOTO_TAKING_STAFF_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ASSIGNED_STAFF_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CREATE_AGY_LOC_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BOOKING_TYPE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BOOKING_CREATED_DATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ROOT_OFFENDER_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AGENCY_IML_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "SERVICE_FEE_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "EARNED_CREDIT_LEVEL",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "EKSTRAND_CREDIT_LEVEL",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "INTAKE_AGY_LOC_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ACTIVITY_DATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "INTAKE_CASELOAD_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "INTAKE_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CASE_OFFICER_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CASE_DATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CASE_TIME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "COMMUNITY_ACTIVE_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CREATE_INTAKE_AGY_LOC_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "COMM_STAFF_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "COMM_STATUS",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "COMMUNITY_AGY_LOC_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "NO_COMM_AGY_LOC_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "COMM_STAFF_ROLE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AGY_LOC_ID_LIST",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "STATUS_REASON",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "TOTAL_UNEXCUSED_ABSENCES",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "REQUEST_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CREATE_DATETIME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "CREATE_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "MODIFY_DATETIME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "MODIFY_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "RECORD_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "INTAKE_AGY_LOC_ASSIGN_DATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_TIMESTAMP",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_MODULE_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_CLIENT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_CLIENT_IP_ADDRESS",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_CLIENT_WORKSTATION_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "AUDIT_ADDITIONAL_INFO",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "BOOKING_SEQ",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "ADMISSION_REASON",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    }
+  ]
+}
