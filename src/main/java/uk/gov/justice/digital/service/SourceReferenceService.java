@@ -15,57 +15,43 @@ import org.apache.hadoop.shaded.com.nimbusds.jose.util.IOUtils;
 import org.apache.spark.sql.types.DataType;
 
 import com.google.common.base.Charsets;
+import uk.gov.justice.digital.service.model.SourceReference;
 
 public class SourceReferenceService {
 
-    private static final Map<String, SourceReference> REF = new HashMap<String,SourceReference>();
+    private static final Map<String, SourceReference> sources = new HashMap<String,SourceReference>();
 
-    /**
-     * For the PoC we will hardcode the references - although we would like there to be something
-     * proper in place in future, as we onboard each service.
-     */
+    // Temporarily hardcoded until we extract this into s3/Dynamo/???
     static {
-        // demo
         try {
-            REF.put("system.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
-            REF.put("system.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "nomis", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
-            REF.put("system.agency_locations", new SourceReference("SYSTEM.AGENCY_LOCATIONS", "nomis", "agency_locations", "AGY_LOC_ID", getSchemaFromResource("/schemas/oms_owner.agency_locations.schema.json")));
-            REF.put("system.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
+            sources.put("oms_owner.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
+            sources.put("oms_owner.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "nomis", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
+            sources.put("oms_owner.agency_locations", new SourceReference("SYSTEM.AGENCY_LOCATIONS", "nomis", "agency_locations", "AGY_LOC_ID", getSchemaFromResource("/schemas/oms_owner.agency_locations.schema.json")));
+            sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
 
-            // t3
-            REF.put("oms_owner.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
-            REF.put("oms_owner.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "nomis", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
-            REF.put("oms_owner.agency_locations", new SourceReference("SYSTEM.AGENCY_LOCATIONS", "nomis", "agency_locations", "AGY_LOC_ID", getSchemaFromResource("/schemas/oms_owner.agency_locations.schema.json")));
-            REF.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
-
-
-            // aurora postgres
-            REF.put("public.offenders", new SourceReference("SYSTEM.OFFENDERS", "public", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
-            REF.put("public.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "public", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
-
-            REF.put("public.statement", new SourceReference("public.statement", "use_of_force", "statement", "id", getSchemaFromResource("/schemas/use-of-force.statement.schema.json")));
-            REF.put("public.report", new SourceReference("public.report", "use_of_force", "report", "id", getSchemaFromResource("/schemas/use-of-force.report.schema.json")));
+            sources.put("public.offenders", new SourceReference("SYSTEM.OFFENDERS", "public", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
+            sources.put("public.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "public", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
         } catch (IOException e) {
             handleError(e);
         }
     }
 
     public static String getPrimaryKey(final String key) {
-        final SourceReference ref = REF.get(key.toLowerCase());
+        final SourceReference ref = sources.get(key.toLowerCase());
         return (ref == null ? null : ref.getPrimaryKey());
     }
 
     public static String getSource(final String key) {
-        final SourceReference ref = REF.get(key.toLowerCase());
+        final SourceReference ref = sources.get(key.toLowerCase());
         return (ref == null ? null : ref.getSource());
     }
 
     public static String getTable(final String key) {
-        final SourceReference ref = REF.get(key.toLowerCase());
+        final SourceReference ref = sources.get(key.toLowerCase());
         return (ref == null ? null : ref.getTable());
     }
     public static DataType getSchema(final String key) {
-        final SourceReference ref = REF.get(key.toLowerCase());
+        final SourceReference ref = sources.get(key.toLowerCase());
         return (ref == null ? null : ref.getSchema());
     }
 
@@ -77,13 +63,8 @@ public class SourceReferenceService {
         return null;
     }
 
-    public static Map<String,String> getCasts(final String key) {
-        final SourceReference ref = REF.get(key.toLowerCase());
-        return (ref == null ? null : ref.getCasts());
-    }
-
     public static Set<SourceReference> getReferences() {
-        return new HashSet<SourceReference>(REF.values());
+        return new HashSet<SourceReference>(sources.values());
     }
 
     protected static InputStream getStream(final String resource) {
@@ -111,75 +92,4 @@ public class SourceReferenceService {
         System.err.print(sw.getBuffer().toString());
     }
 
-    public static class SourceReference {
-
-        private String key;
-        private String source;
-        private String table;
-        private String primaryKey;
-        private DataType schema;
-        private Map<String,String> casts;
-
-        public SourceReference(final String key, final String source, final String table, final String primaryKey) {
-            this.key = key;
-            this.source = source;
-            this.table = table;
-            this.primaryKey = primaryKey;
-            this.casts = new HashMap<String,String>();
-        }
-
-        public SourceReference(final String key, final String source, final String table, final String primaryKey, DataType schema) {
-            this.key = key;
-            this.source = source;
-            this.table = table;
-            this.primaryKey = primaryKey;
-            this.schema = schema;
-            this.casts = new HashMap<String,String>();
-        }
-
-        public SourceReference(final String key, final String source, final String table, final String primaryKey, Map<String,String> casts) {
-            this.key = key;
-            this.source = source;
-            this.table = table;
-            this.primaryKey = primaryKey;
-            this.casts = casts;
-        }
-
-        public String getKey() {
-            return key;
-        }
-        public void setKey(String key) {
-            this.key = key;
-        }
-        public String getSource() {
-            return source;
-        }
-        public void setSource(String source) {
-            this.source = source;
-        }
-        public String getTable() {
-            return table;
-        }
-        public void setTable(String table) {
-            this.table = table;
-        }
-        public String getPrimaryKey() {
-            return primaryKey;
-        }
-        public void setPrimaryKey(String primaryKey) {
-            this.primaryKey = primaryKey;
-        }
-        public DataType getSchema() {
-            return schema;
-        }
-        public void setSchema(DataType schema) {
-            this.schema = schema;
-        }
-        public Map<String, String> getCasts() {
-            return casts;
-        }
-        public void setCasts(Map<String, String> casts) {
-            this.casts = casts;
-        }
-    }
 }
