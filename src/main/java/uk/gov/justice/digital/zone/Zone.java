@@ -4,7 +4,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 public interface Zone {
-    default String getTablePath(final String prefix, final String schema, final String table, String operation) {
+    default String getTablePath(final String prefix, final String schema, final String table, final String operation) {
         return prefix + "/" + schema + "/" + table + "/" + operation;
     }
 
