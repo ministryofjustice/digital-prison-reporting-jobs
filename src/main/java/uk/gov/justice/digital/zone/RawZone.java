@@ -43,9 +43,10 @@ public class RawZone implements Zone {
         for(final Row row : sourceReferenceData) {
 
             Dataset<Row> df1 = df;
-            String table = row.getAs("table");
-            String source = row.getAs("source");
+            String table = getTableName(row);
+            String source = getSourceName(row);
             String operation = row.getAs("operation");
+
 
             logger.info("Before writing data to S3 raw bucket..");
             // By Delta lake partition
