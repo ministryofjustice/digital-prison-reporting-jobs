@@ -4,8 +4,6 @@ import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
@@ -14,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.zone.RawZone;
+import uk.gov.justice.digital.zone.StructuredZone;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -36,11 +35,13 @@ public class DataHubJob implements Runnable {
 
     private final KinesisReader kinesisReader;
     private final RawZone rawZone;
+    private final StructuredZone structuredZone;
 
     @Inject
-    public DataHubJob(KinesisReader kinesisReader, RawZone rawZone) {
+    public DataHubJob(KinesisReader kinesisReader, RawZone rawZone, StructuredZone structuredZone) {
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
+        this.structuredZone = structuredZone;
     }
 
     public static void main(String[] args) {
@@ -50,25 +51,19 @@ public class DataHubJob implements Runnable {
 
     private void batchProcessor(JavaRDD<byte[]> batch) {
         if (!batch.isEmpty()) {
-            logger.info("Got batch with " + batch.count() + " records");
+            logger.info("Batch: {} - Processing {} records", batch.id(), batch.count());
 
             val startTime = System.currentTimeMillis();
 
-            val spark = getSparkSession(batch.context().getConf());
+            val spark = getConfiguredSparkSession(batch.context().getConf());
 
-            logger.info("rowRDD start");
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
-            logger.info("rowRDD end");
 
-            logger.info("Creating dataframe");
             Dataset<Row> dataFrame = fromRawDMS_3_4_6(rowRdd, spark);
-            logger.info("Created dataframe");
 
-            logger.info("Processing data frame into raw zone");
             rawZone.process(dataFrame);
-            logger.info("Finished processing data frame into raw zone");
 
-            // TODO - Structured zone uses this dmsDataFrame
+            structuredZone.process(dataFrame);
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",
                 batch.id(),
@@ -95,8 +90,7 @@ public class DataHubJob implements Runnable {
             .drop("jsonData");
     }
 
-
-    private static SparkSession getSparkSession(SparkConf sparkConf) {
+    private static SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
         sparkConf
             .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
@@ -104,7 +98,9 @@ public class DataHubJob implements Runnable {
             .set("spark.databricks.delta.autoCompact.enabled", "true")
             .set("spark.sql.legacy.charVarcharAsString", "true");
 
-        return SparkSession.builder().config(sparkConf).getOrCreate();
+        return SparkSession.builder()
+            .config(sparkConf)
+            .getOrCreate();
     }
 
     @Override

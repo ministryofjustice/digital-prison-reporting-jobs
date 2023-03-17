@@ -61,6 +61,8 @@ public class JobParameters {
             .orElseThrow(() -> new IllegalStateException("Job Parameter: " + jobParameter + " is not set"));
     }
 
+    // TODO - consider supporting a default value where if no value is provided we throw an exception if there is no
+    //        value at all
     private Optional<String> getOptionalProperty(String jobParameter) {
         return Optional
             .ofNullable(config.get(jobParameter));

@@ -9,6 +9,6 @@ public interface Zone {
         return String.join("/", prefix, schema, table, operation);
     }
 
-    void process(Dataset<Row> rowRDD);
+    void process(Dataset<Row> dataFrame);
 
 }

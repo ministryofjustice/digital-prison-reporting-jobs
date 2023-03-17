@@ -26,11 +26,11 @@ public class RawZone implements Zone {
     private static final String OPERATION = "operation";
     private static final String PATH = "path";
 
-    private final String rawPath;
+    private final String rawS3Path;
 
     @Inject
     public RawZone(JobParameters jobParameters) {
-        this.rawPath = jobParameters.getRawS3Path()
+        this.rawS3Path = jobParameters.getRawS3Path()
             .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
     }
 
@@ -41,14 +41,18 @@ public class RawZone implements Zone {
 
         val startTime = System.currentTimeMillis();
 
-        tableLoadEvents(dataFrame).forEach(row -> {
+        val uniqueLoadEventIdentifiers = uniqueTablesForLoad(dataFrame);
+
+        logger.info("Processing {} unique events", uniqueLoadEventIdentifiers.size());
+
+        uniqueLoadEventIdentifiers.forEach(row -> {
             String rowSource = row.getAs(SOURCE);
             String rowTable = row.getAs(TABLE);
             String rowOperation = row.getAs(OPERATION);
 
             val tableName = SourceReferenceService.getTable(rowSource, rowTable);
             val sourceName = SourceReferenceService.getTable(rowSource, rowTable);
-            val tablePath = getTablePath(rawPath, sourceName, tableName, rowOperation);
+            val tablePath = getTablePath(rawS3Path, sourceName, tableName, rowOperation);
 
             dataFrame
                 .filter(col(SOURCE).isin(sourceName).and(col(TABLE).isin(tableName)))
@@ -66,7 +70,7 @@ public class RawZone implements Zone {
         );
     }
 
-    private List<Row> tableLoadEvents(Dataset<Row> dataFrame) {
+    private List<Row> uniqueTablesForLoad(Dataset<Row> dataFrame) {
         return dataFrame
             .filter(col(OPERATION).isin(LOAD))
             .select(TABLE, SOURCE, OPERATION)

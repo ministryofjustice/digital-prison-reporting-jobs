@@ -15,7 +15,6 @@ import java.util.*;
  *
  * See DPR-246 for further details.
  */
-@Bean
 public class SourceReferenceService {
 
     private static final Map<String, SourceReference> sources = new HashMap<>();
@@ -30,6 +29,8 @@ public class SourceReferenceService {
         sources.put("public.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "public", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
     }
 
+    // TODO - refactor these
+    //      - any value in returning Optionals?
     public static String getPrimaryKey(final String key) {
         val ref = sources.get(key.toLowerCase());
         return (ref == null ? null : ref.getPrimaryKey());
@@ -44,8 +45,8 @@ public class SourceReferenceService {
         val ref = sources.get(generateKey(table, source));
         return (ref == null ? null : ref.getTable());
     }
-    public DataType getSchema(final String key) {
-        val ref = sources.get(key.toLowerCase());
+    public static DataType getSchema(String table, String source) {
+        val ref = sources.get(generateKey(table, source));
         return (ref == null ? null : ref.getSchema());
     }
 
