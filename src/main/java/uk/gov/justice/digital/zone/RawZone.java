@@ -22,6 +22,7 @@ public class RawZone implements Zone {
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
     private final String DELTA_FORMAT = "delta";
+    private final String LOAD_OPERATION = "load";
     private final String rawPath;
 
     @Inject
@@ -37,9 +38,7 @@ public class RawZone implements Zone {
     public void process(Dataset<Row> df) {
         logger.info("RawZone process started..");
 
-        List<Row> sourceReferemceData = df.filter(col("operation").isin("load"))
-                .select("table", "source", "operation")
-                .distinct().collectAsList();
+        List<Row> sourceReferenceData = getSourceReferenceData(df);
 
         for(final Row row : sourceReferemceData){
 
@@ -47,9 +46,6 @@ public class RawZone implements Zone {
             String table = row.getAs("table");
             String source = row.getAs("source");
             String operation = row.getAs("operation");
-
-            final String sourceName = SourceReferenceService.getSource(source +"." + table);
-            final String tableName = SourceReferenceService.getTable(source +"." + table);
 
             logger.info("Before writing data to S3 raw bucket..");
             // By Delta lake partition
@@ -63,4 +59,23 @@ public class RawZone implements Zone {
                     .save();
         }
     }
+
+    public List<Row> getSourceReferenceData(Dataset<Row> df) {
+        return df.filter(col("operation").isin(LOAD_OPERATION))
+                .select("table", "source", "operation")
+                .distinct().collectAsList();
+    }
+
+    public String getSourceName(Row row) {
+        String table = row.getAs("table");
+        String source = row.getAs("source");
+        return SourceReferenceService.getSource(source +"." + table);
+    }
+
+    public String getTableName(Row row) {
+        String table = row.getAs("table");
+        String source = row.getAs("source");
+        return SourceReferenceService.getTable(source +"." + table);
+    }
+
 }
