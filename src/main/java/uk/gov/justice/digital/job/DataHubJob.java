@@ -50,13 +50,25 @@ public class DataHubJob implements Runnable {
 
     private void batchProcessor(JavaRDD<byte[]> batch) {
         if (!batch.isEmpty()) {
+            logger.info("Got batch with " + batch.count() + " records");
+
             val startTime = System.currentTimeMillis();
 
             val spark = getSparkSession(batch.context().getConf());
 
-            val rowRdd = batch.map(this::parseRawData);
+            logger.info("rowRDD start");
+            val rowRdd = batch.map(d -> {
+                return RowFactory.create(new String(d, StandardCharsets.UTF_8));
+            });
+            logger.info("rowRDD end");
+
+            logger.info("Creating dataframe");
             Dataset<Row> dmsDataFrame = fromRawDMS_3_4_6(rowRdd, spark);
+            logger.info("Created dataframe");
+
+            logger.info("Processing data frame into raw zone");
             rawZone.process(dmsDataFrame);
+            logger.info("Finished processing data frame into raw zone");
 
             // TODO - Structured zone uses this dmsDataFrame
 
