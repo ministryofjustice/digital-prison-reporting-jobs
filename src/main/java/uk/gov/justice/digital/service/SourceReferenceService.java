@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service;
 
 import io.micronaut.context.annotation.Bean;
+import lombok.val;
 import org.apache.spark.sql.types.DataType;
 import uk.gov.justice.digital.service.model.SourceReference;
 
@@ -30,21 +31,21 @@ public class SourceReferenceService {
     }
 
     public static String getPrimaryKey(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
+        val ref = sources.get(key.toLowerCase());
         return (ref == null ? null : ref.getPrimaryKey());
     }
 
-    public static String getSource(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
+    public static String getSource(String table, String source) {
+        val ref = sources.get(generateKey(table, source));
         return (ref == null ? null : ref.getSource());
     }
 
-    public static String getTable(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
+    public static String getTable(String table, String source) {
+        val ref = sources.get(generateKey(table, source));
         return (ref == null ? null : ref.getTable());
     }
     public DataType getSchema(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
+        val ref = sources.get(key.toLowerCase());
         return (ref == null ? null : ref.getSchema());
     }
 
@@ -59,6 +60,10 @@ public class SourceReferenceService {
         return new Scanner(is, "UTF-8")
             .useDelimiter("\\A") // Matches the next boundary which in our case will be EOF.
             .next();
+    }
+
+    private static String generateKey(String table, String source) {
+        return String.join(".", table, source).toLowerCase();
     }
 
     public Set<SourceReference> getReferences() {

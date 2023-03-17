@@ -57,17 +57,15 @@ public class DataHubJob implements Runnable {
             val spark = getSparkSession(batch.context().getConf());
 
             logger.info("rowRDD start");
-            val rowRdd = batch.map(d -> {
-                return RowFactory.create(new String(d, StandardCharsets.UTF_8));
-            });
+            val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             logger.info("rowRDD end");
 
             logger.info("Creating dataframe");
-            Dataset<Row> dmsDataFrame = fromRawDMS_3_4_6(rowRdd, spark);
+            Dataset<Row> dataFrame = fromRawDMS_3_4_6(rowRdd, spark);
             logger.info("Created dataframe");
 
             logger.info("Processing data frame into raw zone");
-            rawZone.process(dmsDataFrame);
+            rawZone.process(dataFrame);
             logger.info("Finished processing data frame into raw zone");
 
             // TODO - Structured zone uses this dmsDataFrame
@@ -79,10 +77,6 @@ public class DataHubJob implements Runnable {
             );
         }
     };
-
-    private Row parseRawData(byte[] rawData) {
-        return RowFactory.create(new String(rawData, StandardCharsets.UTF_8));
-    }
 
     // TODO - extract this - see DPR-341
     public Dataset<Row> fromRawDMS_3_4_6(JavaRDD<Row> rowRDD, SparkSession spark) {

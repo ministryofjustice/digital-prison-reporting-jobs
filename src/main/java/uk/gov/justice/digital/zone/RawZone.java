@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.zone;
 
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -19,64 +20,58 @@ public class RawZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
-    private final String DELTA_FORMAT = "delta";
-    private final String LOAD_OPERATION = "load";
+    private static final String LOAD = "load";
+    private static final String SOURCE = "source";
+    private static final String TABLE = "table";
+    private static final String OPERATION = "operation";
+    private static final String PATH = "path";
+
     private final String rawPath;
 
     @Inject
-    public RawZone(JobParameters jobParameters){
-        this.rawPath = jobParameters
-            .getRawS3Path()
+    public RawZone(JobParameters jobParameters) {
+        this.rawPath = jobParameters.getRawS3Path()
             .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
     }
 
-    public String getRawPath() {
-        return this.rawPath;
-    }
-
     @Override
-    public void process(Dataset<Row> df) {
-        logger.info("RawZone process started..");
+    public void process(Dataset<Row> dataFrame) {
 
-        List<Row> sourceReferenceData = getSourceReferenceData(df);
+        logger.info("Processing data frame with " + dataFrame.count() + " rows");
 
-        for(final Row row : sourceReferenceData) {
+        val startTime = System.currentTimeMillis();
 
-            Dataset<Row> df1 = df;
-            String table = getTableName(row);
-            String source = getSourceName(row);
-            String operation = row.getAs("operation");
+        tableLoadEvents(dataFrame).forEach(row -> {
+            String rowSource = row.getAs(SOURCE);
+            String rowTable = row.getAs(TABLE);
+            String rowOperation = row.getAs(OPERATION);
 
+            val tableName = SourceReferenceService.getTable(rowSource, rowTable);
+            val sourceName = SourceReferenceService.getTable(rowSource, rowTable);
+            val tablePath = getTablePath(rawPath, sourceName, tableName, rowOperation);
 
-            logger.info("Before writing data to S3 raw bucket..");
-            // By Delta lake partition
-            df1.filter(col("source").isin(source)
-                            .and(col("table").isin(table)))
-                    .drop("source", "table", "operation")
-                    .write()
-                    .mode(SaveMode.Append)
-                    .option("path", getTablePath(getRawPath(), source, table, operation))
-                    .format(DELTA_FORMAT)
-                    .save();
-        }
+            dataFrame
+                .filter(col(SOURCE).isin(sourceName).and(col(TABLE).isin(tableName)))
+                .drop(SOURCE, TABLE, OPERATION)
+                .write()
+                .mode(SaveMode.Append)
+                .option(PATH, tablePath)
+                .format("delta")
+                .save();
+        });
+
+        logger.info("Processed data frame with {} rows in {}ms",
+            dataFrame.count(),
+            System.currentTimeMillis() - startTime
+        );
     }
 
-    public List<Row> getSourceReferenceData(Dataset<Row> df) {
-        return df.filter(col("operation").isin(LOAD_OPERATION))
-                .select("table", "source", "operation")
-                .distinct().collectAsList();
-    }
-
-    public String getSourceName(Row row) {
-        String table = row.getAs("table");
-        String source = row.getAs("source");
-        return SourceReferenceService.getSource(source +"." + table);
-    }
-
-    public String getTableName(Row row) {
-        String table = row.getAs("table");
-        String source = row.getAs("source");
-        return SourceReferenceService.getTable(source +"." + table);
+    private List<Row> tableLoadEvents(Dataset<Row> dataFrame) {
+        return dataFrame
+            .filter(col(OPERATION).isin(LOAD))
+            .select(TABLE, SOURCE, OPERATION)
+            .distinct()
+            .collectAsList();
     }
 
 }
