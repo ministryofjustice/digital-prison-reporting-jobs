@@ -71,15 +71,15 @@ public class DataHubJob implements Runnable {
         StructType eventsSchema = new StructType()
                 .add("data", DataTypes.StringType);
 
-        Dataset<Row> df = spark.createDataFrame(rowRDD, eventsSchema);
-        Dataset<Row> df2 = df.withColumn("jsonData", col("data").cast("string"))
+        Dataset<Row> initialDataFrame = spark.createDataFrame(rowRDD, eventsSchema);
+        Dataset<Row> dmsDataFrame = initialDataFrame.withColumn("jsonData", col("data").cast("string"))
                 .withColumn("data", get_json_object(col("jsonData"), "$.data"))
                 .withColumn("metadata", get_json_object(col("jsonData"), "$.metadata"))
                 .withColumn("source", lower(get_json_object(col("metadata"), "$.schema-name")))
                 .withColumn("table", lower(get_json_object(col("metadata"), "$.table-name")))
                 .withColumn("operation", lower(get_json_object(col("metadata"), "$.operation")))
                 .drop("jsonData");
-        return df2;
+        return dmsDataFrame;
     }
 
 

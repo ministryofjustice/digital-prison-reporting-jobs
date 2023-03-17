@@ -29,6 +29,10 @@ public class RawZone implements Zone {
         this.rawPath = jobParameters.getRawPath();
     }
 
+    public String getRawPath() {
+        return this.rawPath;
+    }
+
     @Override
     public void process(Dataset<Row> df) {
         logger.info("RawZone process started..");
@@ -53,7 +57,7 @@ public class RawZone implements Zone {
                             .and(lower(get_json_object(col("metadata"), "$.table-name"))).isin(table))
                     .write()
                     .mode(SaveMode.Append)
-                    .option("path", getTablePath(rawPath, sourceName, tableName, operation))
+                    .option("path", getTablePath(getRawPath(), sourceName, tableName, operation))
                     .format(DELTA_FORMAT)
                     .save();
         }
