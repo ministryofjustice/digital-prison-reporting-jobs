@@ -22,7 +22,11 @@ import java.nio.charset.StandardCharsets;
 import static org.apache.spark.sql.functions.*;
 
 /**
- * Test job to read events from a kinesis data stream and writing to S3 raw zone.
+ * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
+ *  - TODO - validates the data to ensure it conforms to the expected input format - DPR-341
+ *  - writes the raw data to the raw zone in s3
+ *  - TODO - validates the data to ensure it confirms to the appropriate table schema
+ *  - TODO - writes this validated data to the structured zone in s3
  */
 @Singleton
 @Command(name = "DataHubJob")
@@ -39,56 +43,60 @@ public class DataHubJob implements Runnable {
         this.rawZone = rawZone;
     }
 
-    public RawZone getRawZone() {
-        return rawZone;
-    }
     public static void main(String[] args) {
         logger.info("Job started");
         PicocliRunner.run(DataHubJob.class);
     }
 
-    private final VoidFunction<JavaRDD<byte[]>> batchProcessor = batch -> {
-        logger.info("inside batchProcessor.. ");
+    private void batchProcessor(JavaRDD<byte[]> batch) {
+        if (!batch.isEmpty()) {
+            val startTime = System.currentTimeMillis();
 
-        SparkSession spark = getSparkSession(batch.context().getConf());
+            val spark = getSparkSession(batch.context().getConf());
 
-        JavaRDD<Row> rowRDD = batch.map((Function<byte[], Row>) msg -> RowFactory.create(new String(msg, StandardCharsets.UTF_8)));
+            val rowRdd = batch.map(this::parseRawData);
+            Dataset<Row> dmsDataFrame = fromRawDMS_3_4_6(rowRdd, spark);
+            rawZone.process(dmsDataFrame);
 
-        logger.info("rowRDD.isEmpty(): " + rowRDD.isEmpty());
-        if (!rowRDD.isEmpty()) {
-            Dataset<Row> dmsDataFrame = fromRawDMS_3_4_6(rowRDD, spark);
+            // TODO - Structured zone uses this dmsDataFrame
 
-            getRawZone().process(dmsDataFrame);
-
-            // Structured zone uses this dmsDataFrame
+            logger.info("Batch: {} - Processed {} records - processed batch in {}ms",
+                batch.id(),
+                batch.count(),
+                System.currentTimeMillis() - startTime
+            );
         }
-
     };
 
+    private Row parseRawData(byte[] rawData) {
+        return RowFactory.create(new String(rawData, StandardCharsets.UTF_8));
+    }
+
+    // TODO - extract this - see DPR-341
     public Dataset<Row> fromRawDMS_3_4_6(JavaRDD<Row> rowRDD, SparkSession spark) {
-        logger.info("Preparing Raw DMS Dataframe..");
 
-        StructType eventsSchema = new StructType()
-                .add("data", DataTypes.StringType);
+        val eventsSchema = new StructType()
+            .add("data", DataTypes.StringType);
 
-        Dataset<Row> initialDataFrame = spark.createDataFrame(rowRDD, eventsSchema);
-        Dataset<Row> dmsDataFrame = initialDataFrame.withColumn("jsonData", col("data").cast("string"))
-                .withColumn("data", get_json_object(col("jsonData"), "$.data"))
-                .withColumn("metadata", get_json_object(col("jsonData"), "$.metadata"))
-                .withColumn("source", lower(get_json_object(col("metadata"), "$.schema-name")))
-                .withColumn("table", lower(get_json_object(col("metadata"), "$.table-name")))
-                .withColumn("operation", lower(get_json_object(col("metadata"), "$.operation")))
-                .drop("jsonData");
-        return dmsDataFrame;
+        return spark
+            .createDataFrame(rowRDD, eventsSchema)
+            .withColumn("jsonData", col("data").cast("string"))
+            .withColumn("data", get_json_object(col("jsonData"), "$.data"))
+            .withColumn("metadata", get_json_object(col("jsonData"), "$.metadata"))
+            .withColumn("source", lower(get_json_object(col("metadata"), "$.schema-name")))
+            .withColumn("table", lower(get_json_object(col("metadata"), "$.table-name")))
+            .withColumn("operation", lower(get_json_object(col("metadata"), "$.operation")))
+            .drop("jsonData");
     }
 
 
     private static SparkSession getSparkSession(SparkConf sparkConf) {
-        sparkConf.set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-                .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
-                .set("spark.databricks.delta.optimizeWrite.enabled", "true")
-                .set("spark.databricks.delta.autoCompact.enabled", "true")
-                .set("spark.sql.legacy.charVarcharAsString", "true");
+        sparkConf
+            .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+            .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+            .set("spark.databricks.delta.optimizeWrite.enabled", "true")
+            .set("spark.databricks.delta.autoCompact.enabled", "true")
+            .set("spark.sql.legacy.charVarcharAsString", "true");
 
         return SparkSession.builder().config(sparkConf).getOrCreate();
     }
@@ -96,7 +104,7 @@ public class DataHubJob implements Runnable {
     @Override
     public void run() {
         try {
-            kinesisReader.setBatchProcessor(batchProcessor);
+            kinesisReader.setBatchProcessor(this::batchProcessor);
             kinesisReader.startAndAwaitTermination();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);

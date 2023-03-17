@@ -17,7 +17,7 @@ import java.util.*;
 @Bean
 public class SourceReferenceService {
 
-    private static final Map<String, SourceReference> sources = new HashMap<String,SourceReference>();
+    private static final Map<String, SourceReference> sources = new HashMap<>();
 
     static {
         sources.put("oms_owner.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
@@ -62,7 +62,7 @@ public class SourceReferenceService {
     }
 
     public Set<SourceReference> getReferences() {
-        return new HashSet<SourceReference>(sources.values());
+        return new HashSet<>(sources.values());
     }
 
 }
