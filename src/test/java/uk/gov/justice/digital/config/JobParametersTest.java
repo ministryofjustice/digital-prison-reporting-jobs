@@ -8,6 +8,7 @@ import org.junit.jupiter.api.*;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,13 +18,15 @@ class JobParametersTest {
     private static final String AWS_KINESIS_ENDPOINT_URL_KEY = "aws.kinesis.endpointUrl";
     private static final String KINESIS_READER_STREAM_NAME_KEY = "kinesis.reader.streamName";
     private static final String KINESIS_READER_BATCH_DURATION_SECONDS_KEY = "kinesis.reader.batchDurationSeconds";
+    private static final String RAW_S3_PATH_KEY = "raw.s3.path";
+    private static final String STRUCTURED_S3_PATH_KEY = "structured.s3.path";
 
     private static final String AWS_REGION = "test-region";
     private static final String AWS_KINESIS_ENDPOINT_URL = "https://kinesis.example.com";
     private static final String KINESIS_READER_STREAM_NAME = "some-kinesis-stream";
     private static final String KINESIS_READER_BATCH_DURATION_SECONDS = "5";
-    private static final String RAW_S3_PATH_KEY = "raw.s3.path";
     private static final String RAW_S3_PATH = "s3://rawzone/raw";
+    private static final String STRUCTURED_S3_PATH = "s3://somepath/structured";
 
     private static final Map<String, String> testConfig;
 
@@ -34,6 +37,7 @@ class JobParametersTest {
         testConfig.put(KINESIS_READER_STREAM_NAME_KEY, KINESIS_READER_STREAM_NAME);
         testConfig.put(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, KINESIS_READER_BATCH_DURATION_SECONDS);
         testConfig.put(RAW_S3_PATH_KEY, RAW_S3_PATH);
+        testConfig.put(STRUCTURED_S3_PATH_KEY, STRUCTURED_S3_PATH);
     }
 
     private static final JobParameters validJobParameters = new JobParameters(testConfig);
@@ -97,7 +101,22 @@ class JobParametersTest {
     }
 
     @Test
-    public void shouldReturnRawPathWhenSet() {
-        assertEquals(RAW_S3_PATH, validJobParameters.getRawPath());
+    public void shouldReturnOptionalWithRawPathWhenSet() {
+        assertEquals(Optional.of(RAW_S3_PATH), validJobParameters.getRawS3Path());
+    }
+
+    @Test
+    public void shouldReturnEmptyOptionalWhenRawPathNotSet() {
+        assertEquals(Optional.empty(), emptyJobParameters.getRawS3Path());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithStructuredPathWhenSet() {
+        assertEquals(Optional.of(STRUCTURED_S3_PATH), validJobParameters.getStructuredS3Path());
+    }
+
+    @Test
+    public void shouldReturnEmptyOptionalWhenStructuredPathNotSet() {
+        assertEquals(Optional.empty(), emptyJobParameters.getStructuredS3Path());
     }
 }

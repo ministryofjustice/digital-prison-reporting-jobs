@@ -47,14 +47,23 @@ public class JobParameters {
         return Durations.seconds(parsedDuration);
     }
 
-    public String getRawPath() {
-        return getMandatoryProperty("raw.s3.path");
+    public Optional<String> getRawS3Path() {
+        return getOptionalProperty("raw.s3.path");
+    }
+
+    public Optional<String> getStructuredS3Path() {
+        return getOptionalProperty("structured.s3.path");
     }
 
     private String getMandatoryProperty(String jobParameter) {
         return Optional
             .ofNullable(config.get(jobParameter))
             .orElseThrow(() -> new IllegalStateException("Job Parameter: " + jobParameter + " is not set"));
+    }
+
+    private Optional<String> getOptionalProperty(String jobParameter) {
+        return Optional
+            .ofNullable(config.get(jobParameter));
     }
 
     // We expect job parameters to be specified with a leading -- prefix e.g. --some.job.setting consistent with how

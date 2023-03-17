@@ -13,8 +13,6 @@ import javax.inject.Singleton;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.get_json_object;
-import static org.apache.spark.sql.functions.lower;
 
 @Singleton
 public class RawZone implements Zone {
@@ -27,7 +25,9 @@ public class RawZone implements Zone {
 
     @Inject
     public RawZone(JobParameters jobParameters){
-        this.rawPath = jobParameters.getRawPath();
+        this.rawPath = jobParameters
+            .getRawS3Path()
+            .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
     }
 
     public String getRawPath() {
