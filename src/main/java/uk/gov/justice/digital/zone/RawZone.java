@@ -41,9 +41,9 @@ public class RawZone implements Zone {
                 .select("table", "source", "operation")
                 .distinct().collectAsList();
 
-        Dataset<Row> df1 = df.drop("source", "table", "operation");
-
         for(final Row row : sourceReferemceData){
+
+            Dataset<Row> df1 = df;
             String table = row.getAs("table");
             String source = row.getAs("source");
             String operation = row.getAs("operation");
@@ -53,8 +53,9 @@ public class RawZone implements Zone {
 
             logger.info("Before writing data to S3 raw bucket..");
             // By Delta lake partition
-            df1.filter(lower(get_json_object(col("metadata"), "$.schema-name")).isin(sourceName)
-                            .and(lower(get_json_object(col("metadata"), "$.table-name"))).isin(table))
+            df1.filter(col("source").isin(sourceName)
+                            .and(col("table").isin(table)))
+                    .drop("source", "table", "operation")
                     .write()
                     .mode(SaveMode.Append)
                     .option("path", getTablePath(getRawPath(), sourceName, tableName, operation))
