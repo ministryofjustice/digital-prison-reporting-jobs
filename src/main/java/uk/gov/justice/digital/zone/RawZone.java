@@ -40,7 +40,7 @@ public class RawZone implements Zone {
 
         List<Row> sourceReferenceData = getSourceReferenceData(df);
 
-        for(final Row row : sourceReferemceData){
+        for(final Row row : sourceReferenceData) {
 
             Dataset<Row> df1 = df;
             String table = row.getAs("table");
@@ -49,12 +49,12 @@ public class RawZone implements Zone {
 
             logger.info("Before writing data to S3 raw bucket..");
             // By Delta lake partition
-            df1.filter(col("source").isin(sourceName)
+            df1.filter(col("source").isin(source)
                             .and(col("table").isin(table)))
                     .drop("source", "table", "operation")
                     .write()
                     .mode(SaveMode.Append)
-                    .option("path", getTablePath(getRawPath(), sourceName, tableName, operation))
+                    .option("path", getTablePath(getRawPath(), source, table, operation))
                     .format(DELTA_FORMAT)
                     .save();
         }
