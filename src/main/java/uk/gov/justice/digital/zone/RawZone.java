@@ -30,27 +30,31 @@ public class RawZone implements Zone {
         this.rawPath = jobParameters.getRawPath();
     }
 
+    public String getRawPath() {
+        return this.rawPath;
+    }
+
     @Override
     public void process(Dataset<Row> df) {
         logger.info("RawZone process started..");
 
         List<Row> sourceReferenceData = getSourceReferenceData(df);
 
-        Dataset<Row> df1 = df.drop("source", "table", "operation");
+        for(final Row row : sourceReferemceData){
 
-        for(final Row row : sourceReferenceData){
-
+            Dataset<Row> df1 = df;
+            String table = row.getAs("table");
+            String source = row.getAs("source");
             String operation = row.getAs("operation");
-            String source    = getSourceName(row);
-            String table     = getTableName(row);
 
             logger.info("Before writing data to S3 raw bucket..");
             // By Delta lake partition
-            df1.filter(lower(get_json_object(col("metadata"), "$.schema-name")).isin(source)
-                            .and(lower(get_json_object(col("metadata"), "$.table-name"))).isin(table))
+            df1.filter(col("source").isin(sourceName)
+                            .and(col("table").isin(table)))
+                    .drop("source", "table", "operation")
                     .write()
                     .mode(SaveMode.Append)
-                    .option("path", getTablePath(rawPath, source, table, operation))
+                    .option("path", getTablePath(getRawPath(), sourceName, tableName, operation))
                     .format(DELTA_FORMAT)
                     .save();
         }

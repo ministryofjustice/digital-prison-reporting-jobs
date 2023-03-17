@@ -39,6 +39,10 @@ public class SourceReferenceService {
             REF.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
 
 
+            // aurora postgres
+            REF.put("public.offenders", new SourceReference("SYSTEM.OFFENDERS", "public", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
+            REF.put("public.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "public", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
+
             REF.put("public.statement", new SourceReference("public.statement", "use_of_force", "statement", "id", getSchemaFromResource("/schemas/use-of-force.statement.schema.json")));
             REF.put("public.report", new SourceReference("public.report", "use_of_force", "report", "id", getSchemaFromResource("/schemas/use-of-force.report.schema.json")));
         } catch (IOException e) {
