@@ -1,9 +1,9 @@
 package uk.gov.justice.digital.zone;
 
 import lombok.val;
-import org.apache.spark.api.java.function.ForeachFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
@@ -46,25 +46,29 @@ public class StructuredZone implements Zone {
         val startTime = System.currentTimeMillis();
 
         uniqueTablesForLoad(dataFrame).forEach((table) -> {
-                logger.info("Processing table: {}", table);
+            logger.info("Processing table: {}", table);
 
-                // Locate schema
-                String rowSource = table.getAs(SOURCE);
-                String rowTable = table.getAs(TABLE);
+            // Locate schema
+            String rowSource = table.getAs(SOURCE);
+            String rowTable = table.getAs(TABLE);
 
-                logger.info("Locating schema for source: {} table: {}", rowSource, rowTable);
+            val schema = SourceReferenceService.getSchema(rowSource, rowTable);
 
-                val schema = SourceReferenceService.getSchema(rowSource, rowTable);
+            val tableName = SourceReferenceService.getTable(rowSource, rowTable);
+            val sourceName = SourceReferenceService.getSource(rowSource, rowTable);
+            // TODO - fix this (varargs?)
+            val tablePath = getTablePath(structuredS3Path, sourceName, tableName, "");
 
-                logger.info("Found schema: {}", schema);
-
-                // Apply schema to DF and log out
-                dataFrame.withColumn("parsedData", from_json(col("data"), schema))
-                    .select(col("parsedData.*"))
-                    .foreach((ForeachFunction<Row>) r -> {
-                        logger.info("Processing row: {}", r);
-                    });
-            });
+            // Apply schema and write out to structured zone.
+            // TODO - violation handling
+            dataFrame.withColumn("parsedData", from_json(col("data"), schema))
+                .select(col("parsedData.*"))
+                .write()
+                .mode(SaveMode.Append)
+                .option(PATH, tablePath)
+                .format("delta")
+                .save();
+        });
 
         logger.info("Processed data frame with {} rows in {}ms",
             dataFrame.count(),

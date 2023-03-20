@@ -43,7 +43,7 @@ public class RawZone implements Zone {
 
         val uniqueLoadEventIdentifiers = uniqueTablesForLoad(dataFrame);
 
-        logger.info("Processing {} unique events", uniqueLoadEventIdentifiers.size());
+        logger.info("Processing {} unique load events", uniqueLoadEventIdentifiers.size());
 
         uniqueLoadEventIdentifiers.forEach(row -> {
             String rowSource = row.getAs(SOURCE);
@@ -51,7 +51,7 @@ public class RawZone implements Zone {
             String rowOperation = row.getAs(OPERATION);
 
             val tableName = SourceReferenceService.getTable(rowSource, rowTable);
-            val sourceName = SourceReferenceService.getTable(rowSource, rowTable);
+            val sourceName = SourceReferenceService.getSource(rowSource, rowTable);
             val tablePath = getTablePath(rawS3Path, sourceName, tableName, rowOperation);
 
             dataFrame
