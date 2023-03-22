@@ -1,0 +1,22 @@
+version: 2.1
+
+orbs:
+  reporting: ministryofjustice/hmpps-reporting@1.0.0
+
+workflows:
+  checkout-build-test:
+    jobs:
+      - reporting/gradle_ci:
+          app_src_directory: .
+          app_artifacts_directory: build/libs/
+          bucket: dpr-artifact-store-development
+          bucket_path: digital-prison-reporting-java-template
+          args: ""
+          cache_key: 'v1'
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              ignore: /.*/
+          context:
+            - digital-prison-reporting-dev

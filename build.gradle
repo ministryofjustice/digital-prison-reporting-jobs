@@ -6,8 +6,9 @@ plugins {
     id 'io.freefair.lombok' version '6.5.1'
 }
 
+version = "${version != 'unspecified' ? version : '0.0.1-SNAPSHOT'}"
+
 group 'uk.gov.justice'
-version '1.0-SNAPSHOT'
 
 java {
     targetCompatibility = "1.8"
