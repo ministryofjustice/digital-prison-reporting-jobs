@@ -1,7 +1,9 @@
 package uk.gov.justice.digital.zone;
 
 import lombok.val;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.slf4j.Logger;
@@ -13,8 +15,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.List;
 
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.from_json;
+import static org.apache.spark.sql.functions.*;
 
 @Singleton
 public class StructuredZone implements Zone {
@@ -59,15 +60,62 @@ public class StructuredZone implements Zone {
             // TODO - fix this (varargs?)
             val tablePath = getTablePath(structuredS3Path, sourceName, tableName, "");
 
-            // Apply schema and write out to structured zone.
-            // TODO - violation handling
-            dataFrame.withColumn("parsedData", from_json(col("data"), schema))
-                .select(col("parsedData.*"))
-                .write()
-                .mode(SaveMode.Append)
-                .option(PATH, tablePath)
-                .format("delta")
-                .save();
+            // TODO - add a config key for violations path so we can build the correct path here.
+            val validationFailedViolationPath = getTablePath(structuredS3Path, "violations", sourceName, tableName);
+            val missingSchemaViolationPath = getTablePath(structuredS3Path, "violations", rowSource, rowTable);
+
+            if (schema != null) {
+
+                logger.info("Saving data");
+
+                val parsedJsonDataFrame = dataFrame
+                    .withColumn("parsedData", from_json(col("data"), schema));
+
+                // Write valid records
+                parsedJsonDataFrame
+                    .select(col("parsedData"))
+                    .select(col("parsedData").isNotNull())
+                    .select(col("parsedData.*"))
+                    .write()
+                    .mode(SaveMode.Append)
+                    .option(PATH, tablePath)
+                    .format("delta")
+                    .save();
+
+//                // Write records without a primary key to violations
+//                parsedJsonDataFrame
+//                    .select(col("parsedData"))
+//                    .select(col("parsedData.*"))
+//                    .filter(col(primaryKey).isNull())
+//                    .withColumn("error", lit("Primary key is null"))
+//                    .write()
+//                    .mode(SaveMode.Append)
+//                    .option(PATH, violationsPath)
+//                    .format("delta")
+//                    .save();
+
+            }
+            else {
+                // Write to violation bucket
+                logger.error("No schema found for {}/{} - writing to violations", rowSource, rowTable);
+
+                val errorString = String.format(
+                    "Schema does not exist for %s/%s",
+                    rowSource,
+                    rowTable
+                );
+
+                dataFrame
+                    .select(col("data"), col("metadata"))
+                    .withColumn("error", lit(errorString))
+                    .write()
+                    .mode(SaveMode.Append)
+                    .option(PATH, missingSchemaViolationPath)
+                    .format("delta")
+                    .save();
+            }
+
+            logger.info("Processing completed.");
         });
 
         logger.info("Processed data frame with {} rows in {}ms",

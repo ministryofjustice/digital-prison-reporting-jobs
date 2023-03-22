@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import io.micronaut.context.annotation.Bean;
 import lombok.val;
 import org.apache.spark.sql.types.DataType;
 import uk.gov.justice.digital.service.model.SourceReference;
