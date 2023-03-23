@@ -1,11 +1,17 @@
 package uk.gov.justice.digital.zone;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.api.java.UDF2;
+import org.apache.spark.sql.expressions.UserDefinedFunction;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
@@ -14,6 +20,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.List;
+import java.util.Optional;
 
 import static org.apache.spark.sql.functions.*;
 
@@ -21,6 +28,9 @@ import static org.apache.spark.sql.functions.*;
 public class StructuredZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
+
+    // TODO - refactor this out into a separate validator class
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // TODO - this duplicates the constants in RawZone
     private static final String LOAD = "load";
@@ -53,7 +63,8 @@ public class StructuredZone implements Zone {
             String rowSource = table.getAs(SOURCE);
             String rowTable = table.getAs(TABLE);
 
-            val schema = SourceReferenceService.getSchema(rowSource, rowTable);
+            // TODO - review this - casting could throw
+            StructType schema = (StructType) SourceReferenceService.getSchema(rowSource, rowTable);
 
             val tableName = SourceReferenceService.getTable(rowSource, rowTable);
             val sourceName = SourceReferenceService.getSource(rowSource, rowTable);
@@ -64,36 +75,54 @@ public class StructuredZone implements Zone {
             val validationFailedViolationPath = getTablePath(structuredS3Path, "violations", sourceName, tableName);
             val missingSchemaViolationPath = getTablePath(structuredS3Path, "violations", rowSource, rowTable);
 
+            // Filter records on table name in metadata
+            // TODO - is this adequate or should we parse out the metadata fields into columns first?
+            val dataFrameForTable = dataFrame
+                .filter(col("metadata").contains(String.join(".", rowSource, rowTable)));
+
             if (schema != null) {
 
-                logger.info("Saving data");
+                logger.info("Validating data against schema: {}/{}", tableName, sourceName);
 
-                val parsedJsonDataFrame = dataFrame
-                    .withColumn("parsedData", from_json(col("data"), schema));
+                val udfName = "jsonValidatorFor" + tableName + sourceName;
+                val jsonValidator = dataFrameForTable
+                    .sparkSession()
+                    .udf()
+                    .register(udfName, createJsonValidator(schema));
+
+                val validatedData = dataFrameForTable
+                    .select(col("data"), col("metadata"))
+                    .withColumn("parsedData", from_json(col("data"), schema))
+                    .withColumn("valid", jsonValidator.apply(col("data"), to_json(col("parsedData"))));
 
                 // Write valid records
-                parsedJsonDataFrame
-                    .select(col("parsedData"))
-                    .select(col("parsedData").isNotNull())
-                    .select(col("parsedData.*"))
+                validatedData
+                    .select(col("parsedData"), col("valid"))
+                    .filter(col("valid").equalTo(true))
+                    .select("parsedData.*")
                     .write()
                     .mode(SaveMode.Append)
                     .option(PATH, tablePath)
                     .format("delta")
                     .save();
 
-//                // Write records without a primary key to violations
-//                parsedJsonDataFrame
-//                    .select(col("parsedData"))
-//                    .select(col("parsedData.*"))
-//                    .filter(col(primaryKey).isNull())
-//                    .withColumn("error", lit("Primary key is null"))
-//                    .write()
-//                    .mode(SaveMode.Append)
-//                    .option(PATH, violationsPath)
-//                    .format("delta")
-//                    .save();
+                val errorString = String.format(
+                    "Record does not match schema %s/%s",
+                    rowSource,
+                    rowTable
+                );
 
+                // Write invalid records where schema validation failed
+                validatedData
+                    .select(col("data"), col("metadata"), col("valid"))
+                    .filter(col("valid").equalTo(false))
+                    .withColumn("error", lit(errorString))
+                    .drop(col("valid"))
+                    .write()
+                    .mode(SaveMode.Append)
+                    .option(PATH, validationFailedViolationPath)
+                    .format("delta")
+                    .save();
             }
             else {
                 // Write to violation bucket
@@ -105,7 +134,7 @@ public class StructuredZone implements Zone {
                     rowTable
                 );
 
-                dataFrame
+                dataFrameForTable
                     .select(col("data"), col("metadata"))
                     .withColumn("error", lit(errorString))
                     .write()
@@ -131,6 +160,46 @@ public class StructuredZone implements Zone {
             .select(TABLE, SOURCE, OPERATION)
             .distinct()
             .collectAsList();
+    }
+
+    private static UserDefinedFunction createJsonValidator(StructType schema) {
+        return udf(
+            (UDF2<String, String, Boolean>) (String originalJson, String parsedJson) -> {
+                return validateJson(originalJson, parsedJson, schema);
+            }, DataTypes.BooleanType);
+    }
+
+    public static boolean validateJson(
+        String originalJson,
+        String parsedJson,
+        StructType schema
+    ) throws JsonProcessingException {
+
+        val originalData = objectMapper.readTree(originalJson);
+        val parsedData = objectMapper.readTree(parsedJson);
+
+        // Check that the original and parsed json trees match. If there are discrepancies then the initial parse must
+        // have encountered an invalid field and set it to null (e.g. got string when int expected - this will be set
+        // to null in the DataFrame.
+        if (!originalData.equals(parsedData)) return false;
+
+
+        // Verify that all notNull fields have a value set.
+        for (StructField structField : schema.fields()) {
+            // Skip fields that are declared nullable in the table schema.
+            if (structField.nullable()) continue;
+
+            val jsonField = Optional.ofNullable(originalData.get(structField.name()));
+
+            val jsonFieldIsNull = jsonField
+                .map(JsonNode::isNull)  // Field present in JSON but with no value
+                .orElse(true);         // If no field found then it's null by default.
+
+            // Verify that the current JSON field in the original data set is not null.
+            if (jsonFieldIsNull) return false;
+        }
+
+        return true;
     }
 
 }
