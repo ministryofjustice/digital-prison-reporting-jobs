@@ -12,21 +12,27 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
+import java.io.Serializable;
 import java.util.Optional;
 
 import static org.apache.spark.sql.functions.udf;
 
-public class JsonValidator {
+// TODO - docs
+public class JsonValidator implements Serializable {
+
+    private static final long serialVersionUID = 3626262733334508950L;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final UserDefinedFunction registeredFunction;
 
     public JsonValidator(StructType schema, SparkSession sparkSession, String schemaName, String tableName) {
-        val udfName = String.format("udfValidatorFor%s%s", schemaName, tableName);
         this.registeredFunction = sparkSession
             .udf()
-            .register(udfName, jsonValidatorForSchema(schema));
+            .register(
+                String.format("udfValidatorFor%s%s", schemaName, tableName),
+                jsonValidatorForSchema(schema)
+            );
     }
 
     public Column apply(Column rawData, Column parsedData) {
@@ -48,29 +54,28 @@ public class JsonValidator {
     ) throws JsonProcessingException {
 
         val originalData = objectMapper.readTree(originalJson);
-        val parsedData = objectMapper.readTree(parsedJson);
 
         // Check that the original and parsed json trees match. If there are discrepancies then the initial parse by
         // from_json must have encountered an invalid field and set it to null (e.g. got string when int expected - this
         // will be set to null in the DataFrame.
-        if (!originalData.equals(parsedData)) return false;
+        return originalData.equals(objectMapper.readTree(parsedJson)) &&
+            allNotNullFieldsHaveValues(schema, originalData);
+    }
 
-
-        // Verify that all notNull fields have a value set.
+    private boolean allNotNullFieldsHaveValues(StructType schema, JsonNode json) {
         for (StructField structField : schema.fields()) {
             // Skip fields that are declared nullable in the table schema.
             if (structField.nullable()) continue;
 
-            val jsonField = Optional.ofNullable(originalData.get(structField.name()));
+            val jsonField = Optional.ofNullable(json.get(structField.name()));
 
             val jsonFieldIsNull = jsonField
                 .map(JsonNode::isNull)  // Field present in JSON but with no value
-                .orElse(true);         // If no field found then it's null by default.
+                .orElse(true);          // If no field found then it's null by default.
 
             // Verify that the current JSON field in the original data set is not null.
             if (jsonFieldIsNull) return false;
         }
-
         return true;
     }
 }
