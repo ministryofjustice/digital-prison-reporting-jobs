@@ -84,7 +84,7 @@ public class StructuredZone implements Zone {
 
                 logger.info("Validating data against schema: {}/{}", sourceName, tableName);
 
-                val jsonValidator = new JsonValidator(
+                val jsonValidator = JsonValidator.createAndRegister(
                     schema,
                     dataFrameForTable.sparkSession(),
                     sourceName,
