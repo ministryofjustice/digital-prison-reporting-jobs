@@ -57,7 +57,6 @@ public class StructuredZone implements Zone {
         val startTime = System.currentTimeMillis();
 
         uniqueTablesForLoad(dataFrame).forEach((table) -> {
-            logger.info("Processing table: {}", table);
 
             // Locate schema
             String rowSource = table.getAs(SOURCE);
@@ -78,13 +77,19 @@ public class StructuredZone implements Zone {
             // Filter records on table name in metadata
             // TODO - is this adequate or should we parse out the metadata fields into columns first?
             val dataFrameForTable = dataFrame
-                .filter(col("metadata").contains(String.join(".", rowSource, rowTable)));
+                .filter(col("metadata").ilike("%" + rowSource + "." + rowTable + "%"));
+
+            logger.info("Processing {} records for {}/{}",
+                dataFrameForTable.count(),
+                rowSource,
+                rowTable
+            );
 
             if (schema != null) {
 
-                logger.info("Validating data against schema: {}/{}", tableName, sourceName);
+                logger.info("Validating data against schema: {}/{}", sourceName, tableName);
 
-                val udfName = "jsonValidatorFor" + tableName + sourceName;
+                val udfName = "jsonValidatorFor" + sourceName + tableName;
                 val jsonValidator = dataFrameForTable
                     .sparkSession()
                     .udf()
@@ -96,15 +101,22 @@ public class StructuredZone implements Zone {
                     .withColumn("valid", jsonValidator.apply(col("data"), to_json(col("parsedData"))));
 
                 // Write valid records
-                validatedData
+                val validRecords = validatedData
                     .select(col("parsedData"), col("valid"))
                     .filter(col("valid").equalTo(true))
-                    .select("parsedData.*")
-                    .write()
-                    .mode(SaveMode.Append)
-                    .option(PATH, tablePath)
-                    .format("delta")
-                    .save();
+                    .select("parsedData.*");
+
+                if (validRecords.count() > 0) {
+                    logger.info("Writing {} valid records", validRecords.count());
+
+                    validRecords
+                        .write()
+                        .mode(SaveMode.Append)
+                        .option(PATH, tablePath)
+                        .format("delta")
+                        .save();
+
+                }
 
                 val errorString = String.format(
                     "Record does not match schema %s/%s",
@@ -113,20 +125,29 @@ public class StructuredZone implements Zone {
                 );
 
                 // Write invalid records where schema validation failed
-                validatedData
+                val invalidRecords = validatedData
                     .select(col("data"), col("metadata"), col("valid"))
                     .filter(col("valid").equalTo(false))
                     .withColumn("error", lit(errorString))
-                    .drop(col("valid"))
-                    .write()
-                    .mode(SaveMode.Append)
-                    .option(PATH, validationFailedViolationPath)
-                    .format("delta")
-                    .save();
+                    .drop(col("valid"));
+
+                if (invalidRecords.count() > 0) {
+
+                    logger.error("Structured Zone Violation - {} records failed schema validation",
+                        invalidRecords.count()
+                    );
+
+                    invalidRecords
+                        .write()
+                        .mode(SaveMode.Append)
+                        .option(PATH, validationFailedViolationPath)
+                        .format("delta")
+                        .save();
+                }
             }
             else {
                 // Write to violation bucket
-                logger.error("No schema found for {}/{} - writing to violations", rowSource, rowTable);
+                logger.error("Structured Zone Violation - No schema found for {}/{}", rowSource, rowTable);
 
                 val errorString = String.format(
                     "Schema does not exist for %s/%s",
