@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.job.udf.JsonValidator;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.model.SourceReference;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -41,7 +42,6 @@ public class StructuredZone implements Zone {
             ));
     }
 
-    // TODO - filter on load events too
     @Override
     public void process(Dataset<Row> dataFrame) {
 
@@ -50,46 +50,39 @@ public class StructuredZone implements Zone {
         val startTime = System.currentTimeMillis();
 
         uniqueTablesForLoad(dataFrame).forEach((table) -> {
-            // Locate schema
-            String rowSource = table.getAs(SOURCE);
-            String rowTable = table.getAs(TABLE);
+            String sourceName = table.getAs(SOURCE);
+            String tableName = table.getAs(TABLE);
 
-            // TODO - review this - casting could throw
-            StructType schema = (StructType) SourceReferenceService.getSchema(rowSource, rowTable);
-
-            val tableName = SourceReferenceService.getTable(rowSource, rowTable);
-            val sourceName = SourceReferenceService.getSource(rowSource, rowTable);
-            // TODO - fix this (varargs?)
-            val tablePath = getTablePath(structuredS3Path, sourceName, tableName, "");
-
-            // TODO - add a config key for violations path so we can build the correct path here.
-            val validationFailedViolationPath = getTablePath(structuredS3Path, "violations", sourceName, tableName);
-            val missingSchemaViolationPath = getTablePath(structuredS3Path, "violations", rowSource, rowTable);
+            val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
 
             // Filter records on table name in metadata
-            // TODO - is this adequate or should we parse out the metadata fields into columns first?
             // TODO - filter on load too
-            val dataFrameForTable = dataFrame
-                .filter(col("metadata").ilike("%" + rowSource + "." + rowTable + "%"));
+            val dataFrameForTable = dataFrame.filter(col("metadata").ilike("%" + sourceName + "." + tableName + "%"));
 
-            logger.info("Processing {} records for {}/{}",
-                dataFrameForTable.count(),
-                rowSource,
-                rowTable
-            );
+            logger.info("Processing {} records for {}/{}", dataFrameForTable.count(), sourceName, tableName);
 
-            if (schema == null) handleNoSchemaFound(dataFrameForTable, rowSource, rowTable, missingSchemaViolationPath);
-            else {
-                val validatedDataFrame = validateJsonData(dataFrameForTable, schema, sourceName, tableName);
-                handleValidRecords(validatedDataFrame, tablePath);
-                handleInValidRecords(validatedDataFrame, sourceName, tableName, validationFailedViolationPath);
-            }
+            if (sourceReference.isPresent()) handleSchemaFound(dataFrameForTable, sourceReference.get());
+            else handleNoSchemaFound(dataFrameForTable, sourceName, tableName);
         });
 
         logger.info("Processed data frame with {} rows in {}ms",
             dataFrame.count(),
             System.currentTimeMillis() - startTime
         );
+    }
+
+    private void handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
+        // TODO - fix this (varargs?)
+        val tablePath = getTablePath(structuredS3Path, sourceReference.getSource(), sourceReference.getTable(), "");
+        val validationFailedViolationPath = getTablePath(
+            structuredS3Path,
+            "violations",
+            sourceReference.getSource(),
+            sourceReference.getTable()
+        );
+        val validatedDataFrame = validateJsonData(dataFrame, sourceReference.getSchema(), sourceReference.getSource(), sourceReference.getTable());
+        handleValidRecords(validatedDataFrame, tablePath);
+        handleInValidRecords(validatedDataFrame, sourceReference.getSource(), sourceReference.getTable(), validationFailedViolationPath);
     }
 
     private Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {
@@ -150,7 +143,7 @@ public class StructuredZone implements Zone {
         }
     }
 
-    private void handleNoSchemaFound(Dataset<Row> dataFrame, String source, String table, String destinationPath) {
+    private void handleNoSchemaFound(Dataset<Row> dataFrame, String source, String table) {
         logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
             source,
             table,
@@ -162,7 +155,7 @@ public class StructuredZone implements Zone {
             .withColumn("error", lit(String.format("Schema does not exist for %s/%s", source, table)))
             .write()
             .mode(SaveMode.Append)
-            .option(PATH, destinationPath)
+            .option(PATH, getTablePath(structuredS3Path, "violations", source, table))
             .format("delta")
             .save();
     }

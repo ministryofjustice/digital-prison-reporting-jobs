@@ -2,6 +2,7 @@ package uk.gov.justice.digital.service;
 
 import lombok.val;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.service.model.SourceReference;
 
 import java.io.InputStream;
@@ -49,10 +50,14 @@ public class SourceReferenceService {
         return (ref == null ? null : ref.getSchema());
     }
 
-    private static DataType getSchemaFromResource(final String resource) {
-        return Optional.ofNullable(System.class.getResourceAsStream(resource))
+    public static Optional<SourceReference> getSourceReference(String source, String table) {
+        return Optional.ofNullable(sources.get(generateKey(source, table)));
+    }
+
+    private static StructType getSchemaFromResource(final String resource) {
+        return (StructType) Optional.ofNullable(System.class.getResourceAsStream(resource))
             .map(SourceReferenceService::readInputStream)
-            .map(DataType::fromJson)
+            .map(StructType::fromJson)
             .orElseThrow(() -> new IllegalStateException("Failed to read resource: " + resource));
     }
 
@@ -62,8 +67,8 @@ public class SourceReferenceService {
             .next();
     }
 
-    private static String generateKey(String table, String source) {
-        return String.join(".", table, source).toLowerCase();
+    private static String generateKey(String source, String table) {
+        return String.join(".", source, table).toLowerCase();
     }
 
     public Set<SourceReference> getReferences() {
