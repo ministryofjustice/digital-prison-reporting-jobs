@@ -1,26 +1,20 @@
 package uk.gov.justice.digital.zone;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
-import org.apache.spark.sql.api.java.UDF2;
-import org.apache.spark.sql.expressions.UserDefinedFunction;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.job.udf.JsonValidator;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.List;
-import java.util.Optional;
 
 import static org.apache.spark.sql.functions.*;
 
@@ -49,6 +43,7 @@ public class StructuredZone implements Zone {
             ));
     }
 
+    // TODO - filter on load events too
     @Override
     public void process(Dataset<Row> dataFrame) {
 
@@ -89,16 +84,18 @@ public class StructuredZone implements Zone {
 
                 logger.info("Validating data against schema: {}/{}", sourceName, tableName);
 
-                val udfName = "jsonValidatorFor" + sourceName + tableName;
-                val jsonValidator = dataFrameForTable
-                    .sparkSession()
-                    .udf()
-                    .register(udfName, createJsonValidator(schema));
+                val jsonValidator = new JsonValidator(
+                    schema,
+                    dataFrameForTable.sparkSession(),
+                    sourceName,
+                    tableName
+                );
 
                 val validatedData = dataFrameForTable
                     .select(col("data"), col("metadata"))
                     .withColumn("parsedData", from_json(col("data"), schema))
-                    .withColumn("valid", jsonValidator.apply(col("data"), to_json(col("parsedData"))));
+                    // TODO - provide an apply method that delegates to the internal method
+                    .withColumn("valid", jsonValidator.getRegisteredFunction().apply(col("data"), to_json(col("parsedData"))));
 
                 // Write valid records
                 val validRecords = validatedData
@@ -181,46 +178,6 @@ public class StructuredZone implements Zone {
             .select(TABLE, SOURCE, OPERATION)
             .distinct()
             .collectAsList();
-    }
-
-    private static UserDefinedFunction createJsonValidator(StructType schema) {
-        return udf(
-            (UDF2<String, String, Boolean>) (String originalJson, String parsedJson) -> {
-                return validateJson(originalJson, parsedJson, schema);
-            }, DataTypes.BooleanType);
-    }
-
-    public static boolean validateJson(
-        String originalJson,
-        String parsedJson,
-        StructType schema
-    ) throws JsonProcessingException {
-
-        val originalData = objectMapper.readTree(originalJson);
-        val parsedData = objectMapper.readTree(parsedJson);
-
-        // Check that the original and parsed json trees match. If there are discrepancies then the initial parse must
-        // have encountered an invalid field and set it to null (e.g. got string when int expected - this will be set
-        // to null in the DataFrame.
-        if (!originalData.equals(parsedData)) return false;
-
-
-        // Verify that all notNull fields have a value set.
-        for (StructField structField : schema.fields()) {
-            // Skip fields that are declared nullable in the table schema.
-            if (structField.nullable()) continue;
-
-            val jsonField = Optional.ofNullable(originalData.get(structField.name()));
-
-            val jsonFieldIsNull = jsonField
-                .map(JsonNode::isNull)  // Field present in JSON but with no value
-                .orElse(true);         // If no field found then it's null by default.
-
-            // Verify that the current JSON field in the original data set is not null.
-            if (jsonFieldIsNull) return false;
-        }
-
-        return true;
     }
 
 }

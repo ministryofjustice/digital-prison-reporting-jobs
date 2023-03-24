@@ -50,6 +50,7 @@ public class RawZone implements Zone {
             String rowTable = row.getAs(TABLE);
             String rowOperation = row.getAs(OPERATION);
 
+            // TODO - handle misshing schema by writing to source location instead.
             val tableName = SourceReferenceService.getTable(rowSource, rowTable);
             val sourceName = SourceReferenceService.getSource(rowSource, rowTable);
             val tablePath = getTablePath(rawS3Path, sourceName, tableName, rowOperation);
