@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.zone;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -23,10 +22,8 @@ public class StructuredZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
 
-    // TODO - refactor this out into a separate validator class
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
     // TODO - this duplicates the constants in RawZone
+    // TODO - ensure we only process load events for now
     private static final String LOAD = "load";
     private static final String SOURCE = "source";
     private static final String TABLE = "table";
@@ -37,9 +34,10 @@ public class StructuredZone implements Zone {
 
     @Inject
     public StructuredZone(JobParameters jobParameters) {
+        // TODO - this needs to be the path to the root location where structured data and violations will be written
         this.structuredS3Path = jobParameters.getStructuredS3Path()
             .orElseThrow(() -> new IllegalStateException(
-                "structured s3 path now set - unable to create StructuredZone instance"
+                "structured s3 path not set - unable to create StructuredZone instance"
             ));
     }
 
@@ -47,12 +45,11 @@ public class StructuredZone implements Zone {
     @Override
     public void process(Dataset<Row> dataFrame) {
 
-        logger.info("Processing data frame with " + dataFrame.count() + " rows");
+        logger.info("Processing batch with " + dataFrame.count() + " records");
 
         val startTime = System.currentTimeMillis();
 
         uniqueTablesForLoad(dataFrame).forEach((table) -> {
-
             // Locate schema
             String rowSource = table.getAs(SOURCE);
             String rowTable = table.getAs(TABLE);
@@ -71,6 +68,7 @@ public class StructuredZone implements Zone {
 
             // Filter records on table name in metadata
             // TODO - is this adequate or should we parse out the metadata fields into columns first?
+            // TODO - filter on load too
             val dataFrameForTable = dataFrame
                 .filter(col("metadata").ilike("%" + rowSource + "." + rowTable + "%"));
 
@@ -80,89 +78,12 @@ public class StructuredZone implements Zone {
                 rowTable
             );
 
-            if (schema != null) {
-
-                logger.info("Validating data against schema: {}/{}", sourceName, tableName);
-
-                val jsonValidator = JsonValidator.createAndRegister(
-                    schema,
-                    dataFrameForTable.sparkSession(),
-                    sourceName,
-                    tableName
-                );
-
-                val validatedData = dataFrameForTable
-                    .select(col("data"), col("metadata"))
-                    .withColumn("parsedData", from_json(col("data"), schema))
-                    // TODO - provide an apply method that delegates to the internal method
-                    .withColumn("valid", jsonValidator.apply(col("data"), to_json(col("parsedData"))));
-
-                // Write valid records
-                val validRecords = validatedData
-                    .select(col("parsedData"), col("valid"))
-                    .filter(col("valid").equalTo(true))
-                    .select("parsedData.*");
-
-                if (validRecords.count() > 0) {
-                    logger.info("Writing {} valid records", validRecords.count());
-
-                    validRecords
-                        .write()
-                        .mode(SaveMode.Append)
-                        .option(PATH, tablePath)
-                        .format("delta")
-                        .save();
-
-                }
-
-                val errorString = String.format(
-                    "Record does not match schema %s/%s",
-                    rowSource,
-                    rowTable
-                );
-
-                // Write invalid records where schema validation failed
-                val invalidRecords = validatedData
-                    .select(col("data"), col("metadata"), col("valid"))
-                    .filter(col("valid").equalTo(false))
-                    .withColumn("error", lit(errorString))
-                    .drop(col("valid"));
-
-                if (invalidRecords.count() > 0) {
-
-                    logger.error("Structured Zone Violation - {} records failed schema validation",
-                        invalidRecords.count()
-                    );
-
-                    invalidRecords
-                        .write()
-                        .mode(SaveMode.Append)
-                        .option(PATH, validationFailedViolationPath)
-                        .format("delta")
-                        .save();
-                }
-            }
+            if (schema == null) handleNoSchemaFound(dataFrameForTable, rowSource, rowTable, missingSchemaViolationPath);
             else {
-                // Write to violation bucket
-                logger.error("Structured Zone Violation - No schema found for {}/{}", rowSource, rowTable);
-
-                val errorString = String.format(
-                    "Schema does not exist for %s/%s",
-                    rowSource,
-                    rowTable
-                );
-
-                dataFrameForTable
-                    .select(col("data"), col("metadata"))
-                    .withColumn("error", lit(errorString))
-                    .write()
-                    .mode(SaveMode.Append)
-                    .option(PATH, missingSchemaViolationPath)
-                    .format("delta")
-                    .save();
+                val validatedDataFrame = validateJsonData(dataFrameForTable, schema, sourceName, tableName);
+                handleValidRecords(validatedDataFrame, tablePath);
+                handleInValidRecords(validatedDataFrame, sourceName, tableName, validationFailedViolationPath);
             }
-
-            logger.info("Processing completed.");
         });
 
         logger.info("Processed data frame with {} rows in {}ms",
@@ -171,7 +92,83 @@ public class StructuredZone implements Zone {
         );
     }
 
+    private Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {
+        logger.info("Validating data against schema: {}/{}", source, table);
+
+        val jsonValidator = JsonValidator.createAndRegister(schema, dataFrame.sparkSession(), source, table);
+
+        return dataFrame
+            .select(col("data"), col("metadata"))
+            .withColumn("parsedData", from_json(col("data"), schema))
+            .withColumn("valid", jsonValidator.apply(col("data"), to_json(col("parsedData"))));
+    }
+
+    private void handleValidRecords(Dataset<Row> dataFrame, String destinationPath) {
+        val validRecords = dataFrame
+            .select(col("parsedData"), col("valid"))
+            .filter(col("valid").equalTo(true))
+            .select("parsedData.*");
+
+        if (validRecords.count() > 0) {
+            logger.info("Writing {} valid records", validRecords.count());
+
+            validRecords
+                .write()
+                .mode(SaveMode.Append)
+                .option(PATH, destinationPath)
+                .format("delta")
+                .save();
+        }
+    }
+
+    private void handleInValidRecords(Dataset<Row> dataFrame, String source, String table, String destinationPath) {
+        val errorString = String.format(
+            "Record does not match schema %s/%s",
+            source,
+            table
+        );
+
+        // Write invalid records where schema validation failed
+        val invalidRecords = dataFrame
+            .select(col("data"), col("metadata"), col("valid"))
+            .filter(col("valid").equalTo(false))
+            .withColumn("error", lit(errorString))
+            .drop(col("valid"));
+
+        if (invalidRecords.count() > 0) {
+
+            logger.error("Structured Zone Violation - {} records failed schema validation",
+                invalidRecords.count()
+            );
+
+            invalidRecords
+                .write()
+                .mode(SaveMode.Append)
+                .option(PATH, destinationPath)
+                .format("delta")
+                .save();
+        }
+    }
+
+    private void handleNoSchemaFound(Dataset<Row> dataFrame, String source, String table, String destinationPath) {
+        logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
+            source,
+            table,
+            dataFrame.count()
+        );
+
+        dataFrame
+            .select(col("data"), col("metadata"))
+            .withColumn("error", lit(String.format("Schema does not exist for %s/%s", source, table)))
+            .write()
+            .mode(SaveMode.Append)
+            .option(PATH, destinationPath)
+            .format("delta")
+            .save();
+    }
+
     // TODO - duplicated from RawZone
+    // TODO - better names
     private List<Row> uniqueTablesForLoad(Dataset<Row> dataFrame) {
         return dataFrame
             .filter(col(OPERATION).isin(LOAD))
