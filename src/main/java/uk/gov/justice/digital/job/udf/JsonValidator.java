@@ -3,8 +3,8 @@ package uk.gov.justice.digital.job.udf;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micronaut.context.annotation.Bean;
 import lombok.val;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
@@ -29,8 +29,8 @@ public class JsonValidator {
             .register(udfName, jsonValidatorForSchema(schema));
     }
 
-    public UserDefinedFunction getRegisteredFunction() {
-        return registeredFunction;
+    public Column apply(Column rawData, Column parsedData) {
+        return registeredFunction.apply(rawData, parsedData);
     }
 
     private UserDefinedFunction jsonValidatorForSchema(StructType schema) {

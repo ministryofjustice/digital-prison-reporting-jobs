@@ -95,7 +95,7 @@ public class StructuredZone implements Zone {
                     .select(col("data"), col("metadata"))
                     .withColumn("parsedData", from_json(col("data"), schema))
                     // TODO - provide an apply method that delegates to the internal method
-                    .withColumn("valid", jsonValidator.getRegisteredFunction().apply(col("data"), to_json(col("parsedData"))));
+                    .withColumn("valid", jsonValidator.apply(col("data"), to_json(col("parsedData"))));
 
                 // Write valid records
                 val validRecords = validatedData
