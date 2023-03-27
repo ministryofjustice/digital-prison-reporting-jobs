@@ -31,7 +31,7 @@ public class StructuredZone implements Zone {
             .orElseThrow(() -> new IllegalStateException(
                 "structured s3 path not set - unable to create StructuredZone instance"
             ));
-        this.violationsPath = jobParameters.getStructuredS3Path()
+        this.violationsPath = jobParameters.getViolationsS3Path()
             .orElseThrow(() -> new IllegalStateException(
                 "violations s3 path not set - unable to create StructuredZone instance"
             ));
