@@ -83,7 +83,7 @@ public class DataHubJob implements Runnable {
 
         return spark
             .createDataFrame(rowRDD, eventsSchema)
-            .withColumn(JSON_DATA, col(DATA).cast("string"))
+            .withColumn(JSON_DATA, col(DATA))
             .withColumn(DATA, get_json_object(col(JSON_DATA), "$.data"))
             .withColumn(METADATA, get_json_object(col(JSON_DATA), "$.metadata"))
             .withColumn(SOURCE, lower(get_json_object(col(METADATA), "$.schema-name")))

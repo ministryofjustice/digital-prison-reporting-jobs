@@ -70,13 +70,11 @@ public class StructuredZone implements Zone {
     }
 
     private void handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
-        // TODO - fix this (varargs?)
-        val tablePath = getTablePath(structuredS3Path, sourceReference.getSource(), sourceReference.getTable(), "");
+        val tablePath = getTablePath(structuredS3Path, sourceReference);
         val validationFailedViolationPath = getTablePath(
             structuredS3Path,
-            "violations",
-            sourceReference.getSource(),
-            sourceReference.getTable()
+            sourceReference,
+            "violations"
         );
         val validatedDataFrame = validateJsonData(dataFrame, sourceReference.getSchema(), sourceReference.getSource(), sourceReference.getTable());
         handleValidRecords(validatedDataFrame, tablePath);

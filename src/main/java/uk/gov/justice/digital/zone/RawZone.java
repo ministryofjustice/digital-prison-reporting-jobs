@@ -50,7 +50,7 @@ public class RawZone implements Zone {
             String rowOperation = row.getAs(OPERATION);
 
             val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
-                .map(r -> getTablePath(rawS3Path, r.getSource(), r.getTable(), rowOperation))
+                .map(r -> getTablePath(rawS3Path, r, rowOperation))
                 // Revert to source and table from row where no match exists in the schema reference service.
                 .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
