@@ -23,17 +23,18 @@ public class StructuredZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
 
-    // TODO - this duplicates the constants in RawZone
-    private static final String PATH = "path";
-
-    private final String structuredS3Path;
+    private final String structuredPath;
+    private final String violationsPath;
 
     @Inject
     public StructuredZone(JobParameters jobParameters) {
-        // TODO - this needs to be the path to the root location where structured data and violations will be written
-        this.structuredS3Path = jobParameters.getStructuredS3Path()
+        this.structuredPath = jobParameters.getStructuredS3Path()
             .orElseThrow(() -> new IllegalStateException(
                 "structured s3 path not set - unable to create StructuredZone instance"
+            ));
+        this.violationsPath = jobParameters.getStructuredS3Path()
+            .orElseThrow(() -> new IllegalStateException(
+                "violations s3 path not set - unable to create StructuredZone instance"
             ));
     }
 
@@ -66,11 +67,10 @@ public class StructuredZone implements Zone {
     }
 
     private void handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
-        val tablePath = getTablePath(structuredS3Path, sourceReference);
+        val tablePath = getTablePath(structuredPath, sourceReference);
         val validationFailedViolationPath = getTablePath(
-            structuredS3Path,
-            sourceReference,
-            "violations"
+            violationsPath,
+            sourceReference
         );
         val validatedDataFrame = validateJsonData(dataFrame, sourceReference.getSchema(), sourceReference.getSource(), sourceReference.getTable());
         handleValidRecords(validatedDataFrame, tablePath);
@@ -88,6 +88,7 @@ public class StructuredZone implements Zone {
             .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA))));
     }
 
+    // TODO - factor out the datawriter 'sink'?
     private void handleValidRecords(Dataset<Row> dataFrame, String destinationPath) {
         val validRecords = dataFrame
             .select(col(PARSED_DATA), col(VALID))
@@ -100,7 +101,7 @@ public class StructuredZone implements Zone {
             validRecords
                 .write()
                 .mode(SaveMode.Append)
-                .option(PATH, destinationPath)
+                .option("path", destinationPath)
                 .format("delta")
                 .save();
         }
@@ -129,7 +130,7 @@ public class StructuredZone implements Zone {
             invalidRecords
                 .write()
                 .mode(SaveMode.Append)
-                .option(PATH, destinationPath)
+                .option("path", destinationPath)
                 .format("delta")
                 .save();
         }
@@ -147,7 +148,7 @@ public class StructuredZone implements Zone {
             .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)))
             .write()
             .mode(SaveMode.Append)
-            .option(PATH, getTablePath(structuredS3Path, "violations", source, table))
+            .option("path", getTablePath(violationsPath, source, table))
             .format("delta")
             .save();
     }

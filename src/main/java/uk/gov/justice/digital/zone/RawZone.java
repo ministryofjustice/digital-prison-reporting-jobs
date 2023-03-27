@@ -20,9 +20,6 @@ public class RawZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
-    // TODO - move these into a shared location
-    private static final String PATH = "path";
-
     private final String rawS3Path;
 
     @Inject
@@ -48,12 +45,13 @@ public class RawZone implements Zone {
                 // Revert to source and table from row where no match exists in the schema reference service.
                 .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
+            // TODO - factor this out
             dataFrame
                 .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
                 .drop(SOURCE, TABLE, OPERATION)
                 .write()
                 .mode(SaveMode.Append)
-                .option(PATH, tablePath)
+                .option("source", tablePath)
                 .format("delta")
                 .save();
         });

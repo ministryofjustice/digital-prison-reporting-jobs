@@ -55,6 +55,10 @@ public class JobParameters {
         return getOptionalProperty("structured.s3.path");
     }
 
+    public Optional<String> getViolationsS3Path() {
+        return getOptionalProperty("violations.s3.path");
+    }
+
     private String getMandatoryProperty(String jobParameter) {
         return Optional
             .ofNullable(config.get(jobParameter))

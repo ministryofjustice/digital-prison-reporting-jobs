@@ -20,6 +20,7 @@ class JobParametersTest {
     private static final String KINESIS_READER_BATCH_DURATION_SECONDS_KEY = "kinesis.reader.batchDurationSeconds";
     private static final String RAW_S3_PATH_KEY = "raw.s3.path";
     private static final String STRUCTURED_S3_PATH_KEY = "structured.s3.path";
+    private static final String VIOLATIONS_S3_PATH_KEY = "violations.s3.path";
 
     private static final String AWS_REGION = "test-region";
     private static final String AWS_KINESIS_ENDPOINT_URL = "https://kinesis.example.com";
@@ -27,6 +28,7 @@ class JobParametersTest {
     private static final String KINESIS_READER_BATCH_DURATION_SECONDS = "5";
     private static final String RAW_S3_PATH = "s3://rawzone/raw";
     private static final String STRUCTURED_S3_PATH = "s3://somepath/structured";
+    private static final String VIOLATIONS_S3_PATH = "s3://somepath/violations";
 
     private static final Map<String, String> testConfig;
 
@@ -38,6 +40,7 @@ class JobParametersTest {
         testConfig.put(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, KINESIS_READER_BATCH_DURATION_SECONDS);
         testConfig.put(RAW_S3_PATH_KEY, RAW_S3_PATH);
         testConfig.put(STRUCTURED_S3_PATH_KEY, STRUCTURED_S3_PATH);
+        testConfig.put(VIOLATIONS_S3_PATH_KEY, VIOLATIONS_S3_PATH);
     }
 
     private static final JobParameters validJobParameters = new JobParameters(testConfig);
@@ -118,5 +121,15 @@ class JobParametersTest {
     @Test
     public void shouldReturnEmptyOptionalWhenStructuredPathNotSet() {
         assertEquals(Optional.empty(), emptyJobParameters.getStructuredS3Path());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithViolationsPathWhenSet() {
+        assertEquals(Optional.of(VIOLATIONS_S3_PATH), validJobParameters.getViolationsS3Path());
+    }
+
+    @Test
+    public void shouldReturnEmptyOptionalWhenViolationsPathNotSet() {
+        assertEquals(Optional.empty(), emptyJobParameters.getViolationsS3Path());
     }
 }
