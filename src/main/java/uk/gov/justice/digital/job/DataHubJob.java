@@ -2,6 +2,7 @@ package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.*;
@@ -19,6 +20,7 @@ import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 
 import static org.apache.spark.sql.functions.*;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
@@ -77,17 +79,17 @@ public class DataHubJob implements Runnable {
     public Dataset<Row> fromRawDMS_3_4_6(JavaRDD<Row> rowRDD, SparkSession spark) {
 
         val eventsSchema = new StructType()
-            .add("data", DataTypes.StringType);
+            .add(DATA, DataTypes.StringType);
 
         return spark
             .createDataFrame(rowRDD, eventsSchema)
-            .withColumn("jsonData", col("data").cast("string"))
-            .withColumn("data", get_json_object(col("jsonData"), "$.data"))
-            .withColumn("metadata", get_json_object(col("jsonData"), "$.metadata"))
-            .withColumn("source", lower(get_json_object(col("metadata"), "$.schema-name")))
-            .withColumn("table", lower(get_json_object(col("metadata"), "$.table-name")))
-            .withColumn("operation", lower(get_json_object(col("metadata"), "$.operation")))
-            .drop("jsonData");
+            .withColumn(JSON_DATA, col(DATA).cast("string"))
+            .withColumn(DATA, get_json_object(col(JSON_DATA), "$.data"))
+            .withColumn(METADATA, get_json_object(col(JSON_DATA), "$.metadata"))
+            .withColumn(SOURCE, lower(get_json_object(col(METADATA), "$.schema-name")))
+            .withColumn(TABLE, lower(get_json_object(col(METADATA), "$.table-name")))
+            .withColumn(OPERATION, lower(get_json_object(col(METADATA), "$.operation")))
+            .drop(JSON_DATA);
     }
 
     private static SparkSession getConfiguredSparkSession(SparkConf sparkConf) {

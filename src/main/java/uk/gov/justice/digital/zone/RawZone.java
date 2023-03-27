@@ -14,16 +14,15 @@ import javax.inject.Singleton;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
 public class RawZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
+    // TODO - move these into a shared location
     private static final String LOAD = "load";
-    private static final String SOURCE = "source";
-    private static final String TABLE = "table";
-    private static final String OPERATION = "operation";
     private static final String PATH = "path";
 
     private final String rawS3Path;
@@ -50,7 +49,7 @@ public class RawZone implements Zone {
             String rowTable = row.getAs(TABLE);
             String rowOperation = row.getAs(OPERATION);
 
-            // TODO - handle misshing schema by writing to source location instead.
+            // TODO - handle missing schema by writing to source location instead.
             val tableName = SourceReferenceService.getTable(rowSource, rowTable);
             val sourceName = SourceReferenceService.getSource(rowSource, rowTable);
             val tablePath = getTablePath(rawS3Path, sourceName, tableName, rowOperation);

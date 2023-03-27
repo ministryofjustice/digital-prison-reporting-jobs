@@ -17,6 +17,7 @@ import javax.inject.Singleton;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.*;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
 public class StructuredZone implements Zone {
@@ -25,12 +26,9 @@ public class StructuredZone implements Zone {
 
     // TODO - this duplicates the constants in RawZone
     // TODO - ensure we only process load events for now
-    private static final String LOAD = "load";
-    private static final String SOURCE = "source";
-    private static final String TABLE = "table";
-    private static final String OPERATION = "operation";
     private static final String PATH = "path";
-
+    // TODO - enum?
+    public static final String LOAD = "load";
     private final String structuredS3Path;
 
     @Inject
@@ -91,16 +89,16 @@ public class StructuredZone implements Zone {
         val jsonValidator = JsonValidator.createAndRegister(schema, dataFrame.sparkSession(), source, table);
 
         return dataFrame
-            .select(col("data"), col("metadata"))
-            .withColumn("parsedData", from_json(col("data"), schema))
-            .withColumn("valid", jsonValidator.apply(col("data"), to_json(col("parsedData"))));
+            .select(col(DATA), col(METADATA))
+            .withColumn(PARSED_DATA, from_json(col(DATA), schema))
+            .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA))));
     }
 
     private void handleValidRecords(Dataset<Row> dataFrame, String destinationPath) {
         val validRecords = dataFrame
-            .select(col("parsedData"), col("valid"))
-            .filter(col("valid").equalTo(true))
-            .select("parsedData.*");
+            .select(col(PARSED_DATA), col(VALID))
+            .filter(col(VALID).equalTo(true))
+            .select(PARSED_DATA + ".*");
 
         if (validRecords.count() > 0) {
             logger.info("Writing {} valid records", validRecords.count());
@@ -123,10 +121,10 @@ public class StructuredZone implements Zone {
 
         // Write invalid records where schema validation failed
         val invalidRecords = dataFrame
-            .select(col("data"), col("metadata"), col("valid"))
-            .filter(col("valid").equalTo(false))
-            .withColumn("error", lit(errorString))
-            .drop(col("valid"));
+            .select(col(DATA), col(METADATA), col(VALID))
+            .filter(col(VALID).equalTo(false))
+            .withColumn(ERROR, lit(errorString))
+            .drop(col(VALID));
 
         if (invalidRecords.count() > 0) {
 
@@ -151,8 +149,8 @@ public class StructuredZone implements Zone {
         );
 
         dataFrame
-            .select(col("data"), col("metadata"))
-            .withColumn("error", lit(String.format("Schema does not exist for %s/%s", source, table)))
+            .select(col(DATA), col(METADATA))
+            .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)))
             .write()
             .mode(SaveMode.Append)
             .option(PATH, getTablePath(structuredS3Path, "violations", source, table))
