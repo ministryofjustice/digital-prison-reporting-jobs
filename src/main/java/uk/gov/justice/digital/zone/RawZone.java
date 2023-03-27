@@ -3,7 +3,6 @@ package uk.gov.justice.digital.zone;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
@@ -45,15 +44,11 @@ public class RawZone implements Zone {
                 // Revert to source and table from row where no match exists in the schema reference service.
                 .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
-            // TODO - factor this out
-            dataFrame
+            val rowsForTable = dataFrame
                 .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
-                .drop(SOURCE, TABLE, OPERATION)
-                .write()
-                .mode(SaveMode.Append)
-                .option("source", tablePath)
-                .format("delta")
-                .save();
+                .drop(SOURCE, TABLE, OPERATION);
+
+            appendToDeltaLakeTable(rowsForTable, tablePath);
         });
 
         logger.info("Processed data frame with {} rows in {}ms",

@@ -3,7 +3,6 @@ package uk.gov.justice.digital.zone;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +87,6 @@ public class StructuredZone implements Zone {
             .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA))));
     }
 
-    // TODO - factor out the datawriter 'sink'?
     private void handleValidRecords(Dataset<Row> dataFrame, String destinationPath) {
         val validRecords = dataFrame
             .select(col(PARSED_DATA), col(VALID))
@@ -98,21 +96,12 @@ public class StructuredZone implements Zone {
         if (validRecords.count() > 0) {
             logger.info("Writing {} valid records", validRecords.count());
 
-            validRecords
-                .write()
-                .mode(SaveMode.Append)
-                .option("path", destinationPath)
-                .format("delta")
-                .save();
+            appendToDeltaLakeTable(validRecords, destinationPath);
         }
     }
 
     private void handleInValidRecords(Dataset<Row> dataFrame, String source, String table, String destinationPath) {
-        val errorString = String.format(
-            "Record does not match schema %s/%s",
-            source,
-            table
-        );
+        val errorString = String.format("Record does not match schema %s/%s", source, table);
 
         // Write invalid records where schema validation failed
         val invalidRecords = dataFrame
@@ -122,17 +111,8 @@ public class StructuredZone implements Zone {
             .drop(col(VALID));
 
         if (invalidRecords.count() > 0) {
-
-            logger.error("Structured Zone Violation - {} records failed schema validation",
-                invalidRecords.count()
-            );
-
-            invalidRecords
-                .write()
-                .mode(SaveMode.Append)
-                .option("path", destinationPath)
-                .format("delta")
-                .save();
+            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecords.count());
+            appendToDeltaLakeTable(invalidRecords, destinationPath);
         }
     }
 
@@ -143,14 +123,11 @@ public class StructuredZone implements Zone {
             dataFrame.count()
         );
 
-        dataFrame
+        val missingSchemaRecords = dataFrame
             .select(col(DATA), col(METADATA))
-            .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)))
-            .write()
-            .mode(SaveMode.Append)
-            .option("path", getTablePath(violationsPath, source, table))
-            .format("delta")
-            .save();
+            .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
+
+        appendToDeltaLakeTable(missingSchemaRecords, getTablePath(violationsPath, source, table));
     }
 
 }

@@ -2,14 +2,15 @@ package uk.gov.justice.digital.zone;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import uk.gov.justice.digital.service.model.SourceReference;
 
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.job.model.Columns.*;
-import static uk.gov.justice.digital.job.model.Columns.OPERATION;
 
+// TODO - probably better as an abstract class with protected methods
 public interface Zone {
 
     void process(Dataset<Row> dataFrame);
@@ -34,6 +35,15 @@ public interface Zone {
             .select(TABLE, SOURCE, OPERATION)
             .distinct()
             .collectAsList();
+    }
+
+    default void appendToDeltaLakeTable(Dataset<Row> dataFrame, String tablePath) {
+        dataFrame
+            .write()
+            .mode(SaveMode.Append)
+            .option("path", tablePath)
+            .format("delta")
+            .save();
     }
 
 }
