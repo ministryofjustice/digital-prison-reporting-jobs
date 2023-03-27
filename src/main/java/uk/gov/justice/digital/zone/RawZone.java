@@ -1,8 +1,8 @@
 package uk.gov.justice.digital.zone;
 
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
@@ -10,73 +10,51 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.get_json_object;
-import static org.apache.spark.sql.functions.lower;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
-public class RawZone implements Zone {
+public class RawZone extends Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
-    private final String DELTA_FORMAT = "delta";
-    private final String LOAD_OPERATION = "load";
-    private final String rawPath;
+    private final String rawS3Path;
 
     @Inject
-    public RawZone(JobParameters jobParameters){
-        this.rawPath = jobParameters.getRawPath();
-    }
-
-    public String getRawPath() {
-        return this.rawPath;
+    public RawZone(JobParameters jobParameters) {
+        this.rawS3Path = jobParameters.getRawS3Path()
+            .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
     }
 
     @Override
-    public void process(Dataset<Row> df) {
-        logger.info("RawZone process started..");
+    public void process(Dataset<Row> dataFrame) {
 
-        List<Row> sourceReferenceData = getSourceReferenceData(df);
+        logger.info("Processing data frame with " + dataFrame.count() + " rows");
 
-        for(final Row row : sourceReferenceData) {
+        val startTime = System.currentTimeMillis();
 
-            Dataset<Row> df1 = df;
-            String table = getTableName(row);
-            String source = getSourceName(row);
-            String operation = row.getAs("operation");
+        getTablesWithLoadRecords(dataFrame).forEach(row -> {
+            String rowSource = row.getAs(SOURCE);
+            String rowTable = row.getAs(TABLE);
+            String rowOperation = row.getAs(OPERATION);
 
+            val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
+                .map(r -> getTablePath(rawS3Path, r, rowOperation))
+                // Revert to source and table from row where no match exists in the schema reference service.
+                .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
-            logger.info("Before writing data to S3 raw bucket..");
-            // By Delta lake partition
-            df1.filter(col("source").isin(source)
-                            .and(col("table").isin(table)))
-                    .drop("source", "table", "operation")
-                    .write()
-                    .mode(SaveMode.Append)
-                    .option("path", getTablePath(getRawPath(), source, table, operation))
-                    .format(DELTA_FORMAT)
-                    .save();
-        }
-    }
+            val rowsForTable = dataFrame
+                .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
+                .drop(SOURCE, TABLE, OPERATION);
 
-    public List<Row> getSourceReferenceData(Dataset<Row> df) {
-        return df.filter(col("operation").isin(LOAD_OPERATION))
-                .select("table", "source", "operation")
-                .distinct().collectAsList();
-    }
+            appendToDeltaLakeTable(rowsForTable, tablePath);
+        });
 
-    public String getSourceName(Row row) {
-        String table = row.getAs("table");
-        String source = row.getAs("source");
-        return SourceReferenceService.getSource(source +"." + table);
-    }
-
-    public String getTableName(Row row) {
-        String table = row.getAs("table");
-        String source = row.getAs("source");
-        return SourceReferenceService.getTable(source +"." + table);
+        logger.info("Processed data frame with {} rows in {}ms",
+            dataFrame.count(),
+            System.currentTimeMillis() - startTime
+        );
     }
 
 }

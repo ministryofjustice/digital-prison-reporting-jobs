@@ -1,7 +1,8 @@
 package uk.gov.justice.digital.service;
 
-import io.micronaut.context.annotation.Bean;
+import lombok.val;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.service.model.SourceReference;
 
 import java.io.InputStream;
@@ -14,10 +15,9 @@ import java.util.*;
  *
  * See DPR-246 for further details.
  */
-@Bean
 public class SourceReferenceService {
 
-    private static final Map<String, SourceReference> sources = new HashMap<String,SourceReference>();
+    private static final Map<String, SourceReference> sources = new HashMap<>();
 
     static {
         sources.put("oms_owner.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
@@ -29,29 +29,14 @@ public class SourceReferenceService {
         sources.put("public.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "public", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
     }
 
-    public static String getPrimaryKey(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
-        return (ref == null ? null : ref.getPrimaryKey());
+    public static Optional<SourceReference> getSourceReference(String source, String table) {
+        return Optional.ofNullable(sources.get(generateKey(source, table)));
     }
 
-    public static String getSource(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
-        return (ref == null ? null : ref.getSource());
-    }
-
-    public static String getTable(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
-        return (ref == null ? null : ref.getTable());
-    }
-    public DataType getSchema(final String key) {
-        final SourceReference ref = sources.get(key.toLowerCase());
-        return (ref == null ? null : ref.getSchema());
-    }
-
-    private static DataType getSchemaFromResource(final String resource) {
-        return Optional.ofNullable(System.class.getResourceAsStream(resource))
+    private static StructType getSchemaFromResource(final String resource) {
+        return (StructType) Optional.ofNullable(System.class.getResourceAsStream(resource))
             .map(SourceReferenceService::readInputStream)
-            .map(DataType::fromJson)
+            .map(StructType::fromJson)
             .orElseThrow(() -> new IllegalStateException("Failed to read resource: " + resource));
     }
 
@@ -61,8 +46,8 @@ public class SourceReferenceService {
             .next();
     }
 
-    public Set<SourceReference> getReferences() {
-        return new HashSet<SourceReference>(sources.values());
+    private static String generateKey(String source, String table) {
+        return String.join(".", source, table).toLowerCase();
     }
 
 }

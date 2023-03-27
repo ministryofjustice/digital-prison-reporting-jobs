@@ -1,33 +1,34 @@
 package uk.gov.justice.digital.service;
 
+import lombok.val;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.service.model.SourceReference;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SourceReferenceServiceTest {
 
 	@Test
-	public void shouldConvert_OMS_OWNER_OFFENDERS_to_nomis_offenders() {
-		String source = SourceReferenceService.getSource("OMS_OWNER.OFFENDERS");
-		String table = SourceReferenceService.getTable("OMS_OWNER.offendERS");
+	public void getSourceReferenceShouldReturnCorrectReferenceForExistingSourceAndTable() {
+		val sourceReference = SourceReferenceService.getSourceReference("OMS_OWNER", "OFFENDERS");
 
-		assertEquals("nomis", source);
-		assertEquals("offenders", table);
+		assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
+		assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
 	}
 
 	@Test
-	public void shouldConvert_OMS_OWNER_OFFENDERS_to_nomis_offender_bookings() {
-		String source = SourceReferenceService.getSource("OMS_OWNER.OFFENDER_BOOKINGS");
-		String table = SourceReferenceService.getTable("OMS_OWNER.offendER_BOOKINGS");
+	public void getSourceReferenceShouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
+		val sourceReference = SourceReferenceService.getSourceReference("oMs_oWnEr", "oFfEnDeRs");
 
-		assertEquals("nomis", source);
-		assertEquals("offender_bookings", table);
+		assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
+		assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
 	}
 
 	@Test
-	public void shouldGetTheRightPrimaryKey() {
-		assertEquals("OFFENDER_ID", SourceReferenceService.getPrimaryKey("OMS_OWNER.OFFENDERS"));
-		assertEquals("OFFENDER_BOOK_ID", SourceReferenceService.getPrimaryKey("OMS_OWNER.OFFENDER_BOOKINGS"));
+	public void getSourceReferenceShouldReturnAnEmptyOptionalIfNoReferenceIsFound() {
+		assertEquals(Optional.empty(), SourceReferenceService.getSourceReference("DOES_NOT", "EXIST"));
 	}
 
 }

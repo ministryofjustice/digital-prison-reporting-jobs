@@ -18,12 +18,12 @@ repositories {
 }
 
 ext {
+    deltaVersion = '2.2.0'
     jacksonVersion = '2.14.2'
     junitVersion = '5.8.1'
     log4jVersion = '2.20.0'
     micronautVersion = '3.8.7'
     sparkVersion = '3.3.0'
-    deltaVersion = '2.2.0'
 }
 
 dependencies {
@@ -36,9 +36,6 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
     implementation "com.fasterxml.jackson:jackson-bom:$jacksonVersion"
-    implementation ("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
-      exclude group: "org.apache.spark", module: "spark-core_2.12"
-    }
     implementation "info.picocli:picocli"
     implementation "io.micronaut.picocli:micronaut-picocli"
     implementation "io.micronaut:micronaut-jackson-databind"
@@ -54,12 +51,20 @@ dependencies {
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
 
+    implementation ("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
+      // We exclude spark here to prevent spark being added to the jar during the build.
+      // AWS Glue provides this dependency on the classpath so we don't need to include it.
+      exclude group: "org.apache.spark", module: "spark-core_2.12"
+    }
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-    testImplementation 'org.mockito:mockito-core:5.1.1'
+    testImplementation "org.apache.spark:spark-core_2.12:$sparkVersion"
+    testImplementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
+
+    // We are targetting Java 8 so must use mockito 4.x since 5.x requires Java 11 or later.
+    testImplementation 'org.mockito:mockito-core:4.11.0'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-    testRuntimeOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
-    testRuntimeOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
 }
 
 test {
