@@ -29,30 +29,6 @@ public class SourceReferenceService {
         sources.put("public.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "public", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
     }
 
-    @Deprecated
-    public static String getPrimaryKey(final String key) {
-        val ref = sources.get(key.toLowerCase());
-        return (ref == null ? null : ref.getPrimaryKey());
-    }
-
-    @Deprecated
-    public static String getSource(String table, String source) {
-        val ref = sources.get(generateKey(table, source));
-        return (ref == null ? null : ref.getSource());
-    }
-
-    @Deprecated
-    public static String getTable(String table, String source) {
-        val ref = sources.get(generateKey(table, source));
-        return (ref == null ? null : ref.getTable());
-    }
-
-    @Deprecated
-    public static DataType getSchema(String table, String source) {
-        val ref = sources.get(generateKey(table, source));
-        return (ref == null ? null : ref.getSchema());
-    }
-
     public static Optional<SourceReference> getSourceReference(String source, String table) {
         return Optional.ofNullable(sources.get(generateKey(source, table)));
     }
