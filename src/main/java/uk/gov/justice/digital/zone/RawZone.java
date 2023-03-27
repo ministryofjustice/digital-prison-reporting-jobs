@@ -11,7 +11,6 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.job.model.Columns.*;
@@ -22,7 +21,6 @@ public class RawZone implements Zone {
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
     // TODO - move these into a shared location
-    private static final String LOAD = "load";
     private static final String PATH = "path";
 
     private final String rawS3Path;
@@ -40,11 +38,7 @@ public class RawZone implements Zone {
 
         val startTime = System.currentTimeMillis();
 
-        val uniqueLoadEventIdentifiers = uniqueTablesForLoad(dataFrame);
-
-        logger.info("Processing {} unique load events", uniqueLoadEventIdentifiers.size());
-
-        uniqueLoadEventIdentifiers.forEach(row -> {
+        getTablesWithLoadRecords(dataFrame).forEach(row -> {
             String rowSource = row.getAs(SOURCE);
             String rowTable = row.getAs(TABLE);
             String rowOperation = row.getAs(OPERATION);
@@ -68,14 +62,6 @@ public class RawZone implements Zone {
             dataFrame.count(),
             System.currentTimeMillis() - startTime
         );
-    }
-
-    private List<Row> uniqueTablesForLoad(Dataset<Row> dataFrame) {
-        return dataFrame
-            .filter(col(OPERATION).isin(LOAD))
-            .select(TABLE, SOURCE, OPERATION)
-            .distinct()
-            .collectAsList();
     }
 
 }

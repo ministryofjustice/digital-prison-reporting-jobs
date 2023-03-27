@@ -14,7 +14,6 @@ import uk.gov.justice.digital.service.model.SourceReference;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.List;
 
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.job.model.Columns.*;
@@ -25,10 +24,8 @@ public class StructuredZone implements Zone {
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
 
     // TODO - this duplicates the constants in RawZone
-    // TODO - ensure we only process load events for now
     private static final String PATH = "path";
-    // TODO - enum?
-    public static final String LOAD = "load";
+
     private final String structuredS3Path;
 
     @Inject
@@ -47,14 +44,13 @@ public class StructuredZone implements Zone {
 
         val startTime = System.currentTimeMillis();
 
-        uniqueTablesForLoad(dataFrame).forEach((table) -> {
+        getTablesWithLoadRecords(dataFrame).forEach((table) -> {
             String sourceName = table.getAs(SOURCE);
             String tableName = table.getAs(TABLE);
 
             val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
 
             // Filter records on table name in metadata
-            // TODO - filter on load too
             val dataFrameForTable = dataFrame.filter(col("metadata").ilike("%" + sourceName + "." + tableName + "%"));
 
             logger.info("Processing {} records for {}/{}", dataFrameForTable.count(), sourceName, tableName);
@@ -154,16 +150,6 @@ public class StructuredZone implements Zone {
             .option(PATH, getTablePath(structuredS3Path, "violations", source, table))
             .format("delta")
             .save();
-    }
-
-    // TODO - duplicated from RawZone
-    // TODO - better names
-    private List<Row> uniqueTablesForLoad(Dataset<Row> dataFrame) {
-        return dataFrame
-            .filter(col(OPERATION).isin(LOAD))
-            .select(TABLE, SOURCE, OPERATION)
-            .distinct()
-            .collectAsList();
     }
 
 }

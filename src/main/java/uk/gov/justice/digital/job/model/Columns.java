@@ -10,4 +10,6 @@ public class Columns {
     public static final String SOURCE = "source";
     public static final String TABLE = "table";
     public static final String VALID = "valid";
+
+    private Columns() {}
 }
