@@ -18,7 +18,7 @@ import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
-public class StructuredZone implements Zone {
+public class StructuredZone extends Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
 
