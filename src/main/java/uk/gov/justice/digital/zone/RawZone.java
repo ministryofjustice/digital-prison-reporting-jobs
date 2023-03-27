@@ -49,13 +49,13 @@ public class RawZone implements Zone {
             String rowTable = row.getAs(TABLE);
             String rowOperation = row.getAs(OPERATION);
 
-            // TODO - handle missing schema by writing to source location instead.
-            val tableName = SourceReferenceService.getTable(rowSource, rowTable);
-            val sourceName = SourceReferenceService.getSource(rowSource, rowTable);
-            val tablePath = getTablePath(rawS3Path, sourceName, tableName, rowOperation);
+            val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
+                .map(r -> getTablePath(rawS3Path, r.getSource(), r.getTable(), rowOperation))
+                // Revert to source and table from row where no match exists in the schema reference service.
+                .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
             dataFrame
-                .filter(col(SOURCE).isin(sourceName).and(col(TABLE).isin(tableName)))
+                .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
                 .drop(SOURCE, TABLE, OPERATION)
                 .write()
                 .mode(SaveMode.Append)
