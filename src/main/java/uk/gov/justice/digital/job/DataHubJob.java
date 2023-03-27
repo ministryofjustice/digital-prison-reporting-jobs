@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.*;
@@ -19,15 +18,17 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.get_json_object;
+import static org.apache.spark.sql.functions.lower;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
- *  - TODO - validates the data to ensure it conforms to the expected input format - DPR-341
+ *  - validates the data to ensure it conforms to the expected input format - DPR-341
  *  - writes the raw data to the raw zone in s3
- *  - TODO - validates the data to ensure it confirms to the appropriate table schema
- *  - TODO - writes this validated data to the structured zone in s3
+ *  - validates the data to ensure it confirms to the appropriate table schema
+ *  - writes this validated data to the structured zone in s3
  */
 @Singleton
 @Command(name = "DataHubJob")

@@ -14,7 +14,10 @@ import uk.gov.justice.digital.service.model.SourceReference;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.from_json;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.to_json;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
