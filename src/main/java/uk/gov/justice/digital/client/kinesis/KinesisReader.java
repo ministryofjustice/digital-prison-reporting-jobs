@@ -54,10 +54,6 @@ public class KinesisReader {
 
     }
 
-    public JavaDStream<byte[]> getKinesisStream() {
-        return kinesisStream;
-    }
-
     public void setBatchProcessor(VoidFunction<JavaRDD<byte[]>> batchProcessor) {
         kinesisStream.foreachRDD(batchProcessor);
     }

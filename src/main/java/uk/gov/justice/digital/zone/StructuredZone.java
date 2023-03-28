@@ -14,7 +14,10 @@ import uk.gov.justice.digital.service.model.SourceReference;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.from_json;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.to_json;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
@@ -51,7 +54,7 @@ public class StructuredZone extends Zone {
             val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
 
             // Filter records on table name in metadata
-            val dataFrameForTable = dataFrame.filter(col("metadata").ilike("%" + sourceName + "." + tableName + "%"));
+            val dataFrameForTable = dataFrame.filter(col(SOURCE).equalTo(sourceName).and(col(TABLE).equalTo(tableName)));
 
             logger.info("Processing {} records for {}/{}", dataFrameForTable.count(), sourceName, tableName);
 
