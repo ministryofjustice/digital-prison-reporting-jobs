@@ -65,7 +65,7 @@ public class JobParameters {
     }
 
     public Optional<String> getCuratedS3Path() {
-        return getOptionalProperty("curated.s3.path");
+        return getOptionalProperty("dpr.curated.s3.path");
     }
 
     private String getMandatoryProperty(String jobParameter) {
