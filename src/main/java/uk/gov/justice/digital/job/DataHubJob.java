@@ -3,22 +3,26 @@ package uk.gov.justice.digital.job;
 import lombok.val;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
+
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.zone.CuratedZone;
+import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.zone.RawZone;
 import uk.gov.justice.digital.zone.StructuredZone;
 import io.micronaut.configuration.picocli.PicocliRunner;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -30,10 +34,10 @@ import static uk.gov.justice.digital.job.model.Columns.*;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
- *  - TODO - validates the data to ensure it conforms to the expected input format - DPR-341
+ *  - validates the data to ensure it conforms to the expected input format - DPR-341
  *  - writes the raw data to the raw zone in s3
- *  - TODO - validates the data to ensure it confirms to the appropriate table schema
- *  - TODO - writes this validated data to the structured zone in s3
+ *  - validates the data to ensure it confirms to the appropriate table schema
+ *  - writes this validated data to the structured zone in s3
  */
 @Singleton
 @Command(name = "DataHubJob")
@@ -45,13 +49,21 @@ public class DataHubJob implements Runnable {
     private final RawZone rawZone;
     private final StructuredZone structuredZone;
     private final CuratedZone curatedZone;
+    private final Converter converter;
 
     @Inject
-    public DataHubJob(KinesisReader kinesisReader, RawZone rawZone, StructuredZone structuredZone, CuratedZone curatedZone) {
+    public DataHubJob(
+        KinesisReader kinesisReader,
+        RawZone rawZone,
+        StructuredZone structuredZone,
+        CuratedZone curatedZone,
+        @Named("converterForDMS_3_4_6") Converter converter
+    ) {
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
         this.structuredZone = structuredZone;
         this.curatedZone = curatedZone;
+        this.converter = converter;
     }
 
     public static void main(String[] args) {
@@ -67,10 +79,8 @@ public class DataHubJob implements Runnable {
             val startTime = System.currentTimeMillis();
 
             val spark = getConfiguredSparkSession(batch.context().getConf());
-
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
-
-            Dataset<Row> dataFrame = fromRawDMS_3_4_6(rowRdd, spark);
+            val dataFrame = converter.convert(rowRdd, spark);
 
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
                 val rawDataFrame = rawZone.process(dataFrame, table);
@@ -88,23 +98,6 @@ public class DataHubJob implements Runnable {
             );
         }
     };
-
-    // TODO - extract this - see DPR-341
-    public Dataset<Row> fromRawDMS_3_4_6(JavaRDD<Row> rowRDD, SparkSession spark) {
-
-        val eventsSchema = new StructType()
-            .add(DATA, DataTypes.StringType);
-
-        return spark
-            .createDataFrame(rowRDD, eventsSchema)
-            .withColumn(JSON_DATA, col(DATA))
-            .withColumn(DATA, get_json_object(col(JSON_DATA), "$.data"))
-            .withColumn(METADATA, get_json_object(col(JSON_DATA), "$.metadata"))
-            .withColumn(SOURCE, lower(get_json_object(col(METADATA), "$.schema-name")))
-            .withColumn(TABLE, lower(get_json_object(col(METADATA), "$.table-name")))
-            .withColumn(OPERATION, lower(get_json_object(col(METADATA), "$.operation")))
-            .drop(JSON_DATA);
-    }
 
     private static SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
         sparkConf

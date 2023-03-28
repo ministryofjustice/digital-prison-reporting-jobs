@@ -1,12 +1,13 @@
 package uk.gov.justice.digital.service;
 
-import lombok.val;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.service.model.SourceReference;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Scanner;
 
 /**
  * Temporary Internal Schema storage using json schema files.
