@@ -11,7 +11,7 @@ import static uk.gov.justice.digital.job.model.Columns.*;
 
 public abstract class Converter {
 
-    private static final boolean NOT_NULL = false;
+    private static final boolean NOT_NULL = true;
 
     // This schema defines the common output format to be created from the incoming data.
     protected static final StructType PARSED_DATA_SCHEMA = new StructType()
