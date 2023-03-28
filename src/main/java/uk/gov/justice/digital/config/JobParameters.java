@@ -35,33 +35,33 @@ public class JobParameters {
     }
 
     public String getAwsRegion() {
-        return getMandatoryProperty("aws.region");
+        return getMandatoryProperty("dpr.aws.region");
     }
 
     public String getAwsKinesisEndpointUrl() {
-        return getMandatoryProperty("aws.kinesis.endpointUrl");
+        return getMandatoryProperty("dpr.aws.kinesis.endpointUrl");
     }
 
     public String getKinesisReaderStreamName() {
-        return getMandatoryProperty("kinesis.reader.streamName");
+        return getMandatoryProperty("dpr.kinesis.reader.streamName");
     }
 
     public Duration getKinesisReaderBatchDuration() {
-        String durationSeconds = getMandatoryProperty("kinesis.reader.batchDurationSeconds");
+        String durationSeconds = getMandatoryProperty("dpr.kinesis.reader.batchDurationSeconds");
         long parsedDuration = Long.parseLong(durationSeconds);
         return Durations.seconds(parsedDuration);
     }
 
     public Optional<String> getRawS3Path() {
-        return getOptionalProperty("raw.s3.path");
+        return getOptionalProperty("dpr.raw.s3.path");
     }
 
     public Optional<String> getStructuredS3Path() {
-        return getOptionalProperty("structured.s3.path");
+        return getOptionalProperty("dpr.structured.s3.path");
     }
 
     public Optional<String> getViolationsS3Path() {
-        return getOptionalProperty("violations.s3.path");
+        return getOptionalProperty("dpr.violations.s3.path");
     }
 
     private String getMandatoryProperty(String jobParameter) {
