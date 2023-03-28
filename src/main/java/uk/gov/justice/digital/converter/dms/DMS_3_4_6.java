@@ -55,9 +55,10 @@ public class DMS_3_4_6 extends Converter {
             .withColumn(JSON_DATA, from_json(col(DATA), recordSchema, jsonOptions))
             .drop(DATA)
             .select(JSON_DATA + ".*")
-            .select(DATA, METADATA + ".*")
+            .select(DATA, METADATA, METADATA + ".*")
             .select(
                 col(DATA),
+                to_json(col(METADATA)),
                 lower(col("schema-name")).as(SOURCE),
                 lower(col("table-name").as(TABLE)),
                 lower(col("operation").as(OPERATION))

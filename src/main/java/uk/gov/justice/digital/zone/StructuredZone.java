@@ -54,7 +54,7 @@ public class StructuredZone extends Zone {
             val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
 
             // Filter records on table name in metadata
-            val dataFrameForTable = dataFrame.filter(col("metadata").ilike("%" + sourceName + "." + tableName + "%"));
+            val dataFrameForTable = dataFrame.filter(col(SOURCE).equalTo(sourceName).and(col(TABLE).equalTo(tableName)));
 
             logger.info("Processing {} records for {}/{}", dataFrameForTable.count(), sourceName, tableName);
 
