@@ -14,13 +14,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class JobParametersTest {
 
-    private static final String AWS_REGION_KEY = "aws.region";
-    private static final String AWS_KINESIS_ENDPOINT_URL_KEY = "aws.kinesis.endpointUrl";
-    private static final String KINESIS_READER_STREAM_NAME_KEY = "kinesis.reader.streamName";
-    private static final String KINESIS_READER_BATCH_DURATION_SECONDS_KEY = "kinesis.reader.batchDurationSeconds";
-    private static final String RAW_S3_PATH_KEY = "raw.s3.path";
-    private static final String STRUCTURED_S3_PATH_KEY = "structured.s3.path";
-    private static final String VIOLATIONS_S3_PATH_KEY = "violations.s3.path";
+    private static final String AWS_REGION_KEY = "dpr.aws.region";
+    private static final String AWS_KINESIS_ENDPOINT_URL_KEY = "dpr.aws.kinesis.endpointUrl";
+    private static final String KINESIS_READER_STREAM_NAME_KEY = "dpr.kinesis.reader.streamName";
+    private static final String KINESIS_READER_BATCH_DURATION_SECONDS_KEY = "dpr.kinesis.reader.batchDurationSeconds";
+    private static final String RAW_S3_PATH_KEY = "dpr.raw.s3.path";
+    private static final String STRUCTURED_S3_PATH_KEY = "dpr.structured.s3.path";
+    private static final String VIOLATIONS_S3_PATH_KEY = "dpr.violations.s3.path";
 
     private static final String AWS_REGION = "test-region";
     private static final String AWS_KINESIS_ENDPOINT_URL = "https://kinesis.example.com";

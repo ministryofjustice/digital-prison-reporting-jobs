@@ -9,7 +9,7 @@ import java.util.Collections;
 
 public class RawZoneTest {
 
-    private static final String S3_PATH_KEY = "raw.s3.path";
+    private static final String S3_PATH_KEY = "dpr.raw.s3.path";
     private static final String S3_PATH = "s3://loadjob/raw";
 
     private final JobParameters jobParameters = new JobParameters(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
