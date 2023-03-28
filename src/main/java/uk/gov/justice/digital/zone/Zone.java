@@ -10,7 +10,10 @@ import uk.gov.justice.digital.service.model.SourceReference;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static org.apache.spark.sql.functions.lit;
+import static uk.gov.justice.digital.job.model.Columns.TABLE;
+import static uk.gov.justice.digital.job.model.Columns.OPERATION;
+import static uk.gov.justice.digital.job.model.Columns.SOURCE;
 
 public abstract class Zone {
 
@@ -52,5 +55,10 @@ public abstract class Zone {
 
         logger.info("Append completed successfully");
     }
+
+    protected Dataset<Row> createEmptyDataFrame(Dataset<Row> dataFrame) {
+        return dataFrame.filter(lit(false));
+    }
+
 
 }

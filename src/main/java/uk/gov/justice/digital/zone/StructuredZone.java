@@ -14,8 +14,17 @@ import uk.gov.justice.digital.service.model.SourceReference;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static org.apache.spark.sql.functions.*;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.to_json;
+import static org.apache.spark.sql.functions.from_json;
+import static uk.gov.justice.digital.job.model.Columns.SOURCE;
+import static uk.gov.justice.digital.job.model.Columns.DATA;
+import static uk.gov.justice.digital.job.model.Columns.TABLE;
+import static uk.gov.justice.digital.job.model.Columns.METADATA;
+import static uk.gov.justice.digital.job.model.Columns.PARSED_DATA;
+import static uk.gov.justice.digital.job.model.Columns.VALID;
+import static uk.gov.justice.digital.job.model.Columns.ERROR;
 
 @Singleton
 public class StructuredZone extends Zone {
@@ -41,7 +50,7 @@ public class StructuredZone extends Zone {
     public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
 
         long noOfRows = dataFrame.count();
-        logger.info("Processing batch with " + noOfRows + " records");
+        logger.info("Processing batch with {} records", noOfRows);
 
         val startTime = System.currentTimeMillis();
 
@@ -52,7 +61,6 @@ public class StructuredZone extends Zone {
 
         // Filter records on table name in metadata
         //val dataFrameForTable = dataFrame.filter(col("metadata").ilike("%" + sourceName + "." + tableName + "%"));
-        // TODO extract this dataFrame.count() into a variable
         logger.info("Processing {} records for {}/{}", noOfRows, sourceName, tableName);
 
         Dataset<Row> validStructuredDataFrame;
@@ -62,7 +70,6 @@ public class StructuredZone extends Zone {
         } else {
             validStructuredDataFrame = handleNoSchemaFound(dataFrame, sourceName, tableName);
         }
-
 
         logger.info("Processed data frame with {} rows in {}ms",
                 noOfRows,
@@ -85,7 +92,6 @@ public class StructuredZone extends Zone {
 
     private Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {
         logger.info("Validating data against schema: {}/{}", source, table);
-
         val jsonValidator = JsonValidator.createAndRegister(schema, dataFrame.sparkSession(), source, table);
 
         return dataFrame
@@ -106,8 +112,7 @@ public class StructuredZone extends Zone {
             appendToDeltaLakeTable(validRecords, destinationPath);
             return validRecords;
         } else {
-            // TODO return empty dataframe
-            return null;
+            return createEmptyDataFrame(dataFrame);
         }
     }
 
@@ -139,8 +144,7 @@ public class StructuredZone extends Zone {
             .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
 
         appendToDeltaLakeTable(missingSchemaRecords, getTablePath(violationsPath, source, table));
-        // TODO return empty dataframe
-        return null;
+        return createEmptyDataFrame(dataFrame);
     }
 
 }

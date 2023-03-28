@@ -1,27 +1,37 @@
 package uk.gov.justice.digital.job;
 
-import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
+import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.zone.RawZone;
 import uk.gov.justice.digital.zone.StructuredZone;
+import io.micronaut.configuration.picocli.PicocliRunner;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.apache.spark.sql.functions.*;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static org.apache.spark.sql.functions.lower;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.get_json_object;
+import static uk.gov.justice.digital.job.model.Columns.DATA;
+import static uk.gov.justice.digital.job.model.Columns.METADATA;
+import static uk.gov.justice.digital.job.model.Columns.SOURCE;
+import static uk.gov.justice.digital.job.model.Columns.TABLE;
+import static uk.gov.justice.digital.job.model.Columns.JSON_DATA;
+import static uk.gov.justice.digital.job.model.Columns.OPERATION;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
@@ -39,12 +49,14 @@ public class DataHubJob implements Runnable {
     private final KinesisReader kinesisReader;
     private final RawZone rawZone;
     private final StructuredZone structuredZone;
+    private final CuratedZone curatedZone;
 
     @Inject
-    public DataHubJob(KinesisReader kinesisReader, RawZone rawZone, StructuredZone structuredZone) {
+    public DataHubJob(KinesisReader kinesisReader, RawZone rawZone, StructuredZone structuredZone, CuratedZone curatedZone) {
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
         this.structuredZone = structuredZone;
+        this.curatedZone = curatedZone;
     }
 
     public static void main(String[] args) {
@@ -65,13 +77,12 @@ public class DataHubJob implements Runnable {
             Dataset<Row> dataFrame = fromRawDMS_3_4_6(rowRdd, spark);
 
             getTablesWithLoadRecords(dataFrame).forEach(row -> {
-                val rawTableDF = rawZone.process(dataFrame, row);
+                val rawDataFrame = rawZone.process(dataFrame, row);
 
-                val validStructuredDataFrame = structuredZone.process(rawTableDF, row);
+                val validStructuredDataFrame = structuredZone.process(rawDataFrame, row);
 
-                logger.info(" validStructuredDataFrame show:: ", validStructuredDataFrame);
-                validStructuredDataFrame.show();
-                // TODO Curated zone
+                curatedZone.process(validStructuredDataFrame, row);
+
             });
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",

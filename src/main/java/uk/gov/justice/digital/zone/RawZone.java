@@ -12,7 +12,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static uk.gov.justice.digital.job.model.Columns.SOURCE;
+import static uk.gov.justice.digital.job.model.Columns.TABLE;
+import static uk.gov.justice.digital.job.model.Columns.OPERATION;
 
 @Singleton
 public class RawZone extends Zone {
@@ -30,7 +32,7 @@ public class RawZone extends Zone {
     @Override
     public Dataset<Row> process(Dataset<Row> dataFrame, Row row) {
 
-        logger.info("Processing data frame with " + dataFrame.count() + " rows");
+        logger.info("Processing data frame with {} rows", dataFrame.count());
 
         val startTime = System.currentTimeMillis();
 
@@ -43,18 +45,17 @@ public class RawZone extends Zone {
             // Revert to source and table from row where no match exists in the schema reference service.
             .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
-        val rowsForTable = dataFrame
+        val rawDataFrame = dataFrame
             .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
             .drop(SOURCE, TABLE, OPERATION);
 
-        appendToDeltaLakeTable(rowsForTable, tablePath);
+        appendToDeltaLakeTable(rawDataFrame, tablePath);
 
         logger.info("Processed data frame with {} rows in {}ms",
             dataFrame.count(),
             System.currentTimeMillis() - startTime
         );
-        // TODO remove it
-        return rowsForTable;
+        return rawDataFrame;
     }
 
 }
