@@ -18,6 +18,7 @@ import uk.gov.justice.digital.zone.StructuredZone;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.job.model.Columns.*;
@@ -47,7 +48,7 @@ public class DataHubJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job started");
+        logger.info("DataHub Job started..");
         PicocliRunner.run(DataHubJob.class);
     }
 
@@ -63,9 +64,15 @@ public class DataHubJob implements Runnable {
 
             Dataset<Row> dataFrame = fromRawDMS_3_4_6(rowRdd, spark);
 
-            rawZone.process(dataFrame);
+            getTablesWithLoadRecords(dataFrame).forEach(row -> {
+                val rawTableDF = rawZone.process(dataFrame, row);
 
-            structuredZone.process(dataFrame);
+                val validStructuredDataFrame = structuredZone.process(rawTableDF, row);
+
+                logger.info(" validStructuredDataFrame show:: ", validStructuredDataFrame);
+                validStructuredDataFrame.show();
+                // TODO Curated zone
+            });
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",
                 batch.id(),
@@ -115,4 +122,11 @@ public class DataHubJob implements Runnable {
         }
     }
 
+    private List<Row> getTablesWithLoadRecords(Dataset<Row> dataFrame) {
+        return dataFrame
+                .filter(col(OPERATION).equalTo("load"))
+                .select(TABLE, SOURCE, OPERATION)
+                .distinct()
+                .collectAsList();
+    }
 }

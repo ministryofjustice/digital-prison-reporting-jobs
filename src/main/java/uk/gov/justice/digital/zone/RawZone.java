@@ -28,33 +28,33 @@ public class RawZone extends Zone {
     }
 
     @Override
-    public void process(Dataset<Row> dataFrame) {
+    public Dataset<Row> process(Dataset<Row> dataFrame, Row row) {
 
         logger.info("Processing data frame with " + dataFrame.count() + " rows");
 
         val startTime = System.currentTimeMillis();
 
-        getTablesWithLoadRecords(dataFrame).forEach(row -> {
-            String rowSource = row.getAs(SOURCE);
-            String rowTable = row.getAs(TABLE);
-            String rowOperation = row.getAs(OPERATION);
+        String rowSource = row.getAs(SOURCE);
+        String rowTable = row.getAs(TABLE);
+        String rowOperation = row.getAs(OPERATION);
 
-            val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
-                .map(r -> getTablePath(rawS3Path, r, rowOperation))
-                // Revert to source and table from row where no match exists in the schema reference service.
-                .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
+        val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
+            .map(r -> getTablePath(rawS3Path, r, rowOperation))
+            // Revert to source and table from row where no match exists in the schema reference service.
+            .orElse(getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
-            val rowsForTable = dataFrame
-                .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
-                .drop(SOURCE, TABLE, OPERATION);
+        val rowsForTable = dataFrame
+            .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
+            .drop(SOURCE, TABLE, OPERATION);
 
-            appendToDeltaLakeTable(rowsForTable, tablePath);
-        });
+        appendToDeltaLakeTable(rowsForTable, tablePath);
 
         logger.info("Processed data frame with {} rows in {}ms",
             dataFrame.count(),
             System.currentTimeMillis() - startTime
         );
+        // TODO remove it
+        return rowsForTable;
     }
 
 }

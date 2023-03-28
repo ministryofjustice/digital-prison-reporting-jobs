@@ -16,7 +16,7 @@ public abstract class Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(Zone.class);
 
-    public abstract void process(Dataset<Row> dataFrame);
+    public abstract Dataset<Row> process(Dataset<Row> dataFrame, Row row);
 
     protected String getTablePath(String prefix, SourceReference ref, String operation) {
         return getTablePath(prefix, ref.getSource(), ref.getTable(), operation);
