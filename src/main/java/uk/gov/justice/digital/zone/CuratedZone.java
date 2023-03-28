@@ -11,8 +11,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static uk.gov.justice.digital.job.model.Columns.SOURCE;
-import static uk.gov.justice.digital.job.model.Columns.TABLE;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
 public class CuratedZone extends Zone {
@@ -25,23 +24,23 @@ public class CuratedZone extends Zone {
     public CuratedZone(JobParameters jobParameters) {
         this.curatedPath = jobParameters.getCuratedS3Path()
                 .orElseThrow(() -> new IllegalStateException(
-                        "structured s3 path not set - unable to create StructuredZone instance"
+                        "curated s3 path not set - unable to create CuratedZone instance"
                 ));
     }
 
     @Override
-    public Dataset<Row> process(Dataset<Row> dataFrame, Row row) {
+    public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
         val curatedRecordsCount = dataFrame.count();
         logger.info("Processing batch with {} records", curatedRecordsCount);
         if (curatedRecordsCount > 0) {
             val startTime = System.currentTimeMillis();
 
-            val sourceReference = SourceReferenceService.getSourceReference(row.getAs(SOURCE), row.getAs(TABLE));
+            val sourceReference = SourceReferenceService.getSourceReference(table.getAs(SOURCE), table.getAs(TABLE));
             val curatedTablePath = getTablePath(curatedPath, sourceReference.get());
 
             appendToDeltaLakeTable(dataFrame, curatedTablePath);
 
-            logger.info("Processed data frame with {} rows in {}ms",
+            logger.info("Processed dataframe with {} rows in {}ms",
                     curatedRecordsCount,
                     System.currentTimeMillis() - startTime
             );
@@ -50,6 +49,5 @@ public class CuratedZone extends Zone {
             return createEmptyDataFrame(dataFrame);
         }
     }
-
 
 }

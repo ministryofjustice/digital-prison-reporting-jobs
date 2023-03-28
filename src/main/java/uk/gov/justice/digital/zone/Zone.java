@@ -11,9 +11,7 @@ import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
-import static uk.gov.justice.digital.job.model.Columns.TABLE;
-import static uk.gov.justice.digital.job.model.Columns.OPERATION;
-import static uk.gov.justice.digital.job.model.Columns.SOURCE;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 public abstract class Zone {
 

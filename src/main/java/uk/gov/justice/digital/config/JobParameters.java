@@ -68,7 +68,6 @@ public class JobParameters {
         return getOptionalProperty("curated.s3.path");
     }
 
-
     private String getMandatoryProperty(String jobParameter) {
         return Optional
             .ofNullable(config.get(jobParameter))

@@ -26,12 +26,7 @@ import java.util.List;
 import static org.apache.spark.sql.functions.lower;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.get_json_object;
-import static uk.gov.justice.digital.job.model.Columns.DATA;
-import static uk.gov.justice.digital.job.model.Columns.METADATA;
-import static uk.gov.justice.digital.job.model.Columns.SOURCE;
-import static uk.gov.justice.digital.job.model.Columns.TABLE;
-import static uk.gov.justice.digital.job.model.Columns.JSON_DATA;
-import static uk.gov.justice.digital.job.model.Columns.OPERATION;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
@@ -66,7 +61,8 @@ public class DataHubJob implements Runnable {
 
     private void batchProcessor(JavaRDD<byte[]> batch) {
         if (!batch.isEmpty()) {
-            logger.info("Batch: {} - Processing {} records", batch.id(), batch.count());
+            val batchCount = batch.count();
+            logger.info("Batch: {} - Processing {} records", batch.id(), batchCount);
 
             val startTime = System.currentTimeMillis();
 
@@ -76,19 +72,19 @@ public class DataHubJob implements Runnable {
 
             Dataset<Row> dataFrame = fromRawDMS_3_4_6(rowRdd, spark);
 
-            getTablesWithLoadRecords(dataFrame).forEach(row -> {
-                val rawDataFrame = rawZone.process(dataFrame, row);
+            getTablesWithLoadRecords(dataFrame).forEach(table -> {
+                val rawDataFrame = rawZone.process(dataFrame, table);
 
-                val validStructuredDataFrame = structuredZone.process(rawDataFrame, row);
+                val structuredDataFrame = structuredZone.process(rawDataFrame, table);
 
-                curatedZone.process(validStructuredDataFrame, row);
+                curatedZone.process(structuredDataFrame, table);
 
             });
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",
-                batch.id(),
-                batch.count(),
-                System.currentTimeMillis() - startTime
+                    batch.id(),
+                    batchCount,
+                    System.currentTimeMillis() - startTime
             );
         }
     };

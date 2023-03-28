@@ -12,9 +12,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.job.model.Columns.SOURCE;
-import static uk.gov.justice.digital.job.model.Columns.TABLE;
-import static uk.gov.justice.digital.job.model.Columns.OPERATION;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
 public class RawZone extends Zone {
@@ -30,15 +28,15 @@ public class RawZone extends Zone {
     }
 
     @Override
-    public Dataset<Row> process(Dataset<Row> dataFrame, Row row) {
+    public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
 
         logger.info("Processing data frame with {} rows", dataFrame.count());
 
         val startTime = System.currentTimeMillis();
 
-        String rowSource = row.getAs(SOURCE);
-        String rowTable = row.getAs(TABLE);
-        String rowOperation = row.getAs(OPERATION);
+        String rowSource = table.getAs(SOURCE);
+        String rowTable = table.getAs(TABLE);
+        String rowOperation = table.getAs(OPERATION);
 
         val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
             .map(r -> getTablePath(rawS3Path, r, rowOperation))
@@ -52,8 +50,8 @@ public class RawZone extends Zone {
         appendToDeltaLakeTable(rawDataFrame, tablePath);
 
         logger.info("Processed data frame with {} rows in {}ms",
-            dataFrame.count(),
-            System.currentTimeMillis() - startTime
+                rawDataFrame.count(),
+                System.currentTimeMillis() - startTime
         );
         return rawDataFrame;
     }

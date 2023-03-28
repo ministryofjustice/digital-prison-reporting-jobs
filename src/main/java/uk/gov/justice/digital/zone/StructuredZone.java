@@ -18,13 +18,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.to_json;
 import static org.apache.spark.sql.functions.from_json;
-import static uk.gov.justice.digital.job.model.Columns.SOURCE;
-import static uk.gov.justice.digital.job.model.Columns.DATA;
-import static uk.gov.justice.digital.job.model.Columns.TABLE;
-import static uk.gov.justice.digital.job.model.Columns.METADATA;
-import static uk.gov.justice.digital.job.model.Columns.PARSED_DATA;
-import static uk.gov.justice.digital.job.model.Columns.VALID;
-import static uk.gov.justice.digital.job.model.Columns.ERROR;
+import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
 public class StructuredZone extends Zone {
@@ -59,23 +53,21 @@ public class StructuredZone extends Zone {
 
         val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
 
-        // Filter records on table name in metadata
-        //val dataFrameForTable = dataFrame.filter(col("metadata").ilike("%" + sourceName + "." + tableName + "%"));
         logger.info("Processing {} records for {}/{}", noOfRows, sourceName, tableName);
 
-        Dataset<Row> validStructuredDataFrame;
+        Dataset<Row> structuredDataFrame;
 
         if (sourceReference.isPresent()){
-            validStructuredDataFrame = handleSchemaFound(dataFrame, sourceReference.get());
+            structuredDataFrame = handleSchemaFound(dataFrame, sourceReference.get());
         } else {
-            validStructuredDataFrame = handleNoSchemaFound(dataFrame, sourceName, tableName);
+            structuredDataFrame = handleNoSchemaFound(dataFrame, sourceName, tableName);
         }
 
         logger.info("Processed data frame with {} rows in {}ms",
                 noOfRows,
-            System.currentTimeMillis() - startTime
+                System.currentTimeMillis() - startTime
         );
-        return validStructuredDataFrame;
+        return structuredDataFrame;
     }
 
     private Dataset<Row> handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
@@ -106,8 +98,9 @@ public class StructuredZone extends Zone {
             .filter(col(VALID).equalTo(true))
             .select(PARSED_DATA + ".*");
 
-        if (validRecords.count() > 0) {
-            logger.info("Writing {} valid records", validRecords.count());
+        val validRecordsCount = validRecords.count();
+        if (validRecordsCount > 0) {
+            logger.info("Writing {} valid records", validRecordsCount);
 
             appendToDeltaLakeTable(validRecords, destinationPath);
             return validRecords;
@@ -126,8 +119,10 @@ public class StructuredZone extends Zone {
             .withColumn(ERROR, lit(errorString))
             .drop(col(VALID));
 
-        if (invalidRecords.count() > 0) {
-            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecords.count());
+        val invalidRecordsCount = invalidRecords.count();
+
+        if (invalidRecordsCount > 0) {
+            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecordsCount);
             appendToDeltaLakeTable(invalidRecords, destinationPath);
         }
     }
