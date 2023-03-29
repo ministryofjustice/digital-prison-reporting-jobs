@@ -64,6 +64,10 @@ public class JobParameters {
         return getOptionalProperty("dpr.violations.s3.path");
     }
 
+    public Optional<String> getCuratedS3Path() {
+        return getOptionalProperty("dpr.curated.s3.path");
+    }
+
     private String getMandatoryProperty(String jobParameter) {
         return Optional
             .ofNullable(config.get(jobParameter))

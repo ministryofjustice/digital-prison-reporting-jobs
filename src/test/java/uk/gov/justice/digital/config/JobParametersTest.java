@@ -21,14 +21,16 @@ class JobParametersTest {
     private static final String RAW_S3_PATH_KEY = "dpr.raw.s3.path";
     private static final String STRUCTURED_S3_PATH_KEY = "dpr.structured.s3.path";
     private static final String VIOLATIONS_S3_PATH_KEY = "dpr.violations.s3.path";
+    private static final String CURATED_S3_PATH_KEY = "dpr.curated.s3.path";
 
     private static final String AWS_REGION = "test-region";
     private static final String AWS_KINESIS_ENDPOINT_URL = "https://kinesis.example.com";
     private static final String KINESIS_READER_STREAM_NAME = "some-kinesis-stream";
     private static final String KINESIS_READER_BATCH_DURATION_SECONDS = "5";
-    private static final String RAW_S3_PATH = "s3://rawzone/raw";
+    private static final String RAW_S3_PATH = "s3://somepath/raw";
     private static final String STRUCTURED_S3_PATH = "s3://somepath/structured";
     private static final String VIOLATIONS_S3_PATH = "s3://somepath/violations";
+    private static final String CURATED_S3_PATH = "s3://somepath/curated";
 
     private static final Map<String, String> testConfig;
 
@@ -41,6 +43,7 @@ class JobParametersTest {
         testConfig.put(RAW_S3_PATH_KEY, RAW_S3_PATH);
         testConfig.put(STRUCTURED_S3_PATH_KEY, STRUCTURED_S3_PATH);
         testConfig.put(VIOLATIONS_S3_PATH_KEY, VIOLATIONS_S3_PATH);
+        testConfig.put(CURATED_S3_PATH_KEY, CURATED_S3_PATH);
     }
 
     private static final JobParameters validJobParameters = new JobParameters(testConfig);
@@ -131,5 +134,10 @@ class JobParametersTest {
     @Test
     public void shouldReturnEmptyOptionalWhenViolationsPathNotSet() {
         assertEquals(Optional.empty(), emptyJobParameters.getViolationsS3Path());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithCuratedPathWhenSet() {
+        assertEquals(Optional.of(CURATED_S3_PATH), validJobParameters.getCuratedS3Path());
     }
 }

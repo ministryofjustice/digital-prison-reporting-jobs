@@ -14,10 +14,10 @@ import uk.gov.justice.digital.service.model.SourceReference;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.from_json;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.to_json;
+import static org.apache.spark.sql.functions.from_json;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 @Singleton
@@ -41,47 +41,48 @@ public class StructuredZone extends Zone {
     }
 
     @Override
-    public void process(Dataset<Row> dataFrame) {
+    public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
 
-        logger.info("Processing batch with " + dataFrame.count() + " records");
+        long noOfRows = dataFrame.count();
+        logger.info("Processing batch with {} records", noOfRows);
 
         val startTime = System.currentTimeMillis();
 
-        getTablesWithLoadRecords(dataFrame).forEach((table) -> {
-            String sourceName = table.getAs(SOURCE);
-            String tableName = table.getAs(TABLE);
+        String sourceName = table.getAs(SOURCE);
+        String tableName = table.getAs(TABLE);
 
-            val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
+        val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
 
-            // Filter records on table name in metadata
-            val dataFrameForTable = dataFrame.filter(col(SOURCE).equalTo(sourceName).and(col(TABLE).equalTo(tableName)));
+        logger.info("Processing {} records for {}/{}", noOfRows, sourceName, tableName);
 
-            logger.info("Processing {} records for {}/{}", dataFrameForTable.count(), sourceName, tableName);
+        Dataset<Row> structuredDataFrame;
 
-            if (sourceReference.isPresent()) handleSchemaFound(dataFrameForTable, sourceReference.get());
-            else handleNoSchemaFound(dataFrameForTable, sourceName, tableName);
-        });
+        if (sourceReference.isPresent())
+            structuredDataFrame = handleSchemaFound(dataFrame, sourceReference.get());
+        else
+            structuredDataFrame = handleNoSchemaFound(dataFrame, sourceName, tableName);
+
 
         logger.info("Processed data frame with {} rows in {}ms",
-            dataFrame.count(),
-            System.currentTimeMillis() - startTime
+                noOfRows,
+                System.currentTimeMillis() - startTime
         );
+        return structuredDataFrame;
     }
 
-    private void handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
+    private Dataset<Row> handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val tablePath = getTablePath(structuredPath, sourceReference);
         val validationFailedViolationPath = getTablePath(
             violationsPath,
             sourceReference
         );
         val validatedDataFrame = validateJsonData(dataFrame, sourceReference.getSchema(), sourceReference.getSource(), sourceReference.getTable());
-        handleValidRecords(validatedDataFrame, tablePath);
         handleInValidRecords(validatedDataFrame, sourceReference.getSource(), sourceReference.getTable(), validationFailedViolationPath);
+        return handleValidRecords(validatedDataFrame, tablePath);
     }
 
     private Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {
         logger.info("Validating data against schema: {}/{}", source, table);
-
         val jsonValidator = JsonValidator.createAndRegister(schema, dataFrame.sparkSession(), source, table);
 
         return dataFrame
@@ -90,16 +91,20 @@ public class StructuredZone extends Zone {
             .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA))));
     }
 
-    private void handleValidRecords(Dataset<Row> dataFrame, String destinationPath) {
+    private Dataset<Row> handleValidRecords(Dataset<Row> dataFrame, String destinationPath) {
         val validRecords = dataFrame
             .select(col(PARSED_DATA), col(VALID))
             .filter(col(VALID).equalTo(true))
             .select(PARSED_DATA + ".*");
 
-        if (validRecords.count() > 0) {
-            logger.info("Writing {} valid records", validRecords.count());
+        val validRecordsCount = validRecords.count();
+        if (validRecordsCount > 0) {
+            logger.info("Writing {} valid records", validRecordsCount);
 
             appendToDeltaLakeTable(validRecords, destinationPath);
+            return validRecords;
+        } else {
+            return createEmptyDataFrame(dataFrame);
         }
     }
 
@@ -113,13 +118,15 @@ public class StructuredZone extends Zone {
             .withColumn(ERROR, lit(errorString))
             .drop(col(VALID));
 
-        if (invalidRecords.count() > 0) {
-            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecords.count());
+        val invalidRecordsCount = invalidRecords.count();
+
+        if (invalidRecordsCount > 0) {
+            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecordsCount);
             appendToDeltaLakeTable(invalidRecords, destinationPath);
         }
     }
 
-    private void handleNoSchemaFound(Dataset<Row> dataFrame, String source, String table) {
+    private Dataset<Row> handleNoSchemaFound(Dataset<Row> dataFrame, String source, String table) {
         logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
             source,
             table,
@@ -131,6 +138,7 @@ public class StructuredZone extends Zone {
             .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
 
         appendToDeltaLakeTable(missingSchemaRecords, getTablePath(violationsPath, source, table));
+        return createEmptyDataFrame(dataFrame);
     }
 
 }
