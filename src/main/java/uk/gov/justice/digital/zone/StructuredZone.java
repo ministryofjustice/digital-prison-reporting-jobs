@@ -57,11 +57,11 @@ public class StructuredZone extends Zone {
 
         Dataset<Row> structuredDataFrame;
 
-        if (sourceReference.isPresent()){
+        if (sourceReference.isPresent())
             structuredDataFrame = handleSchemaFound(dataFrame, sourceReference.get());
-        } else {
+        else
             structuredDataFrame = handleNoSchemaFound(dataFrame, sourceName, tableName);
-        }
+
 
         logger.info("Processed data frame with {} rows in {}ms",
                 noOfRows,
@@ -77,9 +77,8 @@ public class StructuredZone extends Zone {
             sourceReference
         );
         val validatedDataFrame = validateJsonData(dataFrame, sourceReference.getSchema(), sourceReference.getSource(), sourceReference.getTable());
-        val validDataFrame = handleValidRecords(validatedDataFrame, tablePath);
         handleInValidRecords(validatedDataFrame, sourceReference.getSource(), sourceReference.getTable(), validationFailedViolationPath);
-        return validDataFrame;
+        return handleValidRecords(validatedDataFrame, tablePath);
     }
 
     private Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {

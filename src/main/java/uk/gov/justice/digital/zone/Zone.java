@@ -55,8 +55,10 @@ public abstract class Zone {
     }
 
     protected Dataset<Row> createEmptyDataFrame(Dataset<Row> dataFrame) {
-        return dataFrame.filter(lit(false));
+        return dataFrame.sparkSession().createDataFrame(
+                dataFrame.sparkSession().emptyDataFrame().javaRDD(),
+                dataFrame.schema()
+        );
     }
-
 
 }

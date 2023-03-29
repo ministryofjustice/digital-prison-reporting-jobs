@@ -67,7 +67,7 @@ public class DataHubJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("DataHub Job started");
+        logger.info("Job started");
         PicocliRunner.run(DataHubJob.class);
     }
 

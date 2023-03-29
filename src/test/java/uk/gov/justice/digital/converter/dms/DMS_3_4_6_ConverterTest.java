@@ -12,7 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class DMS_3_4_6Test {
+public class DMS_3_4_6_ConverterTest {
 
     private static SparkSession sparkSession;
 
