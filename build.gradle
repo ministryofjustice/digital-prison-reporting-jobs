@@ -58,6 +58,7 @@ dependencies {
     }
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
     testImplementation "org.apache.spark:spark-core_2.12:$sparkVersion"
     testImplementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
 
