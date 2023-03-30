@@ -265,6 +265,18 @@
       "type": "string",
       "nullable": true,
       "metadata": {}
+    },
+    {
+      "name": "AREA_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "PAYROLL_REGION",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
     }
   ]
 }
