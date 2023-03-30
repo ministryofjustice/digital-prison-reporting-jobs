@@ -1,43 +1,50 @@
 package uk.gov.justice.digital.converter.dms;
 
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import lombok.val;
 import org.apache.spark.sql.SparkSession;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.justice.digital.job.model.Columns.DATA;
 
 public class DMS_3_4_6_ConverterTest {
 
     private static SparkSession sparkSession;
 
+    private static final String DATA_PATH = "src/test/resources/data/dms_record.json";
+
+    private static final DMS_3_4_6 underTest = new DMS_3_4_6();
+
     @BeforeAll
-    public static void beforeAll(){
-        sparkSession = SparkSession.builder().master("local[*]").getOrCreate();
+    public static void beforeAll() {
+        sparkSession = SparkSession.builder()
+            .master("local[*]")
+            .config("spark.ui.enabled", "false")
+            .getOrCreate();
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "src/test/resources/data/dms_data.json"
-    })
-    @DisplayName("Test Raw DMS 3.4.6 data.")
-    public void testDMSConvertProcessForValidData(final String rawDataPath) {
-        Dataset<Row> df = sparkSession.read().json(rawDataPath);
+    @Test
+    public void shouldConvertValidDataCorrectly() {
+        // Load JSON as text and slurp in the context of the whole file so we can read multiline JSON files.
+        val rdd = sparkSession
+            .read()
+            .option("wholetext", "true")
+            .text(DATA_PATH)
+            .withColumn(DATA, col("value"))
+            .javaRDD();
 
-        DMS_3_4_6 dms_3_4_6 = new DMS_3_4_6();
-        Dataset<Row> resultDF = dms_3_4_6.convert(df.javaRDD(), sparkSession);
+        val converted = underTest.convert(rdd, sparkSession);
 
-        assertEquals(df.count(), resultDF.count());
+        // Strict schema validation is applied so checking accounts agree should be sufficient here.
+        assertEquals(rdd.count(), converted.count());
     }
 
 
     @AfterAll
-    public static void afterAll(){
+    public static void afterAll() {
         sparkSession.stop();
     }
 
