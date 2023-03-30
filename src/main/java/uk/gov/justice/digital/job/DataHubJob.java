@@ -1,25 +1,21 @@
 package uk.gov.justice.digital.job;
 
+import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
-
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
-import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.zone.RawZone;
 import uk.gov.justice.digital.zone.StructuredZone;
-import io.micronaut.configuration.picocli.PicocliRunner;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -27,9 +23,7 @@ import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.apache.spark.sql.functions.lower;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.get_json_object;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 /**
@@ -74,6 +68,7 @@ public class DataHubJob implements Runnable {
     private void batchProcessor(JavaRDD<byte[]> batch) {
         if (!batch.isEmpty()) {
             val batchCount = batch.count();
+
             logger.info("Batch: {} - Processing {} records", batch.id(), batchCount);
 
             val startTime = System.currentTimeMillis();
@@ -84,11 +79,8 @@ public class DataHubJob implements Runnable {
 
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
                 val rawDataFrame = rawZone.process(dataFrame, table);
-
                 val structuredDataFrame = structuredZone.process(rawDataFrame, table);
-
                 curatedZone.process(structuredDataFrame, table);
-
             });
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",

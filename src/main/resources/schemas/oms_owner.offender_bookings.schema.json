@@ -74,7 +74,7 @@
       "metadata": {}
     },
     {
-      "name": "FINGERPRINTED_STAFF_ID",
+      "name": "FINGER_PRINTED_STAFF_ID",
       "type": "long",
       "nullable": true,
       "metadata": {}

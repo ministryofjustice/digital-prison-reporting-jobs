@@ -14,6 +14,9 @@ import uk.gov.justice.digital.service.model.SourceReference;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import java.util.Collections;
+import java.util.Map;
+
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.to_json;
@@ -24,6 +27,8 @@ import static uk.gov.justice.digital.job.model.Columns.*;
 public class StructuredZone extends Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
+
+    private static final Map<String, String> jsonOptions = Collections.singletonMap("ignoreNullFields", "false");
 
     private final String structuredPath;
     private final String violationsPath;
@@ -43,8 +48,9 @@ public class StructuredZone extends Zone {
     @Override
     public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
 
-        long noOfRows = dataFrame.count();
-        logger.info("Processing batch with {} records", noOfRows);
+        val rowCount = dataFrame.count();
+
+        logger.info("Processing batch with {} records", rowCount);
 
         val startTime = System.currentTimeMillis();
 
@@ -53,42 +59,38 @@ public class StructuredZone extends Zone {
 
         val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
 
-        logger.info("Processing {} records for {}/{}", noOfRows, sourceName, tableName);
+        logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
 
-        Dataset<Row> structuredDataFrame;
-
-        if (sourceReference.isPresent())
-            structuredDataFrame = handleSchemaFound(dataFrame, sourceReference.get());
-        else
-            structuredDataFrame = handleNoSchemaFound(dataFrame, sourceName, tableName);
-
+        val structuredDataFrame = sourceReference.isPresent()
+            ? handleSchemaFound(dataFrame, sourceReference.get())
+            : handleNoSchemaFound(dataFrame, sourceName, tableName);
 
         logger.info("Processed data frame with {} rows in {}ms",
-                noOfRows,
+                rowCount,
                 System.currentTimeMillis() - startTime
         );
+
         return structuredDataFrame;
     }
 
     private Dataset<Row> handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val tablePath = getTablePath(structuredPath, sourceReference);
-        val validationFailedViolationPath = getTablePath(
-            violationsPath,
-            sourceReference
-        );
+        val validationFailedViolationPath = getTablePath(violationsPath, sourceReference);
         val validatedDataFrame = validateJsonData(dataFrame, sourceReference.getSchema(), sourceReference.getSource(), sourceReference.getTable());
         handleInValidRecords(validatedDataFrame, sourceReference.getSource(), sourceReference.getTable(), validationFailedViolationPath);
         return handleValidRecords(validatedDataFrame, tablePath);
     }
 
     private Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {
+
         logger.info("Validating data against schema: {}/{}", source, table);
+
         val jsonValidator = JsonValidator.createAndRegister(schema, dataFrame.sparkSession(), source, table);
 
         return dataFrame
             .select(col(DATA), col(METADATA))
-            .withColumn(PARSED_DATA, from_json(col(DATA), schema))
-            .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA))));
+            .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
+            .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
     }
 
     private Dataset<Row> handleValidRecords(Dataset<Row> dataFrame, String destinationPath) {
