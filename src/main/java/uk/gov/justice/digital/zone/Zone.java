@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.zone;
 
+import io.delta.tables.DeltaTable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -10,7 +11,6 @@ import uk.gov.justice.digital.service.model.SourceReference;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.lit;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 public abstract class Zone {
@@ -41,7 +41,12 @@ public abstract class Zone {
             .collectAsList();
     }
 
-    protected void appendToDeltaLakeTable(Dataset<Row> dataFrame, String tablePath) {
+    protected void appendDataAndUpdateManifestForTable(Dataset<Row> dataFrame, String tablePath) {
+        appendToDeltaLakeTable(dataFrame, tablePath);
+        updateDeltaManifestForTable(tablePath);
+    }
+
+    private void appendToDeltaLakeTable(Dataset<Row> dataFrame, String tablePath) {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
 
         dataFrame
@@ -54,11 +59,22 @@ public abstract class Zone {
         logger.info("Append completed successfully");
     }
 
+    private void updateDeltaManifestForTable(String tablePath) {
+        if (DeltaTable.isDeltaTable(tablePath)) {
+            logger.info("Updating metadata for delta table: {}", tablePath);
+            DeltaTable
+                .forPath(tablePath)
+                .generate("symlink_format_manifest");
+        }
+        else logger.warn("Cannot update manifest for table: {} - Not a delta table", tablePath);
+    }
+
     protected Dataset<Row> createEmptyDataFrame(Dataset<Row> dataFrame) {
         return dataFrame.sparkSession().createDataFrame(
                 dataFrame.sparkSession().emptyDataFrame().javaRDD(),
                 dataFrame.schema()
         );
     }
+
 
 }

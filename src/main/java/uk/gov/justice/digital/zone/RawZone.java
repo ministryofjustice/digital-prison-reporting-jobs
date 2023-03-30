@@ -47,7 +47,7 @@ public class RawZone extends Zone {
             .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
             .drop(SOURCE, TABLE, OPERATION);
 
-        appendToDeltaLakeTable(rawDataFrame, tablePath);
+        appendDataAndUpdateManifestForTable(rawDataFrame, tablePath);
 
         logger.info("Processed data frame with {} rows in {}ms",
                 rawDataFrame.count(),
