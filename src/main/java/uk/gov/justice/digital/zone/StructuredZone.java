@@ -74,10 +74,28 @@ public class StructuredZone extends Zone {
     }
 
     private Dataset<Row> handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
+
         val tablePath = getTablePath(structuredPath, sourceReference);
-        val validationFailedViolationPath = getTablePath(violationsPath, sourceReference);
-        val validatedDataFrame = validateJsonData(dataFrame, sourceReference.getSchema(), sourceReference.getSource(), sourceReference.getTable());
-        handleInValidRecords(validatedDataFrame, sourceReference.getSource(), sourceReference.getTable(), validationFailedViolationPath);
+
+        val validationFailedViolationPath = getTablePath(
+            violationsPath,
+            sourceReference
+        );
+
+        val validatedDataFrame = validateJsonData(
+            dataFrame,
+            sourceReference.getSchema(),
+            sourceReference.getSource(),
+            sourceReference.getTable()
+        );
+
+        handleInValidRecords(
+            validatedDataFrame,
+            sourceReference.getSource(),
+            sourceReference.getTable(),
+            validationFailedViolationPath
+        );
+
         return handleValidRecords(validatedDataFrame, tablePath);
     }
 
@@ -100,14 +118,13 @@ public class StructuredZone extends Zone {
             .select(PARSED_DATA + ".*");
 
         val validRecordsCount = validRecords.count();
+
         if (validRecordsCount > 0) {
             logger.info("Writing {} valid records", validRecordsCount);
-
-            appendToDeltaLakeTable(validRecords, destinationPath);
+            appendDataAndUpdateManifestForTable(validRecords, destinationPath);
             return validRecords;
-        } else {
-            return createEmptyDataFrame(dataFrame);
         }
+        else return createEmptyDataFrame(dataFrame);
     }
 
     private void handleInValidRecords(Dataset<Row> dataFrame, String source, String table, String destinationPath) {
@@ -124,7 +141,7 @@ public class StructuredZone extends Zone {
 
         if (invalidRecordsCount > 0) {
             logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecordsCount);
-            appendToDeltaLakeTable(invalidRecords, destinationPath);
+            appendDataAndUpdateManifestForTable(invalidRecords, destinationPath);
         }
     }
 
@@ -139,7 +156,7 @@ public class StructuredZone extends Zone {
             .select(col(DATA), col(METADATA))
             .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
 
-        appendToDeltaLakeTable(missingSchemaRecords, getTablePath(violationsPath, source, table));
+        appendDataAndUpdateManifestForTable(missingSchemaRecords, getTablePath(violationsPath, source, table));
         return createEmptyDataFrame(dataFrame);
     }
 
