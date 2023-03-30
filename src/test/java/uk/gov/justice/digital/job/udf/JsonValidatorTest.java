@@ -52,6 +52,13 @@ class JsonValidatorTest {
     }
 
     @Test
+    public void shouldPassValidJsonIrrespectiveOfFieldOrdering() throws JsonProcessingException {
+        val json = "{\"mandatory\":\"foo\",\"numeric\":1}";
+        val jsonWithReverseFieldOrder = "{\"numeric\":1,\"mandatory\":\"foo\"}";
+        assertTrue(underTest.validate(json, jsonWithReverseFieldOrder, schema));
+    }
+
+    @Test
     public void shouldFailJsonWithMissingMandatoryValue() throws JsonProcessingException {
         val json = createJsonForMapValues(Arrays.asList(
             entry(Fields.OPTIONAL, "anotherValue"),
