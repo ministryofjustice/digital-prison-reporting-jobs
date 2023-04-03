@@ -46,8 +46,8 @@ public class DMS_3_4_6 extends Converter {
                 .add("table-name", StringType)
             );
 
-    // If the JSON is malformed FAILFAST will throw an exception rather than silently ignore it.
-    private static final Map<String, String> jsonOptions = Collections.singletonMap("mode", "FAILFAST");
+    // Allow parse errors to fail silently when parsing the raw JSON string to allow control records to be filtered.
+    private static final Map<String, String> jsonOptions = Collections.singletonMap("mode", "PERMISSIVE");
 
     @Override
     public Dataset<Row> convert(JavaRDD<Row> rdd, SparkSession spark) {
@@ -56,6 +56,9 @@ public class DMS_3_4_6 extends Converter {
             .drop(DATA)
             .select(JSON_DATA + ".*")
             .select(DATA, METADATA, METADATA + ".*")
+            // Ignore control records since they contain no data
+            .filter(lower(col("record-type")).notEqual("control"))
+            // Construct a dataframe that aligns to the parsed data schema
             .select(
                 col(DATA),
                 to_json(col(METADATA)),
