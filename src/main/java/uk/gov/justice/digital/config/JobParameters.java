@@ -42,6 +42,10 @@ public class JobParameters {
         return getMandatoryProperty("dpr.aws.kinesis.endpointUrl");
     }
 
+    public String getAwsDynamoDBEndpointUrl() {
+        return getMandatoryProperty("dpr.aws.dynamodb.endpointUrl");
+    }
+
     public String getKinesisReaderStreamName() {
         return getMandatoryProperty("dpr.kinesis.reader.streamName");
     }
@@ -89,6 +93,11 @@ public class JobParameters {
     public String getDomainTableName() {
         return getMandatoryProperty( "dpr.domain.table.name");
     }
+
+    public String getDomainOperation() {
+        return getMandatoryProperty( "dpr.domain.operation");
+    }
+
 
     private String getMandatoryProperty(String jobParameter) {
         return Optional

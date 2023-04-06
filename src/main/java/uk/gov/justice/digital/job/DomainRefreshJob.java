@@ -31,6 +31,7 @@ public class DomainRefreshJob extends Job implements Runnable {
     private String domainTargetPath;
     protected String domainTableName;
     private String domainId;
+    private String domainOperation;
     private DynamoDBClient dynamoDBClient;
 
     @Inject
@@ -46,6 +47,7 @@ public class DomainRefreshJob extends Job implements Runnable {
         this.domainTargetPath = jobParameters.getDomainTargetPath();
         this.domainTableName = jobParameters.getDomainTableName();
         this.domainId = jobParameters.getDomainId();
+        this.domainOperation = jobParameters.getDomainOperation();
         this.dynamoDBClient = dynamoDBClient;
     }
     public DomainRefreshService refresh() {
@@ -54,7 +56,7 @@ public class DomainRefreshJob extends Job implements Runnable {
         return new DomainRefreshService(spark, domainFilesPath, domainRepoPath, curatedPath, domainTargetPath, dynamoDBClient);
     }
     public static void main(String[] args) {
-        logger.info("Domain Refresh Job started..");
+        logger.info("Job started");
         PicocliRunner.run(DomainRefreshJob.class);
     }
     protected void getOrCreateDomainRepository(final SparkSession spark, final String domainFilesPath, final String domainRepositoryPath) {
@@ -69,7 +71,7 @@ public class DomainRefreshJob extends Job implements Runnable {
     @Override
     public void run() {
         DomainRefreshService domainRefreshService = refresh();
-        domainRefreshService.run(domainTableName, domainId);
+        domainRefreshService.run(domainTableName, domainId, domainOperation);
     }
 
 }

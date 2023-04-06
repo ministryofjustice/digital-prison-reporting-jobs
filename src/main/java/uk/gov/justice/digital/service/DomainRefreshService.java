@@ -34,11 +34,11 @@ public class DomainRefreshService {
         this.repo = new DomainRepository(spark, domainFilesPath, domainRepositoryPath, dynamoDBClient);
     }
 
-    public void run(final String domainTableName, final String domainId) {
+    public void run(final String domainTableName, final String domainId, final String domainOperation) {
         Set<DomainDefinition> domains = getDomains(domainTableName, domainId);
         System.out.println("Located " + domains.size() + " domains for name '" + domainId + "'");
         for(final DomainDefinition domain : domains) {
-            processDomain(domain);
+            processDomain(domain, domainOperation);
         }
     }
 
@@ -46,11 +46,11 @@ public class DomainRefreshService {
         return this.repo.getForName(domainTableName, domainId);
     }
 
-    protected void processDomain(final DomainDefinition domain) {
+    protected void processDomain(final DomainDefinition domain, final String domainOperation) {
         try {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
-            executor.doFull();
+            executor.doFull(domainOperation);
             System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
         } catch(Exception e) {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");

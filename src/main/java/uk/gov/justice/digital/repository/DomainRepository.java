@@ -125,52 +125,6 @@ public class DomainRepository {
         return domains;
     }
 
-//    public Set<DomainDefinition> getForName(final String name) {
-//        Set<DomainDefinition> domains = new HashSet<>();
-//
-//        try {
-//            final Dataset<Row> df = getDomainRepository();
-//            if(df != null) {
-//                String[] names = name.split("[.]");
-//                if(names.length >= 2) {
-//                    final List<String> results = df
-//                            .where("name ='" + names[0].toLowerCase() + "'")
-//                            .select(col("definition")).as(Encoders.STRING())
-//                            .collectAsList();
-//
-//                    for (final String result : results) {
-//                        domains.add(MAPPER.readValue(result, DomainDefinition.class));
-//                    }
-//                    for(DomainDefinition domain: domains){
-//                        domain.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(names[1]));
-//                    }
-//                } else {
-//                    final List<String> results = df
-//                            .where("name ='" + name.toLowerCase() + "'")
-//                            .select(col("definition")).as(Encoders.STRING())
-//                            .collectAsList();
-//
-//                    for (final String result : results) {
-//                        domains.add(MAPPER.readValue(result, DomainDefinition.class));
-//                    }
-//                }
-//            } else {
-//                throw new RuntimeException("Domain Repository (" + domainRepositoryPath + "/" + SCHEMA + "/" + TABLE + ") does not exist. Please refresh the domain repository");
-//            }
-//        } catch(Exception e) {
-//            handleError(e);
-//        }
-//        return domains;
-//    }
-
-    // TODO this is replaced with DynamoDB
-//    protected Dataset<Row> getDomainRepository() {
-//        if(service.exists(domainRepositoryPath, SCHEMA, TABLE)) {
-//            return service.load(domainRepositoryPath, SCHEMA, TABLE);
-//        }
-//        return null;
-//    }
-
     protected void handleError(final Exception e) {
         final StringWriter sw = new StringWriter();
         final PrintWriter pw = new PrintWriter(sw);

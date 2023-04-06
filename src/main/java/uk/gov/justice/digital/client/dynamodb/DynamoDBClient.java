@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.client.dynamodb;
 
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
@@ -8,15 +9,17 @@ import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micronaut.context.annotation.Bean;
+import jakarta.inject.Inject;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domains.model.DomainDefinition;
 
-import javax.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
 
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
-@Singleton
+@Bean
 public class DynamoDBClient {
 
     private final static ObjectMapper MAPPER = new ObjectMapper();
@@ -25,8 +28,14 @@ public class DynamoDBClient {
     private final String sortKeyName = "secondaryId";
     private final AmazonDynamoDB dynamoDB;
 
-    public DynamoDBClient() {
-        dynamoDB = AmazonDynamoDBClientBuilder.defaultClient();
+    @Inject
+    public DynamoDBClient(JobParameters jobParameters) {
+        dynamoDB = AmazonDynamoDBClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                        jobParameters.getAwsDynamoDBEndpointUrl(),
+                        jobParameters.getAwsRegion()
+                ))
+                .build();
     }
 
     public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId) {
