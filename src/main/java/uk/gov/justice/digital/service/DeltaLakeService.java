@@ -41,7 +41,7 @@ public class DeltaLakeService {
         deltaTable.delete();
         System.out.println("DeltaLakeService:: before truncate");
         deltaTable.sparkSession().sql("DELETE FROM delta.`" + tablePath + "`");
-        deltaTable.vacuum();
+        //deltaTable.vacuum();
         //DbfsUtils.fs.rm("");
         //deltaTable.sparkSession().sql("TRUNCATE TABLE delta.`" + tablePath + "`");
         //deltaTable.sparkSession().sql("DROP TABLE IF EXISTS delta.`" + tablePath + "`");
