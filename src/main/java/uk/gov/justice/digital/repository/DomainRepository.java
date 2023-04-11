@@ -2,7 +2,6 @@ package uk.gov.justice.digital.repository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
@@ -18,21 +17,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.spark.sql.functions.col;
-
 public class DomainRepository {
 
     private final static ObjectMapper MAPPER = new ObjectMapper();
 
     // sourceDomains // TODO not required
     protected String domainFilesPath; // TODO not required
-    // delta table repo
     protected String domainRepositoryPath;
-    protected DeltaLakeService service = new DeltaLakeService();
     protected final static String SCHEMA = "domain-repository";
     protected final static String TABLE = "domain";
     private SparkSession spark;
     private DynamoDBClient dynamoDBClient;
+
+    protected DeltaLakeService service = new DeltaLakeService();
 
     public DomainRepository(final SparkSession spark,
                             final String domainFilesPath,

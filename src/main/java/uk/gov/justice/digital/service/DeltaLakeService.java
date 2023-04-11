@@ -1,7 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.databricks.dbutils_v1.DBUtilsV1;
-import com.databricks.dbutils_v1.DbfsUtils;
 import io.delta.tables.DeltaTable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -33,30 +31,24 @@ public class DeltaLakeService {
                 .save();
     }
 
-    public void truncate(final String prefix, final String schema, final String table) {
-        System.out.println("DeltaLakeService:: truncate");
+    public void delete(final String prefix, final String schema, final String table) {
+        System.out.println("deleting table.");
         final DeltaTable deltaTable = getTable(prefix, schema, table);
-        final String tablePath = getTablePath(prefix, schema, table);
-        System.out.println("DeltaLakeService:: before delete");
-        deltaTable.delete();
-        System.out.println("DeltaLakeService:: before truncate");
-        deltaTable.sparkSession().sql("DELETE FROM delta.`" + tablePath + "`");
-        //deltaTable.vacuum();
-        //DbfsUtils.fs.rm("");
-        //deltaTable.sparkSession().sql("TRUNCATE TABLE delta.`" + tablePath + "`");
-        //deltaTable.sparkSession().sql("DROP TABLE IF EXISTS delta.`" + tablePath + "`");
+        if(deltaTable != null) {
+            deltaTable.delete();
+        }
     }
 
     public void vacuum(final String prefix, final String schema, final String table) {
-        final DeltaTable dt = getTable(prefix, schema, table);
-        if(dt != null) {
-            dt.vacuum();
+        final DeltaTable deltaTable = getTable(prefix, schema, table);
+        if(deltaTable != null) {
+            deltaTable.vacuum();
         }
     }
 
     public Dataset<Row> load(final String prefix, final String schema, final String table) {
-        final DeltaTable dt = getTable(prefix, schema, table);
-        return dt == null ? null : dt.toDF();
+        final DeltaTable deltaTable = getTable(prefix, schema, table);
+        return deltaTable == null ? null : deltaTable.toDF();
     }
 
     protected DeltaTable getTable(final String prefix, final String schema, final String table) {
@@ -67,8 +59,8 @@ public class DeltaLakeService {
     }
 
     public void endTableUpdates(final String prefix, final String schema, final String table) {
-        final DeltaTable dt = getTable(prefix, schema, table);
-        updateManifest(dt);
+        final DeltaTable deltaTable = getTable(prefix, schema, table);
+        updateManifest(deltaTable);
     }
 
     protected void updateManifest(final DeltaTable dt) {

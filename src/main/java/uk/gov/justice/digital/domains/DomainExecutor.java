@@ -161,8 +161,8 @@ public class DomainExecutor {
 
     protected void deleteFull(final TableInfo info) {
         System.out.println("DomainExecutor:: deleteFull");
-        deltaService.truncate(info.getPrefix(), info.getSchema(), info.getTable());
-        //deltaService.vacuum(info.getPrefix(), info.getSchema(), info.getTable());
+        deltaService.delete(info.getPrefix(), info.getSchema(), info.getTable());
+        deltaService.vacuum(info.getPrefix(), info.getSchema(), info.getTable());
     }
 
 

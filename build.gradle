@@ -50,7 +50,6 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
-    implementation 'com.databricks:dbutils-api_2.12:0.0.6'
 
     implementation ("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
       // We exclude spark here to prevent spark being added to the jar during the build.

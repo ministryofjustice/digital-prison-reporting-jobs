@@ -18,7 +18,6 @@ public class DomainRefreshService {
     protected String sourcePath;
     protected String targetPath;
     protected DomainRepository repo;
-    private DynamoDBClient dynamoDBClient;
 
     public DomainRefreshService(final SparkSession spark,
                                 final String domainFilesPath,
@@ -30,7 +29,6 @@ public class DomainRefreshService {
         this.domainRepositoryPath = domainRepositoryPath;
         this.sourcePath = sourcePath;
         this.targetPath = targetPath;
-        this.dynamoDBClient = dynamoDBClient;
         this.repo = new DomainRepository(spark, domainFilesPath, domainRepositoryPath, dynamoDBClient);
     }
 
