@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Script to start a given glue job and tail the logs using the tail-glue-logs
+# script.
+#
+# Usage:
+#
+#   scripts/start-and-tail-job <glue-job-name>
+#
+# Requires the aws cli to be installed and configured.
+
+set -e
+
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+job_name="$@"
+
+if [ -z "$job_name" ]
+then
+  echo "A glue job name must be specified"
+  exit 1;
+fi
+
+
+aws glue start-job-run --job-name $job_name > /dev/null
+$script_dir/tail-glue-logs $job_name

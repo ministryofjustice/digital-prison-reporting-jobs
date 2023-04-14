@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Script to build the jobs jar and push it to a specified s3 bucket.
+#
+# Usage:
+#
+#   scripts/push-jar <s3-folder-uri>
+#
+#   e.g.
+#
+#   scripts/push-jar s3://dpr-jars/dev
+
+set -e
+
+s3_uri="$@"
+
+echo
+
+if [ -z "$s3_uri" ]
+then
+  echo "A destination s3 uri must be specified"
+  exit 1;
+fi
+
+echo "Building jar"
+echo
+
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+./gradlew clean shadowJar
+
+echo
+echo "Uploading jar to $s3_uri"
+echo
+aws s3 cp ./build/libs/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar $s3_uri/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar
+echo

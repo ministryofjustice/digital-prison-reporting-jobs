@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Script to tail the logs for the latest run of a given glue job.
+#
+# Uses a filter pattern to only show relevant log messages. This can be
+# extended as required.
+#
+# Usage:
+#
+#   scripts/tail-glue-logs <glue-job-name>
+
+set -e
+
+job_name="$@"
+
+if [ -z "$job_name" ]
+then
+  echo "A glue job name must be specified"
+  exit 1;
+fi
+
+run_id=$(aws glue get-job-runs --job-name $job_name --max-items 1 --output yaml | grep "Id:" | tr -d ' ' | cut -d ':' -f2)
+
+echo "Tailing logs for job: $job_name run-id: $run_id"
+
+# Default filter pattern includes messages from classes in the ...job.* and
+# ...zone.* packages. This can be extended to include other packages as work
+# progresses.
+#
+# See https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html
+# for further info about filter patterns.
+log_fiter_pattern="?job. ?zone."
+
+aws logs tail /aws-glue/jobs/error \
+  --follow --log-stream-name-prefix $run_id \
+  --filter-pattern "?job. ?zone." \
+  --format short
