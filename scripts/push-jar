@@ -33,5 +33,5 @@ cd $script_dir/../
 echo
 echo "Uploading jar to $s3_uri"
 echo
-aws s3 cp ./build/libs/digital-prison-reporting-jobs-*-all.jar $s3_uri/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar
+aws s3 cp ./build/libs/digital-prison-reporting-jobs-*-all.jar $s3_uri/
 echo
