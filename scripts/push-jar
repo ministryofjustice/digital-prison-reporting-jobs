@@ -12,6 +12,8 @@
 
 set -e
 
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 s3_uri="$@"
 
 echo
@@ -25,12 +27,11 @@ fi
 echo "Building jar"
 echo
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
+cd $script_dir/../
 ./gradlew clean shadowJar
 
 echo
 echo "Uploading jar to $s3_uri"
 echo
-aws s3 cp ./build/libs/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar $s3_uri/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar
+aws s3 cp ./build/libs/digital-prison-reporting-jobs-*-all.jar $s3_uri/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar
 echo
