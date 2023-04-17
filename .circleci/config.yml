@@ -14,7 +14,7 @@ workflows:
           s3_sync_args: ""
           build_args: "--debug"
           notify_jira: true
-          notify_slack: true
+          notify_slack: false
           filters:
             branches:
               only: /.*/
