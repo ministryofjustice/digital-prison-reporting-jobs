@@ -14,47 +14,21 @@ number of processes within the Digital Prison Reporting platform.
 
 ## Local Development
 
-This project uses gradle which is bundled with the repository and also makes use
-of
-
-- [micronaut](https://micronaut.io/) - for compile time dependency injection
-- [lombok](https://projectlombok.org/) - to reduce boilerplate when creating data classes
-- [jacoco](https://docs.gradle.org/current/userguide/jacoco_plugin.html) - for test coverage reports
-
-### Packaging
-
-This project makes use of the [shadow jar plugin](https://github.com/johnrengelman/shadow)
-which takes care of creating a jar containing all dependencies.
-
-The plugin adds the suffix `-all` to the jar file name e.g.
-
-```
-    digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar
-```
+This project uses gradle which is bundled with the repository.
 
 ### Running a job
 
 First, build the jar locally
 
 ```
-    ./gradlew clean shadowJar
+    ./gradlew clean build
 ```
 
-and then execute your job by specifying the fully qualified classname e.g.
+and then execute the job by specifying the fully qualified classname e.g.
 
 ```
-    java -cp ./build/libs/digital-prison-reporting-jobs-1.0-SNAPSHOT-all.jar uk.gov.justice.digital.Placeholder
+    java -cp ./build/libs/gradle-demo-app-1.0-SNAPSHOT.jar uk.gov.justice.digital.Placeholder
 ```
-
-ensuring that your job class has a main method that can be executed.
-
-> **Note** - On AWS Glue the job class can be specified using the `--class`
-> parameter and the script can then be left blank.
-
-## Testing
-
-> **Note** - test coverage reports are enabled by default and after running the
-> tests the report will be written to build/reports/jacoco/test/html
 
 ### Unit Tests
 
