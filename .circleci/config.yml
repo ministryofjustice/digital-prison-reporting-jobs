@@ -21,3 +21,4 @@ workflows:
               ignore: /.*/
           context:
             - digital-prison-reporting-dev
+            - hmpps-reporting-orb
