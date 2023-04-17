@@ -11,7 +11,7 @@ workflows:
           app_artifacts_directory: build/libs/
           bucket: dpr-artifact-store-development
           bucket_path: digital-prison-reporting-java-template
-          args: ""
+          args: "--debug"
           notify_jira: true
           notify_slack: true
           filters:
