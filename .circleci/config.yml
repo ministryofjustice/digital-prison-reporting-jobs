@@ -7,7 +7,7 @@ workflows:
   checkout-build-test:
     jobs:
       - reporting/gradle_build_publish:
-          app_src_directory: digital-prison-reporting-java-template
+          app_src_directory: .
           app_artifacts_directory: build/libs/
           bucket: dpr-artifact-store-development
           bucket_path: digital-prison-reporting-java-template
