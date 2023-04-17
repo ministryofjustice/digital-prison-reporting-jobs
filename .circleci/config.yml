@@ -4,7 +4,7 @@ orbs:
   reporting: ministryofjustice/hmpps-reporting@1.0.3
   
 workflows:
-  checkout-build-test:
+  checkout-build-publish:
     jobs:
       - reporting/gradle_build_publish:
           app_src_directory: .
@@ -21,4 +21,4 @@ workflows:
               ignore: /.*/
           context:
             - digital-prison-reporting-dev
-            - hmpps-reporting-orb
+            - hmpps-common-vars
