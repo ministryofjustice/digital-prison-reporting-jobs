@@ -21,4 +21,4 @@ workflows:
             tags:
               ignore: /.*/
           context:
-            - hmpps-common-vars
+            - hmpps-reporting-common
