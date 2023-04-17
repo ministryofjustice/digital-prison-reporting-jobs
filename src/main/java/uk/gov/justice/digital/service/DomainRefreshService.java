@@ -9,6 +9,7 @@ import uk.gov.justice.digital.repository.DomainRepository;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Set;
+import java.util.logging.Logger;
 
 // TODO Rename it to DomainService??
 public class DomainRefreshService {
@@ -19,22 +20,20 @@ public class DomainRefreshService {
     protected String targetPath;
     protected DomainRepository repo;
 
+    static Logger logger = Logger.getLogger(DomainRefreshService.class.getName());
+
     public DomainRefreshService(final SparkSession spark,
-                                final String domainFilesPath,
-                                final String domainRepositoryPath,
                                 final String sourcePath,
                                 final String targetPath,
                                 final DynamoDBClient dynamoDBClient) {
-        this.domainFilesPath = domainFilesPath;
-        this.domainRepositoryPath = domainRepositoryPath;
         this.sourcePath = sourcePath;
         this.targetPath = targetPath;
-        this.repo = new DomainRepository(spark, domainFilesPath, domainRepositoryPath, dynamoDBClient);
+        this.repo = new DomainRepository(spark, dynamoDBClient);
     }
 
     public void run(final String domainTableName, final String domainId, final String domainOperation) {
         Set<DomainDefinition> domains = getDomains(domainTableName, domainId);
-        System.out.println("Located " + domains.size() + " domains for name '" + domainId + "'");
+        logger.info("Located " + domains.size() + " domains for name '" + domainId + "'");
         for(final DomainDefinition domain : domains) {
             processDomain(domain, domainOperation);
         }
@@ -46,12 +45,12 @@ public class DomainRefreshService {
 
     protected void processDomain(final DomainDefinition domain, final String domainOperation) {
         try {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') started");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
             executor.doFull(domainOperation);
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') completed");
         } catch(Exception e) {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             handleError(e);
         }
     }

@@ -3,20 +3,19 @@ package uk.gov.justice.digital.domains;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import uk.gov.justice.digital.domains.model.DomainDefinition;
-import uk.gov.justice.digital.domains.model.TableDefinition;
-import uk.gov.justice.digital.domains.model.TableDefinition.MappingDefinition;
+import uk.gov.justice.digital.domains.model.*;
 import uk.gov.justice.digital.domains.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domains.model.TableDefinition.ViolationDefinition;
-import uk.gov.justice.digital.domains.model.TableInfo;
-import uk.gov.justice.digital.domains.model.TableTuple;
-import uk.gov.justice.digital.service.DeltaLakeService;
+import uk.gov.justice.digital.domains.service.DomainService;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
+import java.util.logging.Logger;
 
-public class DomainExecutor {
+import uk.gov.justice.digital.exceptions.DomainExecutorException;
+
+public class DomainExecutor extends DomainService {
 
     // core initialised values
     // sourceRootPath
@@ -26,7 +25,8 @@ public class DomainExecutor {
     protected String targetRootPath;
     protected DomainDefinition domainDefinition;
 
-    protected DeltaLakeService deltaService = new DeltaLakeService();
+    static Logger logger = Logger.getLogger(DomainExecutor.class.getName());
+
 
     public DomainExecutor(final String sourceRootPath, final String targetRootPath, final DomainDefinition domain) {
         this.sourceRootPath = sourceRootPath;
@@ -34,103 +34,43 @@ public class DomainExecutor {
         this.domainDefinition = domain;
     }
 
+//    protected List<TableDefinition> getTablesChangedForSourceTable(final TableTuple sourceTable) {
+//        List<TableDefinition> tables = new ArrayList<>();
+//        for(final TableDefinition table : domainDefinition.getTables()) {
+//            for( final String source : table.getTransform().getSources()) {
+//                if(sourceTable != null && sourceTable.asString().equalsIgnoreCase(source)) {
+//                    tables.add(table);
+//                    break;
+//                }
+//            }
+//        }
+//        return tables;
+//    }
 
     // TODO this is only for unit testing purpose
-    public void doFull(final TableTuple sourceTable) {
-
-        final TableInfo sourceInfo = TableInfo.create(sourceRootPath, sourceTable.getSchema(), sourceTable.getTable());
-        final Dataset<Row> df_source = deltaService.load(sourceInfo.getPrefix(), sourceInfo.getSchema(), sourceInfo.getTable());
-
-        final List<TableDefinition> tables = getTablesChangedForSourceTable(sourceTable);
-        for(final TableDefinition table : tables) {
-
-            try {
-                final Dataset<Row> df_target = apply(table, sourceTable, df_source);
-                final TableInfo targetInfo = TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName());
-                saveFull(targetInfo, df_target);
-            } catch(Exception e) {
-                handleError(e);
-            }
-        }
-    }
-
-    protected List<TableDefinition> getTablesChangedForSourceTable(final TableTuple sourceTable) {
-        List<TableDefinition> tables = new ArrayList<>();
-        for(final TableDefinition table : domainDefinition.getTables()) {
-            for( final String source : table.getTransform().getSources()) {
-                if(sourceTable != null && sourceTable.asString().equalsIgnoreCase(source)) {
-                    tables.add(table);
-                    break;
-                }
-            }
-        }
-        return tables;
-    }
-
-    public void doFull(final String domainOperation) {
-        final List<TableDefinition> tables = domainDefinition.getTables();
-        for(final TableDefinition table : tables) {
-
-            try {
-                // TODO no source table and df they are required only for unit testing
-                final Dataset<Row> df_target = apply(table, null, null);
-                final TableInfo targetInfo = TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName());
-                // Create an Enum for insert, update, sync and delete
-                if(domainOperation.equalsIgnoreCase("insert") ||
-                        domainOperation.equalsIgnoreCase("update") ||
-                        domainOperation.equalsIgnoreCase("sync")) {
-                    System.out.println("domain operation is insert/update/sync");
-                    saveFull(targetInfo, df_target);
-                }
-                else if(domainOperation.equalsIgnoreCase("delete")) {
-                    System.out.println("domain operation is delete");
-                    deleteFull(targetInfo);
-                }
-                else throw new UnsupportedOperationException("Unsupported domain operation.");
-            } catch(Exception e) {
-                handleError(e);
-            }
-        }
-    }
-
-    protected Dataset<Row> apply(final TableDefinition table, final TableTuple sourceTable, final Dataset<Row> dataFrame) {
-        try {
-
-            System.out.println("DomainExecutor::applyTransform(" + table.getName() + ")...");
-            // Transform
-            final Map<String, Dataset<Row>> refs = this.getAllSourcesForTable(table, sourceTable);
-            // Add sourceTable if present
-            if(sourceTable != null && dataFrame != null) {
-                refs.put(sourceTable.asString().toLowerCase(), dataFrame);
-            }
-            System.out.println("'" + table.getName() + "' has " + refs.size() + " references to tables...");
-            final Dataset<Row> transformedDataFrame = applyTransform(refs, table.getTransform());
-
-            System.out.println("DomainExecutor::applyViolations(" + table.getName() + ")...");
-            // Process Violations - we now have a subset
-            final Dataset<Row> postViolationsDataFrame = applyViolations(transformedDataFrame, table.getViolations());
-
-            System.out.println("DomainExecutor::applyMappings(" + table.getName() + ")...");
-            // Mappings
-            final Dataset<Row> postMappingsDataFrame = applyMappings(postViolationsDataFrame, table.getMapping());
-
-            return postMappingsDataFrame;
-
-        } catch(Exception e) {
-            System.out.println("DomainExecutor::apply(" + table.getName() + ") failed.");
-            handleError(e);
-            return dataFrame;
-        }
-        finally {
-            System.out.println("DomainExecutor::apply(" + table.getName() + ") completed.");
-        }
-    }
+//    public void doFull(final TableTuple sourceTable) {
+//
+//        final TableInfo sourceInfo = TableInfo.create(sourceRootPath, sourceTable.getSchema(), sourceTable.getTable());
+//        final Dataset<Row> df_source = deltaService.load(sourceInfo.getPrefix(), sourceInfo.getSchema(), sourceInfo.getTable());
+//
+//        final List<TableDefinition> tables = getTablesChangedForSourceTable(sourceTable);
+//        for(final TableDefinition table : tables) {
+//
+//            try {
+//                final Dataset<Row> df_target = apply(table, sourceTable, df_source);
+//                final TableInfo targetInfo = TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName());
+//                saveFull(targetInfo, df_target);
+//            } catch(Exception e) {
+//                handleError(e);
+//            }
+//        }
+//    }
 
     protected Dataset<Row> applyViolations(final Dataset<Row> dataFrame, final List<ViolationDefinition> violations) {
         Dataset<Row> violationsDataFrame = dataFrame;
-        for(final ViolationDefinition violation : violations) {
+        for (final ViolationDefinition violation : violations) {
             final Dataset<Row> df_violations = violationsDataFrame.where("not(" + violation.getCheck() + ")").toDF();
-            if(!df_violations.isEmpty()) {
+            if (!df_violations.isEmpty()) {
                 TableInfo info = TableInfo.create(targetRootPath, violation.getLocation(), violation.getName());
                 saveViolations(info, df_violations);
                 violationsDataFrame = violationsDataFrame.except(df_violations);
@@ -139,113 +79,170 @@ public class DomainExecutor {
         return violationsDataFrame;
     }
 
-    protected void saveViolations(final TableInfo target, final Dataset<Row> dataFrame) {
-        // save the violations to the specified location
-        deltaService.append(target.getPrefix(), target.getSchema(), target.getTable(), dataFrame);
-        deltaService.endTableUpdates(target.getPrefix(), target.getSchema(), target.getTable());
-    }
-
-    protected Dataset<Row> applyMappings(final Dataset<Row> dataFrame, final MappingDefinition mapping) {
-        if(mapping != null && mapping.getViewText() != null && !mapping.getViewText().isEmpty()) {
-            return dataFrame.sqlContext().sql(mapping.getViewText()).toDF();
-        }
-        return dataFrame;
-    }
-
-    protected void saveFull(final TableInfo info, final Dataset<Row> dataFrame) {
-        System.out.println("DomainExecutor:: saveFull");
-        deltaService.replace(info.getPrefix(), info.getSchema(), info.getTable(), dataFrame);
-        deltaService.endTableUpdates(info.getPrefix(), info.getSchema(), info.getTable());
-        deltaService.vacuum(info.getPrefix(), info.getSchema(), info.getTable());
-    }
-
-    protected void deleteFull(final TableInfo info) {
-        System.out.println("DomainExecutor:: deleteFull");
-        deltaService.delete(info.getPrefix(), info.getSchema(), info.getTable());
-        deltaService.vacuum(info.getPrefix(), info.getSchema(), info.getTable());
-    }
-
-
-    protected Map<String, Dataset<Row>> getAllSourcesForTable(final TableDefinition table, final TableTuple exclude) {
-        Map<String,Dataset<Row>> fullSources = new HashMap<>();
-        if(table.getTransform() != null && table.getTransform().getSources() != null && table.getTransform().getSources().size() > 0) {
-            for( final String source : table.getTransform().getSources()) {
-                if(exclude != null && exclude.asString().equalsIgnoreCase(source)) {
-                    // we already have this table
-                } else {
-                    try {
-                        TableTuple full = new TableTuple(source);
-                        final Dataset<Row> dataFrame = deltaService.load(sourceRootPath, full.getSchema(), full.getTable());
-                        if(dataFrame == null) {
-                            System.err.println("Unable to load source '" + source +"' for Table Definition '" + table.getName() + "'");
-                        } else {
-                            System.out.println("Loaded source '" + full.asString() +"'.");
-                            fullSources.put(source.toLowerCase(), dataFrame);
-                        }
-                    } catch(Exception e) {
-                        handleError(e);
-                    }
-                }
-            }
-        }
-        return fullSources;
-    }
-
-    protected Dataset<Row> applyTransform(final Map<String,Dataset<Row>> dfs, final TransformDefinition transform) {
+    protected Dataset<Row> applyTransform(final Map<String, Dataset<Row>> dfs, final TransformDefinition transform)
+            throws DomainExecutorException {
         final List<String> srcs = new ArrayList<>();
         SparkSession spark = null;
         try {
             String view = transform.getViewText().toLowerCase();
+            if (view.isEmpty()) {
+//                logger.info("View text is empty");
+                throw new DomainExecutorException("View text is empty");
+            }
             boolean incremental = false;
-            for(final String source : transform.getSources()) {
-                final String src = source.toLowerCase().replace(".","__");
+            for (final String source : transform.getSources()) {
+                final String src = source.toLowerCase().replace(".", "__");
                 final Dataset<Row> df_source = dfs.get(source);
-                if(df_source != null) {
+                if (df_source != null) {
                     df_source.createOrReplaceTempView(src);
-                    System.out.println("Added view '" + src +"'");
+                    logger.info("Added view '" + src + "'");
                     srcs.add(src);
-                    if(!incremental &&
+                    if (!incremental &&
                             schemaContains(df_source, "_operation") &&
-                            schemaContains(df_source, "_timestamp"))
-                    {
-                        view = view.replace(" from ", ", " + src +"._operation, " + src + "._timestamp from ");
+                            schemaContains(df_source, "_timestamp")) {
+                        view = view.replace(" from ", ", " + src + "._operation, " + src + "._timestamp from ");
                         incremental = true;
                     }
-                    if(spark == null) {
+                    if (spark == null) {
                         spark = df_source.sparkSession();
                     }
                 }
+                logger.info(view);
                 view = view.replace(source, src);
             }
-            System.out.println("Executing view '" + view + "'...");
+            logger.info("Executing view '" + view + "'...");
             return spark == null ? null : spark.sqlContext().sql(view).toDF();
-        } catch(Exception e) {
+        } catch (Exception e) {
             handleError(e);
             return null;
         } finally {
             try {
-                if(spark != null) {
-                    for(final String source : srcs) {
+                if (spark != null) {
+                    for (final String source : srcs) {
                         spark.catalog().dropTempView(source);
                     }
                 }
-            }
-            catch(Exception e) {
+            } catch (Exception e) {
                 // TODO handle errors
                 // continue;
             }
         }
     }
 
-    protected boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
-        return Arrays.asList(dataFrame.schema().fieldNames()).contains(field);
+
+    // TODO: Mapping will be enhanced at later stage in future user stories
+    protected Dataset<Row> applyMappings(final Dataset<Row> dataFrame, final TableDefinition.MappingDefinition mapping) {
+        if(mapping != null && mapping.getViewText() != null && !mapping.getViewText().isEmpty()) {
+            return dataFrame.sqlContext().sql(mapping.getViewText()).toDF();
+        }
+        return dataFrame;
     }
 
-    protected void handleError(final Exception e) {
-        final StringWriter sw = new StringWriter();
-        final PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-        System.err.print(sw.getBuffer().toString());
+    protected Dataset<Row> getAllSourcesForTable(final String source, final TableTuple exclude) {
+        if(exclude != null && exclude.asString().equalsIgnoreCase(source)) {
+            //TODO: this condition only for unit test
+            // we already have this table
+            logger.info("table already present " + exclude.asString());
+        } else {
+            try {
+                TableTuple full = new TableTuple(source);
+                final Dataset<Row> dataFrame = deltaService.load(sourceRootPath, full.getSchema(), full.getTable());
+                if(dataFrame != null) {
+                    logger.info("Loaded source '" + full.asString() +"'.");
+                    return dataFrame;
+                }
+            } catch(Exception e) {
+                handleError(e);
+            }
+        }
+        return null;
     }
+
+    public Dataset<Row> apply(final TableDefinition table, final Map<String, Dataset<Row>> sourceTableMap)
+            throws DomainExecutorException {
+        try {
+
+            logger.info("DomainExecutor::applyTransform(" + table.getName() + ")...");
+            // Transform
+            Map<String,Dataset<Row>> refs = new HashMap<>();
+            // Add sourceTable if present
+            if (sourceTableMap != null && sourceTableMap.size() > 0) {
+                refs.putAll(sourceTableMap);
+            } else if(table.getTransform() != null && table.getTransform().getSources() != null
+                    && table.getTransform().getSources().size() > 0) {
+                for (final String source : table.getTransform().getSources()) {
+                    Dataset<Row> sourceDataFrame = this.getAllSourcesForTable(source, null);
+                    if (sourceDataFrame != null) {
+                        refs.put(source.toLowerCase(), sourceDataFrame);
+                    } else {
+                        System.err.println("Unable to load source '" + source +"' for Table Definition '" + table.getName() + "'");
+                        throw new DomainExecutorException("Unable to load source '" + source +
+                                "' for Table Definition '" + table.getName() + "'");
+                    }
+                }
+            } else {
+                //TODO: Expecting this condition should never be reached
+                logger.info("TableDefinition is invalid");
+            }
+
+
+            logger.info("'" + table.getName() + "' has " + refs.size() + " references to tables...");
+            final Dataset<Row> transformedDataFrame = applyTransform(refs, table.getTransform());
+
+            logger.info("DomainExecutor::applyViolations(" + table.getName() + ")...");
+            // Process Violations - we now have a subset
+            final Dataset<Row> postViolationsDataFrame = applyViolations(transformedDataFrame, table.getViolations());
+
+            logger.info("DomainExecutor::applyMappings(" + table.getName() + ")...");
+            // Mappings
+            return applyMappings(postViolationsDataFrame, table.getMapping());
+
+        } catch(Exception e) {
+            logger.info("DomainExecutor::apply(" + table.getName() + ") failed.");
+            handleError(e);
+            throw new DomainExecutorException("DomainExecutor::apply(" + table.getName() + ") failed.");
+        }
+        finally {
+            logger.info("Process DomainExecutor::apply(" + table.getName() + ") completed.");
+        }
+    }
+
+    public void doFull(final String domainOperation) {
+        final List<TableDefinition> tables = domainDefinition.getTables();
+        for(final TableDefinition table : tables) {
+
+            try {
+                // TODO no source table and df they are required only for unit testing
+                final Dataset<Row> df_target = apply(table, null);
+                final TableInfo targetInfo = TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName());
+                // Create an Enum for insert, update, sync and delete
+                if(domainOperation.equalsIgnoreCase("insert") ||
+                        domainOperation.equalsIgnoreCase("update") ||
+                        domainOperation.equalsIgnoreCase("sync")) {
+                    logger.info("domain operation is insert/update/sync");
+                    saveFull(targetInfo, df_target);
+                }
+                else if(domainOperation.equalsIgnoreCase("delete")) {
+                    logger.info("domain operation is delete");
+                    deleteFull(targetInfo);
+                }
+                else throw new UnsupportedOperationException("Unsupported domain operation.");
+            } catch(Exception e) {
+                handleError(e);
+            } catch (DomainExecutorException e) {
+                final StringWriter sw = new StringWriter();
+                final PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+            }
+        }
+    }
+
+    protected void deleteFull(final TableInfo info) {
+        logger.info("DomainExecutor:: deleteFull");
+        deltaService.delete(info.getPrefix(), info.getSchema(), info.getTable());
+        deltaService.vacuum(info.getPrefix(), info.getSchema(), info.getTable());
+    }
+
+
 
 }

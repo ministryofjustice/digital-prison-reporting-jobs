@@ -36,10 +36,6 @@ public class DomainRefreshJob extends Job implements Runnable {
 
     @Inject
     public DomainRefreshJob(JobParameters jobParameters, DynamoDBClient dynamoDBClient) {
-        // TODO not required
-        this.domainFilesPath = jobParameters.getDomainFilesPath();
-        // TODO not required
-        this.domainRepoPath = jobParameters.getDomainRepoPath();
         this.curatedPath = jobParameters.getCuratedS3Path()
                 .orElseThrow(() -> new IllegalStateException(
                         "curated s3 path not set - unable to create CuratedZone instance"
@@ -50,22 +46,14 @@ public class DomainRefreshJob extends Job implements Runnable {
         this.domainOperation = jobParameters.getDomainOperation();
         this.dynamoDBClient = dynamoDBClient;
     }
+
     public DomainRefreshService refresh() {
         SparkSession spark = getConfiguredSparkSession(new SparkConf());
-        getOrCreateDomainRepository(spark, domainFilesPath, domainRepoPath);
-        return new DomainRefreshService(spark, domainFilesPath, domainRepoPath, curatedPath, domainTargetPath, dynamoDBClient);
+        return new DomainRefreshService(spark, curatedPath, domainTargetPath, dynamoDBClient);
     }
     public static void main(String[] args) {
         logger.info("Job started");
         PicocliRunner.run(DomainRefreshJob.class);
-    }
-    protected void getOrCreateDomainRepository(final SparkSession spark, final String domainFilesPath, final String domainRepositoryPath) {
-        final DomainRepository repository = new DomainRepository(spark, domainFilesPath, domainRepositoryPath, dynamoDBClient);
-        if(!repository.exists()) {
-            logger.info("Domain repository cache missing. Caching domains...");
-            repository.touch();
-            logger.info("Domain repository cached.");
-        }
     }
 
     @Override
