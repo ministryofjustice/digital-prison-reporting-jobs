@@ -21,5 +21,4 @@ workflows:
             tags:
               ignore: /.*/
           context:
-            - digital-prison-reporting-dev
             - hmpps-common-vars
