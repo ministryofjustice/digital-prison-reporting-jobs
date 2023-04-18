@@ -1,12 +1,12 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.6
+  reporting: ministryofjustice/hmpps-reporting@1.0.7
   
 workflows:
   checkout-build-publish:
     jobs:
-      - reporting/gradle_owasp_check:
+      - reporting/gradle_owasp_check: ## OWASP Checks
           notify_slack: false
           channel: dpr_cicd_alerts    
           context:
@@ -14,7 +14,7 @@ workflows:
           filters:
             branches:
               only: main ## Run for Main                
-      - reporting/gradle_build_publish:
+      - reporting/gradle_build_publish: ## Test, Build and Publish
           app: digital-prison-reporting-java-template
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
@@ -26,6 +26,7 @@ workflows:
               only: /.*/
             tags:
               ignore: /.*/
+          ref: << pipeline.git.branch >><< pipeline.git.tag >>    
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
