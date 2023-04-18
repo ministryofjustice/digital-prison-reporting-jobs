@@ -7,15 +7,14 @@ import uk.gov.justice.digital.common.Util;
 import uk.gov.justice.digital.domains.model.TableInfo;
 import uk.gov.justice.digital.service.DeltaLakeService;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 public class DomainService extends Util {
 
     protected DeltaLakeService deltaService = new DeltaLakeService();
     static Logger logger = Logger.getLogger(DomainService.class.getName());
+
+
     public void saveFull(final TableInfo info, final Dataset<Row> dataFrame) {
         logger.info("DomainExecutor:: saveFull");
         deltaService.replace(info.getPrefix(), info.getSchema(), info.getTable(), dataFrame);

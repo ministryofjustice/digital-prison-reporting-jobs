@@ -145,7 +145,7 @@ public class DomainExecutor extends DomainService {
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
                     } else {
-                        System.err.println("Unable to load source '" + source +"' for Table Definition '" + table.getName() + "'");
+                        logger.info("Unable to load source '" + source +"' for Table Definition '" + table.getName() + "'");
                         throw new DomainExecutorException("Unable to load source '" + source +
                                 "' for Table Definition '" + table.getName() + "'");
                     }
@@ -179,9 +179,7 @@ public class DomainExecutor extends DomainService {
 
     public void doFull(final String domainOperation) {
         final List<TableDefinition> tables = domainDefinition.getTables();
-        System.out.println(tables.size());
         for(final TableDefinition table : tables) {
-            System.out.println(table.getTransform().getSources());
             try {
                 // TODO no source table and df they are required only for unit testing
                 final Dataset<Row> df_target = apply(table, null);
@@ -213,7 +211,4 @@ public class DomainExecutor extends DomainService {
         deltaService.delete(info.getPrefix(), info.getSchema(), info.getTable());
         deltaService.vacuum(info.getPrefix(), info.getSchema(), info.getTable());
     }
-
-
-
 }

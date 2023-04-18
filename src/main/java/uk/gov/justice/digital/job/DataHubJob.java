@@ -1,16 +1,10 @@
 package uk.gov.justice.digital.job;
 
 import lombok.val;
-import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
-
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -26,10 +20,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-
-import static org.apache.spark.sql.functions.lower;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.get_json_object;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 /**
@@ -97,7 +88,7 @@ public class DataHubJob extends Job implements Runnable {
                     System.currentTimeMillis() - startTime
             );
         }
-    };
+    }
 
     @Override
     public void run() {

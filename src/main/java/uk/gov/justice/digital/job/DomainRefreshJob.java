@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.repository.DomainRepository;
 import uk.gov.justice.digital.service.DomainRefreshService;
 
 import javax.inject.Inject;
@@ -25,14 +24,12 @@ import javax.inject.Singleton;
 public class DomainRefreshJob extends Job implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DomainRefreshJob.class);
 
-    private String domainFilesPath;
-    private String domainRepoPath;
-    private String curatedPath;
-    private String domainTargetPath;
+    private final String curatedPath;
+    private final String domainTargetPath;
     protected String domainTableName;
-    private String domainId;
-    private String domainOperation;
-    private DynamoDBClient dynamoDBClient;
+    private final String domainId;
+    private final String domainOperation;
+    private final DynamoDBClient dynamoDBClient;
 
     @Inject
     public DomainRefreshJob(JobParameters jobParameters, DynamoDBClient dynamoDBClient) {
