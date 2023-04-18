@@ -1,36 +1,37 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.6
+  reporting: ministryofjustice/hmpps-reporting@1.0.8
   
 workflows:
   checkout-build-publish:
     jobs:
-      - reporting/gradle_owasp_check:
-          notify_slack: false
-          channel: dpr_cicd_alerts    
+      - reporting/gradle_owasp_check: ## OWASP Checks
+          notify_slack: true
           context:
             - hmpps-reporting-common
           filters:
             branches:
               only: main ## Run for Main                
-      - reporting/gradle_build_publish:
-          app: digital-prison-reporting-java-template
-          app_artifacts_directory: build/libs/
-          bucket_prefix: dpr-artifact-store
-          build_args: --debug
-          notify_jira: true
-          notify_slack: false
+      - reporting/gradle_build_publish: ## Test, Build and Publish
+          tag: "11.0" ## Defaults to 11.0
+          app: digital-prison-reporting-java-template ## AppName, Repo Name
+          app_artifacts_directory: build/libs/ ## Build Artifacts Location
+          bucket_prefix: dpr-artifact-store ## S3 Artifacts Store, Defaults to "dpr-artifact-store"
+          build_args: --debug ## Build Extra Args
+          notify_jira: true ## Notify Jira
+          notify_slack: true ## Notify Slack
           filters:
             branches:
               only: /.*/
             tags:
               ignore: /.*/
+          ref: << pipeline.git.branch >><< pipeline.git.tag >>  
           context:
-            - hmpps-reporting-common
+            - hmpps-reporting-common ## Reporting Common ORB
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
 
-  owasp-security:
+  owasp-security: ## Security Jobs Cron
     triggers:
       - schedule:
           cron: "30 7 * * *" ## Runs everyday at 7.30 AM
@@ -41,7 +42,7 @@ workflows:
     jobs:
       - reporting/gradle_owasp_check:
           notify_slack: true
-          channel: dpr__alerts    
+          channel: dpr_cicd_alerts ## May be Seperate Channel 
           context:
             - hmpps-reporting-common
-          cache_key: "v2"                                 
+          cache_key: "v4"
