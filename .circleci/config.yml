@@ -7,10 +7,13 @@ workflows:
   checkout-build-publish:
     jobs:
       - reporting/gradle_owasp_check:
-          notify_slack: true
+          notify_slack: false
           channel: dpr_cicd_alerts    
           context:
-            - hmpps-reporting-common          
+            - hmpps-reporting-common
+          filters:
+            branches:
+              only: main ## Run for Main                
       - reporting/gradle_build_publish:
           app: digital-prison-reporting-java-template
           app_artifacts_directory: build/libs/
@@ -27,3 +30,18 @@ workflows:
             - hmpps-reporting-common
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
 
+  owasp-security:
+    triggers:
+      - schedule:
+          cron: "30 7 * * *" ## Runs everyday at 7.30 AM
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - reporting/gradle_owasp_check:
+          notify_slack: true
+          channel: dpr__alerts    
+          context:
+            - hmpps-reporting-common
+          cache_key: "v2"                                 
