@@ -1,0 +1,58 @@
+{
+  "_comment": "DPR-132 Establishment Domain",
+
+  "id": "8b5e5e22-3f4d-458b-a373-865414b51ba4",
+  "name": "establishment",
+  "description": "Establishment and Location Domain for DPR Proof of Concept",
+  "version": "0.0.1",
+  "location": "/establishment",
+  "tags": {
+    "department": "HMPPS",
+    "unit": "Prisons"
+  },
+  "owner": "michael.w.clarke@justice.gov.uk",
+  "author": "michael.w.clarke@justice.gov.uk",
+
+  "tables": [
+    {
+      "_comment": "DPR-132 Establishment Table",
+      "name": "establishment",
+      "description": "Prison Establishment Table",
+      "version": "0.0.1",
+      "location": "/establishment",
+      "tags": {
+        "department": "HMPPS",
+        "unit": "Prisons"
+      },
+      "owner": "michael.w.clarke@justice.gov.uk",
+      "author": "michael.w.clarke@justice.gov.uk",
+
+      "primaryKey": "id",
+      "transform": {
+        "viewText": "SELECT nomis.agency_locations.agy_loc_id as id, nomis.agency_locations.description as name from nomis.agency_locations",
+        "sources": ["nomis.agency_locations"]
+      },
+      "violations": []
+    },
+    {
+      "_comment": "DPR-132 Living Units Table",
+      "name": "living_unit",
+      "description": "Prisoner Living Unit Table",
+      "version": "0.0.1",
+      "location": "/living_unit",
+      "tags": {
+        "department": "HMPPS",
+        "unit": "Prisons"
+      },
+      "owner": "michael.w.clarke@justice.gov.uk",
+      "author": "michael.w.clarke@justice.gov.uk",
+
+      "primaryKey": "id",
+      "transform": {
+        "viewText": "select nomis.agency_internal_locations.internal_location_id as id, nomis.agency_internal_locations.internal_location_code as code, nomis.agency_internal_locations.agy_loc_id as establishment_id, nomis.agency_internal_locations.description as name from nomis.agency_internal_locations",
+        "sources": ["nomis.agency_internal_locations"]
+      },
+      "violations": []
+    }
+  ]
+}

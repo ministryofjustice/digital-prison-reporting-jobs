@@ -72,16 +72,6 @@ public class JobParameters {
         return getOptionalProperty("dpr.curated.s3.path");
     }
 
-    // TODO not required
-    public String getDomainFilesPath() {
-        return getMandatoryProperty("dpr.domain.files.path");
-    }
-
-    // TODO not required
-    public String getDomainRepoPath() {
-        return getMandatoryProperty( "dpr.domain.repo.path");
-    }
-
     public String getDomainTargetPath() {
         return getMandatoryProperty("dpr.domain.target.path");
     }

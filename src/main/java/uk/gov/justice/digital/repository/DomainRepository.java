@@ -5,6 +5,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
+import uk.gov.justice.digital.common.Util;
 import uk.gov.justice.digital.domains.model.DomainDefinition;
 import uk.gov.justice.digital.domains.model.DomainRepoRecord;
 import uk.gov.justice.digital.domains.model.TableDefinition;
@@ -17,7 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class DomainRepository {
+public class DomainRepository extends Util {
 
     private final static ObjectMapper MAPPER = new ObjectMapper();
 
@@ -45,12 +46,4 @@ public class DomainRepository {
         domains.add(domain);
         return domains;
     }
-
-    protected void handleError(final Exception e) {
-        final StringWriter sw = new StringWriter();
-        final PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-        System.err.print(sw.getBuffer().toString());
-    }
-
 }

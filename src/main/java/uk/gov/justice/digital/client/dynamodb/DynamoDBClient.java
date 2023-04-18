@@ -24,8 +24,8 @@ public class DynamoDBClient {
 
     private final static ObjectMapper MAPPER = new ObjectMapper();
     // TODO hardcoded values
-    private final String indexName = "secondaryId-type-index";
-    private final String sortKeyName = "secondaryId";
+    private final static String indexName = "secondaryId-type-index";
+    private final static String sortKeyName = "secondaryId";
     private final AmazonDynamoDB dynamoDB;
 
     @Inject

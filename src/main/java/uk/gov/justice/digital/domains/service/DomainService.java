@@ -3,6 +3,7 @@ package uk.gov.justice.digital.domains.service;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
+import uk.gov.justice.digital.common.Util;
 import uk.gov.justice.digital.domains.model.TableInfo;
 import uk.gov.justice.digital.service.DeltaLakeService;
 
@@ -11,7 +12,7 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
-public class DomainService {
+public class DomainService extends Util {
 
     protected DeltaLakeService deltaService = new DeltaLakeService();
     static Logger logger = Logger.getLogger(DomainService.class.getName());
@@ -28,14 +29,5 @@ public class DomainService {
         deltaService.endTableUpdates(target.getPrefix(), target.getSchema(), target.getTable());
     }
 
-    protected void handleError(final Exception e) {
-        final StringWriter sw = new StringWriter();
-        final PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-        System.err.print(sw.getBuffer().toString());
-    }
 
-    protected boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
-        return Arrays.asList(dataFrame.schema().fieldNames()).contains(field);
-    }
 }

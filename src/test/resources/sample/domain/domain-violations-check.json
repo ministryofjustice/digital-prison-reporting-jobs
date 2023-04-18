@@ -1,0 +1,45 @@
+{
+	"id": "1f9da22f-5acb-4950-a295-97311cf1025c",
+	"name": "example",
+	"description": "An example domain for testing purposes",
+	"version": "1.2.3.4",
+	"location": "s3://domain-bucket/safety",
+	"tags": {
+		"department": "HMPPS",
+		"unit": "Prisons"
+	},
+	"owner": "david.smith@justice.gov.uk",
+	"author": "alice.jones@justice.gov.uk",
+	
+	"tables": [
+		{
+			"name": "prisoner",
+			"description": "Prisoner Table",
+			"version": "1.2.3.4",
+			"location": "s3://domain-bucket/safety/prisoner",
+			"tags": {
+				"department": "HMPPS",
+				"unit": "Prisons"
+			},
+			"owner": "david.smith@justice.gov.uk",
+			"author": "alice.jones@justice.gov.uk",
+			
+			"transform": {
+				"viewText" : "SELECT * from source.table",
+				"sources" : [ "source.table" ]
+			},
+			
+			"mapping": {
+				"viewText" : "SELECT CAST(a AS INT8)"
+			},
+			
+			"violations": [
+				{
+					"check": "age < 20",
+					"location": "domain",
+					"name": "violations"
+				}
+			]
+		}
+	]
+}

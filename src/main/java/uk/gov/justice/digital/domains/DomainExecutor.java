@@ -34,37 +34,6 @@ public class DomainExecutor extends DomainService {
         this.domainDefinition = domain;
     }
 
-//    protected List<TableDefinition> getTablesChangedForSourceTable(final TableTuple sourceTable) {
-//        List<TableDefinition> tables = new ArrayList<>();
-//        for(final TableDefinition table : domainDefinition.getTables()) {
-//            for( final String source : table.getTransform().getSources()) {
-//                if(sourceTable != null && sourceTable.asString().equalsIgnoreCase(source)) {
-//                    tables.add(table);
-//                    break;
-//                }
-//            }
-//        }
-//        return tables;
-//    }
-
-    // TODO this is only for unit testing purpose
-//    public void doFull(final TableTuple sourceTable) {
-//
-//        final TableInfo sourceInfo = TableInfo.create(sourceRootPath, sourceTable.getSchema(), sourceTable.getTable());
-//        final Dataset<Row> df_source = deltaService.load(sourceInfo.getPrefix(), sourceInfo.getSchema(), sourceInfo.getTable());
-//
-//        final List<TableDefinition> tables = getTablesChangedForSourceTable(sourceTable);
-//        for(final TableDefinition table : tables) {
-//
-//            try {
-//                final Dataset<Row> df_target = apply(table, sourceTable, df_source);
-//                final TableInfo targetInfo = TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName());
-//                saveFull(targetInfo, df_target);
-//            } catch(Exception e) {
-//                handleError(e);
-//            }
-//        }
-//    }
 
     protected Dataset<Row> applyViolations(final Dataset<Row> dataFrame, final List<ViolationDefinition> violations) {
         Dataset<Row> violationsDataFrame = dataFrame;
@@ -132,7 +101,8 @@ public class DomainExecutor extends DomainService {
 
     // TODO: Mapping will be enhanced at later stage in future user stories
     protected Dataset<Row> applyMappings(final Dataset<Row> dataFrame, final TableDefinition.MappingDefinition mapping) {
-        if(mapping != null && mapping.getViewText() != null && !mapping.getViewText().isEmpty()) {
+        if(mapping != null && mapping.getViewText() != null && !mapping.getViewText().isEmpty()
+                && !dataFrame.isEmpty()) {
             return dataFrame.sqlContext().sql(mapping.getViewText()).toDF();
         }
         return dataFrame;
@@ -209,8 +179,9 @@ public class DomainExecutor extends DomainService {
 
     public void doFull(final String domainOperation) {
         final List<TableDefinition> tables = domainDefinition.getTables();
+        System.out.println(tables.size());
         for(final TableDefinition table : tables) {
-
+            System.out.println(table.getTransform().getSources());
             try {
                 // TODO no source table and df they are required only for unit testing
                 final Dataset<Row> df_target = apply(table, null);

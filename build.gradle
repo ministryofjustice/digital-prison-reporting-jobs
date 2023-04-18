@@ -59,12 +59,8 @@ dependencies {
     }
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
-    // TODO remove it
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
-    testImplementation "org.apache.spark:spark-core_2.12:$sparkVersion"
     testImplementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
-
-
     // We are targetting Java 8 so must use mockito 4.x since 5.x requires Java 11 or later.
     testImplementation 'org.mockito:mockito-core:4.11.0'
 

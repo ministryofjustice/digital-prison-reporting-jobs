@@ -30,7 +30,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 
-public abstract class BaseSparkTest {
+public class BaseSparkTest {
 
 	@TempDir
 	Path folder;
@@ -40,36 +40,33 @@ public abstract class BaseSparkTest {
 
 	protected String accessKey;
 	protected String secretKey;
-	
 
-	@BeforeEach
-	public void before() {
-		
+	protected SparkSession createSparkSession() {
 		spark = SparkSession.builder()
-			    .appName("test")
-			    .enableHiveSupport()
+				.appName("test")
+//				.enableHiveSupport()
 				.config("spark.master", "local")
 				// important delta configurations
 				// =================================
 				// these need to be in the cloud-platform
 				.config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-			    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-			    .config("spark.databricks.delta.schema.autoMerge.enabled", true)
-			    .config("spark.databricks.delta.optimizeWrite.enabled", true)
-			    .config("spark.databricks.delta.autoCompact.enabled", true)
-			    // ============================
-			    // these are needed for test but NOT for live
-			    // the manifest needs a HiveContext and this handles a separate one for each test
-			    // otherwise we do an inmem one : jdbc:derby://localhost:1527/memory:myInMemDB;create=true
-			    .config("javax.jdo.option.ConnectionURL", "jdbc:derby:;databaseName=" +
-						folder.toFile().getAbsolutePath() + "/metastore_db_test;create=true")
-			    .getOrCreate();
+				.config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+				.config("spark.databricks.delta.schema.autoMerge.enabled", true)
+				.config("spark.databricks.delta.optimizeWrite.enabled", true)
+				.config("spark.databricks.delta.autoCompact.enabled", true)
+				// ============================
+				// these are needed for test but NOT for live
+				// the manifest needs a HiveContext and this handles a separate one for each test
+				// otherwise we do an inmem one : jdbc:derby://localhost:1527/memory:myInMemDB;create=true
+//				.config("javax.jdo.option.ConnectionURL", "jdbc:derby:;databaseName=" +
+//						folder.toFile().getAbsolutePath() + "/metastore_db_test;create=true")
+				.getOrCreate();
 
 		try {
 			final AWSCredentials credentials = new ProfileCredentialsProvider("moj").getCredentials();
 			accessKey = credentials.getAWSAccessKeyId();
 			secretKey = credentials.getAWSSecretKey();
-			
+
 			spark.sparkContext().hadoopConfiguration().set("com.amazonaws.services.s3.enableV4", "true");
 			spark.sparkContext().hadoopConfiguration().set("fs.s3a.impl",
 					org.apache.hadoop.fs.s3a.S3AFileSystem.class.getName());
@@ -80,14 +77,24 @@ public abstract class BaseSparkTest {
 		} catch(Exception e) {
 			// lets not do AWS
 		}
-				
-		Assertions.assertNotNull(spark);
+		return spark;
 	}
+
+	@BeforeEach
+	public void before() {
+		this.spark = createSparkSession();
+		Assertions.assertNotNull(this.spark);
+	}
+
 
 	@AfterEach
 	public void after() {
 		spark.stop();
 		// cleanup derby database
+	}
+
+	public SparkSession getSparkSession() {
+		return this.spark;
 	}
 	
 	// Test
@@ -128,7 +135,7 @@ public abstract class BaseSparkTest {
 	}
 	
 	protected Dataset<Row> loadParquetDataframe(final String resource, final String filename) throws IOException {
-		return spark.read().parquet(createFileFromResource(resource, filename).toString());
+		return createSparkSession().read().parquet(createFileFromResource(resource, filename).toString());
 	}
 
 	protected Path createFileFromResource(final String resource, final String filename) throws IOException {
@@ -138,7 +145,8 @@ public abstract class BaseSparkTest {
 		return Paths.get(f.getAbsolutePath());
 	}
 
-	protected Path createFileFromResource(final String resource, final String filename, final String directory) throws IOException {
+	protected Path createFileFromResource(final String resource, final String filename, final String directory)
+			throws IOException {
 		final InputStream stream = getStream(resource);
 		File dir;
 		if(Files.exists(Paths.get(folder.toFile().getAbsolutePath(),directory))) {
@@ -156,7 +164,7 @@ public abstract class BaseSparkTest {
 		final InputStream stream = getStream(resource);
 		return IOUtils.toString(stream);
 	}
-	
+
 	protected static InputStream getStream(final String resource) {
 		InputStream stream = System.class.getResourceAsStream(resource);
 		if(stream == null) {

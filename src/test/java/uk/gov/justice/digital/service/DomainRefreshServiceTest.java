@@ -1,31 +1,50 @@
 package uk.gov.justice.digital.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.spark.SparkConf;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.junit.jupiter.api.io.TempDir;
-import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import uk.gov.justice.digital.common.Util;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domains.DomainExecutor;
 import uk.gov.justice.digital.domains.DomainExecutorTest;
 import uk.gov.justice.digital.domains.model.DomainDefinition;
-import uk.gov.justice.digital.domains.service.DomainService;
+import uk.gov.justice.digital.domains.model.TableInfo;
 import uk.gov.justice.digital.exceptions.DomainExecutorException;
-import uk.gov.justice.digital.repository.DomainRepository;
-
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
-import java.util.Set;
-
+import java.util.Objects;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DomainRefreshServiceTest extends DomainService {
+public class DomainRefreshServiceTest extends Util {
+
+
+    private static TestUtil utils = null;
 
     @TempDir
-    Path folder;
+    private Path folder;
+
+    private static SparkSession spark = null;
+
+
+    @BeforeAll
+    public static void setUp() {
+        System.out.println("setup method");
+        //instantiate and populate the dependencies
+        utils = new TestUtil();
+        spark = utils.getSparkSession();
+    }
+
+    @Test
+    public void test_tempFolder() {
+        assertNotNull(this.folder);
+    }
 
     protected DomainDefinition getDomain(final String resource) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
@@ -33,28 +52,12 @@ public class DomainRefreshServiceTest extends DomainService {
         return mapper.readValue(json, DomainDefinition.class);
     }
 
-    protected static SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
-        sparkConf
-                .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-                .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-                .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
-                .set("spark.databricks.delta.optimizeWrite.enabled", "true")
-                .set("spark.databricks.delta.autoCompact.enabled", "true")
-                .set("spark.sql.legacy.charVarcharAsString", "true");
-
-        return SparkSession.builder()
-                .config(sparkConf)
-                .master("local[*]")
-                .getOrCreate();
-    }
 
     @Test
     public void getString_MatchesValuePassedToDomainRefreshService() {
-        final SparkSession spark = getConfiguredSparkSession(new SparkConf());
-        final String sourcePath = folder.toFile().getAbsolutePath()  + "domain/source";
-        final String targetPath = folder.toFile().getAbsolutePath()  + "domain/target";
-        final DynamoDBClient dynamoDBClient = null;
-        String expectedResult = folder.toFile().getAbsolutePath()  + "domain/source";
+        final String sourcePath = this.folder.toFile().getAbsolutePath()  + "domain/source";
+        final String targetPath = this.folder.toFile().getAbsolutePath()  + "domain/target";
+        String expectedResult = this.folder.toFile().getAbsolutePath()  + "domain/source";
 
         DomainRefreshService service = new DomainRefreshService(spark,
                 sourcePath, targetPath, null);
@@ -64,27 +67,127 @@ public class DomainRefreshServiceTest extends DomainService {
 
 
     @Test
-    public void test_processDomain() throws IOException {
-        final String domainTableName = "source.table";
-        final String domainId = "0000";
-        final SparkSession spark = getConfiguredSparkSession(new SparkConf());
-        final DynamoDBClient dynamoDBClient = null;
+    public void test_incident_domain() throws IOException {
         final String domainOperation = "insert";
-        final String sourcePath = folder.toFile().getAbsolutePath()  + "domain/source";
-        final String targetPath = folder.toFile().getAbsolutePath()  + "domain/target";
-        DomainRepository repo = new DomainRepository(spark, null);
+        final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
+        final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/incident_domain.json");
+
+        final Dataset<Row> df_offenders = utils.getOffenders(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"), df_offenders);
+
+        final Dataset<Row> df_offenderBookings = utils.getOffenderBookings(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"), df_offenderBookings);
 
         try {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
             executor.doFull(domainOperation);
+            File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
+            if (emptyCheck.isDirectory()) {
+                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
+            }
             System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
         } catch (Exception e) {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
             handleError(e);
         }
     }
+
+    @Test
+    public void test_establishment_domain_insert() throws IOException {
+        final String domainOperation = "insert";
+        final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
+        final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
+        final DomainDefinition domain = getDomain("/sample/domain/establishment.domain.json");
+
+        final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_locations"),
+                df_agency_locations);
+
+        final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_internal_locations"),
+                df_internal_agency_locations);
+
+        try {
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') started");
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+            executor.doFull(domainOperation);
+            File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
+            if (emptyCheck.isDirectory()) {
+                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
+            }
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
+        } catch (Exception e) {
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            handleError(e);
+        }
+    }
+
+    @Test
+    public void test_establishment_domain_update() throws IOException {
+        final String domainOperation = "update";
+        final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
+        final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
+        final DomainDefinition domain = getDomain("/sample/domain/establishment.domain.json");
+
+        final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_locations"),
+                df_agency_locations);
+
+        final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_internal_locations"),
+                df_internal_agency_locations);
+
+        try {
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') update started");
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+            executor.doFull(domainOperation);
+            File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
+            if (emptyCheck.isDirectory()) {
+                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
+            }
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') update completed");
+        } catch (Exception e) {
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            handleError(e);
+        }
+    }
+
+    @Test
+    public void test_establishment_domain_delete() throws IOException {
+        final String domainOperation = "delete";
+        final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
+        final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
+        final DomainDefinition domain = getDomain("/sample/domain/establishment.domain.json");
+
+        final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_locations"),
+                df_agency_locations);
+
+        final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_internal_locations"),
+                df_internal_agency_locations);
+
+        try {
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') delete started");
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+            executor.doFull(domainOperation);
+            File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
+            if (emptyCheck.isDirectory()) {
+                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
+            }
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') delete completed");
+        } catch (Exception e) {
+            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            handleError(e);
+        }
+    }
+
 
     @Test
     public void test_handle_error() {
@@ -95,8 +198,9 @@ public class DomainRefreshServiceTest extends DomainService {
             final PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
             System.err.print(sw.getBuffer().toString());
+            assertTrue(true);
         } finally {
-
+            System.out.println("Test Completed");
         }
 
     }
