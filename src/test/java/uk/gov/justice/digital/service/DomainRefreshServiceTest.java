@@ -3,7 +3,6 @@ package uk.gov.justice.digital.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -30,15 +29,12 @@ public class DomainRefreshServiceTest extends Util {
     @TempDir
     private Path folder;
 
-    private static SparkSession spark = null;
-
 
     @BeforeAll
     public static void setUp() {
         System.out.println("setup method");
         //instantiate and populate the dependencies
         utils = new TestUtil();
-        spark = utils.getSparkSession();
     }
 
     @Test
