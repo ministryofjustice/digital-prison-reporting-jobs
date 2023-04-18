@@ -11,10 +11,6 @@ plugins {
 group 'uk.gov.justice'
 version "${version != 'unspecified' ? version : '0.0.1-SNAPSHOT'}"
 
-#java {
-#    targetCompatibility = "1.8"
-#}
-
 repositories {
     mavenCentral()
 }
