@@ -9,6 +9,8 @@ workflows:
       - reporting/gradle_owasp_check:
           notify_slack: true
           channel: dpr_cicd_alerts    
+          context:
+            - hmpps-reporting-common          
       - reporting/gradle_build_publish:
           app: digital-prison-reporting-java-template
           app_artifacts_directory: build/libs/
