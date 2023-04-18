@@ -10,6 +10,7 @@ workflows:
           notify_slack: true
           context:
             - hmpps-reporting-common
+            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
           filters:
             branches:
               only: main ## Run for Main                
@@ -45,4 +46,5 @@ workflows:
           channel: dpr_cicd_alerts ## May be Seperate Channel 
           context:
             - hmpps-reporting-common
+            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
           cache_key: "v4"
