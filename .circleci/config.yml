@@ -6,6 +6,9 @@ orbs:
 workflows:
   checkout-build-publish:
     jobs:
+      - reporting/gradle_owasp_check:
+          notify_slack: true
+          channel: dpr_cicd_alerts    
       - reporting/gradle_build_publish:
           app: digital-prison-reporting-java-template
           app_artifacts_directory: build/libs/
@@ -20,4 +23,5 @@ workflows:
               ignore: /.*/
           context:
             - hmpps-reporting-common
-            - hmpps-reporting-orb ## Required for JIRA, needs reviewing 
+            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
+
