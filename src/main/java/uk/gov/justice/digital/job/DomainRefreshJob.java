@@ -46,7 +46,7 @@ public class DomainRefreshJob extends Job implements Runnable {
 
     public DomainRefreshService refresh() {
         SparkSession spark = getConfiguredSparkSession(new SparkConf());
-        return new DomainRefreshService(spark, curatedPath, domainTargetPath, dynamoDBClient);
+        return new DomainRefreshService(curatedPath, domainTargetPath, dynamoDBClient);
     }
     public static void main(String[] args) {
         logger.info("Job started");

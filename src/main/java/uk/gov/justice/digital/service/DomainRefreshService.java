@@ -14,21 +14,18 @@ import java.util.logging.Logger;
 // TODO Rename it to DomainService??
 public class DomainRefreshService {
 
-    protected String domainFilesPath;
-    protected String domainRepositoryPath;
     protected String sourcePath;
     protected String targetPath;
     protected DomainRepository repo;
 
     static Logger logger = Logger.getLogger(DomainRefreshService.class.getName());
 
-    public DomainRefreshService(final SparkSession spark,
-                                final String sourcePath,
+    public DomainRefreshService(final String sourcePath,
                                 final String targetPath,
                                 final DynamoDBClient dynamoDBClient) {
         this.sourcePath = sourcePath;
         this.targetPath = targetPath;
-        this.repo = new DomainRepository(spark, dynamoDBClient);
+        this.repo = new DomainRepository(dynamoDBClient);
     }
 
     public void run(final String domainTableName, final String domainId, final String domainOperation) {

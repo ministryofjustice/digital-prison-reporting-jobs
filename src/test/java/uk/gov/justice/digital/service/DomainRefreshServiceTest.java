@@ -59,8 +59,7 @@ public class DomainRefreshServiceTest extends Util {
         final String targetPath = this.folder.toFile().getAbsolutePath()  + "domain/target";
         String expectedResult = this.folder.toFile().getAbsolutePath()  + "domain/source";
 
-        DomainRefreshService service = new DomainRefreshService(spark,
-                sourcePath, targetPath, null);
+        DomainRefreshService service = new DomainRefreshService(sourcePath, targetPath, null);
         String result = service.sourcePath;
         assertEquals(expectedResult, result);
     }
