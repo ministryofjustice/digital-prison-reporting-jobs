@@ -1,0 +1,41 @@
+#!/bin/bash
+
+if [ "$#" -ne 2 ]
+then
+  cat <<USAGE
+
+Compare fields in a DMS table schema with fields from a json DMS record.
+
+Usage: check-fields <path to schema> <path to json file>
+
+USAGE
+  exit 1
+fi
+
+if ! [ -x "$(command -v jq)" ]
+then
+  cat <<INSTALL_JQ
+
+This command requires jq to be installed in order to parse json files.
+
+If you're using brew this should simply be a case of
+
+  > brew install jq
+
+INSTALL_JQ
+  exit 1
+fi
+
+schema=$1
+json=$2
+
+schema_fields=$(cat $schema | grep name | tr -d " " | cut -d ':' -f2 | tr -d '"' | tr -d ',' | sort)
+json_fields=$(cat $json | jq ".data" -M | tr -d ' ' | cut -d ':' -f1 | grep -v '{\|}' | tr -d '"' | tr -d ',' | sort)
+
+if diff -y --suppress-common-lines <(echo "$schema_fields") <(echo "$json_fields")
+then
+  echo -e "[\033[1;32mPASS\033[0m] Schema and DMS record fields agree"
+else
+  echo -e "[\033[1;31mFAIL\033[0m] Schema and DMS record fields agree"
+  exit 1
+fi

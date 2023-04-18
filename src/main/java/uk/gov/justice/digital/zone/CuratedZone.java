@@ -30,24 +30,38 @@ public class CuratedZone extends Zone {
 
     @Override
     public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
-        val curatedRecordsCount = dataFrame.count();
-        logger.info("Processing batch with {} records", curatedRecordsCount);
-        if (curatedRecordsCount > 0) {
+
+        val count = dataFrame.count();
+
+        logger.info("Processing batch with {} records", count);
+
+        if (count > 0) {
             val startTime = System.currentTimeMillis();
 
-            val sourceReference = SourceReferenceService.getSourceReference(table.getAs(SOURCE), table.getAs(TABLE));
-            val curatedTablePath = getTablePath(curatedPath, sourceReference.get());
+            String sourceName = table.getAs(SOURCE);
+            String tableName = table.getAs(TABLE);
 
-            appendToDeltaLakeTable(dataFrame, curatedTablePath);
+            val sourceReference = SourceReferenceService
+                .getSourceReference(sourceName, tableName)
+                // This can only happen if the schema disappears after the structured zone has processed the data, so we
+                // should never see this in practise. However if it does happen throwing here will make it clear what
+                // has happened.
+                .orElseThrow(() -> new IllegalStateException(
+                    "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
+                ));
+
+            val curatedTablePath = getTablePath(curatedPath, sourceReference);
+
+            appendDataAndUpdateManifestForTable(dataFrame, curatedTablePath);
 
             logger.info("Processed dataframe with {} rows in {}ms",
-                    curatedRecordsCount,
+                    count,
                     System.currentTimeMillis() - startTime
             );
+
             return dataFrame;
-        } else {
-            return createEmptyDataFrame(dataFrame);
         }
+        else return createEmptyDataFrame(dataFrame);
     }
 
 }
