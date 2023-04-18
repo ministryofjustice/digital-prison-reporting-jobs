@@ -1,17 +1,16 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.8
+  reporting: ministryofjustice/hmpps-reporting@1.0.9
   
 workflows:
   checkout-build-publish:
     jobs:
       - reporting/gradle_owasp_check: ## OWASP Checks
-          notify_slack: true
+          notify_slack: false
           context:
             - hmpps-reporting-common ## Reporting Common ORB
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
-            - hmpps-common-vars ## Common ORB, Slack ALerts
           filters:
             branches:
               only: main ## Run for Main                
@@ -23,6 +22,7 @@ workflows:
           build_args: --debug ## Build Extra Args
           notify_jira: true ## Notify Jira
           notify_slack: true ## Notify Slack
+          channel: dpr_release_alerts
           filters:
             branches:
               only: /.*/
@@ -32,7 +32,6 @@ workflows:
           context:
             - hmpps-reporting-common ## Reporting Common ORB 
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
-            - hmpps-common-vars ## Common ORB, Slack ALerts
 
   owasp-security: ## Security Jobs Cron
     triggers:
@@ -49,5 +48,4 @@ workflows:
           context:
             - hmpps-reporting-common ## Reporting Common ORB
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
-            - hmpps-common-vars ## Common ORB, Slack ALerts
           cache_key: "v4"
