@@ -13,7 +13,7 @@ workflows:
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
           filters:
             branches:
-              only: main ## Run for Main                
+              only: main ## Run for Main, Before Code is promoted to Release/Prod                
       - reporting/gradle_build_publish: ## Test, Build and Publish
           tag: "11.0" ## Defaults to 11.0
           app: digital-prison-reporting-java-template ## AppName, Repo Name
@@ -22,7 +22,7 @@ workflows:
           build_args: --debug ## Build Extra Args
           notify_jira: true ## Notify Jira
           notify_slack: true ## Notify Slack
-          channel: dpr_release_alerts
+          channel: dpr_cicd_alerts
           filters:
             branches:
               only: /.*/
