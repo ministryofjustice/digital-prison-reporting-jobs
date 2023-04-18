@@ -30,7 +30,7 @@ workflows:
               ignore: /.*/
           ref: << pipeline.git.branch >><< pipeline.git.tag >>  
           context:
-            - hmpps-reporting-common ## Reporting Common ORB
+            - hmpps-reporting-common ## Reporting Common ORB 
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
             - hmpps-common-vars ## Common ORB, Slack ALerts
 
