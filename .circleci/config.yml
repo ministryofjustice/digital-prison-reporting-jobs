@@ -44,7 +44,7 @@ workflows:
     jobs:
       - reporting/gradle_owasp_check:
           notify_slack: true
-          channel: dpr_release_alerts ## May be Seperate Channel 
+          channel: dpr_cicd_alerts ## May be Seperate Channel 
           context:
             - hmpps-reporting-common ## Reporting Common ORB
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
