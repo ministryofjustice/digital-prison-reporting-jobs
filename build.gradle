@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    id 'org.sonarqube'                          version '3.5.0.2730'
+    id 'org.owasp.dependencycheck'              version '8.2.1'
 }
 
 group 'uk.gov.justice'
