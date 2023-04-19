@@ -42,6 +42,10 @@ public class JobParameters {
         return getMandatoryProperty("dpr.aws.kinesis.endpointUrl");
     }
 
+    public String getAwsDynamoDBEndpointUrl() {
+        return getMandatoryProperty("dpr.aws.dynamodb.endpointUrl");
+    }
+
     public String getKinesisReaderStreamName() {
         return getMandatoryProperty("dpr.kinesis.reader.streamName");
     }
@@ -67,6 +71,23 @@ public class JobParameters {
     public Optional<String> getCuratedS3Path() {
         return getOptionalProperty("dpr.curated.s3.path");
     }
+
+    public String getDomainTargetPath() {
+        return getMandatoryProperty("dpr.domain.target.path");
+    }
+
+    public String getDomainId() {
+        return getMandatoryProperty("dpr.domain.id");
+    }
+
+    public String getDomainTableName() {
+        return getMandatoryProperty( "dpr.domain.table.name");
+    }
+
+    public String getDomainOperation() {
+        return getMandatoryProperty( "dpr.domain.operation");
+    }
+
 
     private String getMandatoryProperty(String jobParameter) {
         return Optional

@@ -2,12 +2,10 @@ package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
-import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -16,13 +14,11 @@ import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.zone.RawZone;
 import uk.gov.justice.digital.zone.StructuredZone;
-
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
@@ -35,7 +31,7 @@ import static uk.gov.justice.digital.job.model.Columns.*;
  */
 @Singleton
 @Command(name = "DataHubJob")
-public class DataHubJob implements Runnable {
+public class DataHubJob extends Job implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
 
@@ -89,19 +85,6 @@ public class DataHubJob implements Runnable {
                     System.currentTimeMillis() - startTime
             );
         }
-    };
-
-    private static SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
-        sparkConf
-            .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-            .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
-            .set("spark.databricks.delta.optimizeWrite.enabled", "true")
-            .set("spark.databricks.delta.autoCompact.enabled", "true")
-            .set("spark.sql.legacy.charVarcharAsString", "true");
-
-        return SparkSession.builder()
-            .config(sparkConf)
-            .getOrCreate();
     }
 
     @Override

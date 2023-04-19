@@ -1,0 +1,35 @@
+{
+  "_comment": "DPR-265 Incident Domain",
+  "author": "michael.w.clarke@justice.gov.uk",
+  "description": "Initial incident domain for DPR Proof of Concept",
+  "id": "6b8c6f0e-c605-431d-a175-b3564b4d4114",
+  "location": "/incident",
+  "name": "incident",
+  "owner": "michael.w.clarke@justice.gov.uk",
+  "tables": [
+    {
+      "_comment": "DPR-129 Demographics Table",
+      "author": "michael.w.clarke@justice.gov.uk",
+      "description": "Prisoner Demographics Table",
+      "location": "/demographics",
+      "name": "demographics",
+      "owner": "michael.w.clarke@justice.gov.uk",
+      "primaryKey": "id",
+      "tags": {
+        "department": "HMPPS",
+        "unit": "Prisons"
+      },
+      "transform": {
+        "sources": ["nomis.offender_bookings", "nomis.offenders"],
+        "viewText": "select nomis.offender_bookings.offender_book_id as id, nomis.offenders.birth_date as birth_date, nomis.offender_bookings.living_unit_id as living_unit_id, nomis.offenders.first_name as first_name, nomis.offenders.last_name as last_name, nomis.offenders.offender_id_display as offender_no from nomis.offender_bookings join nomis.offenders on nomis.offender_bookings.offender_id = nomis.offenders.offender_id"
+      },
+      "version": "0.0.1",
+      "violations": []
+    }
+  ],
+  "tags": {
+    "department": "HMPPS",
+    "unit": "Prisons"
+  },
+  "version": "0.0.1"
+}

@@ -31,6 +31,7 @@ public abstract class Zone {
         return String.join("/", elements);
     }
 
+
     // These rows are used to select only those records corresponding to a specific source and table that has loads
     // events in the batch being processed.
     protected List<Row> getTablesWithLoadRecords(Dataset<Row> dataFrame) {
@@ -46,7 +47,7 @@ public abstract class Zone {
         updateDeltaManifestForTable(tablePath);
     }
 
-    private void appendToDeltaLakeTable(Dataset<Row> dataFrame, String tablePath) {
+    protected void appendToDeltaLakeTable(Dataset<Row> dataFrame, String tablePath) {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
 
         dataFrame

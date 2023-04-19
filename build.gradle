@@ -53,6 +53,7 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
+    implementation "org.apache.hadoop:hadoop-aws:3.3.1"
 
     implementation ("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
       // We exclude spark here to prevent spark being added to the jar during the build.
@@ -62,9 +63,7 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
-    testImplementation "org.apache.spark:spark-core_2.12:$sparkVersion"
     testImplementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
-
     // We are targetting Java 8 so must use mockito 4.x since 5.x requires Java 11 or later.
     testImplementation 'org.mockito:mockito-core:4.11.0'
 
@@ -94,3 +93,9 @@ tasks.withType(JavaCompile).configureEach {
     ]
 }
 
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    maxParallelForks = Runtime.runtime.availableProcessors()
+}
