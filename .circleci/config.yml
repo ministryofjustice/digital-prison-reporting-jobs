@@ -19,7 +19,6 @@ workflows:
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
-          build_args: --debug
           notify_jira: true
           notify_slack: false
           channel: dpr_cicd_alerts
