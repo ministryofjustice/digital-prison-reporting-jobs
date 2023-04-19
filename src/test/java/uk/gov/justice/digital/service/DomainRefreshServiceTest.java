@@ -197,6 +197,5 @@ public class DomainRefreshServiceTest extends Util {
         } finally {
             System.out.println("Test Completed");
         }
-
     }
 }
