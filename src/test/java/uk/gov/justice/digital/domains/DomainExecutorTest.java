@@ -31,7 +31,6 @@ public class DomainExecutorTest extends DomainService {
     @TempDir
     private Path folder;
 
-
     @BeforeAll
     public static void setUp() {
         //instantiate and populate the dependencies

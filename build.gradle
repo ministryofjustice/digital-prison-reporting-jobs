@@ -93,3 +93,9 @@ tasks.withType(JavaCompile).configureEach {
     ]
 }
 
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    maxParallelForks = Runtime.runtime.availableProcessors()
+}
