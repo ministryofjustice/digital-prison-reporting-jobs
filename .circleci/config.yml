@@ -15,7 +15,7 @@ workflows:
             branches:
               only: main           
       - reporting/gradle_build_publish:
-          tag: "1.8"
+          tag: "8.0"
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
