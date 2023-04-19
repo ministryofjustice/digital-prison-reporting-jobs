@@ -20,7 +20,7 @@ workflows:
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
           notify_jira: true
-          notify_slack: false
+          notify_slack: true
           channel: dpr_cicd_alerts
           filters:
             branches:
