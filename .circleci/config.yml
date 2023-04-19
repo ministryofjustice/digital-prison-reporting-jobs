@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   reporting: ministryofjustice/hmpps-reporting@1.0.9
-  
+
 workflows:
   checkout-build-publish:
     jobs:
@@ -15,7 +15,7 @@ workflows:
             branches:
               only: main           
       - reporting/gradle_build_publish:
-          tag: "11.0" # Defaults to 11.0
+          tag: "1.8"
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
