@@ -7,7 +7,6 @@ import uk.gov.justice.digital.domains.model.*;
 import uk.gov.justice.digital.domains.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domains.model.TableDefinition.ViolationDefinition;
 import uk.gov.justice.digital.domains.service.DomainService;
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
@@ -58,7 +57,7 @@ public class DomainExecutor extends DomainService {
 //                logger.info("View text is empty");
                 throw new DomainExecutorException("View text is empty");
             }
-            boolean incremental = false;
+
             for (final String source : transform.getSources()) {
                 final String src = source.toLowerCase().replace(".", "__");
                 final Dataset<Row> df_source = dfs.get(source);
@@ -66,11 +65,9 @@ public class DomainExecutor extends DomainService {
                     df_source.createOrReplaceTempView(src);
                     logger.info("Added view '" + src + "'");
                     srcs.add(src);
-                    if (!incremental &&
-                            schemaContains(df_source, "_operation") &&
+                    if (schemaContains(df_source, "_operation") &&
                             schemaContains(df_source, "_timestamp")) {
                         view = view.replace(" from ", ", " + src + "._operation, " + src + "._timestamp from ");
-                        incremental = true;
                     }
                     if (spark == null) {
                         spark = df_source.sparkSession();
@@ -108,26 +105,6 @@ public class DomainExecutor extends DomainService {
         return dataFrame;
     }
 
-    protected Dataset<Row> getAllSourcesForTable(final String source, final TableTuple exclude) {
-        if(exclude != null && exclude.asString().equalsIgnoreCase(source)) {
-            //TODO: this condition only for unit test
-            // we already have this table
-            logger.info("table already present " + exclude.asString());
-        } else {
-            try {
-                TableTuple full = new TableTuple(source);
-                final Dataset<Row> dataFrame = deltaService.load(sourceRootPath, full.getSchema(), full.getTable());
-                if(dataFrame != null) {
-                    logger.info("Loaded source '" + full.asString() +"'.");
-                    return dataFrame;
-                }
-            } catch(Exception e) {
-                handleError(e);
-            }
-        }
-        return null;
-    }
-
     public Dataset<Row> apply(final TableDefinition table, final Map<String, Dataset<Row>> sourceTableMap)
             throws DomainExecutorException {
         try {
@@ -141,7 +118,7 @@ public class DomainExecutor extends DomainService {
             } else if(table.getTransform() != null && table.getTransform().getSources() != null
                     && table.getTransform().getSources().size() > 0) {
                 for (final String source : table.getTransform().getSources()) {
-                    Dataset<Row> sourceDataFrame = this.getAllSourcesForTable(source, null);
+                    Dataset<Row> sourceDataFrame = this.getAllSourcesForTable(sourceRootPath, source, null);
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
                     } else {
@@ -206,9 +183,8 @@ public class DomainExecutor extends DomainService {
         }
     }
 
-    protected void deleteFull(final TableInfo info) {
-        logger.info("DomainExecutor:: deleteFull");
-        deltaService.delete(info.getPrefix(), info.getSchema(), info.getTable());
-        deltaService.vacuum(info.getPrefix(), info.getSchema(), info.getTable());
+    protected boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
+        return Arrays.asList(dataFrame.schema().fieldNames()).contains(field);
     }
+
 }

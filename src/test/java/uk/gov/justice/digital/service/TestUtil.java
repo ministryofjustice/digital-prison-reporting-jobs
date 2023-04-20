@@ -45,7 +45,7 @@ public class TestUtil extends BaseSparkTest {
     }
 
     public void saveDataToDisk(final TableInfo location, final Dataset<Row> df) {
-        DeltaLakeService service = new DeltaLakeService();
+        DataStorageService service = new DataStorageService();
         service.replace(location.getPrefix(), location.getSchema(), location.getTable(), df);
     }
 

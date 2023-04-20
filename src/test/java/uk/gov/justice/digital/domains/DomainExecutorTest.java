@@ -14,8 +14,8 @@ import uk.gov.justice.digital.domains.model.TableInfo;
 import uk.gov.justice.digital.domains.model.TableTuple;
 import uk.gov.justice.digital.domains.service.DomainService;
 import uk.gov.justice.digital.exceptions.DomainExecutorException;
-import uk.gov.justice.digital.service.DeltaLakeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.TestUtil;
 
 import java.io.*;
@@ -53,7 +53,7 @@ public class DomainExecutorTest extends DomainService {
             TableTuple tuple = new TableTuple("nomis", "offenders");
             System.out.println(tuple.asString());
             for (final String source : table.getTransform().getSources()) {
-                final Dataset<Row> dataFrame = executor.getAllSourcesForTable(source, tuple);
+                final Dataset<Row> dataFrame = executor.getAllSourcesForTable(sourcePath, source, tuple);
                 assertNull(dataFrame);
             }
         }
@@ -216,7 +216,7 @@ public class DomainExecutorTest extends DomainService {
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
 
-        DeltaLakeService service = new DeltaLakeService();
+        DataStorageService service = new DataStorageService();
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
@@ -244,7 +244,7 @@ public class DomainExecutorTest extends DomainService {
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
 
-        DeltaLakeService service = new DeltaLakeService();
+        DataStorageService service = new DataStorageService();
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-join.json");
 
@@ -285,7 +285,7 @@ public class DomainExecutorTest extends DomainService {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
 
-        DeltaLakeService service = new DeltaLakeService();
+        DataStorageService service = new DataStorageService();
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
@@ -382,7 +382,7 @@ public class DomainExecutorTest extends DomainService {
     // shouldNotWriteViolationsIfThereAreNone
     @Test
     public void shouldNotWriteViolationsIfThereAreNone() throws IOException {
-        final DeltaLakeService service = new DeltaLakeService();
+        final DataStorageService service = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
@@ -408,7 +408,7 @@ public class DomainExecutorTest extends DomainService {
     // shouldSubtractViolationsIfThereAreSome
     @Test
     public void shouldWriteViolationsIfThereAreSome() throws IOException {
-        final DeltaLakeService service = new DeltaLakeService();
+        final DataStorageService service = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");

@@ -4,7 +4,7 @@ import io.delta.tables.DeltaTable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
-public class DeltaLakeService {
+public class DataStorageService {
 
     public boolean exists(final String prefix, final String schema, final String table) {
         return DeltaTable.isDeltaTable(getTablePath(prefix, schema, table));

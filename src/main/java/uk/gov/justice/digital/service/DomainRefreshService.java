@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domains.DomainExecutor;
 import uk.gov.justice.digital.domains.model.DomainDefinition;

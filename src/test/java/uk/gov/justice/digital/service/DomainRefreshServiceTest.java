@@ -86,7 +86,7 @@ public class DomainRefreshServiceTest extends Util {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
         } catch (Exception e) {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
-            handleError(e);
+            fail();
         }
     }
 
@@ -117,7 +117,7 @@ public class DomainRefreshServiceTest extends Util {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
         } catch (Exception e) {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
-            handleError(e);
+            fail();
         }
     }
 
@@ -148,7 +148,7 @@ public class DomainRefreshServiceTest extends Util {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') update completed");
         } catch (Exception e) {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
-            handleError(e);
+            fail();
         }
     }
 
@@ -179,7 +179,7 @@ public class DomainRefreshServiceTest extends Util {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') delete completed");
         } catch (Exception e) {
             System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
-            handleError(e);
+            fail();
         }
     }
 
