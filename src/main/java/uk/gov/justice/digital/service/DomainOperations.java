@@ -12,27 +12,29 @@ import java.io.StringWriter;
 
 public class DomainOperations {
 
-    protected DataStorageService storageService = new DataStorageService();
+    protected DataStorageService deltaService = new DataStorageService();
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainOperations.class);
 
 
     public void saveFull(final TableInfo info, final Dataset<Row> dataFrame) {
         logger.info("DomainOperations:: saveFull");
-        storageService.replace(info, dataFrame);
-        storageService.endTableUpdates(info);
-        storageService.vacuum(info);
+        String tablePath = deltaService.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        deltaService.replace(tablePath, dataFrame);
+        deltaService.endTableUpdates(info);
+        deltaService.vacuum(info);
     }
 
     protected void saveViolations(final TableInfo target, final Dataset<Row> dataFrame) {
+        String tablePath = deltaService.getTablePath(target.getPrefix(), target.getSchema(), target.getTable());
         // save the violations to the specified location
-        storageService.append(target, dataFrame);
-        storageService.endTableUpdates(target);
+        deltaService.append(tablePath, dataFrame);
+        deltaService.endTableUpdates(target);
     }
 
     public void deleteFull(final TableInfo info) {
         logger.info("DomainOperations:: deleteFull");
-        storageService.delete(info);
-        storageService.vacuum(info);
+        deltaService.delete(info);
+        deltaService.vacuum(info);
     }
 
     public Dataset<Row> getAllSourcesForTable(final String sourcePath, final String source,
@@ -44,7 +46,7 @@ public class DomainOperations {
         } else {
             try {
                 TableTuple full = new TableTuple(source);
-                final Dataset<Row> dataFrame = storageService.load(
+                final Dataset<Row> dataFrame = deltaService.load(
                         TableInfo.create(sourcePath, full.getSchema(), full.getTable()));
                 if(dataFrame != null) {
                     logger.info("Loaded source '" + full.asString() +"'.");

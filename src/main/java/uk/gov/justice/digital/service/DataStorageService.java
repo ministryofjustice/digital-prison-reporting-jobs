@@ -4,6 +4,7 @@ import io.delta.tables.DeltaTable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.domains.model.SourceReference;
 import uk.gov.justice.digital.domains.model.TableInfo;
 
 public class DataStorageService {
@@ -11,59 +12,73 @@ public class DataStorageService {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     public boolean exists(final TableInfo info) {
-        return DeltaTable.isDeltaTable(getTablePath(info));
+        return DeltaTable.isDeltaTable(getTablePath(info.getPrefix(), info.getSchema(), info.getTable()));
     }
 
-    private String getTablePath(final TableInfo info) {
-        return String.join("/", info.getPrefix(), info.getSchema(), info.getTable());
+    protected String getTablePath(String prefix, SourceReference ref, String operation) {
+        return getTablePath(prefix, ref.getSource(), ref.getTable(), operation);
     }
 
-    public void append(final TableInfo info, final Dataset<Row> df) {
+    protected String getTablePath(String prefix, SourceReference ref) {
+        return getTablePath(prefix, ref.getSource(), ref.getTable());
+    }
+
+    public String getTablePath(String... elements) {
+        return String.join("/", elements);
+    }
+
+    public void append(final String tablePath, final Dataset<Row> df) {
         df.write()
                 .format("delta")
                 .mode("append")
-                .option("path", getTablePath(info))
+                .option("path", tablePath)
                 .save();
     }
 
-    public void replace(final TableInfo info, final Dataset<Row> df) {
+    public void replace(final String tablePath, final Dataset<Row> df) {
         df.write()
                 .format("delta")
                 .mode("overwrite")
                 .option("overwriteSchema", true)
-                .option("path", getTablePath(info))
+                .option("path", tablePath)
                 .save();
     }
 
     public void delete(final TableInfo info) {
         System.out.println("deleting table.");
-        final DeltaTable deltaTable = getTable(info);
+        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        final DeltaTable deltaTable = getTable(tablePath);
         if(deltaTable != null) {
             deltaTable.delete();
         }
     }
 
     public void vacuum(final TableInfo info) {
-        final DeltaTable deltaTable = getTable(info);
+        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        final DeltaTable deltaTable = getTable(tablePath);
         if(deltaTable != null) {
             deltaTable.vacuum();
         }
     }
 
     public Dataset<Row> load(final TableInfo info) {
-        final DeltaTable deltaTable = getTable(info);
+        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        final DeltaTable deltaTable = getTable(tablePath);
         return deltaTable == null ? null : deltaTable.toDF();
     }
 
-    protected DeltaTable getTable(final TableInfo info) {
-        if(DeltaTable.isDeltaTable(getTablePath(info)))
-            return DeltaTable.forPath(getTablePath(info));
-        else
-            return null;
+    protected DeltaTable getTable(final String tablePath) {
+        if(DeltaTable.isDeltaTable(tablePath))
+            return DeltaTable.forPath(tablePath);
+        else {
+            logger.warn("Cannot update manifest for table: {} - Not a delta table", tablePath);
+        }
+        return null;
     }
 
     public void endTableUpdates(final TableInfo info) {
-        final DeltaTable deltaTable = getTable(info);
+        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        final DeltaTable deltaTable = getTable(tablePath);
         updateManifest(deltaTable);
     }
 
@@ -76,4 +91,8 @@ public class DataStorageService {
         }
     }
 
+    protected void updateDeltaManifestForTable(final String tablePath) {
+        final DeltaTable deltaTable = getTable(tablePath);
+        updateManifest(deltaTable);
+    }
 }

@@ -225,7 +225,7 @@ public class DomainExecutorTest extends DomainOperations {
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
 
-        DataStorageService service = new DataStorageService();
+        DataStorageService deltaService = new DataStorageService();
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
@@ -241,10 +241,10 @@ public class DomainExecutorTest extends DomainOperations {
 
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
-        assertTrue(service.exists(info));
+        assertTrue(deltaService.exists(info));
         // it should have all the offenders in it
 
-        final Dataset<Row> df_refreshed = service.load(info);
+        final Dataset<Row> df_refreshed = deltaService.load(info);
         assertTrue(areEqual(df_offenders, df_refreshed));
     }
 
@@ -254,7 +254,7 @@ public class DomainExecutorTest extends DomainOperations {
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
 
-        DataStorageService service = new DataStorageService();
+        DataStorageService deltaService = new DataStorageService();
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-join.json");
 
@@ -274,18 +274,18 @@ public class DomainExecutorTest extends DomainOperations {
         executor.doFull(domainOperation);
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
-        assertTrue(service.exists(info));
+        assertTrue(deltaService.exists(info));
         // it should have all the joined records in it
-        final Dataset<Row> df_refreshed = service.load(info);
+        final Dataset<Row> df_refreshed = deltaService.load(info);
         df_refreshed.show();
         // not equal
 
         // now the reverse
         executor.doFull(domainOperation);
         // there should be a target table
-        assertTrue(service.exists(info));
+        assertTrue(deltaService.exists(info));
         // it should have all the joined records in it
-        final Dataset<Row> df_refreshed2 = service.load(info);
+        final Dataset<Row> df_refreshed2 = deltaService.load(info);
         df_refreshed2.show();
     }
 
@@ -296,7 +296,7 @@ public class DomainExecutorTest extends DomainOperations {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
 
-        DataStorageService service = new DataStorageService();
+        DataStorageService deltaService = new DataStorageService();
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
@@ -306,7 +306,7 @@ public class DomainExecutorTest extends DomainOperations {
 
         // there shouldn't be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
-        assertFalse(service.exists(info));
+        assertFalse(deltaService.exists(info));
 
     }
 // ********************
@@ -394,7 +394,7 @@ public class DomainExecutorTest extends DomainOperations {
     // shouldNotWriteViolationsIfThereAreNone
     @Test
     public void shouldNotWriteViolationsIfThereAreNone() throws IOException {
-        final DataStorageService service = new DataStorageService();
+        final DataStorageService deltaService = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
@@ -413,14 +413,14 @@ public class DomainExecutorTest extends DomainOperations {
         // outputs should be the same as inputs
         assertTrue(this.areEqual(inputs, outputs));
         // there should be no written violations
-        assertFalse(service.exists(TableInfo.create(targetPath + "/safety", "violations", "age")));
+        assertFalse(deltaService.exists(TableInfo.create(targetPath + "/safety", "violations", "age")));
     }
 
     // shouldWriteViolationsIfThereAreSome
     // shouldSubtractViolationsIfThereAreSome
     @Test
     public void shouldWriteViolationsIfThereAreSome() throws IOException {
-        final DataStorageService service = new DataStorageService();
+        final DataStorageService deltaService = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
@@ -442,7 +442,7 @@ public class DomainExecutorTest extends DomainOperations {
         assertTrue(outputs.isEmpty());
 
         // there should be some written violations
-        assertTrue(service.exists(TableInfo.create(targetPath, "violations", "young")));
+        assertTrue(deltaService.exists(TableInfo.create(targetPath, "violations", "young")));
     }
 
     // ********************

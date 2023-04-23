@@ -13,7 +13,6 @@ import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.domains.DomainExecutor;
 import uk.gov.justice.digital.domains.model.DomainDefinition;
 
 import java.util.HashMap;
