@@ -11,7 +11,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.domains.DomainExecutor;
 import uk.gov.justice.digital.domains.model.DomainDefinition;
 
 import java.util.HashMap;
@@ -28,6 +30,8 @@ public class DynamoDBClient {
     private final static String indexName = "secondaryId-type-index";
     private final static String sortKeyName = "secondaryId";
     private final AmazonDynamoDB dynamoDB;
+
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
 
     @Inject
     public DynamoDBClient(JobParameters jobParameters) {
@@ -67,7 +71,7 @@ public class DynamoDBClient {
             return domainDef;
         } catch (AmazonDynamoDBException | JsonProcessingException e) {
             // TODO handle exception properly
-            System.err.println(e.getMessage());
+            logger.error(e.getMessage());
             return domainDef;
         }
     }
