@@ -43,12 +43,12 @@ public class DomainService {
 
     protected void processDomain(final DomainDefinition domain, final String domainOperation) {
         try {
-            logger.info("DomainRefresh::process('" + domain.getName() + "') started");
+            logger.info("DomainService::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
             executor.doFull(domainOperation);
-            logger.info("DomainRefresh::process('" + domain.getName() + "') completed");
+            logger.info("DomainService::process('" + domain.getName() + "') completed");
         } catch(Exception e) {
-            logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
+            logger.info("DomainService::process('" + domain.getName() + "') failed");
             handleError(e);
         }
     }
