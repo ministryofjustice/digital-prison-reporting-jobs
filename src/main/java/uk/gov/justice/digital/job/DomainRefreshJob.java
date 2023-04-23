@@ -8,10 +8,13 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.service.DomainRefreshService;
+import uk.gov.justice.digital.service.DomainService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Job that refreshes domains so that the data in the consumer-facing systems is correctly formatted and up-to-date.
@@ -44,9 +47,9 @@ public class DomainRefreshJob extends Job implements Runnable {
         this.dynamoDBClient = dynamoDBClient;
     }
 
-    public DomainRefreshService refresh() {
+    public DomainService refresh() {
         SparkSession spark = getConfiguredSparkSession(new SparkConf());
-        return new DomainRefreshService(curatedPath, domainTargetPath, dynamoDBClient);
+        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient);
     }
     public static void main(String[] args) {
         logger.info("Job started");
@@ -55,8 +58,15 @@ public class DomainRefreshJob extends Job implements Runnable {
 
     @Override
     public void run() {
-        DomainRefreshService domainRefreshService = refresh();
-        domainRefreshService.run(domainTableName, domainId, domainOperation);
+        DomainService domainRefreshService = refresh();
+        try {
+            domainRefreshService.run(domainTableName, domainId, domainOperation);
+        } catch (PatternSyntaxException e) {
+            final StringWriter sw = new StringWriter();
+            final PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            logger.error(sw.getBuffer().toString());
+        }
     }
 
 }

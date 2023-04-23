@@ -1,17 +1,18 @@
 package uk.gov.justice.digital.domains.model;
 
+import lombok.Data;
+import java.util.regex.PatternSyntaxException;
+
+@Data
 public class TableTuple {
     private String schema;
     private String table;
 
-    private String originalSchema;
-    private String originalTable;
+    private final String originalSchema;
+    private final String originalTable;
 
-    public TableTuple() {
 
-    }
-
-    public TableTuple(final String source) {
+    public TableTuple(final String source) throws PatternSyntaxException {
         if(source != null && source.contains(".")) {
             this.schema = source.split("\\.")[0];
             this.table = source.split("\\.")[1];
@@ -28,49 +29,10 @@ public class TableTuple {
         this.originalTable = table;
     }
 
-    public TableTuple(final String schema, final String table, final String origSchema, final String origTable) {
-        this.schema = schema;
-        this.table = table;
-
-        this.originalSchema = origSchema;
-        this.originalTable = origTable;
-    }
-
-    public String getSchema() {
-        return schema;
-    }
-    public void setSchema(String schema) {
-        this.schema = schema;
-    }
-    public String getTable() {
-        return table;
-    }
-    public void setTable(String table) {
-        this.table = table;
-    }
 
     public String asString() {
         return schema + "." + table;
     }
 
-    public String asString(final String sep) {
-        return schema + sep + table;
-    }
-
-    public String getOriginalSchema() {
-        return originalSchema;
-    }
-
-    public void setOriginalSchema(String originalSchema) {
-        this.originalSchema = originalSchema;
-    }
-
-    public String getOriginalTable() {
-        return originalTable;
-    }
-
-    public void setOriginalTable(String originalTable) {
-        this.originalTable = originalTable;
-    }
 
 }

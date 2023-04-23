@@ -46,7 +46,7 @@ public class TestUtil extends BaseSparkTest {
 
     public void saveDataToDisk(final TableInfo location, final Dataset<Row> df) {
         DataStorageService service = new DataStorageService();
-        service.replace(location.getPrefix(), location.getSchema(), location.getTable(), df);
+        service.replace(location, df);
     }
 
     public Dataset<Row> createIncidentDomainDataframe() {

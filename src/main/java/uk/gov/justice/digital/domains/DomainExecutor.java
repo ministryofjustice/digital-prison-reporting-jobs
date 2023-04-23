@@ -3,18 +3,18 @@ package uk.gov.justice.digital.domains;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domains.model.*;
 import uk.gov.justice.digital.domains.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domains.model.TableDefinition.ViolationDefinition;
-import uk.gov.justice.digital.domains.service.DomainService;
+import uk.gov.justice.digital.service.DomainOperations;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
-import java.util.logging.Logger;
 
 import uk.gov.justice.digital.exceptions.DomainExecutorException;
 
-public class DomainExecutor extends DomainService {
+public class DomainExecutor extends DomainOperations {
 
     // core initialised values
     // sourceRootPath
@@ -23,8 +23,7 @@ public class DomainExecutor extends DomainService {
     protected String sourceRootPath;
     protected String targetRootPath;
     protected DomainDefinition domainDefinition;
-
-    static Logger logger = Logger.getLogger(DomainExecutor.class.getName());
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
 
     public DomainExecutor(final String sourceRootPath, final String targetRootPath, final DomainDefinition domain) {

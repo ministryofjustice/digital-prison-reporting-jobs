@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import uk.gov.justice.digital.common.Util;
+
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domains.DomainExecutor;
 import uk.gov.justice.digital.domains.DomainExecutorTest;
@@ -21,7 +21,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DomainRefreshServiceTest extends Util {
+public class DomainRefreshServiceTest {
 
 
     private static TestUtil utils = null;
@@ -55,7 +55,7 @@ public class DomainRefreshServiceTest extends Util {
         final String targetPath = this.folder.toFile().getAbsolutePath()  + "domain/target";
         String expectedResult = this.folder.toFile().getAbsolutePath()  + "domain/source";
 
-        DomainRefreshService service = new DomainRefreshService(sourcePath, targetPath, null);
+        DomainService service = new DomainService(sourcePath, targetPath, null);
         String result = service.sourcePath;
         assertEquals(expectedResult, result);
     }

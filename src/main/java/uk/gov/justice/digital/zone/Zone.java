@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.service.model.SourceReference;
+import uk.gov.justice.digital.domains.model.SourceReference;
 
 import java.util.List;
 

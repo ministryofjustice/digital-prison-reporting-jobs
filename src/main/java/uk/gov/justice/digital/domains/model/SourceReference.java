@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.model;
+package uk.gov.justice.digital.domains.model;
 
 import lombok.Data;
 import org.apache.spark.sql.types.StructType;

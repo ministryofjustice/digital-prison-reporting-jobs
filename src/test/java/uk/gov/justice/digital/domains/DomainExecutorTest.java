@@ -7,12 +7,13 @@ import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domains.model.DomainDefinition;
 import uk.gov.justice.digital.domains.model.TableDefinition;
 import uk.gov.justice.digital.domains.model.TableInfo;
 import uk.gov.justice.digital.domains.model.TableTuple;
-import uk.gov.justice.digital.domains.service.DomainService;
+import uk.gov.justice.digital.service.DomainOperations;
 import uk.gov.justice.digital.exceptions.DomainExecutorException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -24,7 +25,7 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DomainExecutorTest extends DomainService {
+public class DomainExecutorTest extends DomainOperations {
 
     private static TestUtil utils = null;
 
@@ -43,18 +44,26 @@ public class DomainExecutorTest extends DomainService {
     }
 
     @Test
-    public void test_getAllSourcesForTable() throws IOException {
+    public void test_getAllSourcesForTable() throws IOException, DomainExecutorException {
+        SparkSession spark = BaseSparkTest.getOrCreateSparkSession();
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = "test/target/path";
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
         List<TableDefinition> tables = domainDefinition.getTables();
+
+        final Dataset<Row> df_offender_bookings = utils.getOffenderBookings(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"),
+                df_offender_bookings);
+
+        final Dataset<Row> df_offenders = utils.getOffenders(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"),
+                df_offenders);
+
         for(final TableDefinition table : tables) {
-            TableTuple tuple = new TableTuple("nomis", "offenders");
-            System.out.println(tuple.asString());
             for (final String source : table.getTransform().getSources()) {
-                final Dataset<Row> dataFrame = executor.getAllSourcesForTable(sourcePath, source, tuple);
-                assertNull(dataFrame);
+                final Dataset<Row> dataFrame = executor.getAllSourcesForTable(sourcePath, source, null);
+               assertNotNull(dataFrame);
             }
         }
     }
@@ -231,10 +240,11 @@ public class DomainExecutorTest extends DomainService {
         executor.doFull(domainOperation);
 
         // there should be a target table
-        assertTrue(service.exists(targetPath, "example", "prisoner"));
+        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        assertTrue(service.exists(info));
         // it should have all the offenders in it
 
-        final Dataset<Row> df_refreshed = service.load(targetPath, "example", "prisoner");
+        final Dataset<Row> df_refreshed = service.load(info);
         assertTrue(areEqual(df_offenders, df_refreshed));
     }
 
@@ -263,18 +273,19 @@ public class DomainExecutorTest extends DomainService {
         final String domainOperation = "update";
         executor.doFull(domainOperation);
         // there should be a target table
-        assertTrue(service.exists(targetPath, "example", "prisoner"));
+        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        assertTrue(service.exists(info));
         // it should have all the joined records in it
-        final Dataset<Row> df_refreshed = service.load(targetPath, "example", "prisoner");
+        final Dataset<Row> df_refreshed = service.load(info);
         df_refreshed.show();
         // not equal
 
         // now the reverse
         executor.doFull(domainOperation);
         // there should be a target table
-        assertTrue(service.exists(targetPath, "example", "prisoner"));
+        assertTrue(service.exists(info));
         // it should have all the joined records in it
-        final Dataset<Row> df_refreshed2 = service.load(targetPath, "example", "prisoner");
+        final Dataset<Row> df_refreshed2 = service.load(info);
         df_refreshed2.show();
     }
 
@@ -294,7 +305,8 @@ public class DomainExecutorTest extends DomainService {
         executor.doFull(domainOperation);
 
         // there shouldn't be a target table
-        assertFalse(service.exists(targetPath, "example", "prisoner"));
+        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        assertFalse(service.exists(info));
 
     }
 // ********************
@@ -401,7 +413,7 @@ public class DomainExecutorTest extends DomainService {
         // outputs should be the same as inputs
         assertTrue(this.areEqual(inputs, outputs));
         // there should be no written violations
-        assertFalse(service.exists(targetPath + "/safety", "violations", "age"));
+        assertFalse(service.exists(TableInfo.create(targetPath + "/safety", "violations", "age")));
     }
 
     // shouldWriteViolationsIfThereAreSome
@@ -430,7 +442,7 @@ public class DomainExecutorTest extends DomainService {
         assertTrue(outputs.isEmpty());
 
         // there should be some written violations
-        assertTrue(service.exists(targetPath, "violations", "young"));
+        assertTrue(service.exists(TableInfo.create(targetPath, "violations", "young")));
     }
 
     // ********************

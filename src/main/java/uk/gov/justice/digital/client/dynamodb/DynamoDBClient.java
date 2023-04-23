@@ -16,6 +16,7 @@ import uk.gov.justice.digital.domains.model.DomainDefinition;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.PatternSyntaxException;
 
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
@@ -38,7 +39,8 @@ public class DynamoDBClient {
                 .build();
     }
 
-    public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId) {
+    public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId)
+            throws PatternSyntaxException {
         String[] names = domainId.split("[.]");
         String domainName = names.length >= 2?names[0]:domainId;
 

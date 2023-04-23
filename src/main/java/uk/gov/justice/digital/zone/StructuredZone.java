@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.job.udf.JsonValidator;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.model.SourceReference;
+import uk.gov.justice.digital.domains.model.SourceReference;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;

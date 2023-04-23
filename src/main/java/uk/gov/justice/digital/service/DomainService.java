@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domains.DomainExecutor;
 import uk.gov.justice.digital.domains.model.DomainDefinition;
@@ -8,26 +9,26 @@ import uk.gov.justice.digital.repository.DomainRepository;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Set;
-import java.util.logging.Logger;
+import java.util.regex.PatternSyntaxException;
 
-// TODO Rename it to DomainService??
-public class DomainRefreshService {
+public class DomainService {
 
     protected String sourcePath;
     protected String targetPath;
     protected DomainRepository repo;
 
-    static Logger logger = Logger.getLogger(DomainRefreshService.class.getName());
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainService.class);
 
-    public DomainRefreshService(final String sourcePath,
-                                final String targetPath,
-                                final DynamoDBClient dynamoDBClient) {
+    public DomainService(final String sourcePath,
+                         final String targetPath,
+                         final DynamoDBClient dynamoDBClient) {
         this.sourcePath = sourcePath;
         this.targetPath = targetPath;
         this.repo = new DomainRepository(dynamoDBClient);
     }
 
-    public void run(final String domainTableName, final String domainId, final String domainOperation) {
+    public void run(final String domainTableName, final String domainId, final String domainOperation)
+            throws PatternSyntaxException{
         Set<DomainDefinition> domains = getDomains(domainTableName, domainId);
         logger.info("Located " + domains.size() + " domains for name '" + domainId + "'");
         for(final DomainDefinition domain : domains) {
@@ -35,7 +36,8 @@ public class DomainRefreshService {
         }
     }
 
-    protected Set<DomainDefinition> getDomains(final String domainTableName, final String domainId) {
+    protected Set<DomainDefinition> getDomains(final String domainTableName, final String domainId)
+            throws PatternSyntaxException {
         return this.repo.getForName(domainTableName, domainId);
     }
 
@@ -55,7 +57,7 @@ public class DomainRefreshService {
         final StringWriter sw = new StringWriter();
         final PrintWriter pw = new PrintWriter(sw);
         e.printStackTrace(pw);
-        System.err.print(sw.getBuffer().toString());
+        logger.error(sw.getBuffer().toString());
     }
 
 }

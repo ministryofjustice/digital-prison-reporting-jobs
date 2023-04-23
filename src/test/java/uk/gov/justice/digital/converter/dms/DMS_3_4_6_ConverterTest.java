@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.converter.dms;
 
 import lombok.val;
+import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.BaseSparkTest;
 
@@ -8,11 +10,18 @@ import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
-public class DMS_3_4_6_ConverterTest extends BaseSparkTest {
+public class DMS_3_4_6_ConverterTest {
 
     private static final String DATA_PATH = "src/test/resources/data/dms_record.json";
 
     private static final DMS_3_4_6 underTest = new DMS_3_4_6();
+
+    private static SparkSession spark = null;
+
+    @BeforeAll
+    public static void setUp() {
+        spark = BaseSparkTest.getOrCreateSparkSession();
+    }
 
     @Test
     public void shouldConvertValidDataCorrectly() {

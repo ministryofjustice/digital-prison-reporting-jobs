@@ -34,10 +34,11 @@ public class BaseSparkTest {
 	}
 
 	@BeforeAll
-	public static void getOrCreateSparkSession() {
+	public static SparkSession getOrCreateSparkSession() {
 		spark = createSparkSession();
 		Assertions.assertNotNull(spark);
-	}
+        return spark;
+    }
 
 
 	@AfterAll

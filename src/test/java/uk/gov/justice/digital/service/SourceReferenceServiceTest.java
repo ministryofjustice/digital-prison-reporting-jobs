@@ -2,7 +2,7 @@ package uk.gov.justice.digital.service;
 
 import lombok.val;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.service.model.SourceReference;
+import uk.gov.justice.digital.domains.model.SourceReference;
 
 import java.util.Optional;
 
