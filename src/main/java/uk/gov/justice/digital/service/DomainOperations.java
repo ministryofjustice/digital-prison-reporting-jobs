@@ -50,7 +50,7 @@ public class DomainOperations {
                     logger.info("Loaded source '" + full.asString() +"'.");
                     return dataFrame;
                 } else {
-                    logger.info("Source " + full.asString() + " not found");
+                    logger.error("Source " + full.asString() + " not found");
                     throw new DomainExecutorException("Source " + full.asString() + " not found");
                 }
             } catch(Exception e) {
