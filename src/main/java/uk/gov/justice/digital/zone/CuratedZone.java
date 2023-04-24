@@ -22,10 +22,7 @@ public class CuratedZone extends Zone {
 
     @Inject
     public CuratedZone(JobParameters jobParameters) {
-        this.curatedPath = jobParameters.getCuratedS3Path()
-                .orElseThrow(() -> new IllegalStateException(
-                        "curated s3 path not set - unable to create CuratedZone instance"
-                ));
+        this.curatedPath = jobParameters.getCuratedS3Path();
     }
 
     @Override

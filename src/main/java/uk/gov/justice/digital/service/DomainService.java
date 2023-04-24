@@ -2,8 +2,8 @@ package uk.gov.justice.digital.service;
 
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
-import uk.gov.justice.digital.domains.DomainExecutor;
-import uk.gov.justice.digital.domains.model.DomainDefinition;
+import uk.gov.justice.digital.domain.DomainExecutor;
+import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.repository.DomainRepository;
 
 import java.io.PrintWriter;
@@ -17,47 +17,53 @@ public class DomainService {
     protected String targetPath;
     protected DomainRepository repo;
 
+    protected DataStorageService storage;
+
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainService.class);
 
     public DomainService(final String sourcePath,
                          final String targetPath,
-                         final DynamoDBClient dynamoDBClient) {
+                         final DynamoDBClient dynamoDBClient,
+                         final DataStorageService storage) {
         this.sourcePath = sourcePath;
         this.targetPath = targetPath;
         this.repo = new DomainRepository(dynamoDBClient);
+        this.storage = storage;
     }
 
-    public void run(final String domainTableName, final String domainId, final String domainOperation)
-            throws PatternSyntaxException{
-        Set<DomainDefinition> domains = getDomains(domainTableName, domainId);
-        logger.info("Located " + domains.size() + " domains for name '" + domainId + "'");
-        for(final DomainDefinition domain : domains) {
-            processDomain(domain, domainOperation);
+    public void run(final String domainRegistry, final String domainTableName, final String domainName,
+                    final String domainOperation) throws PatternSyntaxException{
+        if (!domainOperation.equalsIgnoreCase("delete")) {
+            Set<DomainDefinition> domains = getDomains(domainRegistry, domainName);
+            logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
+            for(final DomainDefinition domain : domains) {
+                processDomain(domain, domain.getName(), domainTableName, domainOperation);
+            }
+        } else {
+            processDomain(null, domainName, domainTableName, domainTableName);
         }
     }
 
-    protected Set<DomainDefinition> getDomains(final String domainTableName, final String domainId)
+    protected Set<DomainDefinition> getDomains(final String domainRegistry, final String domainName)
             throws PatternSyntaxException {
-        return this.repo.getForName(domainTableName, domainId);
+        return this.repo.getForName(domainRegistry, domainName);
     }
 
-    protected void processDomain(final DomainDefinition domain, final String domainOperation) {
+    protected void processDomain(final DomainDefinition domain, final String domainName, final String domainTableName,
+                                 final String domainOperation) {
         try {
-            logger.info("DomainService::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
-            executor.doFull(domainOperation);
-            logger.info("DomainService::process('" + domain.getName() + "') completed");
+            logger.info("processing of domain '" + domainName + "' started");
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+            executor.doFull(domainName, domainTableName, domainOperation);
+            logger.info("processing of domain '" + domainName + "' completed");
         } catch(Exception e) {
-            logger.info("DomainService::process('" + domain.getName() + "') failed");
+            logger.error("processing of domain '" + domainName + "' failed");
             handleError(e);
         }
     }
 
     protected void handleError(final Exception e) {
-        final StringWriter sw = new StringWriter();
-        final PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-        logger.error(sw.getBuffer().toString());
+        logger.error("processing of domain failed", e);
     }
 
 }

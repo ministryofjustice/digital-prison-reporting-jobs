@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.service;
 
 import org.apache.spark.sql.types.StructType;
-import uk.gov.justice.digital.domains.model.SourceReference;
+import uk.gov.justice.digital.domain.model.SourceReference;
 
 import java.io.InputStream;
 import java.util.HashMap;

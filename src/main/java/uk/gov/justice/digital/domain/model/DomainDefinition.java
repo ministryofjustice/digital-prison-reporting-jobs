@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.domains.model;
+package uk.gov.justice.digital.domain.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;

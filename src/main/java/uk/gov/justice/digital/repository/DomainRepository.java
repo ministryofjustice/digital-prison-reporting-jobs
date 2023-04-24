@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.repository;
 
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
-import uk.gov.justice.digital.domains.model.DomainDefinition;
+import uk.gov.justice.digital.domain.model.DomainDefinition;
 
 
 import java.util.HashSet;
@@ -17,11 +17,11 @@ public class DomainRepository {
     }
 
 
-    public Set<DomainDefinition> getForName(final String domainTableName, final String domainId)
+    public Set<DomainDefinition> getForName(final String domainRegistry, final String domainId)
             throws PatternSyntaxException {
         //TODO: The purpose of the Set<> is to have multiple domains. Need change to this code later
         Set<DomainDefinition> domains = new HashSet<>();
-        DomainDefinition domain = dynamoDBClient.getDomainDefinition(domainTableName, domainId);
+        DomainDefinition domain = dynamoDBClient.getDomainDefinition(domainRegistry, domainId);
         domains.add(domain);
         return domains;
     }

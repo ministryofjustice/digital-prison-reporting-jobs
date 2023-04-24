@@ -1,12 +1,14 @@
 package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
+import io.micronaut.context.annotation.Bean;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.domains.model.SourceReference;
-import uk.gov.justice.digital.domains.model.TableInfo;
+import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.domain.model.TableInfo;
 
+@Bean
 public class DataStorageService {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DataStorageService.class);
@@ -35,6 +37,13 @@ public class DataStorageService {
                 .save();
     }
 
+    public void create(final String tablePath, final Dataset<Row> df) {
+        df.write()
+                .format("delta")
+                .option("path", tablePath)
+                .save();
+    }
+
     public void replace(final String tablePath, final Dataset<Row> df) {
         df.write()
                 .format("delta")
@@ -44,8 +53,16 @@ public class DataStorageService {
                 .save();
     }
 
+    public void reload(final String tablePath, final Dataset<Row> df) {
+        df.write()
+                .format("delta")
+                .mode("overwrite")
+                .option("path", tablePath)
+                .save();
+    }
+
     public void delete(final TableInfo info) {
-        System.out.println("deleting table.");
+        logger.info("deleting table...");
         String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(tablePath);
         if(deltaTable != null) {

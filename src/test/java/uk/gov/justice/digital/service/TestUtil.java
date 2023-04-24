@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.domains.model.TableInfo;
+import uk.gov.justice.digital.domain.model.TableInfo;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;

@@ -1,8 +1,6 @@
-package uk.gov.justice.digital.domains.model;
+package uk.gov.justice.digital.domain.model;
 
 import lombok.Data;
-
-import java.util.regex.PatternSyntaxException;
 
 @Data
 public class TableInfo {

@@ -13,7 +13,7 @@ import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.domains.model.DomainDefinition;
+import uk.gov.justice.digital.domain.model.DomainDefinition;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -70,7 +70,7 @@ public class DynamoDBClient {
             return domainDef;
         } catch (AmazonDynamoDBException | JsonProcessingException e) {
             // TODO handle exception properly
-            logger.error(e.getMessage());
+            logger.error("DynamoDB request failed:", e);
             return domainDef;
         }
     }

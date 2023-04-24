@@ -34,10 +34,9 @@ public class BaseSparkTest {
 	}
 
 	@BeforeAll
-	public static SparkSession getOrCreateSparkSession() {
+	public static void getOrCreateSparkSession() {
 		spark = createSparkSession();
 		Assertions.assertNotNull(spark);
-        return spark;
     }
 
 

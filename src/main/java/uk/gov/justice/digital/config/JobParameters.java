@@ -68,20 +68,24 @@ public class JobParameters {
         return getOptionalProperty("dpr.violations.s3.path");
     }
 
-    public Optional<String> getCuratedS3Path() {
-        return getOptionalProperty("dpr.curated.s3.path");
+    public String getCuratedS3Path() {
+        return getMandatoryProperty("dpr.curated.s3.path");
     }
 
     public String getDomainTargetPath() {
         return getMandatoryProperty("dpr.domain.target.path");
     }
 
-    public String getDomainId() {
-        return getMandatoryProperty("dpr.domain.id");
+    public String getDomainName() {
+        return getMandatoryProperty("dpr.domain.name");
     }
 
     public String getDomainTableName() {
         return getMandatoryProperty( "dpr.domain.table.name");
+    }
+
+    public String getDomainRegistry() {
+        return getMandatoryProperty( "dpr.domain.registry");
     }
 
     public String getDomainOperation() {

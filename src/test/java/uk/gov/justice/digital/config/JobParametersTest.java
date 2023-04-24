@@ -22,6 +22,11 @@ class JobParametersTest {
     private static final String STRUCTURED_S3_PATH_KEY = "dpr.structured.s3.path";
     private static final String VIOLATIONS_S3_PATH_KEY = "dpr.violations.s3.path";
     private static final String CURATED_S3_PATH_KEY = "dpr.curated.s3.path";
+    private static final String DOMAIN_NAME_KEY = "dpr.domain.name";
+    private static final String DOMAIN_TABLE_NAME_KEY = "dpr.domain.table.name";
+    private static final String DOMAIN_OPERATION_KEY = "dpr.domain.operation";
+    private static final String DOMAIN_REGISTRY_KEY = "dpr.domain.registry";
+    private static final String DOMAIN_S3_TARGET_PATH_KEY = "dpr.domain.target.path";
 
     private static final String AWS_REGION = "test-region";
     private static final String AWS_KINESIS_ENDPOINT_URL = "https://kinesis.example.com";
@@ -31,6 +36,11 @@ class JobParametersTest {
     private static final String STRUCTURED_S3_PATH = "s3://somepath/structured";
     private static final String VIOLATIONS_S3_PATH = "s3://somepath/violations";
     private static final String CURATED_S3_PATH = "s3://somepath/curated";
+    private static final String DOMAIN_NAME = "test_domain_name";
+    private static final String DOMAIN_TABLE_NAME = "test_table";
+    private static final String DOMAIN_OPERATION = "insert";
+    private static final String DOMAIN_REGISTRY = "test_registry";
+    private static final String DOMAIN_S3_TARGET_PATH = "s3://somepath/domain/target";
 
     private static final Map<String, String> testConfig;
 
@@ -44,6 +54,11 @@ class JobParametersTest {
         testConfig.put(STRUCTURED_S3_PATH_KEY, STRUCTURED_S3_PATH);
         testConfig.put(VIOLATIONS_S3_PATH_KEY, VIOLATIONS_S3_PATH);
         testConfig.put(CURATED_S3_PATH_KEY, CURATED_S3_PATH);
+        testConfig.put(DOMAIN_NAME_KEY, DOMAIN_NAME);
+        testConfig.put(DOMAIN_TABLE_NAME_KEY, DOMAIN_TABLE_NAME);
+        testConfig.put(DOMAIN_OPERATION_KEY, DOMAIN_OPERATION);
+        testConfig.put(DOMAIN_REGISTRY_KEY, DOMAIN_REGISTRY);
+        testConfig.put(DOMAIN_S3_TARGET_PATH_KEY, DOMAIN_S3_TARGET_PATH);
     }
 
     private static final JobParameters validJobParameters = new JobParameters(testConfig);
@@ -138,6 +153,31 @@ class JobParametersTest {
 
     @Test
     public void shouldReturnOptionalWithCuratedPathWhenSet() {
-        assertEquals(Optional.of(CURATED_S3_PATH), validJobParameters.getCuratedS3Path());
+        assertEquals(CURATED_S3_PATH, validJobParameters.getCuratedS3Path());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithDomainNameWhenSet() {
+        assertEquals(DOMAIN_NAME, validJobParameters.getDomainName());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithDomainTableNameWhenSet() {
+        assertEquals(DOMAIN_TABLE_NAME, validJobParameters.getDomainTableName());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithDomainOperationWhenSet() {
+        assertEquals(DOMAIN_OPERATION, validJobParameters.getDomainOperation());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithDomainRegistryWhenSet() {
+        assertEquals(DOMAIN_REGISTRY, validJobParameters.getDomainRegistry());
+    }
+
+    @Test
+    public void shouldReturnOptionalWithDomainTargetPathWhenSet() {
+        assertEquals(DOMAIN_S3_TARGET_PATH, validJobParameters.getDomainTargetPath());
     }
 }

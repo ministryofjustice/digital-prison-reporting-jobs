@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainService;
 
 import javax.inject.Inject;
@@ -30,26 +31,29 @@ public class DomainRefreshJob extends Job implements Runnable {
     private final String curatedPath;
     private final String domainTargetPath;
     protected String domainTableName;
-    private final String domainId;
+    private final String domainName;
     private final String domainOperation;
     private final DynamoDBClient dynamoDBClient;
 
+    private final String domainRegistry;
+
+    private final DataStorageService storage;
+
     @Inject
-    public DomainRefreshJob(JobParameters jobParameters, DynamoDBClient dynamoDBClient) {
-        this.curatedPath = jobParameters.getCuratedS3Path()
-                .orElseThrow(() -> new IllegalStateException(
-                        "curated s3 path not set - unable to create CuratedZone instance"
-                ));
+    public DomainRefreshJob(JobParameters jobParameters, DynamoDBClient dynamoDBClient, DataStorageService storage) {
+        this.curatedPath = jobParameters.getCuratedS3Path();
         this.domainTargetPath = jobParameters.getDomainTargetPath();
         this.domainTableName = jobParameters.getDomainTableName();
-        this.domainId = jobParameters.getDomainId();
+        this.domainName = jobParameters.getDomainName();
+        this.domainRegistry = jobParameters.getDomainRegistry();
         this.domainOperation = jobParameters.getDomainOperation();
         this.dynamoDBClient = dynamoDBClient;
+        this.storage = storage;
     }
 
     public DomainService refresh() {
         SparkSession spark = getConfiguredSparkSession(new SparkConf());
-        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient);
+        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient, storage);
     }
     public static void main(String[] args) {
         logger.info("Job started");
@@ -60,7 +64,7 @@ public class DomainRefreshJob extends Job implements Runnable {
     public void run() {
         DomainService domainRefreshService = refresh();
         try {
-            domainRefreshService.run(domainTableName, domainId, domainOperation);
+            domainRefreshService.run(domainRegistry, domainTableName, domainName, domainOperation);
         } catch (PatternSyntaxException e) {
             final StringWriter sw = new StringWriter();
             final PrintWriter pw = new PrintWriter(sw);
