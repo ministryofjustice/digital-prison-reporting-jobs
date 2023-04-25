@@ -3,6 +3,7 @@ package uk.gov.justice.digital.zone;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
@@ -31,7 +32,7 @@ public class RawZone extends Zone {
     }
 
     @Override
-    public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) {
 
         logger.info("Processing data frame with {} rows", dataFrame.count());
 
@@ -53,7 +54,7 @@ public class RawZone extends Zone {
         logger.info("Appending {} records to deltalake table: {}", rawDataFrame.count(), tablePath);
         this.storage.append(tablePath, rawDataFrame);
         logger.info("Append completed successfully");
-        this.storage.updateDeltaManifestForTable(tablePath);
+        this.storage.updateDeltaManifestForTable(spark, tablePath);
 
         logger.info("Processed data frame with {} rows in {}ms",
                 rawDataFrame.count(),

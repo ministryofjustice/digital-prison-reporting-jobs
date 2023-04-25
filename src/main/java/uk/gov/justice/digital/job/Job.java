@@ -6,6 +6,7 @@ import org.apache.spark.sql.SparkSession;
 public abstract class Job {
     protected static SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
         sparkConf
+                .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")

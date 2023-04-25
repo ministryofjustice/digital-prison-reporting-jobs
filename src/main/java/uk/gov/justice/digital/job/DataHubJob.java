@@ -74,9 +74,9 @@ public class DataHubJob extends Job implements Runnable {
             val dataFrame = converter.convert(rowRdd, spark);
 
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
-                val rawDataFrame = rawZone.process(dataFrame, table);
-                val structuredDataFrame = structuredZone.process(rawDataFrame, table);
-                curatedZone.process(structuredDataFrame, table);
+                val rawDataFrame = rawZone.process(spark, dataFrame, table);
+                val structuredDataFrame = structuredZone.process(spark, rawDataFrame, table);
+                curatedZone.process(spark, structuredDataFrame, table);
             });
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",

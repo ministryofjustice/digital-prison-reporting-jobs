@@ -3,6 +3,7 @@ package uk.gov.justice.digital.zone;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
@@ -29,7 +30,7 @@ public class CuratedZone extends Zone {
     }
 
     @Override
-    public Dataset<Row> process(Dataset<Row> dataFrame, Row table) {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) {
 
         val count = dataFrame.count();
 
@@ -54,7 +55,7 @@ public class CuratedZone extends Zone {
             logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), curatedTablePath);
             this.storage.append(curatedTablePath, dataFrame);
             logger.info("Append completed successfully");
-            this.storage.updateDeltaManifestForTable(curatedTablePath);
+            this.storage.updateDeltaManifestForTable(spark, curatedTablePath);
 
             logger.info("Processed dataframe with {} rows in {}ms",
                     count,

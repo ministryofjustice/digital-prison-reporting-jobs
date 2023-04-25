@@ -4,11 +4,13 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
+import uk.gov.justice.digital.job.Job;
 import uk.gov.justice.digital.repository.DomainRepository;
+import javax.inject.Inject;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
-public class DomainService {
+public class DomainService extends Job {
 
     protected String sourcePath;
     protected String targetPath;
@@ -18,6 +20,7 @@ public class DomainService {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainService.class);
 
+    @Inject
     public DomainService(final String sourcePath,
                          final String targetPath,
                          final DynamoDBClient dynamoDBClient,
@@ -37,7 +40,7 @@ public class DomainService {
                 processDomain(domain, domain.getName(), domainTableName, domainOperation);
             }
         } else {
-            processDomain(null, domainName, domainTableName, domainTableName);
+            processDomain(null, domainName, domainTableName, domainOperation);
         }
     }
 

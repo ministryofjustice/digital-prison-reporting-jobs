@@ -1,17 +1,20 @@
 package uk.gov.justice.digital.domain;
 
+import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.execution.ExplainMode;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
+import uk.gov.justice.digital.job.Job;
 import uk.gov.justice.digital.service.DataStorageService;
 import java.util.*;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 
-public class DomainExecutor {
+public class DomainExecutor extends Job {
 
     // core initialised values
     // sourceRootPath
@@ -21,15 +24,19 @@ public class DomainExecutor {
     protected String targetRootPath;
     protected DomainDefinition domainDefinition;
     protected DataStorageService storage;
+    protected SparkSession spark;
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
 
-    public DomainExecutor(final String sourceRootPath, final String targetRootPath, final DomainDefinition domain,
+    public DomainExecutor(final String sourceRootPath,
+                          final String targetRootPath,
+                          final DomainDefinition domain,
                           final DataStorageService storage) {
         this.sourceRootPath = sourceRootPath;
         this.targetRootPath = targetRootPath;
         this.domainDefinition = domain;
         this.storage = storage;
+        this.spark = getConfiguredSparkSession(new SparkConf());
     }
 
     public void saveFull(final TableInfo info, final Dataset<Row> dataFrame, final String domainOperation)
@@ -37,15 +44,19 @@ public class DomainExecutor {
         logger.info("DomainOperations:: saveFull");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         if (domainOperation.equalsIgnoreCase("insert")) {
-            storage.create(tablePath, dataFrame);
+            if (!storage.exists(spark, info)) {
+                storage.create(tablePath, dataFrame);
+            } else {
+                throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
+            }
         } else if (domainOperation.equalsIgnoreCase("update")) {
-            if (storage.exists(info)) {
+            if (storage.exists(spark, info)) {
                 storage.replace(tablePath, dataFrame);
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exists");
             }
         } else if (domainOperation.equalsIgnoreCase("sync")) {
-            if (storage.exists(info)) {
+            if (storage.exists(spark, info)) {
                 storage.reload(tablePath, dataFrame);
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exists");
@@ -55,23 +66,23 @@ public class DomainExecutor {
             logger.error("Invalid operation type " + domainOperation);
             throw new DomainExecutorException("Invalid operation type " + domainOperation);
         }
-        storage.endTableUpdates(info);
-        storage.vacuum(info);
+        storage.endTableUpdates(spark, info);
+        storage.vacuum(spark, info);
     }
 
     protected void saveViolations(final TableInfo target, final Dataset<Row> dataFrame) {
         String tablePath = storage.getTablePath(target.getPrefix(), target.getSchema(), target.getTable());
         // save the violations to the specified location
         storage.append(tablePath, dataFrame);
-        storage.endTableUpdates(target);
+        storage.endTableUpdates(spark, target);
     }
 
     public void deleteFull(final TableInfo info) throws DomainExecutorException {
         logger.info("DomainOperations:: deleteFull");
-        if (storage.exists(info)) {
-            storage.delete(info);
-            storage.endTableUpdates(info);
-            storage.vacuum(info);
+        if (storage.exists(spark, info)) {
+            storage.delete(spark, info);
+            storage.endTableUpdates(spark, info);
+            storage.vacuum(spark, info);
         } else {
             throw new DomainExecutorException("Table " + info.getTable() + "doesn't exists");
         }
@@ -82,7 +93,7 @@ public class DomainExecutor {
         if(exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
-                final Dataset<Row> dataFrame = storage.load(
+                final Dataset<Row> dataFrame = storage.load(spark,
                         TableInfo.create(sourcePath, full.getSchema(), full.getTable()));
                 if(dataFrame != null) {
                     logger.info("Loaded source '" + full.asString() +"'.");
@@ -120,9 +131,8 @@ public class DomainExecutor {
     protected Dataset<Row> applyTransform(final Map<String, Dataset<Row>> dfs, final TransformDefinition transform)
             throws DomainExecutorException {
         final List<String> srcs = new ArrayList<>();
-        SparkSession spark = null;
+        String view = transform.getViewText().toLowerCase();
         try {
-            String view = transform.getViewText().toLowerCase();
             if (view.isEmpty()) {
                 logger.error("View text is empty");
                 throw new DomainExecutorException("View text is empty");
@@ -139,22 +149,33 @@ public class DomainExecutor {
                             schemaContains(df_source, "_timestamp")) {
                         view = view.replace(" from ", ", " + src + "._operation, " + src + "._timestamp from ");
                     }
-                    if (spark == null) {
-                        spark = df_source.sparkSession();
-                    }
                 }
                 logger.info(view);
                 view = view.replace(source, src);
             }
             logger.info("Executing view '" + view + "'...");
-            return spark == null ? null : spark.sqlContext().sql(view).toDF();
+            // This will validate whether the given SQL is valid
+            return validateSQLAndExecute(view);
         } finally {
-            if (spark != null) {
+            if (!view.isEmpty()) {
                 for (final String source : srcs) {
                     spark.catalog().dropTempView(source);
                 }
             }
         }
+    }
+
+    private Dataset<Row> validateSQLAndExecute(final String query) {
+        Dataset<Row> dataframe = null;
+        if (!query.isEmpty()) {
+            try {
+                spark.sql(query).queryExecution().explainString(ExplainMode.fromString("simple"));
+                dataframe = spark.sqlContext().sql(query).toDF();
+            } catch (Exception e) {
+                logger.error("SQL text is invalid: " + query);
+            }
+        }
+        return dataframe;
     }
 
 

@@ -2,6 +2,7 @@ package uk.gov.justice.digital.zone;
 
 import lombok.val;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.service.DataStorageService;
 
@@ -9,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Collections;
 
-public class RawZoneTest {
+public class RawZoneTest extends BaseSparkTest {
 
     private static final String S3_PATH_KEY = "dpr.raw.s3.path";
     private static final String S3_PATH = "s3://loadjob/raw";

@@ -2,6 +2,7 @@ package uk.gov.justice.digital.zone;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
@@ -12,7 +13,7 @@ public abstract class Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(Zone.class);
 
-    public abstract Dataset<Row> process(Dataset<Row> dataFrame, Row row);
+    public abstract Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row row);
 
 
     // These rows are used to select only those records corresponding to a specific source and table that has loads

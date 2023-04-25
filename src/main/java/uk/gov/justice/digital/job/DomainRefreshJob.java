@@ -1,8 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
-import org.apache.spark.SparkConf;
-import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -25,7 +23,7 @@ import java.util.regex.PatternSyntaxException;
  */
 @Singleton
 @CommandLine.Command(name = "DomainRefreshJob")
-public class DomainRefreshJob extends Job implements Runnable {
+public class DomainRefreshJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DomainRefreshJob.class);
 
     private final String curatedPath;
@@ -52,7 +50,6 @@ public class DomainRefreshJob extends Job implements Runnable {
     }
 
     public DomainService refresh() {
-        SparkSession spark = getConfiguredSparkSession(new SparkConf());
         return new DomainService(curatedPath, domainTargetPath, dynamoDBClient, storage);
     }
     public static void main(String[] args) {
