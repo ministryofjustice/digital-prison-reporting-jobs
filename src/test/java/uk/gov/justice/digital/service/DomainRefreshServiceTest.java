@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.DomainExecutorTest;
@@ -23,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class DomainRefreshServiceTest {
 
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainRefreshServiceTest.class);
+
 
     private static TestUtil utils = null;
 
@@ -32,7 +35,7 @@ public class DomainRefreshServiceTest {
 
     @BeforeAll
     public static void setUp() {
-        System.out.println("setup method");
+        logger.info("setup method");
         //instantiate and populate the dependencies
         utils = new TestUtil();
     }
@@ -78,17 +81,17 @@ public class DomainRefreshServiceTest {
         utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"), df_offenderBookings);
 
         try {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') started");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
-                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
                 assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
             }
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') completed");
         } catch (Exception e) {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
         }
     }
@@ -111,17 +114,17 @@ public class DomainRefreshServiceTest {
                 df_internal_agency_locations);
 
         try {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') started");
+            logger.info("Domain Refresh process '" + domain.getName() + "' started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
-                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
                 assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
             }
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
+            logger.info("Domain Refresh process'" + domain.getName() + "' completed");
         } catch (Exception e) {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            logger.info("Domain Refresh process '" + domain.getName() + "' failed");
             fail();
         }
     }
@@ -144,17 +147,17 @@ public class DomainRefreshServiceTest {
                 df_internal_agency_locations);
 
         try {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') started");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
-                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
                 assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
             }
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') completed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') completed");
         } catch (Exception e) {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
         }
     }
@@ -177,17 +180,17 @@ public class DomainRefreshServiceTest {
                 df_internal_agency_locations);
 
         try {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') update started");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') update started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
-                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
                 assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
             }
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') update completed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') update completed");
         } catch (Exception e) {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
         }
     }
@@ -210,17 +213,17 @@ public class DomainRefreshServiceTest {
                 df_internal_agency_locations);
 
         try {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') delete started");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') delete started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
-                System.out.println(Objects.requireNonNull(emptyCheck.list()).length);
+                logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
                 assertTrue(Objects.requireNonNull(emptyCheck.list()).length > 0);
             }
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') delete completed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') delete completed");
         } catch (Exception e) {
-            System.out.println("DomainRefresh::process('" + domain.getName() + "') failed");
+            logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
         }
     }
@@ -237,7 +240,7 @@ public class DomainRefreshServiceTest {
             System.err.print(sw.getBuffer().toString());
             assertTrue(true);
         } finally {
-            System.out.println("Test Completed");
+            logger.info("Test Completed");
         }
     }
 }

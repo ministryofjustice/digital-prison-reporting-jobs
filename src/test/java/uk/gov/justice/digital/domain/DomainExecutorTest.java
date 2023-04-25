@@ -6,6 +6,7 @@ import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
@@ -24,6 +25,8 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DomainExecutorTest {
+
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutorTest.class);
 
     private static TestUtil utils = null;
 
@@ -356,7 +359,7 @@ public class DomainExecutorTest {
             assertEquals(inputs.get("offenders").count(), outputs.count());
             assertTrue(this.areEqual(inputs.get("offenders"), outputs));
         } catch (DomainExecutorException e) {
-            System.err.println("view text is empty");
+            logger.error("view text is empty");
         }
     }
 
@@ -485,7 +488,7 @@ public class DomainExecutorTest {
             final StringWriter sw = new StringWriter();
             final PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
-            System.err.print(sw.getBuffer().toString());
+            logger.error(sw.getBuffer().toString());
         }
         return null;
     }
