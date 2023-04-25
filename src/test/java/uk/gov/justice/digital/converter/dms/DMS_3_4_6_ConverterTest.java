@@ -1,12 +1,8 @@
 package uk.gov.justice.digital.converter.dms;
 
-import com.codahale.metrics.MetricRegistryListener;
 import lombok.val;
-import org.apache.spark.sql.SparkSession;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.BaseSparkTest;
-
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.job.model.Columns.DATA;

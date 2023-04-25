@@ -3,6 +3,8 @@ package uk.gov.justice.digital.zone;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.service.DataStorageService;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Collections;
@@ -13,8 +15,9 @@ public class RawZoneTest {
     private static final String S3_PATH = "s3://loadjob/raw";
 
     private final JobParameters jobParameters = new JobParameters(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
+    private final DataStorageService storage = new DataStorageService();
 
-    private final RawZone underTest = new RawZone(jobParameters);
+    private final RawZone underTest = new RawZone(jobParameters, storage);
 
     @Test
     public void shouldReturnValidRawS3Path() {
@@ -24,6 +27,6 @@ public class RawZoneTest {
 
         val expectedRawS3Path = String.join("/", S3_PATH, source, table, operation);
 
-        assertEquals(expectedRawS3Path, underTest.getTablePath(S3_PATH, source, table, operation));
+        assertEquals(expectedRawS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
     }
 }

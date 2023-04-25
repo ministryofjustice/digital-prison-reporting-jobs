@@ -8,15 +8,10 @@ import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.DomainOperations;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.*;
-
 import uk.gov.justice.digital.exception.DomainExecutorException;
 
-public class DomainExecutor extends DomainOperations {
+public class DomainExecutor {
 
     // core initialised values
     // sourceRootPath
@@ -37,7 +32,6 @@ public class DomainExecutor extends DomainOperations {
         this.storage = storage;
     }
 
-    @Override
     public void saveFull(final TableInfo info, final Dataset<Row> dataFrame, final String domainOperation)
             throws DomainExecutorException {
         logger.info("DomainOperations:: saveFull");
@@ -65,7 +59,6 @@ public class DomainExecutor extends DomainOperations {
         storage.vacuum(info);
     }
 
-    @Override
     protected void saveViolations(final TableInfo target, final Dataset<Row> dataFrame) {
         String tablePath = storage.getTablePath(target.getPrefix(), target.getSchema(), target.getTable());
         // save the violations to the specified location
@@ -86,11 +79,7 @@ public class DomainExecutor extends DomainOperations {
 
     public Dataset<Row> getAllSourcesForTable(final String sourcePath, final String source,
                                               final TableTuple exclude) throws DomainExecutorException {
-        if(exclude != null && exclude.asString().equalsIgnoreCase(source)) {
-            //TODO: this condition only for unit test
-            // we already have this table
-            logger.info("table already present " + exclude.asString());
-        } else {
+        if(exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
                 final Dataset<Row> dataFrame = storage.load(
@@ -103,8 +92,12 @@ public class DomainExecutor extends DomainOperations {
                     throw new DomainExecutorException("Source " + full.asString() + " not found");
                 }
             } catch(Exception e) {
-                handleError(e);
+                logger.error("Unable to get the source information", e);
             }
+        } else {
+            //TODO: this condition only for unit test
+            // we already have this table
+            logger.info("Table already present " + exclude.asString());
         }
         return null;
     }
@@ -215,7 +208,6 @@ public class DomainExecutor extends DomainOperations {
 
         } catch(Exception e) {
             logger.info("Apply Domain for " + table.getName() + " failed.");
-            handleError(e);
             throw new DomainExecutorException("Apply Domain for " + table.getName() + " failed.");
         }
         finally {
@@ -249,9 +241,7 @@ public class DomainExecutor extends DomainOperations {
                 logger.error("Unsupported domain operation");
                 throw new UnsupportedOperationException("Unsupported domain operation.");
             }
-        } catch(Exception e) {
-            handleError(e);
-        } catch (DomainExecutorException e) {
+        } catch(Exception | DomainExecutorException e) {
             logger.error("Domain executor failed: ", e);
         }
     }
@@ -260,12 +250,4 @@ public class DomainExecutor extends DomainOperations {
     protected boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
         return Arrays.asList(dataFrame.schema().fieldNames()).contains(field);
     }
-
-    protected void handleError(final Exception e) {
-        final StringWriter sw = new StringWriter();
-        final PrintWriter pw = new PrintWriter(sw);
-        e.printStackTrace(pw);
-        logger.error(sw.getBuffer().toString());
-    }
-
 }

@@ -5,9 +5,6 @@ import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.repository.DomainRepository;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 

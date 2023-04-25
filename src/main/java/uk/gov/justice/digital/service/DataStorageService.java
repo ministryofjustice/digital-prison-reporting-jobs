@@ -17,11 +17,11 @@ public class DataStorageService {
         return DeltaTable.isDeltaTable(getTablePath(info.getPrefix(), info.getSchema(), info.getTable()));
     }
 
-    protected String getTablePath(String prefix, SourceReference ref, String operation) {
+    public String getTablePath(String prefix, SourceReference ref, String operation) {
         return getTablePath(prefix, ref.getSource(), ref.getTable(), operation);
     }
 
-    protected String getTablePath(String prefix, SourceReference ref) {
+    public String getTablePath(String prefix, SourceReference ref) {
         return getTablePath(prefix, ref.getSource(), ref.getTable());
     }
 
@@ -108,7 +108,7 @@ public class DataStorageService {
         }
     }
 
-    protected void updateDeltaManifestForTable(final String tablePath) {
+    public void updateDeltaManifestForTable(final String tablePath) {
         final DeltaTable deltaTable = getTable(tablePath);
         updateManifest(deltaTable);
     }

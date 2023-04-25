@@ -8,15 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.job.udf.JsonValidator;
+import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.domain.model.SourceReference;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
 import java.util.Collections;
 import java.util.Map;
-
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.to_json;
@@ -32,9 +30,10 @@ public class StructuredZone extends Zone {
 
     private final String structuredPath;
     private final String violationsPath;
+    private final DataStorageService storage;
 
     @Inject
-    public StructuredZone(JobParameters jobParameters) {
+    public StructuredZone(JobParameters jobParameters, DataStorageService storage) {
         this.structuredPath = jobParameters.getStructuredS3Path()
             .orElseThrow(() -> new IllegalStateException(
                 "structured s3 path not set - unable to create StructuredZone instance"
@@ -43,6 +42,7 @@ public class StructuredZone extends Zone {
             .orElseThrow(() -> new IllegalStateException(
                 "violations s3 path not set - unable to create StructuredZone instance"
             ));
+        this.storage = storage;
     }
 
     @Override
@@ -75,9 +75,9 @@ public class StructuredZone extends Zone {
 
     private Dataset<Row> handleSchemaFound(Dataset<Row> dataFrame, SourceReference sourceReference) {
 
-        val tablePath = getTablePath(structuredPath, sourceReference);
+        val tablePath = this.storage.getTablePath(structuredPath, sourceReference);
 
-        val validationFailedViolationPath = getTablePath(
+        val validationFailedViolationPath = this.storage.getTablePath(
             violationsPath,
             sourceReference
         );
@@ -156,8 +156,15 @@ public class StructuredZone extends Zone {
             .select(col(DATA), col(METADATA))
             .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
 
-        appendDataAndUpdateManifestForTable(missingSchemaRecords, getTablePath(violationsPath, source, table));
+        appendDataAndUpdateManifestForTable(missingSchemaRecords,
+                this.storage.getTablePath(violationsPath, source, table));
         return createEmptyDataFrame(dataFrame);
     }
 
+    private void appendDataAndUpdateManifestForTable(Dataset<Row> dataFrame, String tablePath) {
+        logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
+        this.storage.append(tablePath, dataFrame);
+        logger.info("Append completed successfully");
+        this.storage.updateDeltaManifestForTable(tablePath);
+    }
 }
