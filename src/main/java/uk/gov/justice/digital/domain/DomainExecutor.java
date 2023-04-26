@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.domain;
 
 import lombok.val;
-import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -12,7 +11,7 @@ import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
-import uk.gov.justice.digital.job.SparkSessionProvider;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import java.util.*;
 import uk.gov.justice.digital.exception.DomainExecutorException;

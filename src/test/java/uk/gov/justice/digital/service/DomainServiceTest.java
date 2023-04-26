@@ -14,7 +14,7 @@ import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.DomainExecutorTest;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableInfo;
-import uk.gov.justice.digital.job.SparkSessionProvider;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import java.io.File;
 import java.io.IOException;

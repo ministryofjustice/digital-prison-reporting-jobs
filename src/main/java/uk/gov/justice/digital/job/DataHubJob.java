@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.zone.RawZone;
 import uk.gov.justice.digital.zone.StructuredZone;

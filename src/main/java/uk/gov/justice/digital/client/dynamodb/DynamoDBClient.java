@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
@@ -25,13 +26,12 @@ import static uk.gov.justice.digital.job.model.Columns.DATA;
 public class DynamoDBClient {
 
     private final static ObjectMapper mapper = new ObjectMapper();
+    private static final Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
 
     private final static String indexName = "secondaryId-type-index";
     private final static String sortKeyName = "secondaryId";
 
     private final AmazonDynamoDB dynamoDB;
-
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
 
     @Inject
     public DynamoDBClient(JobParameters jobParameters) {

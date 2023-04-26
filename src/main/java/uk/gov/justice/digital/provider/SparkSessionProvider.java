@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.job;
+package uk.gov.justice.digital.provider;
 
 import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
