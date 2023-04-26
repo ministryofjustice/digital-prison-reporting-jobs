@@ -1,17 +1,19 @@
 package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
-import org.apache.spark.SparkConf;
-import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.service.DomainRefreshService;
+import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.DomainService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Job that refreshes domains so that the data in the consumer-facing systems is correctly formatted and up-to-date.
@@ -21,32 +23,34 @@ import javax.inject.Singleton;
  */
 @Singleton
 @CommandLine.Command(name = "DomainRefreshJob")
-public class DomainRefreshJob extends Job implements Runnable {
+public class DomainRefreshJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DomainRefreshJob.class);
 
     private final String curatedPath;
     private final String domainTargetPath;
     protected String domainTableName;
-    private final String domainId;
+    private final String domainName;
     private final String domainOperation;
     private final DynamoDBClient dynamoDBClient;
 
+    private final String domainRegistry;
+
+    private final DataStorageService storage;
+
     @Inject
-    public DomainRefreshJob(JobParameters jobParameters, DynamoDBClient dynamoDBClient) {
-        this.curatedPath = jobParameters.getCuratedS3Path()
-                .orElseThrow(() -> new IllegalStateException(
-                        "curated s3 path not set - unable to create CuratedZone instance"
-                ));
+    public DomainRefreshJob(JobParameters jobParameters, DynamoDBClient dynamoDBClient, DataStorageService storage) {
+        this.curatedPath = jobParameters.getCuratedS3Path();
         this.domainTargetPath = jobParameters.getDomainTargetPath();
         this.domainTableName = jobParameters.getDomainTableName();
-        this.domainId = jobParameters.getDomainId();
+        this.domainName = jobParameters.getDomainName();
+        this.domainRegistry = jobParameters.getDomainRegistry();
         this.domainOperation = jobParameters.getDomainOperation();
         this.dynamoDBClient = dynamoDBClient;
+        this.storage = storage;
     }
 
-    public DomainRefreshService refresh() {
-        SparkSession spark = getConfiguredSparkSession(new SparkConf());
-        return new DomainRefreshService(curatedPath, domainTargetPath, dynamoDBClient);
+    public DomainService refresh() {
+        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient, storage);
     }
     public static void main(String[] args) {
         logger.info("Job started");
@@ -55,8 +59,15 @@ public class DomainRefreshJob extends Job implements Runnable {
 
     @Override
     public void run() {
-        DomainRefreshService domainRefreshService = refresh();
-        domainRefreshService.run(domainTableName, domainId, domainOperation);
+        DomainService domainRefreshService = refresh();
+        try {
+            domainRefreshService.run(domainRegistry, domainTableName, domainName, domainOperation);
+        } catch (PatternSyntaxException e) {
+            final StringWriter sw = new StringWriter();
+            final PrintWriter pw = new PrintWriter(sw);
+            e.printStackTrace(pw);
+            logger.error(sw.getBuffer().toString());
+        }
     }
 
 }

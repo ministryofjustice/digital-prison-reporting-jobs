@@ -37,7 +37,7 @@ public class BaseSparkTest {
 	public static void getOrCreateSparkSession() {
 		spark = createSparkSession();
 		Assertions.assertNotNull(spark);
-	}
+    }
 
 
 	@AfterAll

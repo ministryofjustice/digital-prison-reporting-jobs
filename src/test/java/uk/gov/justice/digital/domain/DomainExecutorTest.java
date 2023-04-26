@@ -1,21 +1,21 @@
-package uk.gov.justice.digital.domains;
+package uk.gov.justice.digital.domain;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.ResourceLoader;
-import uk.gov.justice.digital.domains.model.DomainDefinition;
-import uk.gov.justice.digital.domains.model.TableDefinition;
-import uk.gov.justice.digital.domains.model.TableInfo;
-import uk.gov.justice.digital.domains.model.TableTuple;
-import uk.gov.justice.digital.domains.service.DomainService;
-import uk.gov.justice.digital.exceptions.DomainExecutorException;
-import uk.gov.justice.digital.service.DeltaLakeService;
+import uk.gov.justice.digital.domain.model.DomainDefinition;
+import uk.gov.justice.digital.domain.model.TableDefinition;
+import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.domain.model.TableTuple;
+import uk.gov.justice.digital.exception.DomainExecutorException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.TestUtil;
 
 import java.io.*;
@@ -24,7 +24,9 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DomainExecutorTest extends DomainService {
+public class DomainExecutorTest extends BaseSparkTest{
+
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutorTest.class);
 
     private static TestUtil utils = null;
 
@@ -43,29 +45,38 @@ public class DomainExecutorTest extends DomainService {
     }
 
     @Test
-    public void test_getAllSourcesForTable() throws IOException {
+    public void test_getAllSourcesForTable() throws IOException, DomainExecutorException {
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
+        final DataStorageService storage = new DataStorageService();
         final String targetPath = "test/target/path";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         List<TableDefinition> tables = domainDefinition.getTables();
+
+        final Dataset<Row> df_offender_bookings = utils.getOffenderBookings(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"),
+                df_offender_bookings);
+
+        final Dataset<Row> df_offenders = utils.getOffenders(folder);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"),
+                df_offenders);
+
         for(final TableDefinition table : tables) {
-            TableTuple tuple = new TableTuple("nomis", "offenders");
-            System.out.println(tuple.asString());
             for (final String source : table.getTransform().getSources()) {
-                final Dataset<Row> dataFrame = executor.getAllSourcesForTable(source, tuple);
-                assertNull(dataFrame);
+                final Dataset<Row> dataFrame = executor.getAllSourcesForTable(sourcePath, source, null);
+               assertNotNull(dataFrame);
             }
         }
     }
 
     @Test
     public void test_apply() throws IOException, DomainExecutorException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -79,12 +90,13 @@ public class DomainExecutorTest extends DomainService {
     }
 
     @Test
-    public void test_applyTransform() throws IOException, DomainExecutorException {
+    public void test_applyTransform() throws IOException, DomainExecutorException  {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -99,11 +111,12 @@ public class DomainExecutorTest extends DomainService {
 
     @Test
     public void test_applyViolations_empty() throws IOException, DomainExecutorException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -119,11 +132,12 @@ public class DomainExecutorTest extends DomainService {
 
     @Test
     public void test_applyViolations_nonempty() throws IOException, DomainExecutorException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("source", "table").asString().toLowerCase(),
                 utils.getOffenders(folder));
@@ -140,11 +154,12 @@ public class DomainExecutorTest extends DomainService {
 
     @Test
     public void test_applyMappings() throws IOException, DomainExecutorException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -163,11 +178,13 @@ public class DomainExecutorTest extends DomainService {
 
     @Test
     public void test_saveFull() throws IOException, DomainExecutorException {
+        final DataStorageService storage = new DataStorageService();
+        final String domainOperation = "insert";
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -177,19 +194,23 @@ public class DomainExecutorTest extends DomainService {
             Dataset<Row> df_target = executor.apply(table, testMap);
             df_target.printSchema();
             final TableInfo targetInfo = TableInfo.create(targetPath,  domainDefinition.getName(), table.getName());
-            executor.saveFull(targetInfo, df_target);
+            executor.saveFull(targetInfo, df_target, domainOperation);
         }
         assertTrue(true);
     }
 
     @Test
-    public void test_deleteFull() throws IOException {
+    public void test_deleteFull() throws IOException, DomainExecutorException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
-        System.out.println(targetPath);
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        // Insert first
+        final String domainTableName = "demographics";
+        executor.doFull(domainDefinition.getName(), domainTableName, "insert");
+
         for(final TableDefinition table : tables) {
             final TableInfo targetInfo = TableInfo.create(targetPath,  domainDefinition.getName(), table.getName());
             executor.deleteFull(targetInfo);
@@ -200,11 +221,12 @@ public class DomainExecutorTest extends DomainService {
     // shouldInitializeDomainExecutor
     @Test
     public void shouldInitializeDomainExecutionJob() throws IOException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source-data";
         final String targetPath = "target.path";
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
 
         assertNotNull(executor);
 
@@ -213,42 +235,43 @@ public class DomainExecutorTest extends DomainService {
     // shouldRunWithFullUpdateIfTableIsInDomain
     @Test
     public void shouldRunWithFullUpdateIfTableIsInDomain() throws IOException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
 
-        DeltaLakeService service = new DeltaLakeService();
-
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
 
         // save a source
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
         utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
 
-        final String domainOperation = "update";
-        // do Full Materialize of source to target
-        executor.doFull(domainOperation);
+        final String domainTableName = "prisoner";
+        // Insert first
+        executor.doFull(domain.getName(), domainTableName, "insert");
+        // then update
+        executor.doFull(domain.getName(), domainTableName, "update");
 
         // there should be a target table
-        assertTrue(service.exists(targetPath, "example", "prisoner"));
+        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        assertTrue(storage.exists(spark, info));
         // it should have all the offenders in it
 
-        final Dataset<Row> df_refreshed = service.load(targetPath, "example", "prisoner");
+        final Dataset<Row> df_refreshed = storage.load(spark, info);
         assertTrue(areEqual(df_offenders, df_refreshed));
     }
 
     // shouldRunWithFullUpdateIfMultipleTablesAreInDomain
     @Test
     public void shouldRunWithFullUpdateIfMultipleTablesAreInDomain() throws IOException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
 
-        DeltaLakeService service = new DeltaLakeService();
 
-        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-join.json");
-
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainDefinition domain1 = getDomain("/sample/domain/sample-domain-execution-insert.json");
+        final DomainDefinition domain2 = getDomain("/sample/domain/sample-domain-execution-join.json");
 
         // save a source
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
@@ -260,41 +283,48 @@ public class DomainExecutorTest extends DomainService {
 
 
         // do Full Materialize of source to target
-        final String domainOperation = "update";
-        executor.doFull(domainOperation);
+        final String domainTableName = "prisoner";
+        final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, domain1, storage);
+        executor1.doFull(domain1.getName(), domainTableName, "insert");
         // there should be a target table
-        assertTrue(service.exists(targetPath, "example", "prisoner"));
+        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
-        final Dataset<Row> df_refreshed = service.load(targetPath, "example", "prisoner");
+        final Dataset<Row> df_refreshed = storage.load(spark, info);
         df_refreshed.show();
         // not equal
 
+
         // now the reverse
-        executor.doFull(domainOperation);
+        final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, domain2, storage);
+        executor2.doFull(domain2.getName(), domainTableName, "update");
         // there should be a target table
-        assertTrue(service.exists(targetPath, "example", "prisoner"));
+        assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
-        final Dataset<Row> df_refreshed2 = service.load(targetPath, "example", "prisoner");
-        df_refreshed2.show();
+        final Dataset<Row> df_refreshed_update = storage.load(spark, info);
+        df_refreshed_update.show();
     }
 
     // shouldRunWith0ChangesIfTableIsNotInDomain
     @Test
     public void shouldRunWith0ChangesIfTableIsNotInDomain() throws IOException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
 
-        DeltaLakeService service = new DeltaLakeService();
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
         utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
         final String domainOperation = "insert";
-        executor.doFull(domainOperation);
+        final String domainTableName = "prisoner";
+        executor.doFull(domain.getName(), domainTableName, domainOperation);
 
         // there shouldn't be a target table
-        assertFalse(service.exists(targetPath, "example", "prisoner"));
+        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        assertFalse(storage.exists(spark, info));
 
     }
 // ********************
@@ -304,11 +334,12 @@ public class DomainExecutorTest extends DomainService {
     // shouldNotExecuteTransformIfNoSqlExists
     @Test
     public void shouldNotExecuteTransformIfNoSqlExists() throws IOException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setViewText("");
@@ -323,18 +354,19 @@ public class DomainExecutorTest extends DomainService {
             assertEquals(inputs.get("offenders").count(), outputs.count());
             assertTrue(this.areEqual(inputs.get("offenders"), outputs));
         } catch (DomainExecutorException e) {
-            System.err.println("view text is empty");
+            logger.error("view text is empty");
         }
     }
 
     // shouldNotExecuteTransformIfSqlIsBad
     @Test
     public void shouldNotExecuteTransformIfSqlIsBad() throws IOException, DomainExecutorException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
         Map<String, Dataset<Row>> inputs = new HashMap<>();
         final String sourceTable = "OFFENDERS";
         inputs.put(sourceTable.toLowerCase(), utils.getOffenders(folder));
@@ -349,11 +381,12 @@ public class DomainExecutorTest extends DomainService {
     // shouldDeriveNewColumnIfFunctionProvided
     @Test
     public void shouldDeriveNewColumnIfFunctionProvided() throws IOException {
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
@@ -382,12 +415,12 @@ public class DomainExecutorTest extends DomainService {
     // shouldNotWriteViolationsIfThereAreNone
     @Test
     public void shouldNotWriteViolationsIfThereAreNone() throws IOException {
-        final DeltaLakeService service = new DeltaLakeService();
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
@@ -401,19 +434,19 @@ public class DomainExecutorTest extends DomainService {
         // outputs should be the same as inputs
         assertTrue(this.areEqual(inputs, outputs));
         // there should be no written violations
-        assertFalse(service.exists(targetPath + "/safety", "violations", "age"));
+        assertFalse(storage.exists(spark, TableInfo.create(targetPath + "/safety", "violations", "age")));
     }
 
     // shouldWriteViolationsIfThereAreSome
     // shouldSubtractViolationsIfThereAreSome
     @Test
     public void shouldWriteViolationsIfThereAreSome() throws IOException {
-        final DeltaLakeService service = new DeltaLakeService();
+        final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
@@ -430,7 +463,7 @@ public class DomainExecutorTest extends DomainService {
         assertTrue(outputs.isEmpty());
 
         // there should be some written violations
-        assertTrue(service.exists(targetPath, "violations", "young"));
+        assertTrue(storage.exists(spark, TableInfo.create(targetPath, "violations", "young")));
     }
 
     // ********************
@@ -446,10 +479,7 @@ public class DomainExecutorTest extends DomainService {
             inputs.put(source.toLowerCase(), df);
             return executor.applyTransform(inputs, transform);
         } catch (DomainExecutorException e) {
-            final StringWriter sw = new StringWriter();
-            final PrintWriter pw = new PrintWriter(sw);
-            e.printStackTrace(pw);
-            System.err.print(sw.getBuffer().toString());
+            logger.error("Apply transform failed", e);
         }
         return null;
     }

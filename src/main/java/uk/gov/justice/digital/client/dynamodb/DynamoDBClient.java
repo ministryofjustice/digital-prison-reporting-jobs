@@ -11,11 +11,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.domains.model.DomainDefinition;
+import uk.gov.justice.digital.domain.model.DomainDefinition;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.PatternSyntaxException;
 
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
@@ -28,6 +30,8 @@ public class DynamoDBClient {
     private final static String sortKeyName = "secondaryId";
     private final AmazonDynamoDB dynamoDB;
 
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
+
     @Inject
     public DynamoDBClient(JobParameters jobParameters) {
         dynamoDB = AmazonDynamoDBClientBuilder.standard()
@@ -38,7 +42,8 @@ public class DynamoDBClient {
                 .build();
     }
 
-    public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId) {
+    public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId)
+            throws PatternSyntaxException {
         String[] names = domainId.split("[.]");
         String domainName = names.length >= 2?names[0]:domainId;
 
@@ -65,7 +70,7 @@ public class DynamoDBClient {
             return domainDef;
         } catch (AmazonDynamoDBException | JsonProcessingException e) {
             // TODO handle exception properly
-            System.err.println(e.getMessage());
+            logger.error("DynamoDB request failed:", e);
             return domainDef;
         }
     }

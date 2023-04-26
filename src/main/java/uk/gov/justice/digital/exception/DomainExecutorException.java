@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.exceptions;
+package uk.gov.justice.digital.exception;
 
 public class DomainExecutorException extends Throwable {
 

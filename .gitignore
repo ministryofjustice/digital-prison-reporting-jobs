@@ -32,3 +32,5 @@ metastore_db/
 .settings/
 .vscode
 *.swp
+/spark-warehouse/
+/derby.log
