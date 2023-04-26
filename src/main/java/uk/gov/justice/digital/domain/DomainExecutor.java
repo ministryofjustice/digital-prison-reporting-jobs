@@ -5,6 +5,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.ExplainMode;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
@@ -16,17 +17,13 @@ import uk.gov.justice.digital.exception.DomainExecutorException;
 
 public class DomainExecutor extends Job {
 
-    // core initialised values
-    // sourceRootPath
-    // targetRootPath
-    // domainDefinition
-    protected String sourceRootPath;
-    protected String targetRootPath;
-    protected DomainDefinition domainDefinition;
-    protected DataStorageService storage;
-    protected SparkSession spark;
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
+    private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
+    private final String sourceRootPath;
+    private final String targetRootPath;
+    private final DomainDefinition domainDefinition;
+    private final DataStorageService storage;
+    private final SparkSession spark;
 
     public DomainExecutor(final String sourceRootPath,
                           final String targetRootPath,

@@ -15,10 +15,9 @@ public class DomainRepository {
     private final DynamoDBClient dynamoDBClient;
 
     @Inject
-    public DomainRepository(final DynamoDBClient dynamoDBClient) {
+    public DomainRepository(DynamoDBClient dynamoDBClient) {
         this.dynamoDBClient = dynamoDBClient;
     }
-
 
     public Set<DomainDefinition> getForName(final String domainRegistry, final String domainId)
             throws PatternSyntaxException {

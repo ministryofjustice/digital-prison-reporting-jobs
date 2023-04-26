@@ -1,11 +1,12 @@
 package uk.gov.justice.digital.domain;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.ResourceLoader;
@@ -14,35 +15,22 @@ import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.domain.model.TableTuple;
 import uk.gov.justice.digital.exception.DomainExecutorException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.TestUtil;
+import uk.gov.justice.digital.service.SparkTestHelpers;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class DomainExecutorTest extends BaseSparkTest{
+public class DomainExecutorTest extends BaseSparkTest {
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutorTest.class);
-
-    private static TestUtil utils = null;
+    private static final Logger logger = LoggerFactory.getLogger(DomainExecutorTest.class);
+    private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
 
     @TempDir
     private Path folder;
-
-    @BeforeAll
-    public static void setUp() {
-        //instantiate and populate the dependencies
-        utils = new TestUtil();
-    }
-
-    @Test
-    public void test_tempFolder() {
-        assertNotNull(this.folder);
-    }
 
     @Test
     public void test_getAllSourcesForTable() throws IOException, DomainExecutorException {
@@ -53,12 +41,12 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         List<TableDefinition> tables = domainDefinition.getTables();
 
-        final Dataset<Row> df_offender_bookings = utils.getOffenderBookings(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"),
+        final Dataset<Row> df_offender_bookings = helpers.getOffenderBookings(folder);
+        helpers.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"),
                 df_offender_bookings);
 
-        final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"),
+        final Dataset<Row> df_offenders = helpers.getOffenders(folder);
+        helpers.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"),
                 df_offenders);
 
         for(final TableDefinition table : tables) {
@@ -79,13 +67,13 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
-                utils.getOffenderBookings(folder));
+                helpers.getOffenderBookings(folder));
         testMap.put(new TableTuple("nomis", "offenders").asString().toLowerCase(),
-                utils.getOffenders(folder));
+                helpers.getOffenders(folder));
         for(final TableDefinition table : tables) {
             Dataset<Row> dataframe = executor.apply(table, testMap);
             dataframe.printSchema();
-            assertEquals(dataframe.schema(), utils.createIncidentDomainDataframe().schema());
+            assertEquals(dataframe.schema(), helpers.createIncidentDomainDataframe().schema());
         }
     }
 
@@ -99,12 +87,12 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
-                utils.getOffenderBookings(folder));
+                helpers.getOffenderBookings(folder));
         refs.put(new TableTuple("nomis", "offenders").asString().toLowerCase(),
-                utils.getOffenders(folder));
+                helpers.getOffenders(folder));
         for(final TableDefinition table : tables) {
             final Dataset<Row> transformedDataFrame = executor.applyTransform(refs, table.getTransform());
-            assertEquals(transformedDataFrame.schema(), utils.createIncidentDomainDataframe().schema());
+            assertEquals(transformedDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
         }
 
     }
@@ -119,14 +107,14 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
-                utils.getOffenderBookings(folder));
+                helpers.getOffenderBookings(folder));
         refs.put(new TableTuple("nomis", "offenders").asString().toLowerCase(),
-                utils.getOffenders(folder));
+                helpers.getOffenders(folder));
         for(final TableDefinition table : tables) {
             final Dataset<Row> transformedDataFrame = executor.applyTransform(refs, table.getTransform());
             final Dataset<Row> postViolationsDataFrame = executor.applyViolations(transformedDataFrame, table.getViolations());
             postViolationsDataFrame.printSchema();
-            assertEquals(postViolationsDataFrame.schema(), utils.createIncidentDomainDataframe().schema());
+            assertEquals(postViolationsDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
         }
     }
 
@@ -140,14 +128,14 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("source", "table").asString().toLowerCase(),
-                utils.getOffenders(folder));
+                helpers.getOffenders(folder));
 
         for(final TableDefinition table : tables) {
             final Dataset<Row> transformedDataFrame = executor.applyTransform(refs, table.getTransform());
             final Dataset<Row> postViolationsDataFrame = executor.applyViolations(transformedDataFrame,
                     table.getViolations());
             postViolationsDataFrame.printSchema();
-            assertEquals(postViolationsDataFrame.schema(), utils.createViolationsDomainDataframe().schema());
+            assertEquals(postViolationsDataFrame.schema(), helpers.createViolationsDomainDataframe().schema());
         }
     }
 
@@ -162,9 +150,9 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
-                utils.getOffenderBookings(folder));
+                helpers.getOffenderBookings(folder));
         refs.put(new TableTuple("nomis", "offenders").asString().toLowerCase(),
-                utils.getOffenders(folder));
+                helpers.getOffenders(folder));
         for(final TableDefinition table : tables) {
             final Dataset<Row> transformedDataFrame = executor.applyTransform(refs, table.getTransform());
             final Dataset<Row> postViolationsDataFrame = executor.applyViolations(transformedDataFrame,
@@ -172,7 +160,7 @@ public class DomainExecutorTest extends BaseSparkTest{
             final Dataset<Row> postMappingsDataFrame = executor.applyMappings(postViolationsDataFrame,
                     table.getMapping());
             postMappingsDataFrame.printSchema();
-            assertEquals(postMappingsDataFrame.schema(), utils.createIncidentDomainDataframe().schema());
+            assertEquals(postMappingsDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
         }
     }
 
@@ -187,9 +175,9 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
-                utils.getOffenderBookings(folder));
+                helpers.getOffenderBookings(folder));
         testMap.put(new TableTuple("nomis", "offenders").asString().toLowerCase(),
-                utils.getOffenders(folder));
+                helpers.getOffenders(folder));
         for(final TableDefinition table : tables) {
             Dataset<Row> df_target = executor.apply(table, testMap);
             df_target.printSchema();
@@ -244,8 +232,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
 
         // save a source
-        final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
+        final Dataset<Row> df_offenders = helpers.getOffenders(folder);
+        helpers.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
 
         final String domainTableName = "prisoner";
         // Insert first
@@ -274,12 +262,12 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain2 = getDomain("/sample/domain/sample-domain-execution-join.json");
 
         // save a source
-        final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"), df_offenders);
+        final Dataset<Row> df_offenders = helpers.getOffenders(folder);
+        helpers.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"), df_offenders);
 
 
-        final Dataset<Row> df_offenderBookings = utils.getOffenderBookings(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"), df_offenderBookings);
+        final Dataset<Row> df_offenderBookings = helpers.getOffenderBookings(folder);
+        helpers.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"), df_offenderBookings);
 
 
         // do Full Materialize of source to target
@@ -316,8 +304,8 @@ public class DomainExecutorTest extends BaseSparkTest{
 
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-        final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
+        final Dataset<Row> df_offenders = helpers.getOffenders(folder);
+        helpers.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
         final String domainOperation = "insert";
         final String domainTableName = "prisoner";
         executor.doFull(domain.getName(), domainTableName, domainOperation);
@@ -347,7 +335,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         Map<String, Dataset<Row>> inputs = new HashMap<>();
         // Add sourceTable if present
         final String sourceTable = "OFFENDERS";
-        inputs.put(sourceTable.toLowerCase(), utils.getOffenders(folder));
+        inputs.put(sourceTable.toLowerCase(), helpers.getOffenders(folder));
 
         try {
             final Dataset<Row> outputs = executor.applyTransform(inputs, transform);
@@ -369,7 +357,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
         Map<String, Dataset<Row>> inputs = new HashMap<>();
         final String sourceTable = "OFFENDERS";
-        inputs.put(sourceTable.toLowerCase(), utils.getOffenders(folder));
+        inputs.put(sourceTable.toLowerCase(), helpers.getOffenders(folder));
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setSources(new ArrayList<>(Collections.singleton("source.table")));
@@ -387,7 +375,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-        final Dataset<Row> inputs = utils.getOffenders(folder);
+        final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setViewText("select source.table.*, months_between(current_date()," +
@@ -421,7 +409,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-        final Dataset<Row> inputs = utils.getOffenders(folder);
+        final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
         violation.setCheck("AGE < 100");
@@ -447,7 +435,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-        final Dataset<Row> inputs = utils.getOffenders(folder);
+        final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
         violation.setCheck("AGE >= 100");

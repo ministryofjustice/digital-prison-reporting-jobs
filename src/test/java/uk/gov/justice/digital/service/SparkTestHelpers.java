@@ -1,21 +1,31 @@
 package uk.gov.justice.digital.service;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.TableInfo;
+
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+public class SparkTestHelpers {
 
-public class TestUtil extends BaseSparkTest {
+    private final SparkSession spark;
 
+    public SparkTestHelpers(SparkSession spark) {
+        this.spark = spark;
+    }
 
     public Dataset<Row> getOffenders(Path folder) throws IOException {
         return this.loadParquetDataframe("/sample/events/nomis/offenders/offenders.parquet",
@@ -86,5 +96,36 @@ public class TestUtil extends BaseSparkTest {
         return spark.read().schema(schema).json(
                 spark.emptyDataset(Encoders.STRING()));
     }
+
+    private Dataset<Row> loadParquetDataframe(final String resource, final String filename) throws IOException {
+        return spark.read().parquet(createFileFromResource(resource, filename).toString());
+    }
+
+    // TODO - simpliy this?
+    private Path createFileFromResource(final String resource, final String filename) throws IOException {
+        final InputStream stream = getStream(resource);
+        final File f = Paths.get(filename).toFile();
+        FileUtils.copyInputStreamToFile(stream, f);
+        return Paths.get(f.getAbsolutePath());
+    }
+
+    protected static InputStream getStream(final String resource) {
+        InputStream stream = System.class.getResourceAsStream(resource);
+        if(stream == null) {
+            stream = System.class.getResourceAsStream("/src/test/resources" + resource);
+            if(stream == null) {
+                stream = System.class.getResourceAsStream("/target/test-classes" + resource);
+                if(stream == null) {
+                    Path root = Paths.get(".").normalize().toAbsolutePath();
+                    stream = System.class.getResourceAsStream(root + "/src/test/resources" + resource);
+                    if(stream == null) {
+                        stream = BaseSparkTest.class.getResourceAsStream(resource);
+                    }
+                }
+            }
+        }
+        return stream;
+    }
+
 
 }

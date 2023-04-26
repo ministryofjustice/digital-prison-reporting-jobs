@@ -1,69 +1,73 @@
 package uk.gov.justice.digital.service;
 
+import lombok.val;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.job.Job;
 import uk.gov.justice.digital.repository.DomainRepository;
+
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
+@Singleton
 public class DomainService extends Job {
 
-    protected String sourcePath;
-    protected String targetPath;
-    protected DomainRepository repo;
+    private final DomainRepository repo;
+    private final DomainExecutor executor;
 
     protected DataStorageService storage;
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
 
     @Inject
-    public DomainService(final String sourcePath,
-                         final String targetPath,
-                         final DynamoDBClient dynamoDBClient,
-                         final DataStorageService storage) {
-        this.sourcePath = sourcePath;
-        this.targetPath = targetPath;
-        this.repo = new DomainRepository(dynamoDBClient);
+    public DomainService(DomainRepository repository,
+                         DataStorageService storage,
+                         DomainExecutor executor) {
+        this.repo = repository;
         this.storage = storage;
+        this.executor = executor;
     }
 
-    public void run(final String domainRegistry, final String domainTableName, final String domainName,
-                    final String domainOperation) throws PatternSyntaxException{
-        if (!domainOperation.equalsIgnoreCase("delete")) {
-            Set<DomainDefinition> domains = getDomains(domainRegistry, domainName);
-            logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
-            for(final DomainDefinition domain : domains) {
-                processDomain(domain, domain.getName(), domainTableName, domainOperation);
-            }
-        } else {
-            processDomain(null, domainName, domainTableName, domainOperation);
+    public void run(
+        String domainRegistry,
+        String domainTableName,
+        String domainName,
+        String domainOperation
+    ) throws PatternSyntaxException {
+        if (domainOperation.equalsIgnoreCase("delete")) {
+            processDomain(domainName, domainTableName, domainOperation);
         }
+        else {
+            val domains = getDomains(domainRegistry, domainName);
+            logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
+            for(DomainDefinition domain : domains) {
+                processDomain(domain.getName(), domainTableName, domainOperation);
+            }
+        }
+
     }
 
-    protected Set<DomainDefinition> getDomains(final String domainRegistry, final String domainName)
+    protected Set<DomainDefinition> getDomains(String domainRegistry, String domainName)
             throws PatternSyntaxException {
-        return this.repo.getForName(domainRegistry, domainName);
+        return repo.getForName(domainRegistry, domainName);
     }
 
-    protected void processDomain(final DomainDefinition domain, final String domainName, final String domainTableName,
-                                 final String domainOperation) {
+    protected void processDomain(
+        String domainName,
+        String domainTableName,
+        String domainOperation
+    ) {
         try {
             logger.info("processing of domain '" + domainName + "' started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
             executor.doFull(domainName, domainTableName, domainOperation);
             logger.info("processing of domain '" + domainName + "' completed");
         } catch(Exception e) {
-            logger.error("processing of domain '" + domainName + "' failed");
-            handleError(e);
+            logger.error("processing of domain '" + domainName + "' failed", e);
         }
-    }
-
-    protected void handleError(final Exception e) {
-        logger.error("processing of domain failed", e);
     }
 
 }
