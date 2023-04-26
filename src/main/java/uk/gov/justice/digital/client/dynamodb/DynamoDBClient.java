@@ -9,8 +9,8 @@ import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
@@ -21,13 +21,14 @@ import java.util.regex.PatternSyntaxException;
 
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
-@Bean
+@Singleton
 public class DynamoDBClient {
 
-    private final static ObjectMapper MAPPER = new ObjectMapper();
-    // TODO hardcoded values
+    private final static ObjectMapper mapper = new ObjectMapper();
+
     private final static String indexName = "secondaryId-type-index";
     private final static String sortKeyName = "secondaryId";
+
     private final AmazonDynamoDB dynamoDB;
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
@@ -44,10 +45,11 @@ public class DynamoDBClient {
 
     public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId)
             throws PatternSyntaxException {
-        String[] names = domainId.split("[.]");
-        String domainName = names.length >= 2?names[0]:domainId;
 
-        //set up mapping of the partition name with the value
+        String[] names = domainId.split("[.]");
+        String domainName = names.length >= 2 ?names[0] :domainId;
+
+        // Set up mapping of the partition name with the value
         HashMap<String, AttributeValue> attrValues = new HashMap<>();
         attrValues.put(":"+ sortKeyName, new AttributeValue().withS(domainName));
 
@@ -56,13 +58,15 @@ public class DynamoDBClient {
                 .withIndexName(indexName)
                 .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
                 .withExpressionAttributeValues(attrValues);
+
         DomainDefinition domainDef = null;
+
         try {
             QueryResult response = dynamoDB.query(queryReq);
 
             for(Map<String, AttributeValue> items : response.getItems()) {
                 String data = items.get(DATA).getS();
-                domainDef = MAPPER.readValue(data, DomainDefinition.class);
+                domainDef = mapper.readValue(data, DomainDefinition.class);
                 if(names.length >= 2) {
                     domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(names[1]));
                 }

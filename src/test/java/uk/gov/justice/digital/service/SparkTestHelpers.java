@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -101,31 +102,10 @@ public class SparkTestHelpers {
         return spark.read().parquet(createFileFromResource(resource, filename).toString());
     }
 
-    // TODO - simpliy this?
     private Path createFileFromResource(final String resource, final String filename) throws IOException {
-        final InputStream stream = getStream(resource);
-        final File f = Paths.get(filename).toFile();
-        FileUtils.copyInputStreamToFile(stream, f);
+        val f = Paths.get(filename).toFile();
+        FileUtils.copyInputStreamToFile(System.class.getResourceAsStream(resource), f);
         return Paths.get(f.getAbsolutePath());
     }
-
-    protected static InputStream getStream(final String resource) {
-        InputStream stream = System.class.getResourceAsStream(resource);
-        if(stream == null) {
-            stream = System.class.getResourceAsStream("/src/test/resources" + resource);
-            if(stream == null) {
-                stream = System.class.getResourceAsStream("/target/test-classes" + resource);
-                if(stream == null) {
-                    Path root = Paths.get(".").normalize().toAbsolutePath();
-                    stream = System.class.getResourceAsStream(root + "/src/test/resources" + resource);
-                    if(stream == null) {
-                        stream = BaseSparkTest.class.getResourceAsStream(resource);
-                    }
-                }
-            }
-        }
-        return stream;
-    }
-
 
 }

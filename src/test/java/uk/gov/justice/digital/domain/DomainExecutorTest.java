@@ -15,6 +15,7 @@ import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.domain.model.TableTuple;
 import uk.gov.justice.digital.exception.DomainExecutorException;
+import uk.gov.justice.digital.job.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SparkTestHelpers;
 
@@ -28,6 +29,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutorTest.class);
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
+    private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
 
     @TempDir
     private Path folder;
@@ -38,7 +40,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final DataStorageService storage = new DataStorageService();
         final String targetPath = "test/target/path";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         List<TableDefinition> tables = domainDefinition.getTables();
 
         final Dataset<Row> df_offender_bookings = helpers.getOffenderBookings(folder);
@@ -64,7 +66,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -84,7 +86,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -104,7 +106,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -125,7 +127,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("source", "table").asString().toLowerCase(),
                 helpers.getOffenders(folder));
@@ -147,7 +149,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -172,7 +174,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -194,10 +196,10 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         // Insert first
         final String domainTableName = "demographics";
-        executor.doFull(domainDefinition.getName(), domainTableName, "insert");
+        executor.doFull(domainDefinition, domainDefinition.getName(), domainTableName, "insert");
 
         for(final TableDefinition table : tables) {
             final TableInfo targetInfo = TableInfo.create(targetPath,  domainDefinition.getName(), table.getName());
@@ -206,21 +208,6 @@ public class DomainExecutorTest extends BaseSparkTest {
         assertTrue(true);
     }
 
-    // shouldInitializeDomainExecutor
-    @Test
-    public void shouldInitializeDomainExecutionJob() throws IOException {
-        final DataStorageService storage = new DataStorageService();
-        final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source-data";
-        final String targetPath = "target.path";
-
-        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-
-        assertNotNull(executor);
-
-    }
-
-    // shouldRunWithFullUpdateIfTableIsInDomain
     @Test
     public void shouldRunWithFullUpdateIfTableIsInDomain() throws IOException {
         final DataStorageService storage = new DataStorageService();
@@ -229,7 +216,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
 
         // save a source
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
@@ -237,9 +224,9 @@ public class DomainExecutorTest extends BaseSparkTest {
 
         final String domainTableName = "prisoner";
         // Insert first
-        executor.doFull(domain.getName(), domainTableName, "insert");
+        executor.doFull(domain, domain.getName(), domainTableName, "insert");
         // then update
-        executor.doFull(domain.getName(), domainTableName, "update");
+        executor.doFull(domain, domain.getName(), domainTableName, "update");
 
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
@@ -269,11 +256,10 @@ public class DomainExecutorTest extends BaseSparkTest {
         final Dataset<Row> df_offenderBookings = helpers.getOffenderBookings(folder);
         helpers.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"), df_offenderBookings);
 
-
         // do Full Materialize of source to target
         final String domainTableName = "prisoner";
-        final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, domain1, storage);
-        executor1.doFull(domain1.getName(), domainTableName, "insert");
+        final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
+        executor1.doFull(domain1, domain1.getName(), domainTableName, "insert");
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
@@ -284,8 +270,8 @@ public class DomainExecutorTest extends BaseSparkTest {
 
 
         // now the reverse
-        final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, domain2, storage);
-        executor2.doFull(domain2.getName(), domainTableName, "update");
+        final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
+        executor2.doFull(domain2, domain2.getName(), domainTableName, "update");
         // there should be a target table
         assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
@@ -293,7 +279,6 @@ public class DomainExecutorTest extends BaseSparkTest {
         df_refreshed_update.show();
     }
 
-    // shouldRunWith0ChangesIfTableIsNotInDomain
     @Test
     public void shouldRunWith0ChangesIfTableIsNotInDomain() throws IOException {
         final DataStorageService storage = new DataStorageService();
@@ -301,33 +286,26 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
 
-
-
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
         helpers.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
         final String domainOperation = "insert";
         final String domainTableName = "prisoner";
-        executor.doFull(domain.getName(), domainTableName, domainOperation);
+        executor.doFull(domain, domain.getName(), domainTableName, domainOperation);
 
         // there shouldn't be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
         assertFalse(storage.exists(spark, info));
 
     }
-// ********************
-    // Transform Tests
-    // ********************
 
-    // shouldNotExecuteTransformIfNoSqlExists
     @Test
     public void shouldNotExecuteTransformIfNoSqlExists() throws IOException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setViewText("");
@@ -346,15 +324,13 @@ public class DomainExecutorTest extends BaseSparkTest {
         }
     }
 
-    // shouldNotExecuteTransformIfSqlIsBad
     @Test
     public void shouldNotExecuteTransformIfSqlIsBad() throws IOException, DomainExecutorException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         Map<String, Dataset<Row>> inputs = new HashMap<>();
         final String sourceTable = "OFFENDERS";
         inputs.put(sourceTable.toLowerCase(), helpers.getOffenders(folder));
@@ -366,15 +342,14 @@ public class DomainExecutorTest extends BaseSparkTest {
         final Dataset<Row> outputs = executor.applyTransform(inputs, transform);
         assertNull(outputs);
     }
-    // shouldDeriveNewColumnIfFunctionProvided
+
     @Test
     public void shouldDeriveNewColumnIfFunctionProvided() throws IOException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
@@ -397,18 +372,13 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     }
 
-    // ********************
-    // Violation Tests
-    // ********************
-    // shouldNotWriteViolationsIfThereAreNone
     @Test
     public void shouldNotWriteViolationsIfThereAreNone() throws IOException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
@@ -416,8 +386,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         violation.setLocation("safety");
         violation.setName("age");
 
-        final Dataset<Row> outputs = executor.applyViolations(inputs,
-                Collections.singletonList(violation));
+        final Dataset<Row> outputs = executor.applyViolations(inputs, Collections.singletonList(violation));
 
         // outputs should be the same as inputs
         assertTrue(this.areEqual(inputs, outputs));
@@ -425,16 +394,13 @@ public class DomainExecutorTest extends BaseSparkTest {
         assertFalse(storage.exists(spark, TableInfo.create(targetPath + "/safety", "violations", "age")));
     }
 
-    // shouldWriteViolationsIfThereAreSome
-    // shouldSubtractViolationsIfThereAreSome
     @Test
     public void shouldWriteViolationsIfThereAreSome() throws IOException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
         final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
@@ -454,11 +420,6 @@ public class DomainExecutorTest extends BaseSparkTest {
         assertTrue(storage.exists(spark, TableInfo.create(targetPath, "violations", "young")));
     }
 
-    // ********************
-    // FUNCTIONS
-    // ********************
-
-
     protected Dataset<Row> doTransform(final DomainExecutor executor, final Dataset<Row> df,
                                        final TableDefinition.TransformDefinition transform, final String source) {
         try {
@@ -477,8 +438,6 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String json = ResourceLoader.getResource(DomainExecutorTest.class, resource);
         return mapper.readValue(json, DomainDefinition.class);
     }
-
-
 
     protected boolean areEqual(final Dataset<Row> a, final Dataset<Row> b) {
         if(!a.schema().equals(b.schema()))

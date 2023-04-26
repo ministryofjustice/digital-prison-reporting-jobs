@@ -14,6 +14,7 @@ import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.DomainExecutorTest;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.job.SparkSessionProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,23 +29,10 @@ public class DomainServiceTest extends BaseSparkTest {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final SparkTestHelpers utils = new SparkTestHelpers(spark);
+    private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
 
     @TempDir
     private Path folder;
-
-
-//    @Test
-//    public void getString_MatchesValuePassedToDomainRefreshService() {
-//        final String sourcePath = this.folder.toFile().getAbsolutePath()  + "domain/source";
-//        final String targetPath = this.folder.toFile().getAbsolutePath()  + "domain/target";
-//        String expectedResult = this.folder.toFile().getAbsolutePath()  + "domain/source";
-//        final DataStorageService storage = new DataStorageService();
-//
-//        DomainService service = new DomainService(sourcePath, targetPath, null, storage);
-//        String result = service.sourcePath;
-//        assertEquals(expectedResult, result);
-//    }
-
 
     @Test
     public void test_incident_domain() throws IOException {
@@ -63,8 +51,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
+            executor.doFull(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -96,8 +84,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("Domain Refresh process '" + domain.getName() + "' started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
+            executor.doFull(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -129,8 +117,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
+            executor.doFull(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -162,8 +150,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') update started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
+            executor.doFull(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -195,8 +183,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') delete started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, sparkSessionProvider);
+            executor.doFull(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));

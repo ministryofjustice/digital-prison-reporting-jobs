@@ -31,7 +31,7 @@ import static uk.gov.justice.digital.job.model.Columns.*;
  */
 @Singleton
 @Command(name = "DataHubJob")
-public class DataHubJob extends Job implements Runnable {
+public class DataHubJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
 
@@ -40,6 +40,7 @@ public class DataHubJob extends Job implements Runnable {
     private final StructuredZone structuredZone;
     private final CuratedZone curatedZone;
     private final Converter converter;
+    private final SparkSessionProvider sparkSessionProvider;
 
     @Inject
     public DataHubJob(
@@ -47,13 +48,15 @@ public class DataHubJob extends Job implements Runnable {
         RawZone rawZone,
         StructuredZone structuredZone,
         CuratedZone curatedZone,
-        @Named("converterForDMS_3_4_6") Converter converter
+        @Named("converterForDMS_3_4_6") Converter converter,
+        SparkSessionProvider sparkSessionProvider
     ) {
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
         this.structuredZone = structuredZone;
         this.curatedZone = curatedZone;
         this.converter = converter;
+        this.sparkSessionProvider = sparkSessionProvider;
     }
 
     public static void main(String[] args) {
@@ -69,7 +72,7 @@ public class DataHubJob extends Job implements Runnable {
 
             val startTime = System.currentTimeMillis();
 
-            val spark = getConfiguredSparkSession(batch.context().getConf());
+            val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf());
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             val dataFrame = converter.convert(rowRdd, spark);
 

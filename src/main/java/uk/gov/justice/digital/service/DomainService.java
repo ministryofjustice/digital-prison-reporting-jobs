@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.job.Job;
 import uk.gov.justice.digital.repository.DomainRepository;
 
 import javax.inject.Inject;
@@ -14,7 +13,7 @@ import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
 @Singleton
-public class DomainService extends Job {
+public class DomainService {
 
     private final DomainRepository repo;
     private final DomainExecutor executor;
@@ -39,34 +38,39 @@ public class DomainService extends Job {
         String domainOperation
     ) throws PatternSyntaxException {
         if (domainOperation.equalsIgnoreCase("delete")) {
-            processDomain(domainName, domainTableName, domainOperation);
+            // TODO - instead of passing null private an alternate method/overload
+            processDomain(null, domainName, domainTableName, domainOperation);
         }
         else {
             val domains = getDomains(domainRegistry, domainName);
+
             logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
-            for(DomainDefinition domain : domains) {
-                processDomain(domain.getName(), domainTableName, domainOperation);
+
+            for(val domain : domains) {
+                processDomain(domain, domain.getName(), domainTableName, domainOperation);
             }
         }
 
     }
 
-    protected Set<DomainDefinition> getDomains(String domainRegistry, String domainName)
-            throws PatternSyntaxException {
+    private Set<DomainDefinition> getDomains(String domainRegistry, String domainName) throws PatternSyntaxException {
         return repo.getForName(domainRegistry, domainName);
     }
 
     protected void processDomain(
+        DomainDefinition domain,
         String domainName,
         String domainTableName,
         String domainOperation
     ) {
+        val prefix = "processing of domain: '" + domainName + "' operation: " + domainOperation + " ";
+
         try {
-            logger.info("processing of domain '" + domainName + "' started");
-            executor.doFull(domainName, domainTableName, domainOperation);
-            logger.info("processing of domain '" + domainName + "' completed");
+            logger.info(prefix + "started");
+            executor.doFull(domain, domainName, domainTableName, domainOperation);
+            logger.info(prefix + "completed");
         } catch(Exception e) {
-            logger.error("processing of domain '" + domainName + "' failed", e);
+            logger.error(prefix + "failed", e);
         }
     }
 
