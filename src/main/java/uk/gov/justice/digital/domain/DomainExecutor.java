@@ -1,42 +1,53 @@
 package uk.gov.justice.digital.domain;
 
-import org.apache.spark.SparkConf;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.ExplainMode;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
-import uk.gov.justice.digital.job.Job;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import java.util.*;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 
-public class DomainExecutor extends Job {
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
-    // core initialised values
-    // sourceRootPath
-    // targetRootPath
-    // domainDefinition
-    protected String sourceRootPath;
-    protected String targetRootPath;
-    protected DomainDefinition domainDefinition;
-    protected DataStorageService storage;
-    protected SparkSession spark;
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
+@Singleton
+public class DomainExecutor {
 
+    private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
-    public DomainExecutor(final String sourceRootPath,
-                          final String targetRootPath,
-                          final DomainDefinition domain,
-                          final DataStorageService storage) {
+    private final String sourceRootPath;
+    private final String targetRootPath;
+    private final DataStorageService storage;
+    private final SparkSession spark;
+
+    @Inject
+    public DomainExecutor(JobParameters jobParameters,
+                          DataStorageService storage,
+                          SparkSessionProvider sparkSessionProvider
+                          ) {
+        this.sourceRootPath = jobParameters.getCuratedS3Path();
+        this.targetRootPath = jobParameters.getDomainTargetPath();
+        this.storage = storage;
+        this.spark = sparkSessionProvider.getConfiguredSparkSession();
+    }
+
+    public DomainExecutor(String sourceRootPath,
+                          String targetRootPath,
+                          DataStorageService storage,
+                          SparkSessionProvider sparkSessionProvider) {
         this.sourceRootPath = sourceRootPath;
         this.targetRootPath = targetRootPath;
-        this.domainDefinition = domain;
         this.storage = storage;
-        this.spark = getConfiguredSparkSession(new SparkConf());
+        this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
     public void saveFull(final TableInfo info, final Dataset<Row> dataFrame, final String domainOperation)
@@ -236,39 +247,46 @@ public class DomainExecutor extends Job {
         }
     }
 
-    public void doFull(final String domainName, final String domainTableName, final String domainOperation) {
+    public void doFull(DomainDefinition domainDefinition,
+                       String domainName,
+                       String domainTableName,
+                       String domainOperation) {
         try {
             if (domainOperation.equalsIgnoreCase("insert") ||
                     domainOperation.equalsIgnoreCase("update") ||
                     domainOperation.equalsIgnoreCase("sync")) {
-                final List<TableDefinition> tables = domainDefinition.getTables();
-                TableDefinition table = tables.stream()
+
+                val table = domainDefinition.getTables().stream()
                         .filter(t -> domainTableName.equals(t.getName()))
                         .findAny()
                         .orElse(null);
+
                 if (table == null) {
                     logger.error("Table " + domainTableName + " not found");
                     throw new DomainExecutorException("Table " + domainTableName + " not found");
                 } else {
                     // TODO no source table and df they are required only for unit testing
-                    final Dataset<Row> df_target = apply(table, null);
-                    saveFull(TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName()),
-                            df_target, domainOperation);
+                    val dfTarget = apply(table, null);
+                    saveFull(
+                        TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName()),
+                        dfTarget,
+                        domainOperation)
+                    ;
                 }
             } else if (domainOperation.equalsIgnoreCase("delete")) {
                 logger.info("domain operation is delete");
                 deleteFull(TableInfo.create(targetRootPath, domainName, domainTableName));
             } else {
-                logger.error("Unsupported domain operation");
-                throw new UnsupportedOperationException("Unsupported domain operation.");
+                val message = "Unsupported domain operation: '" + domainOperation + "'";
+                logger.error(message);
+                throw new UnsupportedOperationException(message);
             }
         } catch(Exception | DomainExecutorException e) {
-            logger.error("Domain executor failed: ", e);
+            logger.error("Domain executor failed", e);
         }
     }
 
-
-    protected boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
+    private boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
         return Arrays.asList(dataFrame.schema().fieldNames()).contains(field);
     }
 }
