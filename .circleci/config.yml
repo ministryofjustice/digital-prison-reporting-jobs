@@ -20,7 +20,7 @@ workflows:
           app_artifacts_directory: build/libs/ ## Build Artifacts Location
           bucket_prefix: dpr-artifact-store ## S3 Artifacts Store, Defaults to "dpr-artifact-store"
           build_args: --debug ## Build Extra Args
-          sync_args: "--exclude '*' --include '*vLatest*jar'"
+          sync_args: "--exclude '*' --include '*jar'"
           deploy_script: true          
           notify_jira: false ## Notify Jira
           notify_slack: false ## Notify Slack
