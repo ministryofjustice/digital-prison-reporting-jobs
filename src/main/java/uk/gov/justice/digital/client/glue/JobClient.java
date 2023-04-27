@@ -30,4 +30,8 @@ public class JobClient {
         return result.getJob().getDefaultArguments();
     }
 
+    public AWSGlue getGlueClient() {
+        return glueClient;
+    }
+
 }

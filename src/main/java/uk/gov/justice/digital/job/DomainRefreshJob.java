@@ -1,14 +1,15 @@
 package uk.gov.justice.digital.job;
 
+import com.amazonaws.services.glue.AWSGlue;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.config.JobParameters;
+
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainService;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.PrintWriter;
@@ -36,6 +37,7 @@ public class DomainRefreshJob implements Runnable {
     private final String domainRegistry;
 
     private final DataStorageService storage;
+    private final AWSGlue glueClient;
 
     @Inject
     public DomainRefreshJob(JobParameters jobParameters, DynamoDBClient dynamoDBClient, DataStorageService storage) {
@@ -47,10 +49,12 @@ public class DomainRefreshJob implements Runnable {
         this.domainOperation = jobParameters.getDomainOperation();
         this.dynamoDBClient = dynamoDBClient;
         this.storage = storage;
+        this.glueClient = jobParameters.getGlueClient();
     }
 
     public DomainService refresh() {
-        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient, storage);
+        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient, storage, glueClient);
+
     }
     public static void main(String[] args) {
         logger.info("Job started");
@@ -59,15 +63,16 @@ public class DomainRefreshJob implements Runnable {
 
     @Override
     public void run() {
-        DomainService domainRefreshService = refresh();
+        DomainService domainService = refresh();
         try {
-            domainRefreshService.run(domainRegistry, domainTableName, domainName, domainOperation);
+            domainService.run(domainRegistry, domainTableName, domainName, domainOperation);
         } catch (PatternSyntaxException e) {
             final StringWriter sw = new StringWriter();
             final PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
             logger.error(sw.getBuffer().toString());
         }
+
     }
 
 }

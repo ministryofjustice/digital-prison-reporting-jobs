@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.domain;
 
+import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
@@ -15,6 +17,7 @@ import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.domain.model.TableTuple;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.gov.justice.digital.service.DataCatalogService;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.TestUtil;
 
@@ -50,7 +53,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final DataStorageService storage = new DataStorageService();
         final String targetPath = "test/target/path";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         List<TableDefinition> tables = domainDefinition.getTables();
 
         final Dataset<Row> df_offender_bookings = utils.getOffenderBookings(folder);
@@ -76,7 +80,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -96,7 +101,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -111,12 +117,14 @@ public class DomainExecutorTest extends BaseSparkTest{
 
     @Test
     public void test_applyViolations_empty() throws IOException, DomainExecutorException {
+
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -137,7 +145,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("source", "table").asString().toLowerCase(),
                 utils.getOffenders(folder));
@@ -159,7 +168,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -184,7 +194,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -206,7 +217,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
+                AWSGlueClientBuilder.defaultClient());
         // Insert first
         final String domainTableName = "demographics";
         executor.doFull(domainDefinition.getName(), domainTableName, "insert");
@@ -226,7 +238,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = "target.path";
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
 
         assertNotNull(executor);
 
@@ -241,17 +254,18 @@ public class DomainExecutorTest extends BaseSparkTest{
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
 
         // save a source
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
         utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
-
         final String domainTableName = "prisoner";
         // Insert first
         executor.doFull(domain.getName(), domainTableName, "insert");
         // then update
         executor.doFull(domain.getName(), domainTableName, "update");
+
 
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
@@ -284,8 +298,10 @@ public class DomainExecutorTest extends BaseSparkTest{
 
         // do Full Materialize of source to target
         final String domainTableName = "prisoner";
-        final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, domain1, storage);
+        final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, domain1, storage,
+                AWSGlueClientBuilder.defaultClient());
         executor1.doFull(domain1.getName(), domainTableName, "insert");
+
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
@@ -296,8 +312,10 @@ public class DomainExecutorTest extends BaseSparkTest{
 
 
         // now the reverse
-        final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, domain2, storage);
+        final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, domain2, storage,
+                AWSGlueClientBuilder.defaultClient());
         executor2.doFull(domain2.getName(), domainTableName, "update");
+
         // there should be a target table
         assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
@@ -315,12 +333,15 @@ public class DomainExecutorTest extends BaseSparkTest{
 
 
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
         utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
         final String domainOperation = "insert";
+
         final String domainTableName = "prisoner";
         executor.doFull(domain.getName(), domainTableName, domainOperation);
+
 
         // there shouldn't be a target table
         TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
@@ -339,7 +360,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setViewText("");
@@ -366,7 +388,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> inputs = new HashMap<>();
         final String sourceTable = "OFFENDERS";
         inputs.put(sourceTable.toLowerCase(), utils.getOffenders(folder));
@@ -386,7 +409,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
@@ -420,7 +444,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
@@ -446,7 +471,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();

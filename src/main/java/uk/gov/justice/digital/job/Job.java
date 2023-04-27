@@ -15,6 +15,7 @@ public abstract class Job {
 
         return SparkSession.builder()
                 .config(sparkConf)
+                .enableHiveSupport()
                 .getOrCreate();
     }
 

@@ -35,6 +35,7 @@ dependencies {
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
 
+    implementation "org.apache.spark:spark-hive_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
@@ -54,6 +55,7 @@ dependencies {
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
     implementation "org.apache.hadoop:hadoop-aws:3.3.1"
+
 
     implementation ("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
       // We exclude spark here to prevent spark being added to the jar during the build.

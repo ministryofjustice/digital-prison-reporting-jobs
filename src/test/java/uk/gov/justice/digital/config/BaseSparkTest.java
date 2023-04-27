@@ -21,15 +21,16 @@ public class BaseSparkTest {
 
 	private static SparkSession createSparkSession() {
 		spark = SparkSession.builder()
-			.appName("test")
-			.config("spark.master", "local")
-			.config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-			.config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-			.config("spark.databricks.delta.schema.autoMerge.enabled", true)
-			.config("spark.databricks.delta.optimizeWrite.enabled", true)
-			.config("spark.databricks.delta.autoCompact.enabled", true)
-			.config("spark.ui.enabled", false)
-			.getOrCreate();
+				.appName("test")
+				.config("spark.master", "local")
+				.config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+				.config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+				.config("spark.databricks.delta.schema.autoMerge.enabled", true)
+				.config("spark.databricks.delta.optimizeWrite.enabled", true)
+				.config("spark.databricks.delta.autoCompact.enabled", true)
+				.config("spark.ui.enabled", false)
+				.enableHiveSupport()
+				.getOrCreate();
 		return spark;
 	}
 

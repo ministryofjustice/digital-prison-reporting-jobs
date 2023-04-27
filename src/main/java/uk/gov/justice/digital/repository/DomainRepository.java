@@ -2,7 +2,6 @@ package uk.gov.justice.digital.repository;
 
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashSet;
@@ -17,8 +16,8 @@ public class DomainRepository {
     @Inject
     public DomainRepository(final DynamoDBClient dynamoDBClient) {
         this.dynamoDBClient = dynamoDBClient;
-    }
 
+    }
 
     public Set<DomainDefinition> getForName(final String domainRegistry, final String domainId)
             throws PatternSyntaxException {

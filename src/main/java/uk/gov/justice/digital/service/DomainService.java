@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import com.amazonaws.services.glue.AWSGlue;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domain.DomainExecutor;
@@ -17,6 +18,7 @@ public class DomainService extends Job {
     protected DomainRepository repo;
 
     protected DataStorageService storage;
+    protected AWSGlue glueClient;
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainService.class);
 
@@ -24,11 +26,13 @@ public class DomainService extends Job {
     public DomainService(final String sourcePath,
                          final String targetPath,
                          final DynamoDBClient dynamoDBClient,
-                         final DataStorageService storage) {
+                         final DataStorageService storage,
+                        final AWSGlue glueClient) {
         this.sourcePath = sourcePath;
         this.targetPath = targetPath;
         this.repo = new DomainRepository(dynamoDBClient);
         this.storage = storage;
+        this.glueClient = glueClient;
     }
 
     public void run(final String domainRegistry, final String domainTableName, final String domainName,
@@ -53,7 +57,7 @@ public class DomainService extends Job {
                                  final String domainOperation) {
         try {
             logger.info("processing of domain '" + domainName + "' started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage, glueClient);
             executor.doFull(domainName, domainTableName, domainOperation);
             logger.info("processing of domain '" + domainName + "' completed");
         } catch(Exception e) {

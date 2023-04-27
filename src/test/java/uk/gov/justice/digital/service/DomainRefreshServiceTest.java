@@ -1,12 +1,12 @@
 package uk.gov.justice.digital.service;
 
+import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domain.DomainExecutor;
@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 public class DomainRefreshServiceTest {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainRefreshServiceTest.class);
-
 
     private static TestUtil utils = null;
 
@@ -59,7 +58,8 @@ public class DomainRefreshServiceTest {
         String expectedResult = this.folder.toFile().getAbsolutePath()  + "domain/source";
         final DataStorageService storage = new DataStorageService();
 
-        DomainService service = new DomainService(sourcePath, targetPath, null, storage);
+        DomainService service = new DomainService(sourcePath, targetPath, null, storage, null);
+
         String result = service.sourcePath;
         assertEquals(expectedResult, result);
     }
@@ -82,8 +82,10 @@ public class DomainRefreshServiceTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                    AWSGlueClientBuilder.defaultClient());
             executor.doFull(domain.getName(), domainTableName, domainOperation);
+
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -115,7 +117,8 @@ public class DomainRefreshServiceTest {
 
         try {
             logger.info("Domain Refresh process '" + domain.getName() + "' started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                    AWSGlueClientBuilder.defaultClient());
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -148,8 +151,10 @@ public class DomainRefreshServiceTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                    AWSGlueClientBuilder.defaultClient());
             executor.doFull(domain.getName(), domainTableName, domainOperation);
+
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -181,7 +186,8 @@ public class DomainRefreshServiceTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') update started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                    AWSGlueClientBuilder.defaultClient());
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -214,7 +220,8 @@ public class DomainRefreshServiceTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') delete started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                    AWSGlueClientBuilder.defaultClient());
             executor.doFull(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {

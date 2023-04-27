@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.domain;
 
+import com.amazonaws.services.glue.AWSGlue;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -10,9 +11,11 @@ import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
 import uk.gov.justice.digital.job.Job;
+import uk.gov.justice.digital.service.DataCatalogService;
 import uk.gov.justice.digital.service.DataStorageService;
 import java.util.*;
 import uk.gov.justice.digital.exception.DomainExecutorException;
+import uk.gov.justice.digital.service.DomainSchemaService;
 
 public class DomainExecutor extends Job {
 
@@ -25,25 +28,32 @@ public class DomainExecutor extends Job {
     protected DomainDefinition domainDefinition;
     protected DataStorageService storage;
     protected SparkSession spark;
+    protected AWSGlue glueClient;
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
 
     public DomainExecutor(final String sourceRootPath,
                           final String targetRootPath,
                           final DomainDefinition domain,
-                          final DataStorageService storage) {
+                          final DataStorageService storage,
+                          final AWSGlue glueClient) {
         this.sourceRootPath = sourceRootPath;
         this.targetRootPath = targetRootPath;
         this.domainDefinition = domain;
         this.storage = storage;
+        this.glueClient = glueClient;
         this.spark = getConfiguredSparkSession(new SparkConf());
     }
 
     public void saveFull(final TableInfo info, final Dataset<Row> dataFrame, final String domainOperation)
             throws DomainExecutorException {
         logger.info("DomainOperations:: saveFull");
+        DomainSchemaService glueCatalogService = new DomainSchemaService(glueClient);
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         if (domainOperation.equalsIgnoreCase("insert")) {
+            glueCatalogService.createDatabase("test_domain_219");
+            glueCatalogService.createTable("test_domain_219",
+                    info.getSchema() +"." + info.getTable(), tablePath, dataFrame);
             if (!storage.exists(spark, info)) {
                 storage.create(tablePath, dataFrame);
             } else {
