@@ -1,9 +1,11 @@
 package uk.gov.justice.digital.service;
 
+import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,6 +29,8 @@ public class DomainRefreshServiceTest {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainRefreshServiceTest.class);
 
     private static TestUtil utils = null;
+    private static final String hiveDatabaseName = "test_db";
+    private static DomainSchemaService hiveCatalog = null;
 
     @TempDir
     private Path folder;
@@ -37,6 +41,18 @@ public class DomainRefreshServiceTest {
         logger.info("setup method");
         //instantiate and populate the dependencies
         utils = new TestUtil();
+        AWSGlue glueClient = AWSGlueClientBuilder.defaultClient();
+        hiveCatalog = new DomainSchemaService(glueClient);
+        if (!hiveCatalog.databaseExists(hiveDatabaseName)) {
+            hiveCatalog.createDatabase(hiveDatabaseName);
+        }
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        if (hiveCatalog.databaseExists(hiveDatabaseName)) {
+            hiveCatalog.deleteDatabase(hiveDatabaseName, null);
+        }
     }
 
     @Test
@@ -58,7 +74,8 @@ public class DomainRefreshServiceTest {
         String expectedResult = this.folder.toFile().getAbsolutePath()  + "domain/source";
         final DataStorageService storage = new DataStorageService();
 
-        DomainService service = new DomainService(sourcePath, targetPath, null, storage, null);
+        DomainService service = new DomainService(sourcePath, targetPath, null,
+                storage, hiveDatabaseName, null);
 
         String result = service.sourcePath;
         assertEquals(expectedResult, result);
@@ -75,16 +92,18 @@ public class DomainRefreshServiceTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"), df_offenders);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offenders"),
+                df_offenders);
 
         final Dataset<Row> df_offenderBookings = utils.getOffenderBookings(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"), df_offenderBookings);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offender_bookings"),
+                df_offenderBookings);
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                    AWSGlueClientBuilder.defaultClient());
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+                    hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
+            executor.doFullDomainRefresh(domain.getName(), domainTableName, domainOperation);
 
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -95,6 +114,9 @@ public class DomainRefreshServiceTest {
         } catch (Exception e) {
             logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
+        } finally {
+            // Delete the table from Hive
+            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
     }
 
@@ -108,18 +130,18 @@ public class DomainRefreshServiceTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_internal_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
             logger.info("Domain Refresh process '" + domain.getName() + "' started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                    AWSGlueClientBuilder.defaultClient());
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+                    hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
+            executor.doFullDomainRefresh(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -129,7 +151,11 @@ public class DomainRefreshServiceTest {
         } catch (Exception e) {
             logger.info("Domain Refresh process '" + domain.getName() + "' failed");
             fail();
+        } finally {
+            // Delete the table from Hive
+            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
+
     }
 
     @Test
@@ -142,18 +168,18 @@ public class DomainRefreshServiceTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_internal_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                    AWSGlueClientBuilder.defaultClient());
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+                    hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
+            executor.doFullDomainRefresh(domain.getName(), domainTableName, domainOperation);
 
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -164,6 +190,9 @@ public class DomainRefreshServiceTest {
         } catch (Exception e) {
             logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
+        } finally {
+            // Delete the table from Hive
+            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
     }
 
@@ -177,18 +206,18 @@ public class DomainRefreshServiceTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_internal_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') update started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                    AWSGlueClientBuilder.defaultClient());
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+                    hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
+            executor.doFullDomainRefresh(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));
@@ -198,6 +227,9 @@ public class DomainRefreshServiceTest {
         } catch (Exception e) {
             logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
+        } finally {
+            // Delete the table from Hive
+            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
     }
 
@@ -211,18 +243,18 @@ public class DomainRefreshServiceTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "agency_internal_locations"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') delete started");
             final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                    AWSGlueClientBuilder.defaultClient());
-            executor.doFull(domain.getName(), domainTableName, domainOperation);
+                    hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
+            executor.doFullDomainRefresh(domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
                 logger.info(String.valueOf(Objects.requireNonNull(emptyCheck.list()).length));

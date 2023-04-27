@@ -18,6 +18,7 @@ public class DomainService extends Job {
     protected DomainRepository repo;
 
     protected DataStorageService storage;
+    protected String hiveDatabaseName;
     protected AWSGlue glueClient;
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainService.class);
@@ -27,11 +28,13 @@ public class DomainService extends Job {
                          final String targetPath,
                          final DynamoDBClient dynamoDBClient,
                          final DataStorageService storage,
+                        final String hiveDatabaseName,
                         final AWSGlue glueClient) {
         this.sourcePath = sourcePath;
         this.targetPath = targetPath;
         this.repo = new DomainRepository(dynamoDBClient);
         this.storage = storage;
+        this.hiveDatabaseName = hiveDatabaseName;
         this.glueClient = glueClient;
     }
 
@@ -57,17 +60,12 @@ public class DomainService extends Job {
                                  final String domainOperation) {
         try {
             logger.info("processing of domain '" + domainName + "' started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage, glueClient);
-            executor.doFull(domainName, domainTableName, domainOperation);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
+                    hiveDatabaseName, glueClient);
+            executor.doFullDomainRefresh(domainName, domainTableName, domainOperation);
             logger.info("processing of domain '" + domainName + "' completed");
         } catch(Exception e) {
             logger.error("processing of domain '" + domainName + "' failed");
-            handleError(e);
         }
     }
-
-    protected void handleError(final Exception e) {
-        logger.error("processing of domain failed", e);
-    }
-
 }

@@ -1,15 +1,16 @@
 package uk.gov.justice.digital.domain;
 
+import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
@@ -17,14 +18,12 @@ import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.domain.model.TableTuple;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import uk.gov.justice.digital.service.DataCatalogService;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.DomainSchemaService;
 import uk.gov.justice.digital.service.TestUtil;
-
 import java.io.*;
 import java.nio.file.Path;
 import java.util.*;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DomainExecutorTest extends BaseSparkTest{
@@ -32,7 +31,8 @@ public class DomainExecutorTest extends BaseSparkTest{
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutorTest.class);
 
     private static TestUtil utils = null;
-
+    private static final String hiveDatabaseName = "test_db";
+    private static DomainSchemaService hiveCatalog = null;
     @TempDir
     private Path folder;
 
@@ -40,6 +40,18 @@ public class DomainExecutorTest extends BaseSparkTest{
     public static void setUp() {
         //instantiate and populate the dependencies
         utils = new TestUtil();
+        AWSGlue glueClient = AWSGlueClientBuilder.defaultClient();
+        hiveCatalog = new DomainSchemaService(glueClient);
+        if (!hiveCatalog.databaseExists(hiveDatabaseName)) {
+            hiveCatalog.createDatabase(hiveDatabaseName);
+        }
+    }
+
+    @AfterAll
+    public static void tearDown() {
+        if (hiveCatalog.databaseExists(hiveDatabaseName)) {
+            hiveCatalog.deleteDatabase(hiveDatabaseName, null);
+        }
     }
 
     @Test
@@ -54,15 +66,15 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DataStorageService storage = new DataStorageService();
         final String targetPath = "test/target/path";
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         List<TableDefinition> tables = domainDefinition.getTables();
 
         final Dataset<Row> df_offender_bookings = utils.getOffenderBookings(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offender_bookings"),
                 df_offender_bookings);
 
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"),
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offenders"),
                 df_offenders);
 
         for(final TableDefinition table : tables) {
@@ -81,7 +93,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -102,7 +114,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -124,7 +136,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -146,7 +158,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
         List<TableDefinition> tables = domainDefinition.getTables();
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("source", "table").asString().toLowerCase(),
                 utils.getOffenders(folder));
@@ -169,7 +181,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -187,7 +199,7 @@ public class DomainExecutorTest extends BaseSparkTest{
     }
 
     @Test
-    public void test_saveFull() throws IOException, DomainExecutorException {
+    public void test_createSchemaAndSaveToDisk() throws IOException, DomainExecutorException {
         final DataStorageService storage = new DataStorageService();
         final String domainOperation = "insert";
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
@@ -195,7 +207,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 utils.getOffenderBookings(folder));
@@ -204,28 +216,32 @@ public class DomainExecutorTest extends BaseSparkTest{
         for(final TableDefinition table : tables) {
             Dataset<Row> df_target = executor.apply(table, testMap);
             df_target.printSchema();
-            final TableInfo targetInfo = TableInfo.create(targetPath,  domainDefinition.getName(), table.getName());
-            executor.saveFull(targetInfo, df_target, domainOperation);
+            final TableInfo targetInfo = TableInfo.create(targetPath, hiveDatabaseName,
+                    domainDefinition.getName(), table.getName());
+            executor.createSchemaAndSaveToDisk(targetInfo, df_target, domainOperation);
+            // Delete the table from Hive
+            hiveCatalog.deleteTable(hiveDatabaseName, domainDefinition.getName() + "." + table.getName());
         }
         assertTrue(true);
     }
 
     @Test
-    public void test_deleteFull() throws IOException, DomainExecutorException {
+    public void test_deleteSchemaAndTableData() throws IOException, DomainExecutorException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domainDefinition, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         // Insert first
         final String domainTableName = "demographics";
-        executor.doFull(domainDefinition.getName(), domainTableName, "insert");
+        executor.doFullDomainRefresh(domainDefinition.getName(), domainTableName, "insert");
 
         for(final TableDefinition table : tables) {
-            final TableInfo targetInfo = TableInfo.create(targetPath,  domainDefinition.getName(), table.getName());
-            executor.deleteFull(targetInfo);
+            final TableInfo targetInfo = TableInfo.create(targetPath, hiveDatabaseName,
+                    domainDefinition.getName(), table.getName());
+            executor.deleteSchemaAndTableData(targetInfo);
         }
         assertTrue(true);
     }
@@ -239,7 +255,7 @@ public class DomainExecutorTest extends BaseSparkTest{
 
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
 
         assertNotNull(executor);
 
@@ -255,20 +271,23 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
 
         // save a source
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "source", "table"),
+                df_offenders);
         final String domainTableName = "prisoner";
         // Insert first
-        executor.doFull(domain.getName(), domainTableName, "insert");
+        executor.doFullDomainRefresh(domain.getName(), domainTableName, "insert");
         // then update
-        executor.doFull(domain.getName(), domainTableName, "update");
+        executor.doFullDomainRefresh(domain.getName(), domainTableName, "update");
 
+        // Delete the table from Hive
+        hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
 
         // there should be a target table
-        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        TableInfo info = TableInfo.create(targetPath, hiveDatabaseName, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
         // it should have all the offenders in it
 
@@ -289,21 +308,26 @@ public class DomainExecutorTest extends BaseSparkTest{
 
         // save a source
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offenders"), df_offenders);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offenders"),
+                df_offenders);
 
 
         final Dataset<Row> df_offenderBookings = utils.getOffenderBookings(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "nomis", "offender_bookings"), df_offenderBookings);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offender_bookings"),
+                df_offenderBookings);
 
 
         // do Full Materialize of source to target
         final String domainTableName = "prisoner";
         final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, domain1, storage,
-                AWSGlueClientBuilder.defaultClient());
-        executor1.doFull(domain1.getName(), domainTableName, "insert");
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
+        executor1.doFullDomainRefresh(domain1.getName(), domainTableName, "insert");
+
+        // Delete the table from Hive
+        hiveCatalog.deleteTable(hiveDatabaseName, domain1.getName() + "." + domainTableName);
 
         // there should be a target table
-        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        TableInfo info = TableInfo.create(targetPath, hiveDatabaseName, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
         final Dataset<Row> df_refreshed = storage.load(spark, info);
@@ -313,8 +337,11 @@ public class DomainExecutorTest extends BaseSparkTest{
 
         // now the reverse
         final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, domain2, storage,
-                AWSGlueClientBuilder.defaultClient());
-        executor2.doFull(domain2.getName(), domainTableName, "update");
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
+        executor2.doFullDomainRefresh(domain2.getName(), domainTableName, "update");
+
+        // Delete the table from Hive
+        hiveCatalog.deleteTable(hiveDatabaseName, domain2.getName() + "." + domainTableName);
 
         // there should be a target table
         assertTrue(storage.exists(spark, info));
@@ -334,17 +361,17 @@ public class DomainExecutorTest extends BaseSparkTest{
 
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, "source", "table"), df_offenders);
+        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "source", "table"), df_offenders);
         final String domainOperation = "insert";
 
         final String domainTableName = "prisoner";
-        executor.doFull(domain.getName(), domainTableName, domainOperation);
+        executor.doFullDomainRefresh(domain.getName(), domainTableName, domainOperation);
 
 
         // there shouldn't be a target table
-        TableInfo info = TableInfo.create(targetPath, "example", "prisoner");
+        TableInfo info = TableInfo.create(targetPath, hiveDatabaseName, "example", "prisoner");
         assertFalse(storage.exists(spark, info));
 
     }
@@ -361,7 +388,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setViewText("");
@@ -389,7 +416,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         Map<String, Dataset<Row>> inputs = new HashMap<>();
         final String sourceTable = "OFFENDERS";
         inputs.put(sourceTable.toLowerCase(), utils.getOffenders(folder));
@@ -410,7 +437,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
@@ -445,7 +472,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
@@ -459,7 +486,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         // outputs should be the same as inputs
         assertTrue(this.areEqual(inputs, outputs));
         // there should be no written violations
-        assertFalse(storage.exists(spark, TableInfo.create(targetPath + "/safety", "violations", "age")));
+        assertFalse(storage.exists(spark, TableInfo.create(targetPath + "/safety", hiveDatabaseName,
+                "violations", "age")));
     }
 
     // shouldWriteViolationsIfThereAreSome
@@ -472,7 +500,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
 
         final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, domain, storage,
-                AWSGlueClientBuilder.defaultClient());
+                hiveDatabaseName, AWSGlueClientBuilder.defaultClient());
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
@@ -489,7 +517,8 @@ public class DomainExecutorTest extends BaseSparkTest{
         assertTrue(outputs.isEmpty());
 
         // there should be some written violations
-        assertTrue(storage.exists(spark, TableInfo.create(targetPath, "violations", "young")));
+        assertTrue(storage.exists(spark, TableInfo.create(targetPath, hiveDatabaseName, "violations",
+                "young")));
     }
 
     // ********************

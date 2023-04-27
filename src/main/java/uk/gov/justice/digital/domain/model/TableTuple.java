@@ -5,6 +5,7 @@ import java.util.regex.PatternSyntaxException;
 
 @Data
 public class TableTuple {
+
     private String schema;
     private String table;
 

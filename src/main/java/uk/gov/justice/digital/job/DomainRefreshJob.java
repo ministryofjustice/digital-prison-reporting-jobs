@@ -37,6 +37,7 @@ public class DomainRefreshJob implements Runnable {
     private final String domainRegistry;
 
     private final DataStorageService storage;
+    private final String hiveDatabaseName;
     private final AWSGlue glueClient;
 
     @Inject
@@ -47,13 +48,14 @@ public class DomainRefreshJob implements Runnable {
         this.domainName = jobParameters.getDomainName();
         this.domainRegistry = jobParameters.getDomainRegistry();
         this.domainOperation = jobParameters.getDomainOperation();
+        this.hiveDatabaseName = "test_domain_219"; // TODO: check if needs to be passed as a job parameter
         this.dynamoDBClient = dynamoDBClient;
         this.storage = storage;
         this.glueClient = jobParameters.getGlueClient();
     }
 
     public DomainService refresh() {
-        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient, storage, glueClient);
+        return new DomainService(curatedPath, domainTargetPath, dynamoDBClient, storage, hiveDatabaseName, glueClient);
 
     }
     public static void main(String[] args) {
