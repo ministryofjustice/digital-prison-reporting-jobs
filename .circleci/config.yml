@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.9
+  reporting: ministryofjustice/hmpps-reporting@dev:011fafbf5c94b510adc6a1878c6eb3ce8e1222ff
   
 workflows:
   checkout-build-publish:
@@ -20,8 +20,10 @@ workflows:
           app_artifacts_directory: build/libs/ ## Build Artifacts Location
           bucket_prefix: dpr-artifact-store ## S3 Artifacts Store, Defaults to "dpr-artifact-store"
           build_args: --debug ## Build Extra Args
-          notify_jira: true ## Notify Jira
-          notify_slack: true ## Notify Slack
+          sync_args: "--exclude '*' --include '*vLatest*jar'"
+          deploy_script: true          
+          notify_jira: false ## Notify Jira
+          notify_slack: false ## Notify Slack
           channel: dpr_cicd_alerts
           filters:
             branches:
@@ -36,14 +38,14 @@ workflows:
   owasp-security: ## Security Jobs Cron
     triggers:
       - schedule:
-          cron: "30 7 * * *" ## Runs everyday at 7.30 AM 
+          cron: "30 6 * * *" ## Runs everyday at 7.30 AM 
           filters:
             branches:
               only:
                 - main
     jobs:
       - reporting/gradle_owasp_check:
-          notify_slack: true
+          notify_slack: false
           channel: dpr_cicd_alerts ## May be Seperate Channel 
           context:
             - hmpps-reporting-common ## Reporting Common ORB
