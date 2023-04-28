@@ -41,7 +41,8 @@ public class TestUtil extends BaseSparkTest {
     }
 
     public Dataset<Row> getValidDataset() throws IOException {
-        return this.loadParquetDataframe("/sample/events/updates.parquet", "updates.parquet");
+        return this.loadParquetDataframe("/sample/events/nomis/offenders/offenders.parquet",
+                "updates.parquet");
     }
 
     public void saveDataToDisk(final TableInfo location, final Dataset<Row> df) {

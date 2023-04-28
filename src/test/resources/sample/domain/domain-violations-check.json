@@ -35,7 +35,7 @@
 
       "violations": [
         {
-          "check": "age < 20",
+          "check": "id_source_code == 'DUMMY'",
           "location": "domain",
           "name": "violations"
         }

@@ -48,7 +48,7 @@ public class DomainRefreshJob implements Runnable {
         this.domainName = jobParameters.getDomainName();
         this.domainRegistry = jobParameters.getDomainRegistry();
         this.domainOperation = jobParameters.getDomainOperation();
-        this.hiveDatabaseName = "test_domain_219"; // TODO: check if needs to be passed as a job parameter
+        this.hiveDatabaseName = "domain"; // TODO: check if needs to be passed as a job parameter
         this.dynamoDBClient = dynamoDBClient;
         this.storage = storage;
         this.glueClient = jobParameters.getGlueClient();

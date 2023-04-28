@@ -168,18 +168,22 @@ public class DomainExecutor extends Job {
     }
 
 
-
     protected Dataset<Row> applyViolations(final Dataset<Row> dataFrame, final List<ViolationDefinition> violations) {
-        Dataset<Row> violationsDataFrame = dataFrame;
+        Dataset<Row> sourceDataframe = dataFrame;
         for (final ViolationDefinition violation : violations) {
-            final Dataset<Row> df_violations = violationsDataFrame.where("not(" + violation.getCheck() + ")").toDF();
-            if (!df_violations.isEmpty()) {
-                TableInfo info = TableInfo.create(targetRootPath, null, violation.getLocation(), violation.getName());
-                saveViolations(info, df_violations);
-                violationsDataFrame = violationsDataFrame.except(df_violations);
+            final String applyCondition = violation.getCheck();
+            final Dataset<Row> violationsDataframe = sourceDataframe.where(applyCondition).toDF();
+            if (!violationsDataframe.isEmpty()) {
+                logger.info("Removing violation records");
+                TableInfo info = TableInfo.create(targetRootPath, hiveDatabaseName,
+                        violation.getLocation(), violation.getName());
+                saveViolations(info, violationsDataframe);
+                sourceDataframe = sourceDataframe.except(violationsDataframe);
+            } else {
+                logger.info("No Violation records found for condition " + applyCondition);
             }
         }
-        return violationsDataFrame;
+        return sourceDataframe;
     }
 
     protected Dataset<Row> applyTransform(final Map<String, Dataset<Row>> dfs, final TransformDefinition transform)

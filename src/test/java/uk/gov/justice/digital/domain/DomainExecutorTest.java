@@ -5,6 +5,9 @@ import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,7 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
+import org.apache.spark.sql.RowFactory;
 
 public class DomainExecutorTest extends BaseSparkTest{
 
@@ -476,7 +480,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
-        violation.setCheck("AGE < 100");
+        violation.setCheck("AGE >= 90");
         violation.setLocation("safety");
         violation.setName("age");
 
@@ -504,7 +508,7 @@ public class DomainExecutorTest extends BaseSparkTest{
         final Dataset<Row> inputs = utils.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
-        violation.setCheck("AGE >= 100");
+        violation.setCheck("AGE <= 18");
         violation.setLocation("violations");
         violation.setName("young");
 
@@ -514,7 +518,6 @@ public class DomainExecutorTest extends BaseSparkTest{
         // shouldSubtractViolationsIfThereAreSome
         // outputs should be removed
         assertFalse(this.areEqual(inputs, outputs));
-        assertTrue(outputs.isEmpty());
 
         // there should be some written violations
         assertTrue(storage.exists(spark, TableInfo.create(targetPath, hiveDatabaseName, "violations",
