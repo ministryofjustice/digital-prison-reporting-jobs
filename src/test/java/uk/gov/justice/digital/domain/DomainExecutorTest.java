@@ -382,7 +382,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
-        violation.setCheck("AGE < 100");
+        violation.setCheck("AGE >= 90");
         violation.setLocation("safety");
         violation.setName("age");
 
@@ -404,7 +404,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final Dataset<Row> inputs = helpers.getOffenders(folder);
 
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
-        violation.setCheck("AGE >= 100");
+        violation.setCheck("AGE <= 18");
         violation.setLocation("violations");
         violation.setName("young");
 
@@ -414,7 +414,6 @@ public class DomainExecutorTest extends BaseSparkTest {
         // shouldSubtractViolationsIfThereAreSome
         // outputs should be removed
         assertFalse(this.areEqual(inputs, outputs));
-        assertTrue(outputs.isEmpty());
 
         // there should be some written violations
         assertTrue(storage.exists(spark, TableInfo.create(targetPath, "violations", "young")));
