@@ -76,7 +76,7 @@ public class DomainExecutor {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
             }
             if (hiveSchemaService.databaseExists(info.getDatabase())) {
-                logger.info("Hive Schema updated started for " + info.getDatabase());
+                logger.info("Hive Schema insert started for " + info.getDatabase());
                 if (!hiveSchemaService.tableExists(info.getDatabase(),
                         info.getSchema() + "." + info.getTable())) {
                     hiveSchemaService.createTable(info.getDatabase(),

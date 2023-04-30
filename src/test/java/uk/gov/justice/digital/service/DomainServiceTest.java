@@ -34,6 +34,7 @@ public class DomainServiceTest extends BaseSparkTest {
     private static final String hiveDatabaseName = "test_db";
     private static DomainSchemaService hiveCatalog = null;
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
+    private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
     private static AWSGlue glueClient = null;
 
     @TempDir
@@ -251,4 +252,13 @@ public class DomainServiceTest extends BaseSparkTest {
             fail();
         }
     }
+
+    @Test
+    public void test_hive_create_table()  {
+        final String targetPath = this.folder.toFile().getAbsolutePath() + "/target/test/table";
+        Dataset<Row> df_test = helpers.createSchemaForTest();
+        hiveCatalog.createTable(hiveDatabaseName, "test.table", targetPath, df_test);
+        hiveCatalog.tableExists(hiveDatabaseName, "test.table");
+    }
+
 }

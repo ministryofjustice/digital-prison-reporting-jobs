@@ -7,7 +7,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.LoggerFactory;
-
 import java.util.Collections;
 
 
@@ -73,7 +72,7 @@ public class DomainSchemaService {
             logger.info("Hive Catalog Table '" + tableName + "' found");
             return Boolean.TRUE;
         } catch (EntityNotFoundException e) {
-            logger.error("Hive Catalog Table check failed : " + e.getMessage());
+            logger.error(e.getMessage());
             return Boolean.FALSE;
         }
     }
@@ -95,7 +94,6 @@ public class DomainSchemaService {
         } catch (Exception e) {
             logger.error("Delete failed for " + databaseName + ":" + tableName + " " + e.getMessage());
         }
-
     }
 
     @SuppressWarnings("serial")
@@ -115,7 +113,7 @@ public class DomainSchemaService {
                                 .withInputFormat("org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat")
                                 .withOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
                                 .withSerdeInfo(new SerDeInfo()
-                                        .withSerializationLibrary("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe")
+                                        .withSerializationLibrary("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
                                         .withParameters(new java.util.HashMap<String, String>() {{
                                             put("serialization.format", ",");
                                         }}))
@@ -127,16 +125,33 @@ public class DomainSchemaService {
 
 
         // Create the table in the AWS Glue Data Catalog
-        glueClient.createTable(createTableRequest);
+        try {
+            glueClient.createTable(createTableRequest);
+            logger.info("Table created in hive : " + tableName);
+        } catch (Exception e) {
+            logger.error("Create table failed : Table Name " + tableName + "Reason: " + e.getMessage());
+        }
     }
 
     private static java.util.List<Column> getColumns(StructType schema) {
         java.util.List<Column> columns = new java.util.ArrayList<Column>();
         for (StructField field : schema.fields()) {
-            columns.add(new Column()
+            Column col = new Column()
                     .withName(field.name())
                     .withType(field.dataType().typeName())
-                    .withComment(""));
+                    .withComment("");
+            // Null type not supported in AWS Glue Catalog
+            // numerical types mapping should be explicit and not automatically picks
+            if (col.getType().equals("long")) {
+                col.setType("bigint");
+            } else if (col.getType().equals("short")) {
+                col.setType("smallint");
+            } else if (col.getType().equals("integer")) {
+                col.setType("int");
+            } else if (col.getType().equals("byte")) {
+                col.setType("tinyint");
+            }
+            columns.add(col);
         }
         return columns;
     }
