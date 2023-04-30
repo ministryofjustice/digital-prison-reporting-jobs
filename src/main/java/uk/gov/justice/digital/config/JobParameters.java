@@ -99,6 +99,7 @@ public class JobParameters {
         return getMandatoryProperty( "dpr.domain.operation");
     }
 
+    public Optional<String> getCatalogDatabase() { return getOptionalProperty("dpr.domain.catalog.db");}
 
     private String getMandatoryProperty(String jobParameter) {
         return Optional

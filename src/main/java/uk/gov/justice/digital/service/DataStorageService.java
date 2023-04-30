@@ -1,19 +1,20 @@
 package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
-import io.micronaut.context.annotation.Bean;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableInfo;
 
+import javax.inject.Singleton;
 
-@Bean
+@Singleton
 public class DataStorageService {
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DataStorageService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     public boolean exists(final SparkSession spark, final TableInfo info) {
         return DeltaTable.isDeltaTable(spark, getTablePath(info.getPrefix(), info.getSchema(), info.getTable()));

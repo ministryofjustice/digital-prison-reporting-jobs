@@ -1,50 +1,64 @@
 package uk.gov.justice.digital.domain;
 
+
 import com.amazonaws.services.glue.AWSGlue;
-import org.apache.spark.SparkConf;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.ExplainMode;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
-import uk.gov.justice.digital.job.Job;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import java.util.*;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.service.DomainSchemaService;
-
-public class DomainExecutor extends Job {
-
-    // core initialised values
-    // sourceRootPath
-    // targetRootPath
-    // domainDefinition
-    protected String sourceRootPath;
-    protected String targetRootPath;
-    protected DomainDefinition domainDefinition;
-    protected DataStorageService storage;
-    protected SparkSession spark;
-    protected String hiveDatabaseName;
-    protected AWSGlue glueClient;
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 
-    public DomainExecutor(final String sourceRootPath,
-                          final String targetRootPath,
-                          final DomainDefinition domain,
-                          final DataStorageService storage,
-                          final String hiveDatabaseName,
-                          final AWSGlue glueClient) {
+@Singleton
+public class DomainExecutor {
+
+    private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
+
+    private final String sourceRootPath;
+    private final String targetRootPath;
+    private final DataStorageService storage;
+    private final SparkSession spark;
+    private final String hiveDatabaseName;
+    private final AWSGlue glueClient;
+
+    @Inject
+    public DomainExecutor(JobParameters jobParameters,
+                          DataStorageService storage,
+                          SparkSessionProvider sparkSessionProvider
+                          ) {
+        this.sourceRootPath = jobParameters.getCuratedS3Path();
+        this.targetRootPath = jobParameters.getDomainTargetPath();
+        this.storage = storage;
+        this.hiveDatabaseName = String.valueOf(jobParameters.getCatalogDatabase());
+        this.glueClient = jobParameters.getGlueClient();
+        this.spark = sparkSessionProvider.getConfiguredSparkSession();
+    }
+
+    public DomainExecutor(String sourceRootPath,
+                          String targetRootPath,
+                          DataStorageService storage,
+                          String hiveDatabaseName,
+                          AWSGlue glueClient,
+                          SparkSessionProvider sparkSessionProvider) {
         this.sourceRootPath = sourceRootPath;
         this.targetRootPath = targetRootPath;
-        this.domainDefinition = domain;
         this.storage = storage;
-        this.glueClient = glueClient;
         this.hiveDatabaseName = hiveDatabaseName;
-        this.spark = getConfiguredSparkSession(new SparkConf());
+        this.glueClient = glueClient;
+        this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
     public void createSchemaAndSaveToDisk(final TableInfo info, final Dataset<Row> dataFrame,
@@ -294,41 +308,47 @@ public class DomainExecutor extends Job {
         }
     }
 
-    public void doFullDomainRefresh(final String domainName, final String domainTableName,
-                                    final String domainOperation) {
+
+    public void doFullDomainRefresh(DomainDefinition domainDefinition,
+                       String domainName,
+                       String domainTableName,
+                       String domainOperation) {
         try {
             if (domainOperation.equalsIgnoreCase("insert") ||
                     domainOperation.equalsIgnoreCase("update") ||
                     domainOperation.equalsIgnoreCase("sync")) {
-                final List<TableDefinition> tables = domainDefinition.getTables();
-                TableDefinition table = tables.stream()
+
+                val table = domainDefinition.getTables().stream()
                         .filter(t -> domainTableName.equals(t.getName()))
                         .findAny()
                         .orElse(null);
+
                 if (table == null) {
                     logger.error("Table " + domainTableName + " not found");
                     throw new DomainExecutorException("Table " + domainTableName + " not found");
                 } else {
                     // TODO no source table and df they are required only for unit testing
-                    final Dataset<Row> df_target = apply(table, null);
-                    createSchemaAndSaveToDisk(TableInfo.create(targetRootPath, hiveDatabaseName,
-                                    domainDefinition.getName(), table.getName()), df_target, domainOperation);
+
+                    val dfTarget = apply(table, null);
+                    createSchemaAndSaveToDisk(
+                        TableInfo.create(targetRootPath, hiveDatabaseName,
+                                domainDefinition.getName(), table.getName()), dfTarget, domainOperation);
                 }
             } else if (domainOperation.equalsIgnoreCase("delete")) {
                 logger.info("domain operation is delete");
                 deleteSchemaAndTableData(TableInfo.create(targetRootPath, hiveDatabaseName,
                         domainName, domainTableName));
             } else {
-                logger.error("Unsupported domain operation");
-                throw new UnsupportedOperationException("Unsupported domain operation.");
+                val message = "Unsupported domain operation: '" + domainOperation + "'";
+                logger.error(message);
+                throw new UnsupportedOperationException(message);
             }
         } catch(Exception | DomainExecutorException e) {
-            logger.error(e.getMessage());
+            logger.error("Domain executor failed" + e.getMessage());
         }
     }
 
-
-    protected boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
+    private boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
         return Arrays.asList(dataFrame.schema().fieldNames()).contains(field);
     }
 }

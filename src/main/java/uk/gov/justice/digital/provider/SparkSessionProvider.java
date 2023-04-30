@@ -1,10 +1,13 @@
-package uk.gov.justice.digital.job;
+package uk.gov.justice.digital.provider;
 
+import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 
-public abstract class Job {
-    protected static SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
+@Singleton
+public class SparkSessionProvider {
+
+    public SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
         sparkConf
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
@@ -17,6 +20,10 @@ public abstract class Job {
                 .config(sparkConf)
                 .enableHiveSupport()
                 .getOrCreate();
+    }
+
+    public SparkSession getConfiguredSparkSession() {
+        return getConfiguredSparkSession(new SparkConf());
     }
 
 }

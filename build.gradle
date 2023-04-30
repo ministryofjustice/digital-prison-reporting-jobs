@@ -101,3 +101,7 @@ test {
     }
     maxParallelForks = Runtime.runtime.availableProcessors()
 }
+
+assemble {
+  dependsOn shadowJar
+}

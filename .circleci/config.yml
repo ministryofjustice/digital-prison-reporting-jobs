@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.9
+  reporting: ministryofjustice/hmpps-reporting@1.0.14
 
 workflows:
   checkout-build-publish:
@@ -19,6 +19,8 @@ workflows:
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
+          sync_args: "--exclude '*' --include '*-all*jar'"
+          deploy_script: true          
           notify_jira: true
           notify_slack: true
           channel: dpr_cicd_alerts
