@@ -42,7 +42,10 @@ public class DomainExecutor {
         this.sourceRootPath = jobParameters.getCuratedS3Path();
         this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
-        this.hiveDatabaseName = String.valueOf(jobParameters.getCatalogDatabase());
+        this.hiveDatabaseName = jobParameters.getCatalogDatabase()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Hive Catalog database not set - unable to create Hive Catalog schema"
+                ));
         this.glueClient = jobParameters.getGlueClient();
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
@@ -328,7 +331,6 @@ public class DomainExecutor {
                     throw new DomainExecutorException("Table " + domainTableName + " not found");
                 } else {
                     // TODO no source table and df they are required only for unit testing
-
                     val dfTarget = apply(table, null);
                     createSchemaAndSaveToDisk(
                         TableInfo.create(targetRootPath, hiveDatabaseName,

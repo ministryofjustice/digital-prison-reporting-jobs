@@ -24,16 +24,13 @@ public class DomainRefreshJob implements Runnable {
 
     private final DomainService domainService;
     private final JobParameters jobParameters;
-    private final AWSGlue glueClient;
-    private final String hiveDatabaseName;
+
 
     @Inject
     public DomainRefreshJob(JobParameters jobParameters,
                             DomainService domainService) {
         this.domainService = domainService;
         this.jobParameters = jobParameters;
-        this.glueClient = jobParameters.getGlueClient();
-        this.hiveDatabaseName = String.valueOf(jobParameters.getCatalogDatabase());
     }
 
     public static void main(String[] args) {
