@@ -6,4 +6,6 @@ public class DomainExecutorException extends Throwable {
     public DomainExecutorException(String errorMessage) {
         super();
     }
+
+    public DomainExecutorException(Throwable t) { super(t); }
 }

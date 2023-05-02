@@ -7,6 +7,9 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.exception.DomainExecutorException;
+import uk.gov.justice.digital.exception.DomainSchemaException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -25,6 +28,52 @@ public class DomainSchemaService {
     @Inject
     public DomainSchemaService(AWSGlue glueClient) {
         this.glueClient = glueClient;
+    }
+
+    public void create(final TableInfo info, final String path, final Dataset<Row> dataFrame) throws DomainSchemaException {
+        if (this.databaseExists(info.getDatabase())) {
+            logger.info("Hive Schema insert started for " + info.getDatabase());
+            if (!this.tableExists(info.getDatabase(),
+                    info.getSchema() + "." + info.getTable())) {
+                this.createTable(info.getDatabase(),
+                        info.getSchema() + "." + info.getTable(), path, dataFrame);
+                logger.info("Creating hive schema completed:" + info.getSchema() + "." + info.getTable());
+            } else {
+                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' already exists");
+            }
+        } else {
+            throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
+        }
+    }
+
+    public void replace(final TableInfo info, final String path, final Dataset<Row> dataFrame) throws DomainSchemaException {
+        if (this.databaseExists(info.getDatabase())) {
+            logger.info("Hive Schema insert started for " + info.getDatabase());
+            if (this.tableExists(info.getDatabase(),
+                    info.getSchema() + "." + info.getTable())) {
+                this.updateTable(info.getDatabase(),
+                        info.getSchema() + "." + info.getTable(), path, dataFrame);
+                logger.info("Replacing Hive Schema completed " + info.getSchema() + "." + info.getTable());
+            } else {
+                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
+            }
+        } else {
+            throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
+        }
+    }
+
+    public void drop(final TableInfo info) throws DomainSchemaException {
+        if (this.databaseExists(info.getDatabase())) {
+            if (this.tableExists(info.getDatabase(),
+                    info.getSchema() + "." + info.getTable())) {
+                this.deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
+                logger.info("Dropping Hive Schema completed " +  info.getSchema() + "." + info.getTable());
+            } else {
+                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
+            }
+        } else {
+            throw new DomainSchemaException("Glue catalog " + info.getDatabase() + " doesn't exist");
+        }
     }
 
     public boolean databaseExists(String databaseName) {
@@ -58,7 +107,7 @@ public class DomainSchemaService {
         }
     }
 
-    public void updateTable(final String databaseName, final String tableName, final String path,
+    protected void updateTable(final String databaseName, final String tableName, final String path,
                             final Dataset<Row> dataframe) {
         // First delete the table
         deleteTable(databaseName, tableName);
@@ -66,7 +115,7 @@ public class DomainSchemaService {
         createTable(databaseName, tableName, path, dataframe);
     }
 
-    public void deleteTable(final String databaseName, final String tableName) {
+    protected void deleteTable(final String databaseName, final String tableName) {
         DeleteTableRequest deleteTableRequest = new DeleteTableRequest()
                 .withDatabaseName(databaseName)
                 .withName(tableName);
@@ -78,7 +127,7 @@ public class DomainSchemaService {
     }
 
     @SuppressWarnings("serial")
-    public void createTable(final String databaseName, final String tableName, final String path,
+    protected void createTable(final String databaseName, final String tableName, final String path,
                             final Dataset<Row> dataframe) {
         // Create a CreateTableRequest
         CreateTableRequest createTableRequest = new CreateTableRequest()
