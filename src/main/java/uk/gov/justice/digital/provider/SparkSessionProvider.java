@@ -18,6 +18,7 @@ public class SparkSessionProvider {
 
         return SparkSession.builder()
                 .config(sparkConf)
+                .enableHiveSupport()
                 .getOrCreate();
     }
 

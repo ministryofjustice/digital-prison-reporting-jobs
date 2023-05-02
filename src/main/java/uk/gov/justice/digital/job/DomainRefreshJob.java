@@ -1,12 +1,12 @@
 package uk.gov.justice.digital.job;
 
+import com.amazonaws.services.glue.AWSGlue;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.service.DomainService;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -24,6 +24,7 @@ public class DomainRefreshJob implements Runnable {
 
     private final DomainService domainService;
     private final JobParameters jobParameters;
+
 
     @Inject
     public DomainRefreshJob(JobParameters jobParameters,
@@ -49,6 +50,7 @@ public class DomainRefreshJob implements Runnable {
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
         }
+
     }
 
 }

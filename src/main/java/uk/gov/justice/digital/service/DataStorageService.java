@@ -33,6 +33,7 @@ public class DataStorageService {
     }
 
     public void append(final String tablePath, final Dataset<Row> df) {
+        logger.info("Appending schema and data to " + tablePath);
         df.write()
                 .format("delta")
                 .mode("append")
@@ -41,6 +42,7 @@ public class DataStorageService {
     }
 
     public void create(final String tablePath, final Dataset<Row> df) {
+        logger.info("Inserting schema and data to " + tablePath);
         df.write()
                 .format("delta")
                 .option("path", tablePath)
@@ -48,6 +50,7 @@ public class DataStorageService {
     }
 
     public void replace(final String tablePath, final Dataset<Row> df) {
+        logger.info("Overwriting schema and data to " + tablePath);
         df.write()
                 .format("delta")
                 .mode("overwrite")
@@ -57,6 +60,7 @@ public class DataStorageService {
     }
 
     public void reload(final String tablePath, final Dataset<Row> df) {
+        logger.info("Syncing data to " + tablePath);
         df.write()
                 .format("delta")
                 .mode("overwrite")
@@ -65,7 +69,7 @@ public class DataStorageService {
     }
 
     public void delete(final SparkSession spark, final TableInfo info) {
-        logger.info("deleting table...");
+        logger.info("deleting Delta table..." + info.getTable());
         String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         if(deltaTable != null) {

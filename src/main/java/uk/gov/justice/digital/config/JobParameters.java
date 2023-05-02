@@ -1,11 +1,12 @@
 package uk.gov.justice.digital.config;
 
+import com.amazonaws.services.glue.AWSGlue;
 import lombok.val;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.glue.JobClient;
+import uk.gov.justice.digital.client.glue.GlueClient;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -20,10 +21,12 @@ public class JobParameters {
     private static final Logger logger = LoggerFactory.getLogger(JobParameters.class);
 
     private final Map<String, String> config;
+    private AWSGlue glueClient;
 
     @Inject
-    public JobParameters(JobClient jobClient) {
-        this(jobClient.getJobParameters());
+    public JobParameters(GlueClient glueClient) {
+        this(glueClient.getJobParameters());
+        this.glueClient = glueClient.getGlueClient();
     }
 
     public JobParameters(Map<String, String> config) {
@@ -32,6 +35,10 @@ public class JobParameters {
             .map(this::cleanEntryKey)
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Job initialised with parameters: {}", config);
+    }
+
+    public AWSGlue getGlueClient() {
+        return this.glueClient;
     }
 
     public String getAwsRegion() {
@@ -92,6 +99,7 @@ public class JobParameters {
         return getMandatoryProperty( "dpr.domain.operation");
     }
 
+    public Optional<String> getCatalogDatabase() { return getOptionalProperty("dpr.domain.catalog.db");}
 
     private String getMandatoryProperty(String jobParameter) {
         return Optional

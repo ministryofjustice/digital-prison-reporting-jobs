@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.domain;
 
+
+import com.amazonaws.services.glue.AWSGlue;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -15,9 +17,10 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import java.util.*;
 import uk.gov.justice.digital.exception.DomainExecutorException;
-
+import uk.gov.justice.digital.service.DomainSchemaService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
 
 @Singleton
 public class DomainExecutor {
@@ -27,48 +30,95 @@ public class DomainExecutor {
     private final String sourceRootPath;
     private final String targetRootPath;
     private final DataStorageService storage;
+
+    private final DomainSchemaService schema;
+
     private final SparkSession spark;
+    private final String hiveDatabaseName;
 
     @Inject
     public DomainExecutor(JobParameters jobParameters,
                           DataStorageService storage,
+                          DomainSchemaService schema,
                           SparkSessionProvider sparkSessionProvider
                           ) {
         this.sourceRootPath = jobParameters.getCuratedS3Path();
         this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
+        this.schema = schema;
+        this.hiveDatabaseName = jobParameters.getCatalogDatabase()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Hive Catalog database not set - unable to create Hive Catalog schema"
+                ));
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
     public DomainExecutor(String sourceRootPath,
                           String targetRootPath,
                           DataStorageService storage,
+                          DomainSchemaService schema,
+                          String hiveDatabaseName,
                           SparkSessionProvider sparkSessionProvider) {
         this.sourceRootPath = sourceRootPath;
         this.targetRootPath = targetRootPath;
         this.storage = storage;
+        this.schema = schema;
+        this.hiveDatabaseName = hiveDatabaseName;
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
-    public void saveFull(final TableInfo info, final Dataset<Row> dataFrame, final String domainOperation)
+    public void createSchemaAndSaveToDisk(final TableInfo info, final Dataset<Row> dataFrame,
+                                          final String domainOperation)
             throws DomainExecutorException {
-        logger.info("DomainOperations:: saveFull");
+        logger.info("DomainOperations:: createSchemaAndSaveToDisk");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         if (domainOperation.equalsIgnoreCase("insert")) {
+            logger.info("Domain operation " + domainOperation + " to disk started");
             if (!storage.exists(spark, info)) {
                 storage.create(tablePath, dataFrame);
+                logger.info("Creating delta table completed...");
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
             }
+            if (schema.databaseExists(info.getDatabase())) {
+                logger.info("Hive Schema insert started for " + info.getDatabase());
+                if (!schema.tableExists(info.getDatabase(),
+                        info.getSchema() + "." + info.getTable())) {
+                    schema.createTable(info.getDatabase(),
+                            info.getSchema() + "." + info.getTable(), tablePath, dataFrame);
+                    logger.info("Creating hive schema completed:" + info.getSchema() + "." + info.getTable());
+                } else {
+                    throw new DomainExecutorException("Glue catalog table '" + info.getTable() + "' already exists");
+                }
+            } else {
+                throw new DomainExecutorException("Glue catalog database '" + info.getDatabase() + "' doesn't exists");
+            }
         } else if (domainOperation.equalsIgnoreCase("update")) {
+            logger.info("Domain operation " + domainOperation + " to disk started");
             if (storage.exists(spark, info)) {
                 storage.replace(tablePath, dataFrame);
+                logger.info("Updating delta table completed...");
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exists");
             }
+            if (schema.databaseExists(info.getDatabase())) {
+                if (schema.tableExists(info.getDatabase(),
+                        info.getSchema() + "." + info.getTable())) {
+                    logger.info("Updating Hive schema started " + info.getSchema() + "." + info.getTable());
+                    schema.updateTable(info.getDatabase(),
+                            info.getSchema() + "." + info.getTable(), tablePath, dataFrame);
+                    logger.info("Updating Hive Schema completed " + info.getSchema() + "." + info.getTable());
+                } else {
+                    throw new DomainExecutorException("Glue catalog table '" + info.getTable() + "' doesn't exists");
+                }
+            } else {
+                throw new DomainExecutorException("Glue catalog database '" + info.getDatabase() + "' doesn't exists");
+            }
         } else if (domainOperation.equalsIgnoreCase("sync")) {
+            logger.info("Domain operation " + domainOperation + " to disk started");
             if (storage.exists(spark, info)) {
                 storage.reload(tablePath, dataFrame);
+                logger.info("Syncing delta table completed..." + info.getTable());
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exists");
             }
@@ -88,14 +138,24 @@ public class DomainExecutor {
         storage.endTableUpdates(spark, target);
     }
 
-    public void deleteFull(final TableInfo info) throws DomainExecutorException {
-        logger.info("DomainOperations:: deleteFull");
+    public void deleteSchemaAndTableData(final TableInfo info) throws DomainExecutorException {
+        logger.info("DomainOperations:: deleteSchemaAndTableData");
         if (storage.exists(spark, info)) {
             storage.delete(spark, info);
             storage.endTableUpdates(spark, info);
-            storage.vacuum(spark, info);
         } else {
             throw new DomainExecutorException("Table " + info.getTable() + "doesn't exists");
+        }
+        if (schema.databaseExists(info.getDatabase())) {
+            if (schema.tableExists(info.getDatabase(),
+                    info.getSchema() + "." + info.getTable())) {
+                schema.deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
+                logger.info("Deleting Hive Schema completed " +  info.getSchema() + "." + info.getTable());
+            } else {
+                throw new DomainExecutorException("Glue catalog table '" + info.getTable() + "' doesn't exists");
+            }
+        } else {
+            throw new DomainExecutorException("Glue catalog " + info.getDatabase() + " doesn't exists");
         }
     }
 
@@ -105,7 +165,7 @@ public class DomainExecutor {
             try {
                 TableTuple full = new TableTuple(source);
                 final Dataset<Row> dataFrame = storage.load(spark,
-                        TableInfo.create(sourcePath, full.getSchema(), full.getTable()));
+                        TableInfo.create(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable()));
                 if(dataFrame != null) {
                     logger.info("Loaded source '" + full.asString() +"'.");
                     return dataFrame;
@@ -125,7 +185,6 @@ public class DomainExecutor {
     }
 
 
-
     protected Dataset<Row> applyViolations(final Dataset<Row> dataFrame, final List<ViolationDefinition> violations) {
         Dataset<Row> sourceDataframe = dataFrame;
         for (final ViolationDefinition violation : violations) {
@@ -133,7 +192,7 @@ public class DomainExecutor {
             final Dataset<Row> violationsDataframe = sourceDataframe.where(applyCondition).toDF();
             if (!violationsDataframe.isEmpty()) {
                 logger.info("Removing violation records");
-                TableInfo info = TableInfo.create(targetRootPath,
+                TableInfo info = TableInfo.create(targetRootPath, hiveDatabaseName,
                         violation.getLocation(), violation.getName());
                 saveViolations(info, violationsDataframe);
                 sourceDataframe = sourceDataframe.except(violationsDataframe);
@@ -252,7 +311,8 @@ public class DomainExecutor {
         }
     }
 
-    public void doFull(DomainDefinition domainDefinition,
+
+    public void doFullDomainRefresh(DomainDefinition domainDefinition,
                        String domainName,
                        String domainTableName,
                        String domainOperation) {
@@ -272,22 +332,21 @@ public class DomainExecutor {
                 } else {
                     // TODO no source table and df they are required only for unit testing
                     val dfTarget = apply(table, null);
-                    saveFull(
-                        TableInfo.create(targetRootPath,  domainDefinition.getName(), table.getName()),
-                        dfTarget,
-                        domainOperation)
-                    ;
+                    createSchemaAndSaveToDisk(
+                        TableInfo.create(targetRootPath, hiveDatabaseName,
+                                domainDefinition.getName(), table.getName()), dfTarget, domainOperation);
                 }
             } else if (domainOperation.equalsIgnoreCase("delete")) {
                 logger.info("domain operation is delete");
-                deleteFull(TableInfo.create(targetRootPath, domainName, domainTableName));
+                deleteSchemaAndTableData(TableInfo.create(targetRootPath, hiveDatabaseName,
+                        domainName, domainTableName));
             } else {
                 val message = "Unsupported domain operation: '" + domainOperation + "'";
                 logger.error(message);
                 throw new UnsupportedOperationException(message);
             }
         } catch(Exception | DomainExecutorException e) {
-            logger.error("Domain executor failed", e);
+            logger.error("Domain executor failed" + e.getMessage());
         }
     }
 

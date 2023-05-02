@@ -2,7 +2,6 @@ package uk.gov.justice.digital.repository;
 
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashSet;

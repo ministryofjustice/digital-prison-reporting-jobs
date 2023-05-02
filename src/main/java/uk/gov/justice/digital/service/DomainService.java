@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.repository.DomainRepository;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.Set;
@@ -45,7 +44,6 @@ public class DomainService {
             val domains = getDomains(domainRegistry, domainName);
 
             logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
-
             for(val domain : domains) {
                 processDomain(domain, domain.getName(), domainTableName, domainOperation);
             }
@@ -67,11 +65,10 @@ public class DomainService {
 
         try {
             logger.info(prefix + "started");
-            executor.doFull(domain, domainName, domainTableName, domainOperation);
+            executor.doFullDomainRefresh(domain, domainName, domainTableName, domainOperation);
             logger.info(prefix + "completed");
         } catch(Exception e) {
             logger.error(prefix + "failed", e);
         }
     }
-
 }

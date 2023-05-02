@@ -52,7 +52,8 @@ public class SparkTestHelpers {
     }
 
     public Dataset<Row> getValidDataset() throws IOException {
-        return this.loadParquetDataframe("/sample/events/updates.parquet", "updates.parquet");
+        return this.loadParquetDataframe("/sample/events/nomis/offenders/offenders.parquet",
+                "updates.parquet");
     }
 
     public void saveDataToDisk(final TableInfo location, final Dataset<Row> df) {
@@ -69,6 +70,34 @@ public class SparkTestHelpers {
         fields.add(DataTypes.createStructField("first_name", DataTypes.StringType, true));
         fields.add(DataTypes.createStructField("last_name", DataTypes.StringType, true));
         fields.add(DataTypes.createStructField("offender_no", DataTypes.StringType, true));
+        StructType schema = DataTypes.createStructType(fields);
+        return spark.read().schema(schema).json(
+                spark.emptyDataset(Encoders.STRING()));
+    }
+
+    public Dataset<Row> createSchemaForTest() {
+        List<StructField> fields = new ArrayList<>(2);
+        fields.add(DataTypes.createStructField("long_val", DataTypes.LongType, true));
+        fields.add(DataTypes.createStructField("bool_val", DataTypes.BooleanType, true));
+        fields.add(DataTypes.createStructField("str_val", DataTypes.StringType, true));
+        fields.add(DataTypes.createStructField("int_val", DataTypes.IntegerType, true));
+        fields.add(DataTypes.createStructField("date_val", DataTypes.DateType, true));
+        fields.add(DataTypes.createStructField("byte_val", DataTypes.ByteType, true));
+        fields.add(DataTypes.createStructField("bin_val", DataTypes.BinaryType, true));
+        fields.add(DataTypes.createStructField("float_val", DataTypes.FloatType, true));
+        fields.add(DataTypes.createStructField("double_val", DataTypes.DoubleType, true));
+        fields.add(DataTypes.createStructField("short_val", DataTypes.ShortType, true));
+        fields.add(DataTypes.createStructField("struct_val", DataTypes.createStructType(new ArrayList<>())
+                , true));
+        fields.add(DataTypes.createStructField("array_val",
+                DataTypes.createArrayType(DataTypes.IntegerType, true)
+                , true));
+        fields.add(DataTypes.createStructField("map_val",
+                DataTypes.createMapType(DataTypes.StringType, DataTypes.IntegerType)
+                , true));
+        fields.add(DataTypes.createStructField("ts_val", DataTypes.TimestampType, true));
+        fields.add(DataTypes.createStructField("cal_type", DataTypes.CalendarIntervalType, true));
+        fields.add(DataTypes.createStructField("dec_type", DataTypes.createDecimalType(), true));
         StructType schema = DataTypes.createStructType(fields);
         return spark.read().schema(schema).json(
                 spark.emptyDataset(Encoders.STRING()));
