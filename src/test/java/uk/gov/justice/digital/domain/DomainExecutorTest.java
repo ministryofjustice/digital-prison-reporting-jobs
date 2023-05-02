@@ -1,8 +1,5 @@
 package uk.gov.justice.digital.domain;
 
-import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.AWSGlueClient;
-import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -21,18 +18,18 @@ import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.domain.model.TableTuple;
 import uk.gov.justice.digital.exception.DomainExecutorException;
+import uk.gov.justice.digital.exception.DomainSchemaException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainSchemaService;
 import uk.gov.justice.digital.service.SparkTestHelpers;
-import uk.gov.justice.digital.service.SchemaTestHelpers;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class DomainExecutorTest extends BaseSparkTest {
 
@@ -95,7 +92,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_apply() throws IOException, DomainExecutorException {
+    public void test_apply() throws IOException, DomainExecutorException, DomainSchemaException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
@@ -208,7 +205,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_createSchemaAndSaveToDisk() throws IOException, DomainExecutorException {
+    public void test_saveTable() throws IOException, DomainExecutorException, DomainSchemaException {
         when(schemaService.tableExists(any(), any())).thenReturn(false);
 
         final DataStorageService storage = new DataStorageService();
@@ -224,18 +221,22 @@ public class DomainExecutorTest extends BaseSparkTest {
                 helpers.getOffenderBookings(folder));
         testMap.put(new TableTuple("nomis", "offenders").asString().toLowerCase(),
                 helpers.getOffenders(folder));
+
+        int i = 0;
         for(final TableDefinition table : tables) {
             Dataset<Row> df_target = executor.apply(table, testMap);
             df_target.printSchema();
             final TableInfo targetInfo = TableInfo.create(targetPath, hiveDatabaseName,
                     domainDefinition.getName(), table.getName());
-            executor.createSchemaAndSaveToDisk(targetInfo, df_target, domainOperation);
+            executor.saveTable(targetInfo, df_target, domainOperation);
+            i++;
         }
-        assertTrue(true);
+
+        verify(schemaService, atLeastOnce()).create(any(), any(), any());
     }
 
     @Test
-    public void test_deleteSchemaAndTableData() throws IOException, DomainExecutorException {
+    public void test_deleteTable() throws IOException, DomainExecutorException, DomainSchemaException {
         when(schemaService.tableExists(any(), any())).thenReturn(true);
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = Objects.requireNonNull(getClass().getResource("/sample/events")).getPath();
@@ -251,9 +252,10 @@ public class DomainExecutorTest extends BaseSparkTest {
         for(final TableDefinition table : tables) {
             final TableInfo targetInfo = TableInfo.create(targetPath, hiveDatabaseName,
                     domainDefinition.getName(), table.getName());
-            executor.deleteSchemaAndTableData(targetInfo);
+            executor.deleteTable(targetInfo);
         }
-        assertTrue(true);
+
+        verify(schemaService, times(1)).drop(any());
     }
 
     @Test
@@ -271,7 +273,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRunWithFullUpdateIfTableIsInDomain() throws IOException {
+    public void shouldRunWithFullUpdateIfTableIsInDomain() throws IOException, DomainSchemaException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
@@ -287,8 +289,10 @@ public class DomainExecutorTest extends BaseSparkTest {
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "insert");
         // then update
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "update");
-        // Delete the table from Hive
-        schemaService.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
+
+
+        verify(schemaService, times(1)).create(any(), any(), any());
+        verify(schemaService, times(1)).replace(any(), any(), any());
 
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, hiveDatabaseName, "example", "prisoner");
@@ -301,7 +305,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     // shouldRunWithFullUpdateIfMultipleTablesAreInDomain
     @Test
-    public void shouldRunWithFullUpdateIfMultipleTablesAreInDomain() throws IOException {
+    public void shouldRunWithFullUpdateIfMultipleTablesAreInDomain() throws IOException, DomainSchemaException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
@@ -320,8 +324,9 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
                 hiveDatabaseName, sparkSessionProvider);
         executor1.doFullDomainRefresh(domain1, domain1.getName(), domainTableName, "insert");
-        // Delete the table from Hive
-        schemaService.deleteTable(hiveDatabaseName, domain1.getName() + "." + domainTableName);
+
+        verify(schemaService, times(2)).create(any(), any(), any());
+
         // there should be a target table
         TableInfo info = TableInfo.create(targetPath, hiveDatabaseName, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
@@ -333,8 +338,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
                 hiveDatabaseName, sparkSessionProvider);
         executor2.doFullDomainRefresh(domain2, domain2.getName(), domainTableName, "update");
-        // Delete the table from Hive
-        schemaService.deleteTable(hiveDatabaseName, domain2.getName() + "." + domainTableName);
+        verify(schemaService, times(2)).replace(any(), any(), any());
         // there should be a target table
         assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
@@ -343,7 +347,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRunWith0ChangesIfTableIsNotInDomain() throws IOException {
+    public void shouldRunWith0ChangesIfTableIsNotInDomain() throws IOException, DomainSchemaException {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
@@ -357,6 +361,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String domainTableName = "prisoner";
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
+        verify(schemaService, times(3)).create(any(), any(), any());
 
         // there shouldn't be a target table
         TableInfo info = TableInfo.create(targetPath, hiveDatabaseName, "example", "prisoner");

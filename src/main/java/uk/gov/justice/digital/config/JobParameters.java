@@ -21,13 +21,6 @@ public class JobParameters {
     private static final Logger logger = LoggerFactory.getLogger(JobParameters.class);
 
     private final Map<String, String> config;
-    private AWSGlue glueClient;
-
-    @Inject
-    public JobParameters(GlueClient glueClient) {
-        this(glueClient.getJobParameters());
-        this.glueClient = glueClient.getGlueClient();
-    }
 
     public JobParameters(Map<String, String> config) {
         this.config = config.entrySet()
@@ -35,10 +28,6 @@ public class JobParameters {
             .map(this::cleanEntryKey)
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Job initialised with parameters: {}", config);
-    }
-
-    public AWSGlue getGlueClient() {
-        return this.glueClient;
     }
 
     public String getAwsRegion() {

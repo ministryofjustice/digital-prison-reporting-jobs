@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 
 import org.mockito.Mock;
 import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.exception.DomainSchemaException;
 
 @MicronautTest
 public class DomainSchemaServiceTest extends BaseSparkTest {
@@ -95,4 +97,52 @@ public class DomainSchemaServiceTest extends BaseSparkTest {
         verify(mockGlueClient, times(1)).deleteTable(any());
     }
 
+    @Test
+    public void shouldCreateATableWhenCreateIsCalled() throws DomainSchemaException {
+
+        final GetDatabaseResult result = new GetDatabaseResult().withDatabase(new Database().withName("database"));
+        when(mockGlueClient.getDatabase(any())).thenReturn(result);
+        when(mockGlueClient.getTable(any())).thenThrow(new EntityNotFoundException(""));
+        when(mockGlueClient.createTable(any())).thenReturn(new CreateTableResult());
+        final DomainSchemaService service = new DomainSchemaService(mockGlueClient);
+        final Dataset<Row> df = spark.emptyDataFrame();
+        TableInfo info = TableInfo.create("prefix", "database", "schema", "table");
+        service.create(info, "table", df);
+        verify(mockGlueClient, times(1)).createTable(any());
+        verify(mockGlueClient, times(0)).deleteTable(any());
+
+    }
+
+    @Test
+    public void shouldReplaceATableWhenReplaceIsCalled() throws DomainSchemaException {
+
+        final GetDatabaseResult result = new GetDatabaseResult().withDatabase(new Database().withName("database"));
+        when(mockGlueClient.getDatabase(any())).thenReturn(result);
+        when(mockGlueClient.getTable(any())).thenReturn(new GetTableResult());
+        when(mockGlueClient.createTable(any())).thenReturn(new CreateTableResult());
+        final DomainSchemaService service = new DomainSchemaService(mockGlueClient);
+        final Dataset<Row> df = spark.emptyDataFrame();
+        TableInfo info = TableInfo.create("prefix", "database", "schema", "table");
+        service.replace(info, "table", df);
+        verify(mockGlueClient, times(1)).createTable(any());
+        verify(mockGlueClient, times(1)).deleteTable(any());
+
+    }
+
+
+    @Test
+    public void shouldDropATableWhenDropIsCalled() throws DomainSchemaException {
+
+        final GetDatabaseResult result = new GetDatabaseResult().withDatabase(new Database().withName("database"));
+        when(mockGlueClient.getDatabase(any())).thenReturn(result);
+        when(mockGlueClient.getTable(any())).thenReturn(new GetTableResult());
+        when(mockGlueClient.createTable(any())).thenReturn(new CreateTableResult());
+        final DomainSchemaService service = new DomainSchemaService(mockGlueClient);
+        final Dataset<Row> df = spark.emptyDataFrame();
+        TableInfo info = TableInfo.create("prefix", "database", "schema", "table");
+        service.drop(info);
+        verify(mockGlueClient, times(0)).createTable(any());
+        verify(mockGlueClient, times(1)).deleteTable(any());
+
+    }
 }
