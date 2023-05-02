@@ -6,7 +6,7 @@ import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.glue.JobClient;
+import uk.gov.justice.digital.client.glue.GlueClient;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -24,9 +24,9 @@ public class JobParameters {
     private AWSGlue glueClient;
 
     @Inject
-    public JobParameters(JobClient jobClient) {
-        this(jobClient.getJobParameters());
-        this.glueClient = jobClient.getGlueClient();
+    public JobParameters(GlueClient glueClient) {
+        this(glueClient.getJobParameters());
+        this.glueClient = glueClient.getGlueClient();
     }
 
     public JobParameters(Map<String, String> config) {

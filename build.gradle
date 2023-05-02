@@ -63,11 +63,13 @@ dependencies {
       exclude group: "org.apache.spark", module: "spark-core_2.12"
     }
 
+	testImplementation "io.micronaut.test:micronaut-test-junit5"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
     testImplementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
     // We are targetting Java 8 so must use mockito 4.x since 5.x requires Java 11 or later.
     testImplementation 'org.mockito:mockito-core:4.11.0'
+    testImplementation "io.mockk:mockk:1.13.5"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }

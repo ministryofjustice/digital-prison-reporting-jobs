@@ -30,37 +30,40 @@ public class DomainExecutor {
     private final String sourceRootPath;
     private final String targetRootPath;
     private final DataStorageService storage;
+
+    private final DomainSchemaService schema;
+
     private final SparkSession spark;
     private final String hiveDatabaseName;
-    private final AWSGlue glueClient;
 
     @Inject
     public DomainExecutor(JobParameters jobParameters,
                           DataStorageService storage,
+                          DomainSchemaService schema,
                           SparkSessionProvider sparkSessionProvider
                           ) {
         this.sourceRootPath = jobParameters.getCuratedS3Path();
         this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
+        this.schema = schema;
         this.hiveDatabaseName = jobParameters.getCatalogDatabase()
                 .orElseThrow(() -> new IllegalStateException(
                         "Hive Catalog database not set - unable to create Hive Catalog schema"
                 ));
-        this.glueClient = jobParameters.getGlueClient();
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
     public DomainExecutor(String sourceRootPath,
                           String targetRootPath,
                           DataStorageService storage,
+                          DomainSchemaService schema,
                           String hiveDatabaseName,
-                          AWSGlue glueClient,
                           SparkSessionProvider sparkSessionProvider) {
         this.sourceRootPath = sourceRootPath;
         this.targetRootPath = targetRootPath;
         this.storage = storage;
+        this.schema = schema;
         this.hiveDatabaseName = hiveDatabaseName;
-        this.glueClient = glueClient;
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
@@ -68,7 +71,6 @@ public class DomainExecutor {
                                           final String domainOperation)
             throws DomainExecutorException {
         logger.info("DomainOperations:: createSchemaAndSaveToDisk");
-        DomainSchemaService hiveSchemaService = new DomainSchemaService(glueClient);
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         if (domainOperation.equalsIgnoreCase("insert")) {
             logger.info("Domain operation " + domainOperation + " to disk started");
@@ -78,11 +80,11 @@ public class DomainExecutor {
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
             }
-            if (hiveSchemaService.databaseExists(info.getDatabase())) {
+            if (schema.databaseExists(info.getDatabase())) {
                 logger.info("Hive Schema insert started for " + info.getDatabase());
-                if (!hiveSchemaService.tableExists(info.getDatabase(),
+                if (!schema.tableExists(info.getDatabase(),
                         info.getSchema() + "." + info.getTable())) {
-                    hiveSchemaService.createTable(info.getDatabase(),
+                    schema.createTable(info.getDatabase(),
                             info.getSchema() + "." + info.getTable(), tablePath, dataFrame);
                     logger.info("Creating hive schema completed:" + info.getSchema() + "." + info.getTable());
                 } else {
@@ -99,11 +101,11 @@ public class DomainExecutor {
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exists");
             }
-            if (hiveSchemaService.databaseExists(info.getDatabase())) {
-                if (hiveSchemaService.tableExists(info.getDatabase(),
+            if (schema.databaseExists(info.getDatabase())) {
+                if (schema.tableExists(info.getDatabase(),
                         info.getSchema() + "." + info.getTable())) {
                     logger.info("Updating Hive schema started " + info.getSchema() + "." + info.getTable());
-                    hiveSchemaService.updateTable(info.getDatabase(),
+                    schema.updateTable(info.getDatabase(),
                             info.getSchema() + "." + info.getTable(), tablePath, dataFrame);
                     logger.info("Updating Hive Schema completed " + info.getSchema() + "." + info.getTable());
                 } else {
@@ -138,18 +140,16 @@ public class DomainExecutor {
 
     public void deleteSchemaAndTableData(final TableInfo info) throws DomainExecutorException {
         logger.info("DomainOperations:: deleteSchemaAndTableData");
-        DomainSchemaService hiveSchemaService = new DomainSchemaService(glueClient);
         if (storage.exists(spark, info)) {
             storage.delete(spark, info);
             storage.endTableUpdates(spark, info);
-            storage.vacuum(spark, info);
         } else {
             throw new DomainExecutorException("Table " + info.getTable() + "doesn't exists");
         }
-        if (hiveSchemaService.databaseExists(info.getDatabase())) {
-            if (hiveSchemaService.tableExists(info.getDatabase(),
+        if (schema.databaseExists(info.getDatabase())) {
+            if (schema.tableExists(info.getDatabase(),
                     info.getSchema() + "." + info.getTable())) {
-                hiveSchemaService.deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
+                schema.deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
                 logger.info("Deleting Hive Schema completed " +  info.getSchema() + "." + info.getTable());
             } else {
                 throw new DomainExecutorException("Glue catalog table '" + info.getTable() + "' doesn't exists");

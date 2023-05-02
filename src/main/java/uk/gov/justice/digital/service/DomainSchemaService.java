@@ -7,9 +7,13 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.Collections;
 
 
+@Singleton
 public class DomainSchemaService {
 
     private static final long serialVersionUID = 1L;
@@ -18,6 +22,7 @@ public class DomainSchemaService {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
 
+    @Inject
     public DomainSchemaService(AWSGlue glueClient) {
         this.glueClient = glueClient;
     }
@@ -39,30 +44,6 @@ public class DomainSchemaService {
         return Boolean.FALSE;
     }
 
-    // This is needed only for unit testing
-    public void createDatabase(final String databaseName) {
-        // Create a database if it doesn't exist
-        DatabaseInput databaseInput = new DatabaseInput().withName(databaseName);
-        CreateDatabaseRequest createDatabaseRequest = new CreateDatabaseRequest().withDatabaseInput(databaseInput);
-        try {
-            glueClient.createDatabase(createDatabaseRequest);
-        } catch (AlreadyExistsException ae) {
-            logger.error(databaseName + "already exists" + ae.getMessage());
-        }
-    }
-
-    // This is needed only for unit testing
-    public void deleteDatabase(final String databaseName, final String catalogId) {
-        DeleteDatabaseRequest deleteRequest = new DeleteDatabaseRequest()
-                .withCatalogId(catalogId)
-                .withName(databaseName);
-        try {
-            glueClient.deleteDatabase(deleteRequest);
-        } catch (Exception e) {
-            logger.error("Unable to delete database '" + databaseName + "': " + e.getMessage());
-        }
-    }
-
     public boolean tableExists(String databaseName, String tableName) {
         GetTableRequest request = new GetTableRequest()
                 .withDatabaseName(databaseName)
@@ -72,7 +53,7 @@ public class DomainSchemaService {
             logger.info("Hive Catalog Table '" + tableName + "' found");
             return Boolean.TRUE;
         } catch (EntityNotFoundException e) {
-            logger.error(e.getMessage());
+            logger.info("Hive Catalog Table '" + tableName + "' not found");
             return Boolean.FALSE;
         }
     }

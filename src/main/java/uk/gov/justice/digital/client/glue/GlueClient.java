@@ -10,16 +10,16 @@ import javax.inject.Singleton;
 import java.util.Map;
 
 @Singleton
-public class JobClient {
+public class GlueClient {
 
     private final AWSGlue glueClient;
     private final String jobName;
 
-    public JobClient() {
+    public GlueClient() {
         this(AWSGlueClientBuilder.defaultClient());
     }
 
-    private JobClient(AWSGlue client) {
+    private GlueClient(AWSGlue client) {
         glueClient = client;
         jobName = Properties.getSparkJobName();
     }
