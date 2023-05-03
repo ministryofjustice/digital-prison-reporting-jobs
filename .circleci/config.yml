@@ -20,8 +20,8 @@ workflows:
           app_artifacts_directory: build/libs/ ## Build Artifacts Location
           bucket_prefix: dpr-artifact-store ## S3 Artifacts Store, Defaults to "dpr-artifact-store"
           build_args: --debug ## Build Extra Args
-          sync_args: "--exclude '*' --include '*jar'"
-          deploy_script: true          
+          sync_args: "--exclude '*' --include '*jar'" ## Extra Args for Artifacts Sync, OPTIONAL
+          deploy_script: true ## Deploy Placeholder Script for GlueJobs, defaults to False         
           notify_jira: false ## Notify Jira
           notify_slack: false ## Notify Slack
           channel: dpr_cicd_alerts
@@ -31,6 +31,16 @@ workflows:
             tags:
               ignore: /.*/
           ref: << pipeline.git.branch >><< pipeline.git.tag >>  
+          context:
+            - hmpps-reporting-common ## Reporting Common ORB 
+            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
+      - reporting/trigger_reporting_stream: ## Start, Demo Glue JOB on Sandbox
+          job_name: dpr-265-domain-refresh-job-karthik
+          filters:
+            branches:
+              only: main
+            tags:
+              ignore: /.*/          
           context:
             - hmpps-reporting-common ## Reporting Common ORB 
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
