@@ -1,12 +1,14 @@
 package uk.gov.justice.digital.service;
 
 import com.amazonaws.services.glue.AWSGlue;
+import com.amazonaws.services.glue.AWSGlueClient;
 import com.amazonaws.services.glue.model.*;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.client.glue.JobClient;
 import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.exception.DomainSchemaException;
@@ -26,8 +28,12 @@ public class DomainSchemaService {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
 
     @Inject
-    public DomainSchemaService(AWSGlue glueClient) {
-        this.glueClient = glueClient;
+    public DomainSchemaService(JobClient jobClient) {
+        this(jobClient.getGlueClient());
+    }
+
+    protected DomainSchemaService(AWSGlue client) {
+        this.glueClient = client;
     }
 
     public void create(final TableInfo info, final String path, final Dataset<Row> dataFrame) throws DomainSchemaException {
