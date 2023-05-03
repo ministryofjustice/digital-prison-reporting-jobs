@@ -6,7 +6,7 @@ import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.JobClient;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -20,13 +20,24 @@ public class JobParameters {
 
     private static final Logger logger = LoggerFactory.getLogger(JobParameters.class);
 
+    private final JobClient client = null;
+
     private final Map<String, String> config;
+
+    @Inject
+    public JobParameters(JobClient jobClient) {
+        this(jobClient.getJobParameters());
+    }
+
+    public AWSGlue getGlueClient() {
+        return client.getGlueClient();
+    }
 
     public JobParameters(Map<String, String> config) {
         this.config = config.entrySet()
-            .stream()
-            .map(this::cleanEntryKey)
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .stream()
+                .map(this::cleanEntryKey)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Job initialised with parameters: {}", config);
     }
 

@@ -23,30 +23,22 @@ public class DomainRefreshJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DomainRefreshJob.class);
 
     private final DomainService domainService;
-    private final JobParameters jobParameters;
 
 
     @Inject
-    public DomainRefreshJob(JobParameters jobParameters,
-                            DomainService domainService) {
+    public DomainRefreshJob(DomainService domainService) {
         this.domainService = domainService;
-        this.jobParameters = jobParameters;
     }
 
     public static void main(String[] args) {
         logger.info("Job started");
-        PicocliRunner.run(DomainRefreshJob.class);
+        PicocliRunner.run(DomainRefreshJob.class, args);
     }
 
     @Override
     public void run() {
         try {
-            domainService.run(
-                jobParameters.getDomainRegistry(),
-                jobParameters.getDomainTableName(),
-                jobParameters.getDomainName(),
-                jobParameters.getDomainOperation()
-            );
+            domainService.run();
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
         }

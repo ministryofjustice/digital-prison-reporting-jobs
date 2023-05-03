@@ -1,8 +1,10 @@
 package uk.gov.justice.digital.service;
 
+import io.micronaut.context.annotation.Bean;
 import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.repository.DomainRepository;
@@ -11,7 +13,7 @@ import javax.inject.Singleton;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
-@Singleton
+@Bean
 public class DomainService {
 
     private final DomainRepository repo;
@@ -19,18 +21,31 @@ public class DomainService {
 
     protected DataStorageService storage;
 
+    protected JobParameters parameters;
+
     private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
 
     @Inject
-    public DomainService(DomainRepository repository,
+    public DomainService(JobParameters parameters,
+                         DomainRepository repository,
                          DataStorageService storage,
                          DomainExecutor executor) {
+        this.parameters = parameters;
         this.repo = repository;
         this.storage = storage;
         this.executor = executor;
     }
 
-    public void run(
+    public void run() {
+        runInternal(
+                parameters.getDomainRegistry(),
+                parameters.getDomainTableName(),
+                parameters.getDomainName(),
+                parameters.getDomainOperation()
+        );
+    }
+
+    protected void runInternal(
         String domainRegistry,
         String domainTableName,
         String domainName,

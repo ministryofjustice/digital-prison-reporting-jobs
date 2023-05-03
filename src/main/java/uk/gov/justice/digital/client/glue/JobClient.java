@@ -4,24 +4,31 @@ import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import com.amazonaws.services.glue.model.GetJobRequest;
 import com.amazonaws.services.glue.model.GetJobResult;
+import io.micronaut.context.annotation.Bean;
 import uk.gov.justice.digital.config.Properties;
 
-import javax.inject.Singleton;
 import java.util.Map;
+import java.util.Optional;
 
-@Singleton
-public class GlueClient {
+@Bean
+public class JobClient {
+
+    private static final String SPARK_JOB_NAME_PROPERTY = "spark.glue.JOB_NAME";
 
     private final AWSGlue glueClient;
     private final String jobName;
 
-    public GlueClient() {
+    public JobClient() {
         this(AWSGlueClientBuilder.defaultClient());
     }
 
-    private GlueClient(AWSGlue client) {
+    private JobClient(AWSGlue client) {
         glueClient = client;
         jobName = Properties.getSparkJobName();
+    }
+
+    public AWSGlue getGlueClient() {
+        return glueClient;
     }
 
     public Map<String, String> getJobParameters() {
@@ -30,8 +37,5 @@ public class GlueClient {
         return result.getJob().getDefaultArguments();
     }
 
-    public AWSGlue getGlueClient() {
-        return glueClient;
-    }
 
 }
