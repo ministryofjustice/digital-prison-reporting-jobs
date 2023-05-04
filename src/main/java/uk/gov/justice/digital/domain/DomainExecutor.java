@@ -70,6 +70,7 @@ public class DomainExecutor {
         logger.info("DomainOperations:: createSchemaAndSaveToDisk");
         DomainSchemaService hiveSchemaService = new DomainSchemaService(glueClient);
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        logger.info("Table path : " +  tablePath);
         if (domainOperation.equalsIgnoreCase("insert")) {
             logger.info("Domain operation " + domainOperation + " to disk started");
             if (!storage.exists(spark, info)) {
@@ -83,7 +84,8 @@ public class DomainExecutor {
                 if (!hiveSchemaService.tableExists(info.getDatabase(),
                         info.getSchema() + "." + info.getTable())) {
                     hiveSchemaService.createTable(info.getDatabase(),
-                            info.getSchema() + "." + info.getTable(), tablePath, dataFrame);
+                            info.getSchema() + "." + info.getTable(),
+                            tablePath, dataFrame);
                     logger.info("Creating hive schema completed:" + info.getSchema() + "." + info.getTable());
                 } else {
                     throw new DomainExecutorException("Glue catalog table '" + info.getTable() + "' already exists");
@@ -104,7 +106,8 @@ public class DomainExecutor {
                         info.getSchema() + "." + info.getTable())) {
                     logger.info("Updating Hive schema started " + info.getSchema() + "." + info.getTable());
                     hiveSchemaService.updateTable(info.getDatabase(),
-                            info.getSchema() + "." + info.getTable(), tablePath, dataFrame);
+                            info.getSchema() + "." + info.getTable(),
+                            tablePath, dataFrame);
                     logger.info("Updating Hive Schema completed " + info.getSchema() + "." + info.getTable());
                 } else {
                     throw new DomainExecutorException("Glue catalog table '" + info.getTable() + "' doesn't exists");
