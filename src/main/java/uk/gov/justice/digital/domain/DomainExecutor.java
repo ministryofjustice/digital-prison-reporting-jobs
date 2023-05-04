@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.domain;
 
 
-import com.amazonaws.services.glue.AWSGlue;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -40,15 +39,17 @@ public class DomainExecutor {
                           DomainSchemaService schema,
                           SparkSessionProvider sparkSessionProvider
                           ) {
-        this.sourceRootPath = jobParameters.getCuratedS3Path();
-        this.targetRootPath = jobParameters.getDomainTargetPath();
-        this.storage = storage;
-        this.hiveDatabaseName = jobParameters.getCatalogDatabase()
-                .orElseThrow(() -> new IllegalStateException(
-                        "Hive Catalog database not set - unable to create Hive Catalog schema"
-                ));
-        this.schema = schema;
-        this.spark = sparkSessionProvider.getConfiguredSparkSession();
+
+        this(   jobParameters.getCuratedS3Path(),
+                jobParameters.getDomainTargetPath(),
+                storage,
+                schema,
+                jobParameters.getCatalogDatabase()
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Hive Catalog database not set - unable to create Hive Catalog schema"
+                        )),
+                sparkSessionProvider
+        );
     }
 
     public DomainExecutor(String sourceRootPath,

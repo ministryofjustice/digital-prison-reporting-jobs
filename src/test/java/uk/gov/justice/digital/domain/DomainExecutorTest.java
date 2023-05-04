@@ -1,7 +1,5 @@
 package uk.gov.justice.digital.domain;
 
-import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -40,7 +38,6 @@ public class DomainExecutorTest extends BaseSparkTest {
     @Mock
     private static DomainSchemaService schemaService = mock(DomainSchemaService.class);
 
-    private static AWSGlue glueClient = null;
 
     @TempDir
     private Path folder;
@@ -48,7 +45,6 @@ public class DomainExecutorTest extends BaseSparkTest {
     @BeforeAll
     public static void setUp() {
         //instantiate and populate the dependencies
-//        glueClient = AWSGlueClientBuilder.defaultClient();
         when(schemaService.databaseExists(any())).thenReturn(true);
     }
 
