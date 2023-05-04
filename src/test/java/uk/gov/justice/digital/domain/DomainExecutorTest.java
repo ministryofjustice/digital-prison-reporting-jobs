@@ -68,8 +68,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
         final String targetPath = "test/target/path";
 
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         List<TableDefinition> tables = domainDefinition.getTables();
 
         final Dataset<Row> df_offender_bookings = helpers.getOffenderBookings(folder);
@@ -97,8 +97,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -118,8 +118,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -140,8 +140,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -162,8 +162,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("source", "table").asString().toLowerCase(),
                 helpers.getOffenders(folder));
@@ -185,8 +185,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         Map<String, Dataset<Row>> refs = new HashMap<>();
         refs.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -211,8 +211,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         Map<String, Dataset<Row>> testMap = new HashMap<>();
         testMap.put(new TableTuple("nomis", "offender_bookings").asString().toLowerCase(),
                 helpers.getOffenderBookings(folder));
@@ -237,8 +237,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/domain/target";
         final DomainDefinition domainDefinition = getDomain("/sample/domain/incident_domain.json");
         List<TableDefinition> tables = domainDefinition.getTables();
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         // Insert first
         final String domainTableName = "demographics";
         executor.doFullDomainRefresh(domainDefinition, domainDefinition.getName(),
@@ -258,8 +258,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String targetPath = "target.path";
 
 //        final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
 
         assertNotNull(executor);
 
@@ -271,8 +271,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution.json");
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         // save a source
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
         helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
@@ -313,8 +313,8 @@ public class DomainExecutorTest extends BaseSparkTest {
 
         // do Full Materialize of source to target
         final String domainTableName = "prisoner";
-        final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor1 = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         executor1.doFullDomainRefresh(domain1, domain1.getName(), domainTableName, "insert");
 
         verify(schemaService, times(1)).createTable(any(), any(), any(), any());
@@ -327,8 +327,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         df_refreshed.show();
         // not equal
         // now the reverse
-        final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor2 = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         executor2.doFullDomainRefresh(domain2, domain2.getName(), domainTableName, "update");
         verify(schemaService, times(1)).updateTable(any(), any(), any(), any());
 
@@ -345,8 +345,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
         helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
                 "source", "table"), df_offenders);
@@ -366,8 +366,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setViewText("");
 
@@ -390,8 +390,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         Map<String, Dataset<Row>> inputs = new HashMap<>();
         final String sourceTable = "OFFENDERS";
         inputs.put(sourceTable.toLowerCase(), helpers.getOffenders(folder));
@@ -409,8 +409,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         final Dataset<Row> inputs = helpers.getOffenders(folder);
         final TableDefinition.TransformDefinition transform = new TableDefinition.TransformDefinition();
         transform.setViewText("select source.table.*, months_between(current_date()," +
@@ -437,8 +437,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         final Dataset<Row> inputs = helpers.getOffenders(folder);
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
         violation.setCheck("AGE >= 90");
@@ -459,8 +459,8 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
         final String sourcePath = this.folder.toFile().getAbsolutePath() + "/source";
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target";
-        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                hiveDatabaseName, glueClient, sparkSessionProvider);
+        final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                hiveDatabaseName, sparkSessionProvider);
         final TableDefinition.ViolationDefinition violation = new TableDefinition.ViolationDefinition();
         violation.setCheck("AGE <= 18");
         violation.setLocation("violations");

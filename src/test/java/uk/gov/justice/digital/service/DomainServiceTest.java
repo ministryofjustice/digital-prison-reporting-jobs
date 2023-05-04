@@ -1,7 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -39,7 +37,6 @@ public class DomainServiceTest extends BaseSparkTest {
     private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
-    private static AWSGlue glueClient = null;
 
 
     @TempDir
@@ -49,7 +46,6 @@ public class DomainServiceTest extends BaseSparkTest {
     public static void setUp() {
         logger.info("setup method");
         //instantiate and populate the dependencies
-        glueClient = AWSGlueClientBuilder.defaultClient();
         when(schemaService.databaseExists(any())).thenReturn(true);
         when(schemaService.tableExists(any(), any())).thenReturn(true);
     }
@@ -88,8 +84,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -126,8 +122,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("Domain Refresh process '" + domain.getName() + "' started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -164,8 +160,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -201,8 +197,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') update started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -238,8 +234,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') delete started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
