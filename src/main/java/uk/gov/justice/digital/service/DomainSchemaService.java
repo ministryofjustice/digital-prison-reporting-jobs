@@ -7,9 +7,13 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.client.glue.JobClient;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.Collections;
 
-
+@Singleton
 public class DomainSchemaService {
 
     private static final long serialVersionUID = 1L;
@@ -18,9 +22,15 @@ public class DomainSchemaService {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
 
-    public DomainSchemaService(AWSGlue glueClient) {
-        this.glueClient = glueClient;
+    @Inject
+    public DomainSchemaService(JobClient jobClient) {
+        this(jobClient.getGlueClient());
     }
+
+    protected DomainSchemaService(AWSGlue client) {
+        this.glueClient = client;
+    }
+
 
     public boolean databaseExists(String databaseName) {
         GetDatabaseRequest request = new GetDatabaseRequest().withName(databaseName);

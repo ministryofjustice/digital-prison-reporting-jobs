@@ -1,7 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -23,6 +21,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,10 +33,11 @@ public class DomainServiceTest extends BaseSparkTest {
     private static final ObjectMapper mapper = new ObjectMapper();
     private final SparkTestHelpers utils = new SparkTestHelpers(spark);
     private static final String hiveDatabaseName = "test_db";
-    private static DomainSchemaService hiveCatalog = null;
+
+    private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
-    private static AWSGlue glueClient = null;
+
 
     @TempDir
     private Path folder;
@@ -44,18 +46,12 @@ public class DomainServiceTest extends BaseSparkTest {
     public static void setUp() {
         logger.info("setup method");
         //instantiate and populate the dependencies
-        glueClient = AWSGlueClientBuilder.defaultClient();
-        hiveCatalog = new DomainSchemaService(glueClient);
-        if (!hiveCatalog.databaseExists(hiveDatabaseName)) {
-            hiveCatalog.createDatabase(hiveDatabaseName);
-        }
+        when(schemaService.databaseExists(any())).thenReturn(true);
+        when(schemaService.tableExists(any(), any())).thenReturn(true);
     }
 
     @AfterAll
     public static void tearDown() {
-        if (hiveCatalog.databaseExists(hiveDatabaseName)) {
-            hiveCatalog.deleteDatabase(hiveDatabaseName, null);
-        }
     }
 
     @Test
@@ -88,8 +84,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -102,7 +98,7 @@ public class DomainServiceTest extends BaseSparkTest {
             fail();
         } finally {
             // Delete the table from Hive
-            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
+            schemaService.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
     }
 
@@ -126,8 +122,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("Domain Refresh process '" + domain.getName() + "' started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -140,7 +136,7 @@ public class DomainServiceTest extends BaseSparkTest {
             fail();
         } finally {
             // Delete the table from Hive
-            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
+            schemaService.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
 
     }
@@ -164,8 +160,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -178,7 +174,7 @@ public class DomainServiceTest extends BaseSparkTest {
             fail();
         } finally {
             // Delete the table from Hive
-            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
+            schemaService.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
     }
 
@@ -201,8 +197,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') update started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -215,7 +211,7 @@ public class DomainServiceTest extends BaseSparkTest {
             fail();
         } finally {
             // Delete the table from Hive
-            hiveCatalog.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
+            schemaService.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
     }
 
@@ -238,8 +234,8 @@ public class DomainServiceTest extends BaseSparkTest {
 
         try {
             logger.info("DomainRefresh::process('" + domain.getName() + "') delete started");
-            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage,
-                    hiveDatabaseName, glueClient, sparkSessionProvider);
+            final DomainExecutor executor = new DomainExecutor(sourcePath, targetPath, storage, schemaService,
+                    hiveDatabaseName, sparkSessionProvider);
             executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
             File emptyCheck = new File(this.folder.toFile().getAbsolutePath() + "/target");
             if (emptyCheck.isDirectory()) {
@@ -257,8 +253,8 @@ public class DomainServiceTest extends BaseSparkTest {
     public void test_hive_create_table()  {
         final String targetPath = this.folder.toFile().getAbsolutePath() + "/target/test/table";
         Dataset<Row> df_test = helpers.createSchemaForTest();
-        hiveCatalog.createTable(hiveDatabaseName, "test.table", targetPath, df_test);
-        hiveCatalog.tableExists(hiveDatabaseName, "test.table");
+        schemaService.createTable(hiveDatabaseName, "test.table", targetPath, df_test);
+        schemaService.tableExists(hiveDatabaseName, "test.table");
     }
 
 }

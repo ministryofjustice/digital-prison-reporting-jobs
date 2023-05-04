@@ -3,6 +3,7 @@ package uk.gov.justice.digital.service;
 import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.repository.DomainRepository;
@@ -17,20 +18,29 @@ public class DomainService {
     private final DomainRepository repo;
     private final DomainExecutor executor;
 
-    protected DataStorageService storage;
+    protected JobParameters parameters;
 
     private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
 
     @Inject
-    public DomainService(DomainRepository repository,
-                         DataStorageService storage,
+    public DomainService(JobParameters parameters,
+                        DomainRepository repository,
                          DomainExecutor executor) {
+        this.parameters = parameters;
         this.repo = repository;
-        this.storage = storage;
         this.executor = executor;
     }
 
-    public void run(
+    public void run() {
+        runInternal(
+                parameters.getDomainRegistry(),
+                parameters.getDomainTableName(),
+                parameters.getDomainName(),
+                parameters.getDomainOperation()
+        );
+    }
+
+    protected void runInternal(
         String domainRegistry,
         String domainTableName,
         String domainName,
