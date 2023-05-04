@@ -109,7 +109,7 @@ public class DomainSchemaService {
                         .withParameters(Collections.singletonMap("classification", "parquet"))
                         .withStorageDescriptor(new StorageDescriptor()
                                 .withColumns(getColumns(dataframe.schema()))
-                                .withLocation(path)
+                                .withLocation(path + "/_symlink_format_manifest")
                                 .withInputFormat("org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat")
                                 .withOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
                                 .withSerdeInfo(new SerDeInfo()
