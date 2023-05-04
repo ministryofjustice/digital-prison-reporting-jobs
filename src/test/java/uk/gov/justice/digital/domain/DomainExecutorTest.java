@@ -48,7 +48,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     @BeforeAll
     public static void setUp() {
         //instantiate and populate the dependencies
-        glueClient = AWSGlueClientBuilder.defaultClient();
+//        glueClient = AWSGlueClientBuilder.defaultClient();
         when(schemaService.databaseExists(any())).thenReturn(true);
     }
 
