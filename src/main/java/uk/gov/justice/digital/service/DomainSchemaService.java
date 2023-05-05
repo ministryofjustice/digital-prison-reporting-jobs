@@ -8,6 +8,8 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.JobClient;
+import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.exception.DomainSchemaException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -50,26 +52,51 @@ public class DomainSchemaService {
     }
 
     // This is needed only for unit testing
-    public void createDatabase(final String databaseName) {
-        // Create a database if it doesn't exist
-        DatabaseInput databaseInput = new DatabaseInput().withName(databaseName);
-        CreateDatabaseRequest createDatabaseRequest = new CreateDatabaseRequest().withDatabaseInput(databaseInput);
-        try {
-            glueClient.createDatabase(createDatabaseRequest);
-        } catch (AlreadyExistsException ae) {
-            logger.error(databaseName + "already exists" + ae.getMessage());
+    public void create(final TableInfo info, final String path, final Dataset<Row> dataFrame)
+            throws DomainSchemaException {
+        if (this.databaseExists(info.getDatabase())) {
+            logger.info("Hive Schema insert started for " + info.getDatabase());
+            if (!this.tableExists(info.getDatabase(),
+                    info.getSchema() + "." + info.getTable())) {
+                this.createTable(info.getDatabase(),
+                        info.getSchema() + "." + info.getTable(), path, dataFrame);
+                logger.info("Creating hive schema completed:" + info.getSchema() + "." + info.getTable());
+            } else {
+                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' already exists");
+            }
+        } else {
+            throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
         }
     }
 
-    // This is needed only for unit testing
-    public void deleteDatabase(final String databaseName, final String catalogId) {
-        DeleteDatabaseRequest deleteRequest = new DeleteDatabaseRequest()
-                .withCatalogId(catalogId)
-                .withName(databaseName);
-        try {
-            glueClient.deleteDatabase(deleteRequest);
-        } catch (Exception e) {
-            logger.error("Unable to delete database '" + databaseName + "': " + e.getMessage());
+    public void replace(final TableInfo info, final String path, final Dataset<Row> dataFrame)
+            throws DomainSchemaException {
+        if (this.databaseExists(info.getDatabase())) {
+            logger.info("Hive Schema insert started for " + info.getDatabase());
+            if (this.tableExists(info.getDatabase(),
+                    info.getSchema() + "." + info.getTable())) {
+                this.updateTable(info.getDatabase(),
+                        info.getSchema() + "." + info.getTable(), path, dataFrame);
+                logger.info("Replacing Hive Schema completed " + info.getSchema() + "." + info.getTable());
+            } else {
+                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
+            }
+        } else {
+            throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
+        }
+    }
+
+    public void drop(final TableInfo info) throws DomainSchemaException {
+        if (this.databaseExists(info.getDatabase())) {
+            if (this.tableExists(info.getDatabase(),
+                    info.getSchema() + "." + info.getTable())) {
+                this.deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
+                logger.info("Dropping Hive Schema completed " +  info.getSchema() + "." + info.getTable());
+            } else {
+                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
+            }
+        } else {
+            throw new DomainSchemaException("Glue catalog " + info.getDatabase() + " doesn't exist");
         }
     }
 
@@ -87,15 +114,15 @@ public class DomainSchemaService {
         }
     }
 
-    public void updateTable(final String databaseName, final String tableName, final String path,
-                            final Dataset<Row> dataframe) {
+    protected void updateTable(final String databaseName, final String tableName, final String path,
+                               final Dataset<Row> dataframe) {
         // First delete the table
         deleteTable(databaseName, tableName);
         // then recreate
         createTable(databaseName, tableName, path, dataframe);
     }
 
-    public void deleteTable(final String databaseName, final String tableName) {
+    protected void deleteTable(final String databaseName, final String tableName) {
         DeleteTableRequest deleteTableRequest = new DeleteTableRequest()
                 .withDatabaseName(databaseName)
                 .withName(tableName);

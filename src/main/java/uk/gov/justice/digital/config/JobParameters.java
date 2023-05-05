@@ -1,13 +1,11 @@
 package uk.gov.justice.digital.config;
 
-import com.amazonaws.services.glue.AWSGlue;
 import lombok.val;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.JobClient;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.AbstractMap;
@@ -21,12 +19,10 @@ public class JobParameters {
     private static final Logger logger = LoggerFactory.getLogger(JobParameters.class);
 
     private final Map<String, String> config;
-    private AWSGlue glueClient;
 
     @Inject
     public JobParameters(JobClient jobClient) {
         this(jobClient.getJobParameters());
-        this.glueClient = jobClient.getGlueClient();
     }
 
     public JobParameters(Map<String, String> config) {
@@ -37,9 +33,6 @@ public class JobParameters {
         logger.info("Job initialised with parameters: {}", config);
     }
 
-    public AWSGlue getGlueClient() {
-        return this.glueClient;
-    }
 
     public String getAwsRegion() {
         return getMandatoryProperty("dpr.aws.region");
