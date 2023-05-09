@@ -73,12 +73,12 @@ public class DomainExecutorTest extends BaseSparkTest {
         List<TableDefinition> tables = domainDefinition.getTables();
 
         final Dataset<Row> df_offender_bookings = helpers.getOffenderBookings(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                         "nomis", "offender_bookings"),
                 df_offender_bookings);
 
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "nomis", "offenders"),
                 df_offenders);
 
@@ -271,7 +271,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainExecutor executor = createExecutor(sourcePath, targetPath, storage);
         // save a source
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "source", "table"), df_offenders);
         final String domainTableName = "prisoner";
         // Insert first
@@ -301,10 +301,10 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainDefinition domain2 = getDomain("/sample/domain/sample-domain-execution-join.json");
         // save a source
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "nomis", "offenders"), df_offenders);
         final Dataset<Row> df_offenderBookings = helpers.getOffenderBookings(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "nomis", "offender_bookings"), df_offenderBookings);
 
         // do Full Materialize of source to target
@@ -340,7 +340,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
         final DomainExecutor executor = createExecutor(sourcePath, targetPath, storage);
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "source", "table"), df_offenders);
         final String domainOperation = "insert";
         final String domainTableName = "prisoner";

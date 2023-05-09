@@ -9,12 +9,9 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.TableInfo;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -56,7 +53,7 @@ public class SparkTestHelpers {
                 "updates.parquet");
     }
 
-    public void saveDataToDisk(final TableInfo location, final Dataset<Row> df) {
+    public void persistDataset(TableInfo location, Dataset<Row> df) {
         DataStorageService deltaService = new DataStorageService();
         String tablePath = deltaService.getTablePath(location.getPrefix(), location.getSchema(), location.getTable());
         deltaService.replace(tablePath, df);
