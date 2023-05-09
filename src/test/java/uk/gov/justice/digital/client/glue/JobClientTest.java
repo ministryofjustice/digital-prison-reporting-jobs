@@ -7,9 +7,9 @@ import com.amazonaws.services.glue.model.Job;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import lombok.val;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.config.JobProperties;
 
 import javax.inject.Inject;
 import java.util.Collections;
@@ -22,26 +22,19 @@ import static org.mockito.Mockito.when;
 @MicronautTest
 class JobClientTest {
 
-    private static final AWSGlue mockClient = mock(AWSGlue.class);
-
-    // TODO - verify that this is safe
-    private static final String SPARK_JOB_NAME_KEY = "spark.glue.JOB_NAME";
     private static final String SPARK_JOB_NAME = "SomeTestJob";
+
+    private static final AWSGlue mockClient = mock(AWSGlue.class);
+    private static final GlueClientProvider mockClientProvider = mock(GlueClientProvider.class);
+    private static final JobProperties mockJobProperties = mock(JobProperties.class);
 
     @Inject
     public JobClient underTest;
 
-    private static final GlueClientProvider mockClientProvider = mock(GlueClientProvider.class);
-
     @BeforeAll
-    public static void setup() {
-        System.setProperty(SPARK_JOB_NAME_KEY, SPARK_JOB_NAME);
+    public static void setupMocks() {
         when(mockClientProvider.getClient()).thenReturn(mockClient);
-    }
-
-    @AfterAll
-    public static void clearProperties() {
-        System.clearProperty(SPARK_JOB_NAME_KEY);
+        when(mockJobProperties.getSparkJobName()).thenReturn(SPARK_JOB_NAME);
     }
 
     @Test
@@ -60,6 +53,11 @@ class JobClientTest {
     @MockBean(GlueClientProvider.class)
     public GlueClientProvider glueClientProvider() {
         return mockClientProvider;
+    }
+
+    @MockBean(JobProperties.class)
+    public JobProperties jobProperties() {
+        return mockJobProperties;
     }
 
 }
