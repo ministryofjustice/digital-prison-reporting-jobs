@@ -25,57 +25,75 @@ import static uk.gov.justice.digital.job.model.Columns.DATA;
 @Singleton
 public class DynamoDBClient {
 
-    private final static ObjectMapper mapper = new ObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
 
     private final static String indexName = "secondaryId-type-index";
     private final static String sortKeyName = "secondaryId";
 
     private final AmazonDynamoDB dynamoDB;
+    ObjectMapper mapper;
 
     @Inject
     public DynamoDBClient(JobParameters jobParameters) {
-        dynamoDB = AmazonDynamoDBClientBuilder.standard()
+        this(AmazonDynamoDBClientBuilder.standard()
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
                         jobParameters.getAwsDynamoDBEndpointUrl(),
                         jobParameters.getAwsRegion()
                 ))
-                .build();
+                .build(), new ObjectMapper());
+    }
+
+    public DynamoDBClient(AmazonDynamoDB dynamoDB, ObjectMapper mapper) {
+        this.dynamoDB = dynamoDB;
+        this.mapper = mapper;
     }
 
     public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId)
             throws PatternSyntaxException {
 
         String[] names = domainId.split("[.]");
-        String domainName = names.length >= 2 ?names[0] :domainId;
+        String domainName = names.length == 2 ? names[0] : domainId;
+        String tableName = names.length == 2 ? names[1] : null;
+        QueryResult response = executeQuery(domainTableName, domainName);
+        return parse(response, tableName);
+    }
 
-        // Set up mapping of the partition name with the value
-        HashMap<String, AttributeValue> attrValues = new HashMap<>();
-        attrValues.put(":"+ sortKeyName, new AttributeValue().withS(domainName));
-
-        QueryRequest queryReq = new QueryRequest()
-                .withTableName(domainTableName)
-                .withIndexName(indexName)
-                .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
-                .withExpressionAttributeValues(attrValues);
-
+    public DomainDefinition parse(QueryResult response, String tableName) {
         DomainDefinition domainDef = null;
-
         try {
-            QueryResult response = dynamoDB.query(queryReq);
-
-            for(Map<String, AttributeValue> items : response.getItems()) {
-                String data = items.get(DATA).getS();
-                domainDef = mapper.readValue(data, DomainDefinition.class);
-                if(names.length >= 2) {
-                    domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(names[1]));
+            if (response != null) {
+                for (Map<String, AttributeValue> items : response.getItems()) {
+                    String data = items.get(DATA).getS();
+                    domainDef = mapper.readValue(data, DomainDefinition.class);
+                    if (tableName != null) {
+                        domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(tableName));
+                    }
                 }
             }
-            return domainDef;
-        } catch (AmazonDynamoDBException | JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             // TODO handle exception properly
             logger.error("DynamoDB request failed:", e);
             return domainDef;
         }
+        return domainDef;
     }
+
+    public QueryResult executeQuery(final String domainTableName, final String domainName) {
+        // Set up mapping of the partition name with the value
+        HashMap<String, AttributeValue> attrValues = new HashMap<>();
+        attrValues.put(":" + sortKeyName, new AttributeValue().withS(domainName));
+        try {
+            QueryRequest queryReq = new QueryRequest()
+                    .withTableName(domainTableName)
+                    .withIndexName(indexName)
+                    .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
+                    .withExpressionAttributeValues(attrValues);
+            return dynamoDB.query(queryReq);
+        } catch (AmazonDynamoDBException e) {
+            // TODO handle exception properly
+            logger.error("DynamoDB request failed:" + e.getMessage());
+            return null;
+        }
+    }
+
 }
