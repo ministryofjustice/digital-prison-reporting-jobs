@@ -12,4 +12,5 @@ public class Properties {
             .orElseThrow(() -> new IllegalStateException("Property " + SPARK_JOB_NAME_PROPERTY + " not set"));
     }
 
+
 }

@@ -6,6 +6,7 @@ import com.amazonaws.services.glue.model.GetJobRequest;
 import com.amazonaws.services.glue.model.GetJobResult;
 import uk.gov.justice.digital.config.Properties;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.Map;
 
@@ -15,6 +16,12 @@ public class JobClient {
     private final AWSGlue glueClient;
     private final String jobName;
 
+    @Inject
+    public JobClient(GlueClientProvider glueClientProvider) {
+        this(glueClientProvider.getClient());
+    }
+
+    @Deprecated
     public JobClient() {
         this(AWSGlueClientBuilder.defaultClient());
     }
@@ -30,6 +37,7 @@ public class JobClient {
         return result.getJob().getDefaultArguments();
     }
 
+    @Deprecated
     public AWSGlue getGlueClient() {
         return glueClient;
     }
