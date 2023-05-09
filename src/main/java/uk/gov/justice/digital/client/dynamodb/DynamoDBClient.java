@@ -61,25 +61,23 @@ public class DynamoDBClient {
             // TODO handle exception properly
             logger.error("DynamoDB request failed:" + e.getMessage());
             return null;
+        } catch (JsonProcessingException e) {
+            // TODO handle exception properly
+            logger.error("DynamoDB request failed:" + e.getMessage());
+            return null;
         }
     }
 
-    public DomainDefinition parse(QueryResult response, String tableName) {
+    public DomainDefinition parse(QueryResult response, String tableName) throws JsonProcessingException {
         DomainDefinition domainDef = null;
-        try {
-            if (response != null) {
-                for (Map<String, AttributeValue> items : response.getItems()) {
-                    String data = items.get(DATA).getS();
-                    domainDef = mapper.readValue(data, DomainDefinition.class);
-                    if (tableName != null) {
-                        domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(tableName));
-                    }
+        if (response != null) {
+            for (Map<String, AttributeValue> items : response.getItems()) {
+                String data = items.get(DATA).getS();
+                domainDef = mapper.readValue(data, DomainDefinition.class);
+                if (tableName != null) {
+                    domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(tableName));
                 }
             }
-        } catch (JsonProcessingException e) {
-            // TODO handle exception properly
-            logger.error("DynamoDB request failed:", e);
-            return domainDef;
         }
         return domainDef;
     }
@@ -95,7 +93,5 @@ public class DynamoDBClient {
                 .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
                 .withExpressionAttributeValues(attrValues);
         return dynamoDB.query(queryReq);
-
     }
-
 }
