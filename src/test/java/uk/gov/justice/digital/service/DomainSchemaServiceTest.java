@@ -59,7 +59,6 @@ public class DomainSchemaServiceTest extends BaseSparkTest {
 
     @Test
     public void shouldReturnFalseIfTableDoesntExist() {
-        final GetTableResult result = new GetTableResult();
         when(mockGlueClient.getTable(any())).thenThrow(new EntityNotFoundException("message"));
         final DomainSchemaService service = new DomainSchemaService(mockGlueClient);
         assertFalse(service.tableExists("name", "table"));

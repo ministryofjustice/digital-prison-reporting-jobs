@@ -33,15 +33,16 @@ public class DomainServiceTest extends BaseSparkTest {
     private static final Logger logger = LoggerFactory.getLogger(DomainServiceTest.class);
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final String hiveDatabaseName = "test_db";
-    private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
+
+    private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
 
     @TempDir
     private Path folder;
 
     @BeforeAll
-    public static void setUp() {
+    public static void setupCommonMocks() {
         when(schemaService.databaseExists(any())).thenReturn(true);
         when(schemaService.tableExists(any(), any())).thenReturn(true);
     }

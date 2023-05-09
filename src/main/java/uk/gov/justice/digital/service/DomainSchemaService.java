@@ -18,14 +18,13 @@ import java.util.Collections;
 @Singleton
 public class DomainSchemaService {
 
-    private static final long serialVersionUID = 1L;
-
     protected final AWSGlue glueClient;
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
 
     @Inject
     public DomainSchemaService(JobClient jobClient) {
+        // TODO - fix this
         this(jobClient.getGlueClient());
     }
 
