@@ -114,18 +114,19 @@ class DynamoDBClientTest {
     void shouldParseQueryResultForGivenDomainAndTableName() throws IOException {
         QueryResult result = mock(QueryResult.class);
         DomainDefinition domainDef =  new DomainDefinition();
-        domainDef.setName("test name");
+        domainDef.setName("living_unit");
         domainDef.setId("123");
         domainDef.setDescription("test description");
         List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {{
             put("data", new AttributeValue()
-                    .withS("{\"id\": \"123\", \"name\": \"test name\", \"description\": \"test description\"}"));
+                    .withS("{\"id\": \"123\", \"name\": \"demographics\", \"description\": \"test description\"}")
+                    .withS("{\"id\": \"123\", \"name\": \"living_unit\", \"description\": \"test description\"}"));
         }});
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
         DomainDefinition expectedDomainDef = dynamoDBClient.parse(result, "demographics");
-        assertEquals(expectedDomainDef.getName(), "test name");
+        assertEquals(expectedDomainDef.getName(), "living_unit");
     }
 
     @Test
