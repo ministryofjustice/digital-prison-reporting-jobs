@@ -28,10 +28,4 @@ public class JobClient {
         return result.getJob().getDefaultArguments();
     }
 
-    // TODO - remove this
-    @Deprecated
-    public AWSGlue getGlueClient() {
-        return glueClient;
-    }
-
 }

@@ -5,36 +5,39 @@ import com.amazonaws.services.glue.model.GetJobRequest;
 import com.amazonaws.services.glue.model.GetJobResult;
 import com.amazonaws.services.glue.model.Job;
 import io.micronaut.test.annotation.MockBean;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import lombok.val;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobProperties;
 
-import javax.inject.Inject;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-@MicronautTest
+@ExtendWith(MockitoExtension.class)
 class JobClientTest {
 
     private static final String SPARK_JOB_NAME = "SomeTestJob";
 
-    private static final AWSGlue mockClient = mock(AWSGlue.class);
-    private static final GlueClientProvider mockClientProvider = mock(GlueClientProvider.class);
-    private static final JobProperties mockJobProperties = mock(JobProperties.class);
+    @Mock
+    private AWSGlue mockClient = mock(AWSGlue.class);
+    @Mock
+    private GlueClientProvider mockClientProvider = mock(GlueClientProvider.class);
+    @Mock
+    private JobProperties mockJobProperties = mock(JobProperties.class);
 
-    @Inject
-    public JobClient underTest;
+    private JobClient underTest;
 
-    @BeforeAll
-    public static void setupMocks() {
+    @BeforeEach
+    public void setupMocks() {
         when(mockClientProvider.getClient()).thenReturn(mockClient);
         when(mockJobProperties.getSparkJobName()).thenReturn(SPARK_JOB_NAME);
+        underTest = new JobClient(mockClientProvider, mockJobProperties);
     }
 
     @Test
@@ -48,6 +51,8 @@ class JobClientTest {
         val result = underTest.getJobParameters();
 
         assertEquals(fakeJobParameters, result);
+
+        verify(mockClient, times(1)).getJob(eq(expectedRequest));
     }
 
     @MockBean(GlueClientProvider.class)
