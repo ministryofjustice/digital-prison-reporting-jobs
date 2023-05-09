@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,57 +16,36 @@ import uk.gov.justice.digital.domain.DomainExecutorTest;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class DomainServiceTest extends BaseSparkTest {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainServiceTest.class);
     private static final ObjectMapper mapper = new ObjectMapper();
-    private final SparkTestHelpers utils = new SparkTestHelpers(spark);
     private static final String hiveDatabaseName = "test_db";
-
-    private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
 
+    private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
 
     @TempDir
     private Path folder;
 
     @BeforeAll
-    public static void setUp() {
-        logger.info("setup method");
-        //instantiate and populate the dependencies
+    public static void setupCommonMocks() {
         when(schemaService.databaseExists(any())).thenReturn(true);
         when(schemaService.tableExists(any(), any())).thenReturn(true);
     }
-
-    @AfterAll
-    public static void tearDown() {
-    }
-
-    @Test
-    public void test_tempFolder() {
-        assertNotNull(this.folder);
-    }
-
-    private DomainExecutor createExecutor(final String source, final String target, final DataStorageService storage) {
-        return new DomainExecutor(source, target, storage, schemaService, hiveDatabaseName, sparkSessionProvider);
-    }
-
-    private DomainDefinition getDomain(final String resource) throws IOException {
-        val json = ResourceLoader.getResource(DomainExecutorTest.class, resource);
-        return mapper.readValue(json, DomainDefinition.class);
-    }
-
 
     @Test
     public void test_incident_domain() throws IOException {
@@ -78,12 +56,12 @@ public class DomainServiceTest extends BaseSparkTest {
         final DomainDefinition domain = getDomain("/sample/domain/incident_domain.json");
         final DataStorageService storage = new DataStorageService();
 
-        final Dataset<Row> df_offenders = utils.getOffenders(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offenders"),
+        final Dataset<Row> df_offenders = helpers.getOffenders(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offenders"),
                 df_offenders);
 
-        final Dataset<Row> df_offenderBookings = utils.getOffenderBookings(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offender_bookings"),
+        final Dataset<Row> df_offenderBookings = helpers.getOffenderBookings(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "offender_bookings"),
                 df_offenderBookings);
 
         try {
@@ -100,7 +78,6 @@ public class DomainServiceTest extends BaseSparkTest {
             logger.info("DomainRefresh::process('" + domain.getName() + "') failed");
             fail();
         } finally {
-            // Delete the table from Hive
             schemaService.deleteTable(hiveDatabaseName, domain.getName() + "." + domainTableName);
         }
     }
@@ -114,12 +91,12 @@ public class DomainServiceTest extends BaseSparkTest {
         final DomainDefinition domain = getDomain("/sample/domain/establishment.domain.json");
         final DataStorageService storage = new DataStorageService();
 
-        final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
-        final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis",
+        final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis",
                         "agency_internal_locations"),
                 df_internal_agency_locations);
 
@@ -152,12 +129,12 @@ public class DomainServiceTest extends BaseSparkTest {
         final DomainDefinition domain = getDomain("/sample/domain/establishment.domain.json");
         final DataStorageService storage = new DataStorageService();
 
-        final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
-        final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
+        final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
@@ -188,12 +165,12 @@ public class DomainServiceTest extends BaseSparkTest {
         final DomainDefinition domain = getDomain("/sample/domain/establishment.domain.json");
         final DataStorageService storage = new DataStorageService();
 
-        final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
-        final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
+        final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
@@ -224,12 +201,12 @@ public class DomainServiceTest extends BaseSparkTest {
         final DomainDefinition domain = getDomain("/sample/domain/establishment.domain.json");
         final DataStorageService storage = new DataStorageService();
 
-        final Dataset<Row> df_agency_locations = utils.getAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
-        final Dataset<Row> df_internal_agency_locations = utils.getInternalAgencyLocations(folder);
-        utils.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
+        final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
@@ -254,6 +231,15 @@ public class DomainServiceTest extends BaseSparkTest {
         Dataset<Row> df_test = helpers.createSchemaForTest();
         schemaService.createTable(hiveDatabaseName, "test.table", targetPath, df_test);
         schemaService.tableExists(hiveDatabaseName, "test.table");
+    }
+
+    private DomainExecutor createExecutor(String source, String target, DataStorageService storage) {
+        return new DomainExecutor(source, target, storage, schemaService, hiveDatabaseName, sparkSessionProvider);
+    }
+
+    private DomainDefinition getDomain(String resource) throws IOException {
+        val json = ResourceLoader.getResource(DomainExecutorTest.class, resource);
+        return mapper.readValue(json, DomainDefinition.class);
     }
 
 }

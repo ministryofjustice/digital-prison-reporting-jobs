@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
 
+// TODO - review usage of this code
 public class ResourceLoader {
 	
 	@SuppressWarnings("deprecation")
@@ -23,7 +24,7 @@ public class ResourceLoader {
 				stream = System.class.getResourceAsStream("/target/test-classes" + resource);
 				if(stream == null) {
 					Path root = Paths.get(".").normalize().toAbsolutePath();
-					stream = System.class.getResourceAsStream(root.toString() + "/src/test/resources" + resource);
+					stream = System.class.getResourceAsStream(root + "/src/test/resources" + resource);
 					if(stream == null) {
 						stream = clazz.getResourceAsStream(resource);
 					}
