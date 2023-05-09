@@ -54,8 +54,14 @@ public class DynamoDBClient {
         String[] names = domainId.split("[.]");
         String domainName = names.length == 2 ? names[0] : domainId;
         String tableName = names.length == 2 ? names[1] : null;
-        QueryResult response = executeQuery(domainTableName, domainName);
-        return parse(response, tableName);
+        try {
+            QueryResult response = executeQuery(domainTableName, domainName);
+            return parse(response, tableName);
+        } catch (AmazonDynamoDBException e) {
+            // TODO handle exception properly
+            logger.error("DynamoDB request failed:" + e.getMessage());
+            return null;
+        }
     }
 
     public DomainDefinition parse(QueryResult response, String tableName) {
@@ -78,22 +84,18 @@ public class DynamoDBClient {
         return domainDef;
     }
 
-    public QueryResult executeQuery(final String domainTableName, final String domainName) {
+    public QueryResult executeQuery(final String domainTableName, final String domainName)
+            throws AmazonDynamoDBException{
         // Set up mapping of the partition name with the value
         HashMap<String, AttributeValue> attrValues = new HashMap<>();
         attrValues.put(":" + sortKeyName, new AttributeValue().withS(domainName));
-        try {
-            QueryRequest queryReq = new QueryRequest()
-                    .withTableName(domainTableName)
-                    .withIndexName(indexName)
-                    .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
-                    .withExpressionAttributeValues(attrValues);
-            return dynamoDB.query(queryReq);
-        } catch (AmazonDynamoDBException e) {
-            // TODO handle exception properly
-            logger.error("DynamoDB request failed:" + e.getMessage());
-            return null;
-        }
+        QueryRequest queryReq = new QueryRequest()
+                .withTableName(domainTableName)
+                .withIndexName(indexName)
+                .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
+                .withExpressionAttributeValues(attrValues);
+        return dynamoDB.query(queryReq);
+
     }
 
 }
