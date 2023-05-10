@@ -35,6 +35,8 @@ import static org.mockito.Mockito.*;
 public class DomainExecutorTest extends BaseSparkTest {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutorTest.class);
+    private static final ObjectMapper mapper = new ObjectMapper();
+
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final String hiveDatabaseName = "test_db";
@@ -465,13 +467,11 @@ public class DomainExecutorTest extends BaseSparkTest {
         return null;
     }
 
-    protected DomainDefinition getDomain(final String resource) throws IOException {
-        final ObjectMapper mapper = new ObjectMapper();
-        final String json = ResourceLoader.getResource(DomainExecutorTest.class, resource);
-        return mapper.readValue(json, DomainDefinition.class);
+    private DomainDefinition getDomain(String resource) throws IOException {
+        return mapper.readValue(ResourceLoader.getResource(resource), DomainDefinition.class);
     }
 
-    protected boolean areEqual(final Dataset<Row> a, final Dataset<Row> b) {
+    private boolean areEqual(final Dataset<Row> a, final Dataset<Row> b) {
         if(!a.schema().equals(b.schema()))
             return false;
         final List<Row> al = a.collectAsList();

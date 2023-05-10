@@ -34,7 +34,7 @@ public class SourceReferenceService {
         return Optional.ofNullable(sources.get(generateKey(source, table)));
     }
 
-    private static StructType getSchemaFromResource(final String resource) {
+    private static StructType getSchemaFromResource(String resource) {
         return (StructType) Optional.ofNullable(System.class.getResourceAsStream(resource))
             .map(SourceReferenceService::readInputStream)
             .map(StructType::fromJson)

@@ -55,7 +55,7 @@ public class SparkTestHelpers {
 
     public void persistDataset(HiveTableIdentifier location, Dataset<Row> df) {
         DataStorageService deltaService = new DataStorageService();
-        String tablePath = deltaService.getTablePath(location.getPrefix(), location.getSchema(), location.getTable());
+        String tablePath = deltaService.getTablePath(location.getBasePath(), location.getSchema(), location.getTable());
         deltaService.replace(tablePath, df);
     }
 

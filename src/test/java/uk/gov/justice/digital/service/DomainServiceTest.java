@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -244,9 +245,8 @@ public class DomainServiceTest extends BaseSparkTest {
         return new DomainExecutor(mockJobParameters, storage, schemaService, sparkSessionProvider);
     }
 
-    private DomainDefinition getDomain(String resource) throws IOException {
-        val json = ResourceLoader.getResource(DomainExecutorTest.class, resource);
-        return mapper.readValue(json, DomainDefinition.class);
+    private DomainDefinition getDomain(String resource) throws JsonProcessingException {
+        return mapper.readValue(ResourceLoader.getResource(resource), DomainDefinition.class);
     }
 
 }

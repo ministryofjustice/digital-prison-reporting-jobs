@@ -56,7 +56,7 @@ public class DomainExecutor {
     protected void insertTable(HiveTableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: insertTable");
-        String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         logger.info("Domain insert to disk started");
         try {
             if (!storage.exists(spark, info)) {
@@ -74,7 +74,7 @@ public class DomainExecutor {
     protected void updateTable(HiveTableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: updateTable");
-        String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         try {
             if (storage.exists(spark, info)) {
                 storage.replace(tablePath, dataFrame);
@@ -91,7 +91,7 @@ public class DomainExecutor {
     protected void syncTable(HiveTableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: syncTable");
-        String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         if (storage.exists(spark, info)) {
             storage.reload(tablePath, dataFrame);
             logger.info("Syncing delta table completed..." + info.getTable());
@@ -134,7 +134,7 @@ public class DomainExecutor {
     }
 
     protected void saveViolations(HiveTableIdentifier target, Dataset<Row> dataFrame) {
-        String tablePath = storage.getTablePath(target.getPrefix(), target.getSchema(), target.getTable());
+        String tablePath = storage.getTablePath(target.getBasePath(), target.getSchema(), target.getTable());
         // save the violations to the specified location
         storage.append(tablePath, dataFrame);
         storage.endTableUpdates(spark, target);

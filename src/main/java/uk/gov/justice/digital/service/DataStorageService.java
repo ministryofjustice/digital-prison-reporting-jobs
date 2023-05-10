@@ -17,7 +17,7 @@ public class DataStorageService {
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     public boolean exists(final SparkSession spark, final HiveTableIdentifier info) {
-        return DeltaTable.isDeltaTable(spark, getTablePath(info.getPrefix(), info.getSchema(), info.getTable()));
+        return DeltaTable.isDeltaTable(spark, getTablePath(info.getBasePath(), info.getSchema(), info.getTable()));
     }
 
     public String getTablePath(String prefix, SourceReference ref, String operation) {
@@ -70,7 +70,7 @@ public class DataStorageService {
 
     public void delete(final SparkSession spark, final HiveTableIdentifier info) {
         logger.info("deleting Delta table..." + info.getTable());
-        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         if(deltaTable != null) {
             deltaTable.delete();
@@ -78,7 +78,7 @@ public class DataStorageService {
     }
 
     public void vacuum(final SparkSession spark, final HiveTableIdentifier info) {
-        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         if(deltaTable != null) {
             deltaTable.vacuum();
@@ -86,7 +86,7 @@ public class DataStorageService {
     }
 
     public Dataset<Row> load(final SparkSession spark, final HiveTableIdentifier info) {
-        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         return deltaTable == null ? null : deltaTable.toDF();
     }
@@ -101,7 +101,7 @@ public class DataStorageService {
     }
 
     public void endTableUpdates(final SparkSession spark, final HiveTableIdentifier info) {
-        String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         updateManifest(deltaTable);
     }

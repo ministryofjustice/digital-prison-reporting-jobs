@@ -4,9 +4,9 @@ import lombok.Data;
 
 @Data
 public class HiveTableIdentifier {
-    private final String prefix;    // TODO - This is a filesystem prefix - could (should?) be a Path
-    private final String database;
-    private final String schema;
-    private final String table;
+    private final String basePath;  // Base path on filesystem where table data is located
+    private final String database;  // Hive database name
+    private final String schema;    // Schema name
+    private final String table;     // Hive table name
 }
 
