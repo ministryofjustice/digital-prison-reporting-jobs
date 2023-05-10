@@ -67,7 +67,6 @@ class DynamoDBClientTest {
 
 
     @Test
-    @SuppressWarnings("serial")
     void shouldReturnDomainDefinitionForGivenDomain() throws IOException {
         DomainDefinition domainDef =  new DomainDefinition();
         domainDef.setName("test name");
@@ -75,7 +74,9 @@ class DynamoDBClientTest {
         domainDef.setDescription("test description");
         QueryResult result = mock(QueryResult.class);
         when(dynamoDBClient.executeQuery("test", "incident")).thenReturn(result);
-        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {{
+        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
+            static final long serialVersionUID = 1;
+            {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"test name\", \"description\": \"test description\"}"));
         }});
@@ -91,14 +92,15 @@ class DynamoDBClientTest {
 
 
     @Test
-    @SuppressWarnings("serial")
     void shouldParseQueryResultForGivenDomainName() throws IOException {
         QueryResult result = mock(QueryResult.class);
         DomainDefinition domainDef =  new DomainDefinition();
         domainDef.setName("test name");
         domainDef.setId("123");
         domainDef.setDescription("test description");
-        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {{
+        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
+            static final long serialVersionUID = 1;
+            {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"test name\", \"description\": \"test description\"}"));
         }});
@@ -110,14 +112,15 @@ class DynamoDBClientTest {
     }
 
     @Test
-    @SuppressWarnings("serial")
     void shouldParseQueryResultForGivenDomainAndTableName() throws IOException {
         QueryResult result = mock(QueryResult.class);
         DomainDefinition domainDef =  new DomainDefinition();
         domainDef.setName("living_unit");
         domainDef.setId("123");
         domainDef.setDescription("test description");
-        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {{
+        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
+            static final long serialVersionUID = 1;
+            {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"demographics\", \"description\": \"test description\"}")
                     .withS("{\"id\": \"123\", \"name\": \"living_unit\", \"description\": \"test description\"}"));
@@ -130,14 +133,15 @@ class DynamoDBClientTest {
     }
 
     @Test
-    @SuppressWarnings("serial")
     void shouldParseQueryResultProducesException() throws IOException {
         QueryResult result = mock(QueryResult.class);
         DomainDefinition domainDef =  new DomainDefinition();
         domainDef.setName("test name");
         domainDef.setId("123");
         domainDef.setDescription("test description");
-        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {{
+        List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
+            static final long serialVersionUID = 1;
+            {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"test name\", \"description\": \"test description\"}"));
         }});
@@ -151,6 +155,5 @@ class DynamoDBClientTest {
             logger.error("JSON Parser failure" + e.getMessage());
             assertTrue(true);
         }
-
     }
 }
