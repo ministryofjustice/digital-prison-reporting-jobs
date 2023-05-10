@@ -2,6 +2,7 @@ package uk.gov.justice.digital.domain;
 
 
 import lombok.val;
+import lombok.var;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -41,33 +42,18 @@ public class DomainExecutor {
                           SparkSessionProvider sparkSessionProvider
                           ) {
 
-        this(   jobParameters.getCuratedS3Path(),
-                jobParameters.getDomainTargetPath(),
-                storage,
-                schema,
-                jobParameters.getCatalogDatabase()
-                        .orElseThrow(() -> new IllegalStateException(
-                                "Hive Catalog database not set - unable to create Hive Catalog schema"
-                        )),
-                sparkSessionProvider
-        );
-    }
-
-    public DomainExecutor(String sourceRootPath,
-                          String targetRootPath,
-                          DataStorageService storage,
-                          DomainSchemaService schema,
-                          String hiveDatabaseName,
-                          SparkSessionProvider sparkSessionProvider) {
-        this.sourceRootPath = sourceRootPath;
-        this.targetRootPath = targetRootPath;
+        this.sourceRootPath = jobParameters.getCuratedS3Path();
+        this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
-        this.hiveDatabaseName = hiveDatabaseName;
+        this.hiveDatabaseName = jobParameters.getCatalogDatabase()
+            .orElseThrow(() -> new IllegalStateException(
+                "Hive Catalog database not set - unable to create Hive Catalog schema"
+            ));
         this.schema = schema;
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
-    protected void insertTable(final TableInfo info, final Dataset<Row> dataFrame)
+    protected void insertTable(TableInfo info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: insertTable");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
@@ -85,7 +71,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void updateTable(final TableInfo info, final Dataset<Row> dataFrame)
+    protected void updateTable(TableInfo info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: updateTable");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
@@ -102,7 +88,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void syncTable(final TableInfo info, final Dataset<Row> dataFrame)
+    protected void syncTable(TableInfo info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: syncTable");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
@@ -114,7 +100,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void deleteTable(final TableInfo info) throws DomainExecutorException {
+    protected void deleteTable(TableInfo info) throws DomainExecutorException {
         logger.info("DomainOperations:: deleteSchemaAndTableData");
         try {
             if (storage.exists(spark, info)) {
@@ -129,8 +115,8 @@ public class DomainExecutor {
         }
     }
 
-    protected void saveTable(final TableInfo info, final Dataset<Row> dataFrame,
-                             final String domainOperation)
+    protected void saveTable(TableInfo info, Dataset<Row> dataFrame,
+                             String domainOperation)
             throws DomainExecutorException {
         logger.info("DomainOperations::saveTable");
         if (domainOperation.equalsIgnoreCase("insert")) {
@@ -147,20 +133,22 @@ public class DomainExecutor {
         storage.endTableUpdates(spark, info);
     }
 
-    protected void saveViolations(final TableInfo target, final Dataset<Row> dataFrame) {
+    protected void saveViolations(TableInfo target, Dataset<Row> dataFrame) {
         String tablePath = storage.getTablePath(target.getPrefix(), target.getSchema(), target.getTable());
         // save the violations to the specified location
         storage.append(tablePath, dataFrame);
         storage.endTableUpdates(spark, target);
     }
 
-    public Dataset<Row> getAllSourcesForTable(final String sourcePath, final String source,
-                                              final TableTuple exclude) throws DomainExecutorException {
+    public Dataset<Row> getAllSourcesForTable(String sourcePath, String source,
+                                              TableTuple exclude) throws DomainExecutorException {
         if(exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
-                final Dataset<Row> dataFrame = storage.load(spark,
-                        TableInfo.create(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable()));
+                Dataset<Row> dataFrame = storage.load(
+                    spark,
+                    new TableInfo(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable())
+                );
                 if(dataFrame != null) {
                     logger.info("Loaded source '" + full.asString() +"'.");
                     return dataFrame;
@@ -180,27 +168,32 @@ public class DomainExecutor {
     }
 
 
-    protected Dataset<Row> applyViolations(final Dataset<Row> dataFrame, final List<ViolationDefinition> violations) {
-        Dataset<Row> sourceDataframe = dataFrame;
-        for (final ViolationDefinition violation : violations) {
-            final String applyCondition = violation.getCheck();
-            final Dataset<Row> violationsDataframe = sourceDataframe.where(applyCondition).toDF();
-            if (!violationsDataframe.isEmpty()) {
+    protected Dataset<Row> applyViolations(Dataset<Row> dataFrame, List<ViolationDefinition> violations) {
+        var sourceDataframe = dataFrame;
+        for (val violation : violations) {
+            val applyCondition = violation.getCheck();
+            val violationsDataframe = sourceDataframe.where(applyCondition).toDF();
+            if (violationsDataframe.isEmpty()) {
+                logger.info("No Violation records found for condition " + applyCondition);
+            }
+            else {
                 logger.info("Removing violation records");
-                TableInfo info = TableInfo.create(targetRootPath, hiveDatabaseName,
-                        violation.getLocation(), violation.getName());
+                TableInfo info = new TableInfo(
+                    targetRootPath,
+                    hiveDatabaseName,
+                    violation.getLocation(),
+                    violation.getName()
+                );
                 saveViolations(info, violationsDataframe);
                 sourceDataframe = sourceDataframe.except(violationsDataframe);
-            } else {
-                logger.info("No Violation records found for condition " + applyCondition);
             }
         }
         return sourceDataframe;
     }
 
-    protected Dataset<Row> applyTransform(final Map<String, Dataset<Row>> dfs, final TransformDefinition transform)
+    protected Dataset<Row> applyTransform(Map<String, Dataset<Row>> dfs, TransformDefinition transform)
             throws DomainExecutorException {
-        final List<String> srcs = new ArrayList<>();
+        List<String> srcs = new ArrayList<>();
         String view = transform.getViewText().toLowerCase();
         try {
             if (view.isEmpty()) {
@@ -208,9 +201,9 @@ public class DomainExecutor {
                 throw new DomainExecutorException("View text is empty");
             }
 
-            for (final String source : transform.getSources()) {
-                final String src = source.toLowerCase().replace(".", "__");
-                final Dataset<Row> df_source = dfs.get(source);
+            for (String source : transform.getSources()) {
+                String src = source.toLowerCase().replace(".", "__");
+                Dataset<Row> df_source = dfs.get(source);
                 if (df_source != null) {
                     df_source.createOrReplaceTempView(src);
                     logger.info("Added view '" + src + "'");
@@ -228,14 +221,14 @@ public class DomainExecutor {
             return validateSQLAndExecute(view);
         } finally {
             if (!view.isEmpty()) {
-                for (final String source : srcs) {
+                for (String source : srcs) {
                     spark.catalog().dropTempView(source);
                 }
             }
         }
     }
 
-    private Dataset<Row> validateSQLAndExecute(final String query) {
+    private Dataset<Row> validateSQLAndExecute(String query) {
         Dataset<Row> dataframe = null;
         if (!query.isEmpty()) {
             try {
@@ -250,7 +243,7 @@ public class DomainExecutor {
 
 
     // TODO: Mapping will be enhanced at later stage in future user stories
-    protected Dataset<Row> applyMappings(final Dataset<Row> dataFrame, final TableDefinition.MappingDefinition mapping) {
+    protected Dataset<Row> applyMappings(Dataset<Row> dataFrame, TableDefinition.MappingDefinition mapping) {
         if(mapping != null && mapping.getViewText() != null && !mapping.getViewText().isEmpty()
                 && !dataFrame.isEmpty()) {
             return dataFrame.sqlContext().sql(mapping.getViewText()).toDF();
@@ -258,7 +251,7 @@ public class DomainExecutor {
         return dataFrame;
     }
 
-    public Dataset<Row> apply(final TableDefinition table, final Map<String, Dataset<Row>> sourceTableMap)
+    public Dataset<Row> apply(TableDefinition table, Map<String, Dataset<Row>> sourceTableMap)
             throws DomainExecutorException {
         try {
 
@@ -270,7 +263,7 @@ public class DomainExecutor {
                 refs.putAll(sourceTableMap);
             } else if(table.getTransform() != null && table.getTransform().getSources() != null
                     && table.getTransform().getSources().size() > 0) {
-                for (final String source : table.getTransform().getSources()) {
+                for (String source : table.getTransform().getSources()) {
                     Dataset<Row> sourceDataFrame = this.getAllSourcesForTable(sourceRootPath, source, null);
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
@@ -287,11 +280,11 @@ public class DomainExecutor {
 
 
             logger.info("'" + table.getName() + "' has " + refs.size() + " references to tables...");
-            final Dataset<Row> transformedDataFrame = applyTransform(refs, table.getTransform());
+            Dataset<Row> transformedDataFrame = applyTransform(refs, table.getTransform());
 
             logger.info("Apply Violations for " + table.getName() + "...");
             // Process Violations - we now have a subset
-            final Dataset<Row> postViolationsDataFrame = applyViolations(transformedDataFrame, table.getViolations());
+            Dataset<Row> postViolationsDataFrame = applyViolations(transformedDataFrame, table.getViolations());
 
             logger.info("Apply Mappings for " + table.getName() + "...");
             // Mappings
@@ -328,13 +321,24 @@ public class DomainExecutor {
                     // TODO no source table and df they are required only for unit testing
                     val dfTarget = apply(table, null);
                     saveTable(
-                        TableInfo.create(targetRootPath, hiveDatabaseName,
-                                domainDefinition.getName(), table.getName()), dfTarget, domainOperation);
+                        new TableInfo(
+                            targetRootPath,
+                            hiveDatabaseName,
+                            domainDefinition.getName(),
+                            table.getName()
+                        ),
+                        dfTarget,
+                        domainOperation
+                    );
                 }
             } else if (domainOperation.equalsIgnoreCase("delete")) {
                 logger.info("domain operation is delete");
-                deleteTable(TableInfo.create(targetRootPath, hiveDatabaseName,
-                        domainName, domainTableName));
+                deleteTable(new TableInfo(
+                    targetRootPath,
+                    hiveDatabaseName,
+                    domainName,
+                    domainTableName
+                ));
             } else {
                 val message = "Unsupported domain operation: '" + domainOperation + "'";
                 logger.error(message);
@@ -345,7 +349,7 @@ public class DomainExecutor {
         }
     }
 
-    private boolean schemaContains(final Dataset<Row> dataFrame, final String field) {
+    private boolean schemaContains(Dataset<Row> dataFrame, String field) {
         return Arrays.asList(dataFrame.schema().fieldNames()).contains(field);
     }
 }
