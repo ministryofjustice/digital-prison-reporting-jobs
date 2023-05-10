@@ -72,9 +72,7 @@ public class DataStorageService {
         logger.info("deleting Delta table..." + info.getTable());
         String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
-        System.out.println("AAAAAAA");
         if(deltaTable != null) {
-            System.out.println("AAAAAAA");
             deltaTable.delete();
         }
     }
