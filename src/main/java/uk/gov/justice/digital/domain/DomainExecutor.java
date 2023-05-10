@@ -53,7 +53,7 @@ public class DomainExecutor {
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
-    protected void insertTable(TableInfo info, Dataset<Row> dataFrame)
+    protected void insertTable(HiveTableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: insertTable");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
@@ -71,7 +71,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void updateTable(TableInfo info, Dataset<Row> dataFrame)
+    protected void updateTable(HiveTableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: updateTable");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
@@ -88,7 +88,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void syncTable(TableInfo info, Dataset<Row> dataFrame)
+    protected void syncTable(HiveTableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: syncTable");
         String tablePath = storage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
@@ -100,7 +100,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void deleteTable(TableInfo info) throws DomainExecutorException {
+    protected void deleteTable(HiveTableIdentifier info) throws DomainExecutorException {
         logger.info("DomainOperations:: deleteSchemaAndTableData");
         try {
             if (storage.exists(spark, info)) {
@@ -115,7 +115,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void saveTable(TableInfo info, Dataset<Row> dataFrame,
+    protected void saveTable(HiveTableIdentifier info, Dataset<Row> dataFrame,
                              String domainOperation)
             throws DomainExecutorException {
         logger.info("DomainOperations::saveTable");
@@ -133,7 +133,7 @@ public class DomainExecutor {
         storage.endTableUpdates(spark, info);
     }
 
-    protected void saveViolations(TableInfo target, Dataset<Row> dataFrame) {
+    protected void saveViolations(HiveTableIdentifier target, Dataset<Row> dataFrame) {
         String tablePath = storage.getTablePath(target.getPrefix(), target.getSchema(), target.getTable());
         // save the violations to the specified location
         storage.append(tablePath, dataFrame);
@@ -147,7 +147,7 @@ public class DomainExecutor {
                 TableTuple full = new TableTuple(source);
                 Dataset<Row> dataFrame = storage.load(
                     spark,
-                    new TableInfo(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable())
+                    new HiveTableIdentifier(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable())
                 );
                 if(dataFrame != null) {
                     logger.info("Loaded source '" + full.asString() +"'.");
@@ -178,7 +178,7 @@ public class DomainExecutor {
             }
             else {
                 logger.info("Removing violation records");
-                TableInfo info = new TableInfo(
+                HiveTableIdentifier info = new HiveTableIdentifier(
                     targetRootPath,
                     hiveDatabaseName,
                     violation.getLocation(),
@@ -321,7 +321,7 @@ public class DomainExecutor {
                     // TODO no source table and df they are required only for unit testing
                     val dfTarget = apply(table, null);
                     saveTable(
-                        new TableInfo(
+                        new HiveTableIdentifier(
                             targetRootPath,
                             hiveDatabaseName,
                             domainDefinition.getName(),
@@ -333,7 +333,7 @@ public class DomainExecutor {
                 }
             } else if (domainOperation.equalsIgnoreCase("delete")) {
                 logger.info("domain operation is delete");
-                deleteTable(new TableInfo(
+                deleteTable(new HiveTableIdentifier(
                     targetRootPath,
                     hiveDatabaseName,
                     domainName,

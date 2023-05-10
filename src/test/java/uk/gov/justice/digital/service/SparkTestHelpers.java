@@ -9,7 +9,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.domain.model.HiveTableIdentifier;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -53,7 +53,7 @@ public class SparkTestHelpers {
                 "updates.parquet");
     }
 
-    public void persistDataset(TableInfo location, Dataset<Row> df) {
+    public void persistDataset(HiveTableIdentifier location, Dataset<Row> df) {
         DataStorageService deltaService = new DataStorageService();
         String tablePath = deltaService.getTablePath(location.getPrefix(), location.getSchema(), location.getTable());
         deltaService.replace(tablePath, df);

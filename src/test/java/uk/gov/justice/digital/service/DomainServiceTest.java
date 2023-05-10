@@ -15,7 +15,7 @@ import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.DomainExecutorTest;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.domain.model.HiveTableIdentifier;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import java.io.File;
@@ -59,11 +59,11 @@ public class DomainServiceTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "offenders"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "offenders"),
                 df_offenders);
 
         final Dataset<Row> df_offenderBookings = helpers.getOffenderBookings(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "offender_bookings"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "offender_bookings"),
                 df_offenderBookings);
 
         try {
@@ -94,11 +94,11 @@ public class DomainServiceTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis",
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis",
                         "agency_internal_locations"),
                 df_internal_agency_locations);
 
@@ -132,11 +132,11 @@ public class DomainServiceTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
@@ -168,11 +168,11 @@ public class DomainServiceTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
@@ -204,11 +204,11 @@ public class DomainServiceTest extends BaseSparkTest {
         final DataStorageService storage = new DataStorageService();
 
         final Dataset<Row> df_agency_locations = helpers.getAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "agency_locations"),
                 df_agency_locations);
 
         final Dataset<Row> df_internal_agency_locations = helpers.getInternalAgencyLocations(folder);
-        helpers.persistDataset(new TableInfo(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
+        helpers.persistDataset(new HiveTableIdentifier(sourcePath, hiveDatabaseName, "nomis", "agency_internal_locations"),
                 df_internal_agency_locations);
 
         try {
