@@ -75,6 +75,9 @@ dependencies {
     // https://mvnrepository.com/artifact/org.mockito/mockito-inline
     testImplementation 'org.mockito:mockito-inline:4.11.0'
     testImplementation "io.mockk:mockk:1.13.5"
+    testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
+
+
 
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
