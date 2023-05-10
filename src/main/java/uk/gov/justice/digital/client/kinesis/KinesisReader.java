@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.config.Properties;
+import uk.gov.justice.digital.config.JobProperties;
 
 @Bean
 public class KinesisReader {
@@ -24,8 +24,9 @@ public class KinesisReader {
     private final JavaDStream<byte[]> kinesisStream;
 
     @Inject
-    public KinesisReader(JobParameters jobParameters) {
-        String jobName = Properties.getSparkJobName();
+    public KinesisReader(JobParameters jobParameters,
+                         JobProperties jobProperties) {
+        String jobName = jobProperties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
             new SparkConf().setAppName(jobName),

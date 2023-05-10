@@ -2,63 +2,55 @@ package uk.gov.justice.digital.service;
 
 import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.model.*;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.glue.JobClient;
+import uk.gov.justice.digital.client.glue.GlueClientProvider;
 import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.exception.DomainSchemaException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
+// TODO - this should not use the glueClient directly
 @Singleton
 public class DomainSchemaService {
 
-    private static final long serialVersionUID = 1L;
+    private static final Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
 
-    protected final AWSGlue glueClient;
-
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
+    private final AWSGlue glueClient;
 
     @Inject
-    public DomainSchemaService(JobClient jobClient) {
-        this(jobClient.getGlueClient());
+    public DomainSchemaService(GlueClientProvider glueClientProvider) {
+        this.glueClient = glueClientProvider.getClient();
     }
-
-    protected DomainSchemaService(AWSGlue client) {
-        this.glueClient = client;
-    }
-
 
     public boolean databaseExists(String databaseName) {
         GetDatabaseRequest request = new GetDatabaseRequest().withName(databaseName);
+        GetDatabaseResult result = glueClient.getDatabase(request);
 
-        try {
-            GetDatabaseResult result = glueClient.getDatabase(request);
-            Database db = result.getDatabase();
-            if (db != null && db.getName().equals(databaseName)) {
-                logger.info("Hive Catalog Database '" + databaseName + "' found");
-                return Boolean.TRUE;
-            }
-        } catch (Exception e) {
-            logger.error("Hive Catalog Database check failed :" + e.getMessage());
-            return Boolean.FALSE;
-        }
-        return Boolean.FALSE;
+        return Optional.ofNullable(result.getDatabase())
+            .map(Database::getName)
+            .filter(n -> n.equals(databaseName))
+            .isPresent();
     }
 
+    // TODO - is the entire method only needed for testing or some condition within it?
     // This is needed only for unit testing
-    public void create(final TableInfo info, final String path, final Dataset<Row> dataFrame)
-            throws DomainSchemaException {
-        if (this.databaseExists(info.getDatabase())) {
+    public void create(TableInfo info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
+        if (databaseExists(info.getDatabase())) {
             logger.info("Hive Schema insert started for " + info.getDatabase());
-            if (!this.tableExists(info.getDatabase(),
+            if (!tableExists(info.getDatabase(),
                     info.getSchema() + "." + info.getTable())) {
-                this.createTable(info.getDatabase(),
+                createTable(info.getDatabase(),
                         info.getSchema() + "." + info.getTable(), path, dataFrame);
                 logger.info("Creating hive schema completed:" + info.getSchema() + "." + info.getTable());
             } else {
@@ -69,13 +61,12 @@ public class DomainSchemaService {
         }
     }
 
-    public void replace(final TableInfo info, final String path, final Dataset<Row> dataFrame)
-            throws DomainSchemaException {
-        if (this.databaseExists(info.getDatabase())) {
+    public void replace(TableInfo info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
+        if (databaseExists(info.getDatabase())) {
             logger.info("Hive Schema insert started for " + info.getDatabase());
-            if (this.tableExists(info.getDatabase(),
+            if (tableExists(info.getDatabase(),
                     info.getSchema() + "." + info.getTable())) {
-                this.updateTable(info.getDatabase(),
+                updateTable(info.getDatabase(),
                         info.getSchema() + "." + info.getTable(), path, dataFrame);
                 logger.info("Replacing Hive Schema completed " + info.getSchema() + "." + info.getTable());
             } else {
@@ -86,11 +77,11 @@ public class DomainSchemaService {
         }
     }
 
-    public void drop(final TableInfo info) throws DomainSchemaException {
-        if (this.databaseExists(info.getDatabase())) {
-            if (this.tableExists(info.getDatabase(),
+    public void drop(TableInfo info) throws DomainSchemaException {
+        if (databaseExists(info.getDatabase())) {
+            if (tableExists(info.getDatabase(),
                     info.getSchema() + "." + info.getTable())) {
-                this.deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
+                deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
                 logger.info("Dropping Hive Schema completed " +  info.getSchema() + "." + info.getTable());
             } else {
                 throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
@@ -114,15 +105,13 @@ public class DomainSchemaService {
         }
     }
 
-    protected void updateTable(final String databaseName, final String tableName, final String path,
-                               final Dataset<Row> dataframe) {
-        // First delete the table
+    public void updateTable(String databaseName, String tableName, String path, Dataset<Row> dataframe) {
+        // TODO - what if create fails? do we have transactional semantics here?
         deleteTable(databaseName, tableName);
-        // then recreate
         createTable(databaseName, tableName, path, dataframe);
     }
 
-    protected void deleteTable(final String databaseName, final String tableName) {
+    public void deleteTable(final String databaseName, final String tableName) {
         DeleteTableRequest deleteTableRequest = new DeleteTableRequest()
                 .withDatabaseName(databaseName)
                 .withName(tableName);
@@ -133,7 +122,6 @@ public class DomainSchemaService {
         }
     }
 
-    @SuppressWarnings("serial")
     public void createTable(final String databaseName, final String tableName, final String path,
                             final Dataset<Row> dataframe) {
         // Create a CreateTableRequest
@@ -141,25 +129,24 @@ public class DomainSchemaService {
                 .withDatabaseName(databaseName)
                 .withTableInput(new TableInput()
                         .withName(tableName)
-                        .withParameters(new java.util.HashMap<String, String>())
                         .withTableType("EXTERNAL_TABLE")
                         .withParameters(Collections.singletonMap("classification", "parquet"))
-                        .withStorageDescriptor(new StorageDescriptor()
-                                .withColumns(getColumns(dataframe.schema()))
+                        .withStorageDescriptor(
+                            new StorageDescriptor()
+                                .withColumns(getColumnsAndModifyTypes(dataframe.schema()))
                                 .withLocation(path + "/_symlink_format_manifest")
                                 .withInputFormat("org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat")
                                 .withOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
-                                .withSerdeInfo(new SerDeInfo()
+                                .withSerdeInfo(
+                                    new SerDeInfo()
                                         .withSerializationLibrary("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
-                                        .withParameters(new java.util.HashMap<String, String>() {{
-                                            put("serialization.format", ",");
-                                        }}))
+                                        .withParameters(Collections.singletonMap("serialization.format", ","))
+                                )
                                 .withCompressed(false)
                                 .withNumberOfBuckets(0)
                                 .withStoredAsSubDirectories(false)
                         )
                 );
-
 
         // Create the table in the AWS Glue Data Catalog
         try {
@@ -170,15 +157,14 @@ public class DomainSchemaService {
         }
     }
 
-    private static java.util.List<Column> getColumns(StructType schema) {
-        java.util.List<Column> columns = new java.util.ArrayList<Column>();
+    private List<Column> getColumnsAndModifyTypes(StructType schema) {
+        val columns = new ArrayList<Column>();
         for (StructField field : schema.fields()) {
-            Column col = new Column()
+            val col = new Column()
                     .withName(field.name())
-                    .withType(field.dataType().typeName())
-                    .withComment("");
-            // Null type not supported in AWS Glue Catalog
-            // numerical types mapping should be explicit and not automatically picks
+                    .withType(field.dataType().typeName());
+            // Null type not supported in AWS Glue Catalog.
+            // Numerical type mappings should be explicit and not automatically selected.
             if (col.getType().equals("long")) {
                 col.setType("bigint");
             } else if (col.getType().equals("short")) {

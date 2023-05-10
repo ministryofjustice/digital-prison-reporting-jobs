@@ -1,11 +1,10 @@
 package uk.gov.justice.digital.domain;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
@@ -22,11 +21,12 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainSchemaService;
 import uk.gov.justice.digital.service.SparkTestHelpers;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+
 import static org.junit.jupiter.api.Assertions.*;
-import org.mockito.Mock;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -36,30 +36,15 @@ public class DomainExecutorTest extends BaseSparkTest {
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final String hiveDatabaseName = "test_db";
-    @Mock
-    private static DomainSchemaService schemaService = mock(DomainSchemaService.class);
 
+    private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
 
     @TempDir
     private Path folder;
 
     @BeforeAll
-    public static void setUp() {
-        //instantiate and populate the dependencies
+    public static void setupCommonMocks() {
         when(schemaService.databaseExists(any())).thenReturn(true);
-    }
-
-    @AfterAll
-    public static void tearDown() {
-    }
-
-    @Test
-    public void test_tempFolder() {
-        assertNotNull(this.folder);
-    }
-
-    private DomainExecutor createExecutor(final String source, final String target, final DataStorageService storage) {
-        return new DomainExecutor(source, target, storage, schemaService, hiveDatabaseName, sparkSessionProvider);
     }
 
     @Test
@@ -73,12 +58,12 @@ public class DomainExecutorTest extends BaseSparkTest {
         List<TableDefinition> tables = domainDefinition.getTables();
 
         final Dataset<Row> df_offender_bookings = helpers.getOffenderBookings(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                         "nomis", "offender_bookings"),
                 df_offender_bookings);
 
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "nomis", "offenders"),
                 df_offenders);
 
@@ -271,7 +256,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainExecutor executor = createExecutor(sourcePath, targetPath, storage);
         // save a source
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "source", "table"), df_offenders);
         final String domainTableName = "prisoner";
         // Insert first
@@ -301,10 +286,10 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainDefinition domain2 = getDomain("/sample/domain/sample-domain-execution-join.json");
         // save a source
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "nomis", "offenders"), df_offenders);
         final Dataset<Row> df_offenderBookings = helpers.getOffenderBookings(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "nomis", "offender_bookings"), df_offenderBookings);
 
         // do Full Materialize of source to target
@@ -340,7 +325,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         final DomainDefinition domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
         final DomainExecutor executor = createExecutor(sourcePath, targetPath, storage);
         final Dataset<Row> df_offenders = helpers.getOffenders(folder);
-        helpers.saveDataToDisk(TableInfo.create(sourcePath, hiveDatabaseName,
+        helpers.persistDataset(TableInfo.create(sourcePath, hiveDatabaseName,
                 "source", "table"), df_offenders);
         final String domainOperation = "insert";
         final String domainTableName = "prisoner";
@@ -465,7 +450,7 @@ public class DomainExecutorTest extends BaseSparkTest {
                 "young")));
     }
 
-    protected Dataset<Row> doTransform(final DomainExecutor executor, final Dataset<Row> df,
+    private Dataset<Row> doTransform(final DomainExecutor executor, final Dataset<Row> df,
                                        final TableDefinition.TransformDefinition transform, final String source) {
         try {
             Map<String, Dataset<Row>> inputs = new HashMap<>();
@@ -499,5 +484,10 @@ public class DomainExecutorTest extends BaseSparkTest {
 
         return CollectionUtils.subtract(al, bl).size() == 0;
     }
+
+    private DomainExecutor createExecutor(String source, String target, DataStorageService storage) {
+        return new DomainExecutor(source, target, storage, schemaService, hiveDatabaseName, sparkSessionProvider);
+    }
+
 
 }

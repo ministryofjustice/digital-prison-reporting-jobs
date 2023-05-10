@@ -2,13 +2,15 @@ package uk.gov.justice.digital.domain.model;
 
 import lombok.Data;
 
+// TODO - review name
 @Data
 public class TableInfo {
-    protected String prefix;
-    protected String schema;
-    protected String table;
-    protected String database;
+    private final String prefix;
+    private final String schema;
+    private final String table;
+    private final String database;
 
+    // TODO - remove this - @Data provides this
     protected TableInfo(final String prefix, final String database, final String schema, final String table) {
         this.prefix = prefix;
         this.database = database;
@@ -16,9 +18,9 @@ public class TableInfo {
         this.table = table;
     }
 
+
     public TableInfo() {
     }
-
 
     public static TableInfo create(final String prefix, final String database, final String schema, final String table) {
         return new TableInfo(prefix, database, schema, table);
