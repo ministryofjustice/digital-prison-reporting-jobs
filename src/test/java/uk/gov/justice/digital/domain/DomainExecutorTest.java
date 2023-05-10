@@ -379,21 +379,9 @@ public class DomainExecutorTest extends BaseSparkTest {
         return mapper.readValue(ResourceLoader.getResource(resource), DomainDefinition.class);
     }
 
-    // TODO - review this
-    private boolean areEqual(final Dataset<Row> a, final Dataset<Row> b) {
-        if(!a.schema().equals(b.schema()))
-            return false;
-        final List<Row> al = a.collectAsList();
-        final List<Row> bl = b.collectAsList();
-
-        if(al == null && bl == null) return true;
-
-        assert al != null;
-        if(al.isEmpty() && bl.isEmpty()) return true;
-        if(al.isEmpty() && !bl.isEmpty()) return false;
-        if(!al.isEmpty() && bl.isEmpty()) return false;
-
-        return CollectionUtils.subtract(al, bl).size() == 0;
+    private boolean areEqual(Dataset<Row> a, Dataset<Row> b) {
+        return a.schema().equals(b.schema()) &&
+            Arrays.equals(a.collectAsList().toArray(), b.collectAsList().toArray());
     }
 
     // TODO - this also exists in DomainServiceTest
