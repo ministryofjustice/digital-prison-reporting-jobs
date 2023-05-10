@@ -344,8 +344,8 @@ public class DomainExecutor {
                 logger.error(message);
                 throw new UnsupportedOperationException(message);
             }
-        } catch(Exception | DomainExecutorException e) {
-            logger.error("Domain executor failed" + e.getMessage());
+        } catch(Exception e) {
+            logger.error("Domain executor failed", e);
         }
     }
 

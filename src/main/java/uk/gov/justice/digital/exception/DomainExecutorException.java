@@ -1,11 +1,17 @@
 package uk.gov.justice.digital.exception;
 
-public class DomainExecutorException extends Throwable {
+public class DomainExecutorException extends Exception {
 
-    private static final long serialVersionUID = 1L;
     public DomainExecutorException(String errorMessage) {
-        super();
+        super(errorMessage);
     }
 
-    public DomainExecutorException(Throwable t) { super(t); }
+    public DomainExecutorException(Throwable t) {
+        super(t);
+    }
+
+    public DomainExecutorException(String errorMessage, Throwable cause) {
+        super(errorMessage, cause);
+    }
+
 }

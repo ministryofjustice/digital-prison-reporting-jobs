@@ -1,10 +1,12 @@
 package uk.gov.justice.digital.exception;
 
-public class DomainSchemaException extends Throwable {
-
-    private static final long serialVersionUID = 1L;
+public class DomainSchemaException extends Exception {
 
     public DomainSchemaException(String errorMessage) {
-        super();
+        super(errorMessage);
+    }
+
+    public DomainSchemaException(String errorMessage, Throwable cause) {
+        super(errorMessage, cause);
     }
 }
