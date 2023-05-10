@@ -16,6 +16,9 @@ public class TableInfo {
         this.table = table;
     }
 
+    public TableInfo() {
+    }
+
 
     public static TableInfo create(final String prefix, final String database, final String schema, final String table) {
         return new TableInfo(prefix, database, schema, table);

@@ -72,7 +72,9 @@ public class DataStorageService {
         logger.info("deleting Delta table..." + info.getTable());
         String tablePath = getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
+        System.out.println("AAAAAAA");
         if(deltaTable != null) {
+            System.out.println("AAAAAAA");
             deltaTable.delete();
         }
     }
@@ -92,8 +94,9 @@ public class DataStorageService {
     }
 
     protected DeltaTable getTable(final SparkSession spark, final String tablePath) {
-        if(DeltaTable.isDeltaTable(spark, tablePath))
+        if(DeltaTable.isDeltaTable(spark, tablePath)) {
             return DeltaTable.forPath(spark, tablePath);
+        }
         else {
             logger.warn("Cannot update manifest for table: {} - Not a delta table", tablePath);
         }
