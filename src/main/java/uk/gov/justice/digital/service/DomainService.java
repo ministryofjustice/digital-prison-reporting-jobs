@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
+import uk.gov.justice.digital.exception.DomainServiceException;
 import uk.gov.justice.digital.repository.DomainRepository;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -31,7 +32,7 @@ public class DomainService {
         this.executor = executor;
     }
 
-    public void run() {
+    public void run() throws DomainServiceException {
         runInternal(
                 parameters.getDomainRegistry(),
                 parameters.getDomainTableName(),
@@ -45,7 +46,7 @@ public class DomainService {
         String domainTableName,
         String domainName,
         String domainOperation
-    ) throws PatternSyntaxException {
+    ) throws PatternSyntaxException, DomainServiceException {
         if (domainOperation.equalsIgnoreCase("delete")) {
             // TODO - instead of passing null private an alternate method/overload
             processDomain(null, domainName, domainTableName, domainOperation);
@@ -58,10 +59,10 @@ public class DomainService {
                 processDomain(domain, domain.getName(), domainTableName, domainOperation);
             }
         }
-
     }
 
-    private Set<DomainDefinition> getDomains(String domainRegistry, String domainName) throws PatternSyntaxException {
+    private Set<DomainDefinition> getDomains(String domainRegistry, String domainName)
+            throws PatternSyntaxException, DomainServiceException {
         return repo.getForName(domainRegistry, domainName);
     }
 

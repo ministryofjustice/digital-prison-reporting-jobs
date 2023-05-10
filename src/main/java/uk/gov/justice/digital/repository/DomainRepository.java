@@ -2,6 +2,8 @@ package uk.gov.justice.digital.repository;
 
 import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
+import uk.gov.justice.digital.exception.DomainServiceException;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashSet;
@@ -18,12 +20,17 @@ public class DomainRepository {
         this.dynamoDBClient = dynamoDBClient;
     }
 
-    public Set<DomainDefinition> getForName(final String domainRegistry, final String domainId)
-            throws PatternSyntaxException {
+    public Set<DomainDefinition> getForName(final String domainRegistry, final String domainTableName)
+            throws PatternSyntaxException, DomainServiceException {
         //TODO: The purpose of the Set<> is to have multiple domains. Need change to this code later
         Set<DomainDefinition> domains = new HashSet<>();
-        DomainDefinition domain = dynamoDBClient.getDomainDefinition(domainRegistry, domainId);
-        domains.add(domain);
+        String[] names = domainTableName.split("[.]");
+        if (names.length != 2) {
+            throw new DomainServiceException("Invalid domain table name. Should be <domain_name>.<table_name>");
+        } else {
+            DomainDefinition domain = dynamoDBClient.getDomainDefinition(domainRegistry, names[0], names[1]);
+            domains.add(domain);
+        }
         return domains;
     }
 }

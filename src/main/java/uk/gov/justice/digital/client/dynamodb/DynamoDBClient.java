@@ -48,14 +48,11 @@ public class DynamoDBClient {
         this.mapper = mapper;
     }
 
-    public DomainDefinition getDomainDefinition(final String domainTableName, final String domainId)
+    public DomainDefinition getDomainDefinition(final String domainRegistry,
+                                                final String domainName, final String tableName)
             throws PatternSyntaxException {
-
-        String[] names = domainId.split("[.]");
-        String domainName = names.length == 2 ? names[0] : domainId;
-        String tableName = names.length == 2 ? names[1] : null;
         try {
-            QueryResult response = executeQuery(domainTableName, domainName);
+            QueryResult response = executeQuery(domainRegistry, domainName);
             return parse(response, tableName);
         } catch (AmazonDynamoDBException e) {
             // TODO handle exception properly

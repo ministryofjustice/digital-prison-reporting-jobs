@@ -84,7 +84,7 @@ class DynamoDBClientTest {
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
         when(dynamoDBClient.parse(result, null)).thenReturn(domainDef);
         DomainDefinition expectedDomainDef = dynamoDBClient.getDomainDefinition("test",
-                "incident");
+                "incident", "demographics");
         verify(mapper, times(1)).readValue(data, DomainDefinition.class);
         assertEquals(expectedDomainDef.getName(), "test name");
     }

@@ -4,6 +4,7 @@ import io.micronaut.configuration.picocli.PicocliRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import uk.gov.justice.digital.exception.DomainServiceException;
 import uk.gov.justice.digital.service.DomainService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -37,8 +38,8 @@ public class DomainRefreshJob implements Runnable {
     public void run() {
         try {
             domainService.run();
-        } catch (Exception e) {
-            logger.error("Caught exception during job run", e);
+        } catch (Exception | DomainServiceException e) {
+            logger.error("Caught exception during job run" + e.getMessage());
         }
 
     }
