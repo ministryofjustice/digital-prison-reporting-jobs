@@ -1,13 +1,14 @@
 package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.exception.DomainServiceException;
 import uk.gov.justice.digital.service.DomainService;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+
 
 /**
  * Job that refreshes domains so that the data in the consumer-facing systems is correctly formatted and up-to-date.
@@ -39,7 +40,7 @@ public class DomainRefreshJob implements Runnable {
         try {
             domainService.run();
         } catch (Exception | DomainServiceException e) {
-            logger.error("Caught exception during job run" + e.getMessage());
+            logger.error("Caught exception during job run", e);
         }
 
     }

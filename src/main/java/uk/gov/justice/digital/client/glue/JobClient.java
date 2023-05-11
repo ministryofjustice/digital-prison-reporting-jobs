@@ -3,10 +3,11 @@ package uk.gov.justice.digital.client.glue;
 import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.model.GetJobRequest;
 import com.amazonaws.services.glue.model.GetJobResult;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import uk.gov.justice.digital.config.JobProperties;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+
 import java.util.Map;
 
 @Singleton

@@ -1,13 +1,14 @@
 package uk.gov.justice.digital.config;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.JobClient;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Optional;

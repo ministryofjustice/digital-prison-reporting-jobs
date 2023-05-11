@@ -1,5 +1,10 @@
 package uk.gov.justice.digital.service;
 
+import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
+import com.amazonaws.services.dynamodbv2.model.QueryResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,16 +12,15 @@ import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DomainServiceException;
-import uk.gov.justice.digital.repository.DomainRepository;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+
+import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
 @Singleton
 public class DomainService {
 
-    private final DomainRepository repo;
+    private final DomainDefinitionClientService dynamoDB;
     private final DomainExecutor executor;
 
     protected JobParameters parameters;
@@ -25,10 +29,10 @@ public class DomainService {
 
     @Inject
     public DomainService(JobParameters parameters,
-                        DomainRepository repository,
+                         DomainDefinitionClientService dynamoDB,
                          DomainExecutor executor) {
         this.parameters = parameters;
-        this.repo = repository;
+        this.dynamoDB = dynamoDB;
         this.executor = executor;
     }
 
@@ -62,7 +66,7 @@ public class DomainService {
 
     private Set<DomainDefinition> getDomains(String domainRegistry, String domainName)
             throws PatternSyntaxException, DomainServiceException {
-        return repo.getForName(domainRegistry, domainName);
+        return getForName(domainRegistry, domainName);
     }
 
     protected void processDomain(
@@ -79,6 +83,37 @@ public class DomainService {
             logger.info(prefix + "completed");
         } catch(Exception e) {
             logger.error(prefix + "failed", e);
+        }
+    }
+
+    protected Set<DomainDefinition> getForName(final String domainRegistry, final String domainTableName)
+            throws PatternSyntaxException, DomainServiceException {
+        //TODO: The purpose of the Set<> is to have multiple domains. Need change to this code later
+        Set<DomainDefinition> domains = new HashSet<>();
+        String[] names = domainTableName.split("[.]");
+        if (names.length != 2) {
+            throw new DomainServiceException("Invalid domain table name. Should be <domain_name>.<table_name>");
+        } else {
+            DomainDefinition domain = getDomainDefinition(domainRegistry, names[0], names[1]);
+            if (domain != null) {
+                domains.add(domain);
+            } else {
+                throw new DomainServiceException("Database failure");
+            }
+        }
+        return domains;
+    }
+
+    protected DomainDefinition getDomainDefinition(final String domainRegistry,
+                                                final String domainName, final String tableName)
+            throws PatternSyntaxException {
+        try {
+            QueryResult response = dynamoDB.executeQuery(domainRegistry, domainName);
+            return dynamoDB.parse(response, tableName);
+        } catch (AmazonDynamoDBException | JsonProcessingException e){
+            // TODO handle exception properly
+            logger.error("DynamoDB request failed:" + e.getMessage());
+            return null;
         }
     }
 }

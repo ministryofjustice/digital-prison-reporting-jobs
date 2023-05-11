@@ -13,7 +13,6 @@ import uk.gov.justice.digital.config.JobParameters;
 public class DynamoDBClientProvider implements ClientProvider<AmazonDynamoDB> {
 
     private final JobParameters jobParameters;
-
     @Inject
     public DynamoDBClientProvider(JobParameters jobParameters) {
         this.jobParameters = jobParameters;

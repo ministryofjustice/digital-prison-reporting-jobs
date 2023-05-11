@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.client.dynamodb;
+package uk.gov.justice.digital.service;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
@@ -6,9 +6,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
+import uk.gov.justice.digital.service.DomainDefinitionClientService;
+import uk.gov.justice.digital.service.DomainService;
+
 import java.io.IOException;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,12 +19,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 
-class DomainDefinitionDBTest {
+class DomainDefinitionClientServiceTest {
 
 
-    private static final Logger logger = LoggerFactory.getLogger(DomainDefinitionDBTest.class);
-
-    private static DomainDefinitionDB domainDefinitionDB;
+    private static DomainDefinitionClientService domainDefinitionService;
+    private static DomainService domainService;
     private static AmazonDynamoDB dynamoDB;
     private static ObjectMapper mapper;
 
@@ -30,7 +32,9 @@ class DomainDefinitionDBTest {
     void setUp() {
         dynamoDB = mock(AmazonDynamoDB.class);
         mapper = mock(ObjectMapper.class);
-        domainDefinitionDB = new DomainDefinitionDB(dynamoDB, mapper);
+        domainDefinitionService = new DomainDefinitionClientService(dynamoDB, mapper);
+        domainService = new DomainService(mock(JobParameters.class), domainDefinitionService,
+                mock(DomainExecutor.class));
     }
 
     @Test
@@ -39,7 +43,7 @@ class DomainDefinitionDBTest {
         String domainName = "incident";
         QueryResult result = mock(QueryResult.class);
         when(dynamoDB.query(any(QueryRequest.class))).thenReturn(result);
-        QueryResult expected_result = domainDefinitionDB.executeQuery(domainTableName, domainName);
+        QueryResult expected_result = domainDefinitionService.executeQuery(domainTableName, domainName);
         assert(expected_result.getItems().isEmpty());
     }
 
@@ -49,7 +53,7 @@ class DomainDefinitionDBTest {
         String domainName = "incident";
         when(dynamoDB.query(any(QueryRequest.class))).thenThrow(ResourceNotFoundException.class);
         try {
-            QueryResult expected_result = domainDefinitionDB.executeQuery(domainTableName, domainName);
+            QueryResult expected_result = domainDefinitionService.executeQuery(domainTableName, domainName);
             fail();
         } catch (AmazonDynamoDBException e) {
             assertTrue(true);
@@ -64,7 +68,7 @@ class DomainDefinitionDBTest {
         domainDef.setId("123");
         domainDef.setDescription("test description");
         QueryResult result = mock(QueryResult.class);
-        when(domainDefinitionDB.executeQuery("test", "incident")).thenReturn(result);
+        when(domainDefinitionService.executeQuery("test", "incident")).thenReturn(result);
         List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
             static final long serialVersionUID = -2338626292552177485L;
             {
@@ -74,8 +78,8 @@ class DomainDefinitionDBTest {
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        when(domainDefinitionDB.parse(result, null)).thenReturn(domainDef);
-        DomainDefinition expectedDomainDef = domainDefinitionDB.getDomainDefinition("test",
+        when(domainDefinitionService.parse(result, null)).thenReturn(domainDef);
+        DomainDefinition expectedDomainDef = domainService.getDomainDefinition("test",
                 "incident", "demographics");
         verify(mapper, times(1)).readValue(data, DomainDefinition.class);
         assertEquals(expectedDomainDef.getName(), "test name");
@@ -98,7 +102,7 @@ class DomainDefinitionDBTest {
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        DomainDefinition expectedDomainDef = domainDefinitionDB.parse(result, null);
+        DomainDefinition expectedDomainDef = domainDefinitionService.parse(result, null);
         assertEquals(expectedDomainDef.getName(), "test name");
     }
 
@@ -119,7 +123,7 @@ class DomainDefinitionDBTest {
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        DomainDefinition expectedDomainDef = domainDefinitionDB.parse(result, "demographics");
+        DomainDefinition expectedDomainDef = domainDefinitionService.parse(result, "demographics");
         assertEquals(expectedDomainDef.getName(), "living_unit");
     }
 
@@ -140,7 +144,7 @@ class DomainDefinitionDBTest {
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenThrow(JsonProcessingException.class);
         try {
-            DomainDefinition expectedDomainDef = domainDefinitionDB.parse(result, null);
+            DomainDefinition expectedDomainDef = domainDefinitionService.parse(result, null);
             fail();
         } catch (JsonProcessingException e) {
             assertTrue(true);

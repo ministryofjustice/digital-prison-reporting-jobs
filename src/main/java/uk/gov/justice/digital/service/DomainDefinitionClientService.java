@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.client.dynamodb;
+package uk.gov.justice.digital.service;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
@@ -11,16 +11,16 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.client.dynamodb.DynamoDBClientProvider;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.PatternSyntaxException;
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
 @Singleton
-public class DomainDefinitionDB {
+public class DomainDefinitionClientService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DomainDefinitionDB.class);
+    private static final Logger logger = LoggerFactory.getLogger(DomainDefinitionClientService.class);
 
     private final static String indexName = "secondaryId-type-index";
     private final static String sortKeyName = "secondaryId";
@@ -29,29 +29,17 @@ public class DomainDefinitionDB {
     ObjectMapper mapper;
 
     @Inject
-    public DomainDefinitionDB(DynamoDBClientProvider dynamoDBClientProvider) {
+    public DomainDefinitionClientService(DynamoDBClientProvider dynamoDBClientProvider) {
         this(dynamoDBClientProvider.getClient(), new ObjectMapper());
     }
 
-    public DomainDefinitionDB(AmazonDynamoDB dynamoDB, ObjectMapper mapper) {
+    public DomainDefinitionClientService(AmazonDynamoDB dynamoDB, ObjectMapper mapper) {
         this.dynamoDB = dynamoDB;
         this.mapper = mapper;
     }
 
-    public DomainDefinition getDomainDefinition(final String domainRegistry,
-                                                final String domainName, final String tableName)
-            throws PatternSyntaxException {
-        try {
-            QueryResult response = executeQuery(domainRegistry, domainName);
-            return parse(response, tableName);
-        } catch (AmazonDynamoDBException | JsonProcessingException e){
-            // TODO handle exception properly
-            logger.error("DynamoDB request failed:" + e.getMessage());
-            return null;
-        }
-    }
 
-    public DomainDefinition parse(QueryResult response, String tableName) throws JsonProcessingException {
+    protected DomainDefinition parse(QueryResult response, String tableName) throws JsonProcessingException {
         DomainDefinition domainDef = null;
         if (response != null) {
             for (Map<String, AttributeValue> items : response.getItems()) {
@@ -65,7 +53,7 @@ public class DomainDefinitionDB {
         return domainDef;
     }
 
-    public QueryResult executeQuery(final String domainTableName, final String domainName)
+    protected QueryResult executeQuery(final String domainTableName, final String domainName)
             throws AmazonDynamoDBException{
         // Set up mapping of the partition name with the value
         HashMap<String, AttributeValue> attrValues = new HashMap<>();
