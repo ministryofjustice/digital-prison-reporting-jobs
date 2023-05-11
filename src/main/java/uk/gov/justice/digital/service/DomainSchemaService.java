@@ -10,7 +10,7 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.GlueClientProvider;
-import uk.gov.justice.digital.domain.model.HiveTableIdentifier;
+import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DomainSchemaException;
 
 import javax.inject.Inject;
@@ -45,7 +45,7 @@ public class DomainSchemaService {
 
     // TODO - is the entire method only needed for testing or some condition within it?
     // This is needed only for unit testing
-    public void create(HiveTableIdentifier info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
+    public void create(TableIdentifier info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
         if (databaseExists(info.getDatabase())) {
             logger.info("Hive Schema insert started for " + info.getDatabase());
             if (!tableExists(info.getDatabase(),
@@ -61,7 +61,7 @@ public class DomainSchemaService {
         }
     }
 
-    public void replace(HiveTableIdentifier info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
+    public void replace(TableIdentifier info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
         if (databaseExists(info.getDatabase())) {
             logger.info("Hive Schema insert started for " + info.getDatabase());
             if (tableExists(info.getDatabase(),
@@ -77,7 +77,7 @@ public class DomainSchemaService {
         }
     }
 
-    public void drop(HiveTableIdentifier info) throws DomainSchemaException {
+    public void drop(TableIdentifier info) throws DomainSchemaException {
         if (databaseExists(info.getDatabase())) {
             if (tableExists(info.getDatabase(),
                     info.getSchema() + "." + info.getTable())) {

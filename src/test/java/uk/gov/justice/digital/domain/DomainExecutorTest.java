@@ -2,7 +2,6 @@ package uk.gov.justice.digital.domain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeAll;
@@ -12,7 +11,7 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.config.ResourceLoader;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.domain.model.HiveTableIdentifier;
+import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -58,12 +57,12 @@ public class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
 
         helpers.persistDataset(
-            new HiveTableIdentifier(SAMPLE_EVENTS_PATH, hiveDatabaseName, "nomis", "offender_bookings"),
+            new TableIdentifier(SAMPLE_EVENTS_PATH, hiveDatabaseName, "nomis", "offender_bookings"),
             helpers.getOffenderBookings(tmp)
         );
 
         helpers.persistDataset(
-            new HiveTableIdentifier(SAMPLE_EVENTS_PATH, hiveDatabaseName, "nomis", "offenders"),
+            new TableIdentifier(SAMPLE_EVENTS_PATH, hiveDatabaseName, "nomis", "offenders"),
             helpers.getOffenders(tmp)
         );
 
@@ -147,7 +146,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
         for(val table : domainDefinition.getTables()) {
             val df = executor.apply(table, getOffenderRefs());
-            val targetInfo = new HiveTableIdentifier(
+            val targetInfo = new TableIdentifier(
                 domainTargetPath(),
                 hiveDatabaseName,
                 domainDefinition.getName(),
@@ -175,7 +174,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         );
 
         for(val table : domainDefinition.getTables()) {
-            executor.deleteTable(new HiveTableIdentifier(
+            executor.deleteTable(new TableIdentifier(
                 domainTargetPath(),
                 hiveDatabaseName,
                 domainDefinition.getName(),
@@ -193,7 +192,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
         // save a source
         helpers.persistDataset(
-            new HiveTableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
             helpers.getOffenders(tmp)
         );
 
@@ -207,7 +206,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         verify(schemaService, times(1)).replace(any(), any(), any());
 
         // there should be a target table
-        val info = new HiveTableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
+        val info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
 
         // it should have all the offenders in it
@@ -221,11 +220,11 @@ public class DomainExecutorTest extends BaseSparkTest {
 
         // save a source
         helpers.persistDataset(
-            new HiveTableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
             helpers.getOffenders(tmp)
         );
         helpers.persistDataset(
-            new HiveTableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
             helpers.getOffenderBookings(tmp)
         );
 
@@ -238,7 +237,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         verify(schemaService, times(2)).create(any(), any(), any());
 
         // there should be a target table
-        val info = new HiveTableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
+        val info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
         assertEquals(1, storage.load(spark, info).count());
@@ -259,7 +258,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(sourcePath(), targetPath(), storage);
 
         helpers.persistDataset(
-            new HiveTableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
             helpers.getOffenders(tmp)
         );
 
@@ -267,7 +266,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         verify(schemaService, times(3)).create(any(), any(), any());
 
         // there shouldn't be a target table
-        HiveTableIdentifier info = new HiveTableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
+        TableIdentifier info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
         assertFalse(storage.exists(spark, info));
     }
 
@@ -348,7 +347,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         // there should be no written violations
         assertFalse(storage.exists(
             spark,
-            new HiveTableIdentifier(targetPath(), hiveDatabaseName, "violations", "age"))
+            new TableIdentifier(targetPath(), hiveDatabaseName, "violations", "age"))
         );
     }
 
@@ -371,7 +370,7 @@ public class DomainExecutorTest extends BaseSparkTest {
         // there should be some written violations
         assertTrue(storage.exists(
             spark,
-            new HiveTableIdentifier(targetPath(), hiveDatabaseName, "violations", "cannot-vote"))
+            new TableIdentifier(targetPath(), hiveDatabaseName, "violations", "cannot-vote"))
         );
     }
 
