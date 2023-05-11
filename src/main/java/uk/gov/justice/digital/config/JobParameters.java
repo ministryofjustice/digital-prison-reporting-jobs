@@ -8,9 +8,12 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.JobClient;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @Singleton
@@ -18,7 +21,7 @@ public class JobParameters {
 
     private static final Logger logger = LoggerFactory.getLogger(JobParameters.class);
 
-    private final Map<String, String> config;
+    private Map<String, String> config = new HashMap<String,String>();
 
     @Inject
     public JobParameters(JobClient jobClient) {
@@ -26,11 +29,54 @@ public class JobParameters {
     }
 
     public JobParameters(Map<String, String> config) {
-        this.config = config.entrySet()
+        this.config.putAll(config.entrySet()
             .stream()
             .map(this::cleanEntryKey)
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         logger.info("Job initialised with parameters: {}", config);
+    }
+
+    public void parse(String[] args) {
+        Map<String,String> params = Arrays.stream(args).collect(new Collector<String, Map<String,String>, Map<String, String>>() {
+
+            private String key;
+
+            @Override
+            public Supplier<Map<String, String>> supplier() {
+                return () -> new HashMap<>();
+            }
+
+            @Override
+            public BiConsumer<Map<String, String>, String> accumulator() {
+                return (map, value) -> {
+                    if (key != null) {
+                        map.put(key, value);
+                        key = null;
+                    } else {
+                        key = value.replaceFirst("--", "");
+                    }
+                };
+            }
+
+            @Override
+            public BinaryOperator<Map<String, String>> combiner() {
+                return (map1, map2) -> {
+                    map1.putAll(map2);
+                    return map1;
+                };
+            }
+
+            @Override
+            public Function<Map<String, String>, Map<String, String>> finisher() {
+                return Function.identity();
+            }
+
+            @Override
+            public Set<Characteristics> characteristics() {
+                return new HashSet<Characteristics>(Arrays.asList(Characteristics.IDENTITY_FINISH));
+            }
+        });
+        this.config.putAll(params);
     }
 
 
