@@ -36,7 +36,6 @@ dependencies {
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
 
-    implementation "org.apache.spark:spark-hive_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
@@ -55,14 +54,17 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
+
+    // TODO - check if this is provided on the classpath by AWS
     implementation "org.apache.hadoop:hadoop-aws:3.3.1"
 
-
-
-
-    implementation ("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
-      // We exclude spark here to prevent spark being added to the jar during the build.
-      // AWS Glue provides this dependency on the classpath so we don't need to include it.
+    // Where spark core is pulled in transitively, ensure that it is excluded so that we
+    // don't include it in the jar build by the shadowJar plugin.
+    // AWS Glue provides this on the classpath so we don't need to include it.
+    implementation("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
+      exclude group: "org.apache.spark", module: "spark-core_2.12"
+    }
+    implementation("org.apache.spark:spark-hive_2.12:$sparkVersion") {
       exclude group: "org.apache.spark", module: "spark-core_2.12"
     }
 

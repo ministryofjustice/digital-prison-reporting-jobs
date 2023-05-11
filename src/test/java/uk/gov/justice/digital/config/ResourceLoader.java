@@ -1,36 +1,21 @@
 package uk.gov.justice.digital.config;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.Scanner;
 
-import org.apache.commons.io.IOUtils;
-
-// TODO - review usage of this code
 public class ResourceLoader {
-	
-	@SuppressWarnings("deprecation")
-	public static String getResource(final Class<?> clazz, final String resource) throws IOException {
-		final InputStream stream = ResourceLoader.getStream(clazz, resource);
-		return IOUtils.toString(stream);
+
+	public static String getResource(String resource) {
+		return Optional.ofNullable(System.class.getResourceAsStream(resource))
+			.map(ResourceLoader::readInputStream)
+			.orElseThrow(() -> new IllegalStateException("Failed to read resource: " + resource));
 	}
 
-	public static InputStream getStream(final Class<?> clazz, final String resource) {
-		InputStream stream = System.class.getResourceAsStream(resource);
-		if(stream == null) {
-			stream = System.class.getResourceAsStream("/src/test/resources" + resource);
-			if(stream == null) {
-				stream = System.class.getResourceAsStream("/target/test-classes" + resource);
-				if(stream == null) {
-					Path root = Paths.get(".").normalize().toAbsolutePath();
-					stream = System.class.getResourceAsStream(root + "/src/test/resources" + resource);
-					if(stream == null) {
-						stream = clazz.getResourceAsStream(resource);
-					}
-				}
-			}
-		}
-		return stream;
+	private static String readInputStream(InputStream is) {
+		return new Scanner(is, "UTF-8")
+			.useDelimiter("\\A") // Matches the next boundary which in our case will be EOF.
+			.next();
 	}
+
 }

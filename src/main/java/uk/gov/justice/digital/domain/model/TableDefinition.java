@@ -147,7 +147,7 @@ public class TableDefinition {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class     ViolationDefinition {
+    public static class ViolationDefinition {
         private String check;
         private String location;
         private String name;

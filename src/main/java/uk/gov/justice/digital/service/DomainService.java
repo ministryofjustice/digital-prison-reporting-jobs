@@ -20,12 +20,11 @@ import java.util.regex.PatternSyntaxException;
 @Singleton
 public class DomainService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
+
     private final DomainDefinitionClientService dynamoDB;
     private final DomainExecutor executor;
-
-    protected JobParameters parameters;
-
-    private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
+    private final JobParameters parameters;
 
     @Inject
     public DomainService(JobParameters parameters,
@@ -45,7 +44,7 @@ public class DomainService {
         );
     }
 
-    protected void runInternal(
+    private void runInternal(
         String domainRegistry,
         String domainTableName,
         String domainName,
@@ -69,7 +68,7 @@ public class DomainService {
         return getForName(domainRegistry, domainName);
     }
 
-    protected void processDomain(
+    private void processDomain(
         DomainDefinition domain,
         String domainName,
         String domainTableName,

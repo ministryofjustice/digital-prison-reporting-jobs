@@ -11,7 +11,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.domain.model.TableIdentifier;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mockStatic;
@@ -43,12 +43,9 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @Test
     void shouldReturnTrueWhenStorageExists() {
-        TableInfo info = new TableInfo();
-        info.setDatabase("domain");
-        info.setPrefix("s3://test-bucket");
-        info.setSchema("incident");
-        info.setTable("demographics");
-        String identifier = testStorage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        TableIdentifier info = new TableIdentifier("s3://test-bucket", "domain",
+                "incident", "demographics");
+        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(true);
         boolean actual_result = testStorage.exists(spark, info);
         assertTrue(actual_result);
@@ -56,12 +53,9 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @Test
     void shouldReturnFalseWhenStorageDoesNotExists() {
-        TableInfo info = new TableInfo();
-        info.setDatabase("domain");
-        info.setPrefix("s3://test-bucket");
-        info.setSchema("incident");
-        info.setTable("demographics");
-        String identifier = testStorage.getTablePath(info.getPrefix(), info.getSchema(), info.getTable());
+        TableIdentifier info = new TableIdentifier( "s3://test-bucket", "domain",
+                "incident", "demographics");
+        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(false);
         boolean actual_result = testStorage.exists(spark, info);
         assertFalse(actual_result);
@@ -90,7 +84,6 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @Test
     void shouldReturnTablePathWithVarArgString() {
-        String prefix = "s3://test-bucket";
         String path = testStorage.getTablePath("test");
         assertNotNull(path);
     }
@@ -127,10 +120,8 @@ class DataStorageServiceTest extends BaseSparkTest {
     void shouldDeleteCompleteForDeltaTable() {
         DataStorageService spy = spy(new DataStorageService());
         final String tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        TableInfo info = new TableInfo();
-        info.setPrefix(this.folder.toFile().getAbsolutePath());
-        info.setSchema("incident");
-        info.setTable("demographics");
+        TableIdentifier info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
+                "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         doReturn(mockedDeltaTable).when(spy).getTable(spark, tablePath);
@@ -143,10 +134,8 @@ class DataStorageServiceTest extends BaseSparkTest {
     void shouldVaccumCompleteForDeltaTable() {
         DataStorageService spy = spy(new DataStorageService());
         final String tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        TableInfo info = new TableInfo();
-        info.setPrefix(this.folder.toFile().getAbsolutePath());
-        info.setSchema("incident");
-        info.setTable("demographics");
+        TableIdentifier info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
+                "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         doReturn(mockedDeltaTable).when(spy).getTable(spark, tablePath);
@@ -159,10 +148,8 @@ class DataStorageServiceTest extends BaseSparkTest {
     void shouldLoadCompleteForDeltaTable() {
         DataStorageService spy = spy(new DataStorageService());
         final String tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        TableInfo info = new TableInfo();
-        info.setPrefix(this.folder.toFile().getAbsolutePath());
-        info.setSchema("incident");
-        info.setTable("demographics");
+        TableIdentifier info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
+                "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         doReturn(mockedDeltaTable).when(spy).getTable(spark, tablePath);
@@ -193,10 +180,8 @@ class DataStorageServiceTest extends BaseSparkTest {
     void shouldUpdateendTableUpdates() {
         DataStorageService spy = spy(new DataStorageService());
         final String tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        TableInfo info = new TableInfo();
-        info.setPrefix(this.folder.toFile().getAbsolutePath());
-        info.setSchema("incident");
-        info.setTable("demographics");
+        TableIdentifier info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
+                "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         doReturn(mockedDeltaTable).when(spy).getTable(spark, tablePath);

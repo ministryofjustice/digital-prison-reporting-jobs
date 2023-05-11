@@ -9,7 +9,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.domain.model.TableIdentifier;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -25,37 +25,37 @@ public class SparkTestHelpers {
         this.spark = spark;
     }
 
-    public Dataset<Row> getOffenders(Path folder) throws IOException {
-        return this.loadParquetDataframe("/sample/events/nomis/offenders/offenders.parquet",
+    public Dataset<Row> getOffenders(Path folder) {
+        return loadParquetDataframe("/sample/events/nomis/offenders/offenders.parquet",
                 folder.toFile().getAbsolutePath() + "offenders.parquet");
 
     }
 
-    public Dataset<Row> getOffenderBookings(Path folder) throws IOException {
-        return this.loadParquetDataframe("/sample/events/nomis/offender_bookings/offender-bookings.parquet",
+    public Dataset<Row> getOffenderBookings(Path folder) {
+        return loadParquetDataframe("/sample/events/nomis/offender_bookings/offender-bookings.parquet",
                 folder.toFile().getAbsolutePath() + "offender-bookings.parquet");
     }
 
-    public Dataset<Row> getInternalAgencyLocations(Path folder) throws IOException {
-        return this.loadParquetDataframe("/sample/events/nomis/internal-locations/" +
+    public Dataset<Row> getInternalAgencyLocations(Path folder) {
+        return loadParquetDataframe("/sample/events/nomis/internal-locations/" +
                         "sample-nomis.agency_internal_locations.parquet",
                 folder.toFile().getAbsolutePath() + "sample-nomis.agency_internal_locations.parquet");
     }
 
-    public Dataset<Row> getAgencyLocations(Path folder) throws IOException {
-        return this.loadParquetDataframe("/sample/events/nomis/agency-locations/" +
+    public Dataset<Row> getAgencyLocations(Path folder) {
+        return loadParquetDataframe("/sample/events/nomis/agency-locations/" +
                         "sample-nomis.agency_locations.parquet",
                 folder.toFile().getAbsolutePath() + "sample-nomis.agency_locations.parquet");
     }
 
-    public Dataset<Row> getValidDataset() throws IOException {
-        return this.loadParquetDataframe("/sample/events/nomis/offenders/offenders.parquet",
+    public Dataset<Row> getValidDataset() {
+        return loadParquetDataframe("/sample/events/nomis/offenders/offenders.parquet",
                 "updates.parquet");
     }
 
-    public void persistDataset(TableInfo location, Dataset<Row> df) {
+    public void persistDataset(TableIdentifier location, Dataset<Row> df) {
         DataStorageService deltaService = new DataStorageService();
-        String tablePath = deltaService.getTablePath(location.getPrefix(), location.getSchema(), location.getTable());
+        String tablePath = deltaService.getTablePath(location.getBasePath(), location.getSchema(), location.getTable());
         deltaService.replace(tablePath, df);
     }
 
@@ -124,8 +124,13 @@ public class SparkTestHelpers {
                 spark.emptyDataset(Encoders.STRING()));
     }
 
-    private Dataset<Row> loadParquetDataframe(final String resource, final String filename) throws IOException {
-        return spark.read().parquet(createFileFromResource(resource, filename).toString());
+    private Dataset<Row> loadParquetDataframe(final String resource, final String filename) {
+        try {
+            return spark.read().parquet(createFileFromResource(resource, filename).toString());
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Path createFileFromResource(final String resource, final String filename) throws IOException {
