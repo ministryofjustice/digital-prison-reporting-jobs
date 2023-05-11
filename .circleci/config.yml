@@ -20,16 +20,17 @@ workflows:
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
           sync_args: "--exclude '*' --include '*-all*jar'"
-          deploy_script: true          
+          deploy_script: true
           notify_jira: true
           notify_slack: true
           channel: dpr_cicd_alerts
+          command: shadowJar # Skip tests when building jar, they've already run
           filters:
             branches:
               only: /.*/
             tags:
               ignore: /.*/
-          ref: << pipeline.git.branch >><< pipeline.git.tag >>  
+          ref: << pipeline.git.branch >><< pipeline.git.tag >>
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
