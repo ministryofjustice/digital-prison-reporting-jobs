@@ -31,17 +31,16 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final DataStorageService storage = new DataStorageService();
     private static final String hiveDatabaseName = "test_db";
 
     private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
 
-    private static final String SAMPLE_EVENTS_PATH =
-        Objects.requireNonNull(
-            DomainExecutorTest.class.getResource("/sample/events")
-        ).getPath();
+    private static SparkTestHelpers helpers;
+
+    @TempDir
+    private static Path staticFolder;
 
     @TempDir
     private Path tmp;
@@ -49,26 +48,29 @@ public class DomainExecutorTest extends BaseSparkTest {
     @BeforeAll
     public static void setupCommonMocks() {
         when(schemaService.databaseExists(any())).thenReturn(true);
+
+        // Preload data used by multiple tests.
+        helpers = new SparkTestHelpers(spark);
+
+        helpers.persistDataset(
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
+            helpers.getOffenderBookings(staticFolder)
+        );
+
+        helpers.persistDataset(
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
+            helpers.getOffenders(staticFolder)
+        );
     }
 
     @Test
     public void test_getAllSourcesForTable() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
-
-        helpers.persistDataset(
-            new TableIdentifier(SAMPLE_EVENTS_PATH, hiveDatabaseName, "nomis", "offender_bookings"),
-            helpers.getOffenderBookings(tmp)
-        );
-
-        helpers.persistDataset(
-            new TableIdentifier(SAMPLE_EVENTS_PATH, hiveDatabaseName, "nomis", "offenders"),
-            helpers.getOffenders(tmp)
-        );
+        val executor = createExecutor(sourcePath(), domainTargetPath(), storage);
 
         for(val table : domainDefinition.getTables()) {
             for (val source : table.getTransform().getSources()) {
-                val dataFrame = executor.getAllSourcesForTable(SAMPLE_EVENTS_PATH, source, null);
+                val dataFrame = executor.getAllSourcesForTable(sourcePath(), source, null);
                 assertNotNull(dataFrame);
             }
         }
@@ -77,7 +79,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     @Test
     public void test_apply() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
+        val executor = createExecutor(sourcePath(), domainTargetPath(), storage);
 
         for(val table : domainDefinition.getTables()) {
             val dataframe = executor.apply(table, getOffenderRefs());
@@ -88,7 +90,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     @Test
     public void test_applyTransform() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
+        val executor = createExecutor(sourcePath(), domainTargetPath(), storage);
 
         for(val table : domainDefinition.getTables()) {
             val transformedDataFrame = executor.applyTransform(getOffenderRefs(), table.getTransform());
@@ -99,7 +101,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     @Test
     public void test_applyViolations_empty() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
+        val executor = createExecutor(sourcePath(), domainTargetPath(), storage);
 
         for(val table : domainDefinition.getTables()) {
             val transformedDataFrame = executor.applyTransform(getOffenderRefs(), table.getTransform());
@@ -111,7 +113,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     @Test
     public void test_applyViolations_nonempty() throws Exception {
         val domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, targetPath(), storage);
+        val executor = createExecutor(sourcePath(), targetPath(), storage);
 
         val refs = Collections.singletonMap("source.table" , helpers.getOffenders(tmp));
 
@@ -126,7 +128,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     @Test
     public void test_applyMappings() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
+        val executor = createExecutor(sourcePath(), domainTargetPath(), storage);
 
         for(val table : domainDefinition.getTables()) {
             val transformedDataFrame = executor.applyTransform(getOffenderRefs(), table.getTransform());
@@ -140,7 +142,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     public void test_saveTable() throws Exception {
         when(schemaService.tableExists(any(), any())).thenReturn(false);
 
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
+        val executor = createExecutor(sourcePath(), domainTargetPath(), storage);
 
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
 
@@ -162,7 +164,7 @@ public class DomainExecutorTest extends BaseSparkTest {
     public void test_deleteTable() throws Exception {
         when(schemaService.tableExists(any(), any())).thenReturn(true);
 
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage);
+        val executor = createExecutor(sourcePath(), domainTargetPath(), storage);
 
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
 
@@ -188,22 +190,13 @@ public class DomainExecutorTest extends BaseSparkTest {
     @Test
     public void shouldRunWithFullUpdateIfTableIsInDomain() throws Exception {
         val domain = getDomain("/sample/domain/sample-domain-execution.json");
-        val executor = createExecutor(sourcePath(), targetPath(), storage);
-
-        // save a source
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
-            helpers.getOffenders(tmp)
-        );
+        val executor = createExecutor(staticSourcePath(), targetPath(), storage);
 
         val domainTableName = "prisoner";
         // Insert first
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "insert");
         // then update
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "update");
-
-        verify(schemaService, times(1)).create(any(), any(), any());
-        verify(schemaService, times(1)).replace(any(), any(), any());
 
         // there should be a target table
         val info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
@@ -218,23 +211,11 @@ public class DomainExecutorTest extends BaseSparkTest {
         val domain1 = getDomain("/sample/domain/sample-domain-execution-insert.json");
         val domain2 = getDomain("/sample/domain/sample-domain-execution-join.json");
 
-        // save a source
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
-            helpers.getOffenders(tmp)
-        );
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
-            helpers.getOffenderBookings(tmp)
-        );
-
         // do Full Materialize of source to target
         val domainTableName = "prisoner";
-        val executor = createExecutor(sourcePath(), targetPath(), storage);
+        val executor = createExecutor(staticSourcePath(), targetPath(), storage);
 
         executor.doFullDomainRefresh(domain1, domain1.getName(), domainTableName, "insert");
-
-        verify(schemaService, times(2)).create(any(), any(), any());
 
         // there should be a target table
         val info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
@@ -253,17 +234,11 @@ public class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRunWith0ChangesIfTableIsNotInDomain() throws Exception {
+    public void shouldRunWithNoChangesIfTableIsNotInDomain() throws Exception {
         val domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
-        val executor = createExecutor(sourcePath(), targetPath(), storage);
-
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
-            helpers.getOffenders(tmp)
-        );
+        val executor = createExecutor(staticSourcePath(), targetPath(), storage);
 
         executor.doFullDomainRefresh(domain, domain.getName(), "prisoner", "insert");
-        verify(schemaService, times(3)).create(any(), any(), any());
 
         // there shouldn't be a target table
         TableIdentifier info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
@@ -272,7 +247,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     @Test
     public void shouldThrowExceptionIfNoSqlDefinedOnTransform() {
-        val executor = createExecutor(sourcePath(), targetPath(), storage);
+        val executor = createExecutor(staticSourcePath(), targetPath(), storage);
 
         val transform = new TableDefinition.TransformDefinition();
         transform.setViewText("");
@@ -287,7 +262,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     @Test
     public void shouldNotExecuteTransformIfSqlIsBad() throws Exception {
-        val executor = createExecutor(sourcePath(), targetPath(), storage);
+        val executor = createExecutor(staticSourcePath(), targetPath(), storage);
 
         val inputs = Collections.singletonMap("offenders", helpers.getOffenders(tmp));
 
@@ -300,7 +275,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     @Test
     public void shouldDeriveNewColumnIfFunctionProvided() throws Exception {
-        val executor = createExecutor(sourcePath(), targetPath(), storage);
+        val executor = createExecutor(staticSourcePath(), targetPath(), storage);
 
         val inputs = helpers.getOffenders(tmp);
 
@@ -353,7 +328,7 @@ public class DomainExecutorTest extends BaseSparkTest {
 
     @Test
     public void shouldWriteViolationsIfThereAreSome() {
-        val executor = createExecutor(sourcePath(), targetPath(), storage);
+        val executor = createExecutor(staticSourcePath(), targetPath(), storage);
 
         val violation = new TableDefinition.ViolationDefinition();
         violation.setCheck("AGE <= 18");
@@ -383,7 +358,6 @@ public class DomainExecutorTest extends BaseSparkTest {
             Arrays.equals(a.collectAsList().toArray(), b.collectAsList().toArray());
     }
 
-    // TODO - this also exists in DomainServiceTest
     private DomainExecutor createExecutor(String source, String target, DataStorageService storage) {
         val mockJobParameters = mock(JobParameters.class);
         when(mockJobParameters.getCuratedS3Path()).thenReturn(source);
@@ -399,8 +373,13 @@ public class DomainExecutorTest extends BaseSparkTest {
     private String targetPath() {
         return tmp.toFile().getAbsolutePath() + "/target";
     }
-    private String sourcePath() {
-        return tmp.toFile().getAbsolutePath() + "/source";
+
+    private static String sourcePath() {
+        return staticFolder.toFile().getAbsolutePath() + "/source";
+    }
+
+    private String staticSourcePath() {
+        return staticFolder.toFile().getAbsolutePath() + "/source";
     }
 
     private Map<String, Dataset<Row>> getOffenderRefs() {

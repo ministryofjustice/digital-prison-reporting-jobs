@@ -31,12 +31,14 @@ public class DomainServiceTest extends BaseSparkTest {
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final String hiveDatabaseName = "test_db";
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
-    private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
 
     private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
     private static final DataStorageService storage = new DataStorageService();
 
     private DomainExecutor executor;
+
+    @TempDir
+    private static Path staticFolder;
 
     @TempDir
     private Path folder;
@@ -45,6 +47,28 @@ public class DomainServiceTest extends BaseSparkTest {
     public static void setupCommonMocks() {
         when(schemaService.databaseExists(any())).thenReturn(true);
         when(schemaService.tableExists(any(), any())).thenReturn(true);
+
+        // Preload data used by multiple tests
+        val helpers = new SparkTestHelpers(spark);
+
+        helpers.persistDataset(new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
+            helpers.getOffenders(staticFolder)
+        );
+
+        helpers.persistDataset(
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
+            helpers.getOffenderBookings(staticFolder)
+        );
+
+        helpers.persistDataset(
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
+            helpers.getAgencyLocations(staticFolder)
+        );
+
+        helpers.persistDataset(
+            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
+            helpers.getInternalAgencyLocations(staticFolder)
+        );
     }
 
     @BeforeEach
@@ -62,16 +86,6 @@ public class DomainServiceTest extends BaseSparkTest {
         val domainTableName = "demographics";
         val domain = getDomain("/sample/domain/incident_domain.json");
 
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
-            helpers.getOffenders(folder)
-        );
-
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
-            helpers.getOffenderBookings(folder)
-        );
-
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
         assertTargetDirectoryNotEmpty();
     }
@@ -82,15 +96,6 @@ public class DomainServiceTest extends BaseSparkTest {
         val domainTableName = "establishment";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
-        );
-
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
-        );
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
         assertTargetDirectoryNotEmpty();
@@ -102,16 +107,6 @@ public class DomainServiceTest extends BaseSparkTest {
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
-        );
-
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
-        );
-
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
         assertTargetDirectoryNotEmpty();
     }
@@ -122,16 +117,6 @@ public class DomainServiceTest extends BaseSparkTest {
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
-        );
-
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
-        );
-
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
     }
 
@@ -141,16 +126,6 @@ public class DomainServiceTest extends BaseSparkTest {
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
-        );
-
-        helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
-        );
-
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
     }
 
@@ -159,13 +134,11 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     private void assertTargetDirectoryNotEmpty() {
-        val foo = new File(targetPath());
-        System.out.println("Checking file: " + foo.getAbsolutePath());
         assertTrue(Objects.requireNonNull(new File(targetPath()).list()).length > 0);
     }
 
-    private String sourcePath() {
-        return folder.toFile().getAbsolutePath() + "/source";
+    private static String sourcePath() {
+        return staticFolder.toFile().getAbsolutePath() + "/source";
     }
 
     private String targetPath() {

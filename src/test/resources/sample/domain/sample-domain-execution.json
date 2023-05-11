@@ -26,8 +26,8 @@
       "author": "alice.jones@justice.gov.uk",
 
       "transform": {
-        "viewText": "SELECT * from source.table",
-        "sources": ["source.table"]
+        "viewText": "SELECT * from nomis.offenders",
+        "sources": ["nomis.offenders"]
       },
 
       "mapping": {
