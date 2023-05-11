@@ -1,8 +1,6 @@
 package uk.gov.justice.digital.client.dynamodb;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
@@ -13,19 +11,16 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.PatternSyntaxException;
-
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
 @Singleton
-public class DynamoDBClient {
+public class DomainDefinitionDB {
 
-    private static final Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(DomainDefinitionDB.class);
 
     private final static String indexName = "secondaryId-type-index";
     private final static String sortKeyName = "secondaryId";
@@ -34,16 +29,11 @@ public class DynamoDBClient {
     ObjectMapper mapper;
 
     @Inject
-    public DynamoDBClient(JobParameters jobParameters) {
-        this(AmazonDynamoDBClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                        jobParameters.getAwsDynamoDBEndpointUrl(),
-                        jobParameters.getAwsRegion()
-                ))
-                .build(), new ObjectMapper());
+    public DomainDefinitionDB(DynamoDBClientProvider dynamoDBClientProvider) {
+        this(dynamoDBClientProvider.getClient(), new ObjectMapper());
     }
 
-    public DynamoDBClient(AmazonDynamoDB dynamoDB, ObjectMapper mapper) {
+    public DomainDefinitionDB(AmazonDynamoDB dynamoDB, ObjectMapper mapper) {
         this.dynamoDB = dynamoDB;
         this.mapper = mapper;
     }
@@ -54,11 +44,7 @@ public class DynamoDBClient {
         try {
             QueryResult response = executeQuery(domainRegistry, domainName);
             return parse(response, tableName);
-        } catch (AmazonDynamoDBException e) {
-            // TODO handle exception properly
-            logger.error("DynamoDB request failed:" + e.getMessage());
-            return null;
-        } catch (JsonProcessingException e) {
+        } catch (AmazonDynamoDBException | JsonProcessingException e){
             // TODO handle exception properly
             logger.error("DynamoDB request failed:" + e.getMessage());
             return null;

@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.repository;
 
-import uk.gov.justice.digital.client.dynamodb.DynamoDBClient;
+import uk.gov.justice.digital.client.dynamodb.DomainDefinitionDB;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DomainServiceException;
 
@@ -13,11 +13,11 @@ import java.util.regex.PatternSyntaxException;
 @Singleton
 public class DomainRepository {
 
-    private final DynamoDBClient dynamoDBClient;
+    private final DomainDefinitionDB dynamoDB;
 
     @Inject
-    public DomainRepository(DynamoDBClient dynamoDBClient) {
-        this.dynamoDBClient = dynamoDBClient;
+    public DomainRepository(DomainDefinitionDB dynamoDB) {
+        this.dynamoDB = dynamoDB;
     }
 
     public Set<DomainDefinition> getForName(final String domainRegistry, final String domainTableName)
@@ -28,8 +28,12 @@ public class DomainRepository {
         if (names.length != 2) {
             throw new DomainServiceException("Invalid domain table name. Should be <domain_name>.<table_name>");
         } else {
-            DomainDefinition domain = dynamoDBClient.getDomainDefinition(domainRegistry, names[0], names[1]);
-            domains.add(domain);
+            DomainDefinition domain = dynamoDB.getDomainDefinition(domainRegistry, names[0], names[1]);
+            if (domain != null) {
+                domains.add(domain);
+            } else {
+                throw new DomainServiceException("Database failure");
+            }
         }
         return domains;
     }

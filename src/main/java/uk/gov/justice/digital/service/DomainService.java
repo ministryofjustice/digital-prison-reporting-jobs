@@ -53,7 +53,6 @@ public class DomainService {
         }
         else {
             val domains = getDomains(domainRegistry, domainName);
-
             logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
             for(val domain : domains) {
                 processDomain(domain, domain.getName(), domainTableName, domainOperation);

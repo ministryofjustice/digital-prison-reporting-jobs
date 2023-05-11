@@ -16,7 +16,6 @@ import org.mockito.quality.Strictness;
 import uk.gov.justice.digital.client.glue.GlueClientProvider;
 import uk.gov.justice.digital.domain.model.TableInfo;
 import uk.gov.justice.digital.exception.DomainSchemaException;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;

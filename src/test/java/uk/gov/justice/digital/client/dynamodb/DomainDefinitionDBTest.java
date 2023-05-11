@@ -4,7 +4,6 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -17,13 +16,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 
-class DynamoDBClientTest {
+class DomainDefinitionDBTest {
 
 
-    private static final Logger logger = LoggerFactory.getLogger(DynamoDBClientTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(DomainDefinitionDBTest.class);
 
-    private static final long serialVersionUID = 1;
-    private static DynamoDBClient dynamoDBClient;
+    private static DomainDefinitionDB domainDefinitionDB;
     private static AmazonDynamoDB dynamoDB;
     private static ObjectMapper mapper;
 
@@ -32,11 +30,7 @@ class DynamoDBClientTest {
     void setUp() {
         dynamoDB = mock(AmazonDynamoDB.class);
         mapper = mock(ObjectMapper.class);
-        dynamoDBClient = new DynamoDBClient(dynamoDB, mapper);
-    }
-
-    @AfterEach
-    void tearDown() {
+        domainDefinitionDB = new DomainDefinitionDB(dynamoDB, mapper);
     }
 
     @Test
@@ -45,7 +39,7 @@ class DynamoDBClientTest {
         String domainName = "incident";
         QueryResult result = mock(QueryResult.class);
         when(dynamoDB.query(any(QueryRequest.class))).thenReturn(result);
-        QueryResult expected_result = dynamoDBClient.executeQuery(domainTableName, domainName);
+        QueryResult expected_result = domainDefinitionDB.executeQuery(domainTableName, domainName);
         assert(expected_result.getItems().isEmpty());
     }
 
@@ -53,14 +47,11 @@ class DynamoDBClientTest {
     void shouldReturnErrorIfDomainTableDoesntExists() {
         String domainTableName = "test";
         String domainName = "incident";
-        QueryResult result = mock(QueryResult.class);
         when(dynamoDB.query(any(QueryRequest.class))).thenThrow(ResourceNotFoundException.class);
         try {
-            QueryResult expected_result = dynamoDBClient.executeQuery(domainTableName, domainName);
+            QueryResult expected_result = domainDefinitionDB.executeQuery(domainTableName, domainName);
             fail();
         } catch (AmazonDynamoDBException e) {
-            logger.info("Database not exists test");
-            logger.error(e.getMessage());
             assertTrue(true);
         }
     }
@@ -73,9 +64,9 @@ class DynamoDBClientTest {
         domainDef.setId("123");
         domainDef.setDescription("test description");
         QueryResult result = mock(QueryResult.class);
-        when(dynamoDBClient.executeQuery("test", "incident")).thenReturn(result);
+        when(domainDefinitionDB.executeQuery("test", "incident")).thenReturn(result);
         List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
-            static final long serialVersionUID = 1;
+            static final long serialVersionUID = -2338626292552177485L;
             {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"test name\", \"description\": \"test description\"}"));
@@ -83,8 +74,8 @@ class DynamoDBClientTest {
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        when(dynamoDBClient.parse(result, null)).thenReturn(domainDef);
-        DomainDefinition expectedDomainDef = dynamoDBClient.getDomainDefinition("test",
+        when(domainDefinitionDB.parse(result, null)).thenReturn(domainDef);
+        DomainDefinition expectedDomainDef = domainDefinitionDB.getDomainDefinition("test",
                 "incident", "demographics");
         verify(mapper, times(1)).readValue(data, DomainDefinition.class);
         assertEquals(expectedDomainDef.getName(), "test name");
@@ -99,7 +90,7 @@ class DynamoDBClientTest {
         domainDef.setId("123");
         domainDef.setDescription("test description");
         List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
-            static final long serialVersionUID = 1;
+            static final long serialVersionUID = -2338626292552177485L;
             {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"test name\", \"description\": \"test description\"}"));
@@ -107,7 +98,7 @@ class DynamoDBClientTest {
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        DomainDefinition expectedDomainDef = dynamoDBClient.parse(result, null);
+        DomainDefinition expectedDomainDef = domainDefinitionDB.parse(result, null);
         assertEquals(expectedDomainDef.getName(), "test name");
     }
 
@@ -119,7 +110,7 @@ class DynamoDBClientTest {
         domainDef.setId("123");
         domainDef.setDescription("test description");
         List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
-            static final long serialVersionUID = 1;
+            static final long serialVersionUID = -2338626292552177485L;
             {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"demographics\", \"description\": \"test description\"}")
@@ -128,7 +119,7 @@ class DynamoDBClientTest {
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        DomainDefinition expectedDomainDef = dynamoDBClient.parse(result, "demographics");
+        DomainDefinition expectedDomainDef = domainDefinitionDB.parse(result, "demographics");
         assertEquals(expectedDomainDef.getName(), "living_unit");
     }
 
@@ -140,7 +131,7 @@ class DynamoDBClientTest {
         domainDef.setId("123");
         domainDef.setDescription("test description");
         List<Map<String, AttributeValue>> l = Collections.singletonList(new HashMap<String, AttributeValue>() {
-            static final long serialVersionUID = 1;
+            static final long serialVersionUID = -2338626292552177485L;
             {
             put("data", new AttributeValue()
                     .withS("{\"id\": \"123\", \"name\": \"test name\", \"description\": \"test description\"}"));
@@ -149,10 +140,9 @@ class DynamoDBClientTest {
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenThrow(JsonProcessingException.class);
         try {
-            DomainDefinition expectedDomainDef = dynamoDBClient.parse(result, null);
+            DomainDefinition expectedDomainDef = domainDefinitionDB.parse(result, null);
             fail();
         } catch (JsonProcessingException e) {
-            logger.error("JSON Parser failure" + e.getMessage());
             assertTrue(true);
         }
     }
