@@ -14,7 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import uk.gov.justice.digital.client.glue.GlueClientProvider;
-import uk.gov.justice.digital.domain.model.TableInfo;
+import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DomainSchemaException;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -108,7 +108,7 @@ public class DomainSchemaServiceTest {
         when(mockClient.getDatabase(any())).thenReturn(result);
         when(mockClient.getTable(any())).thenThrow(new EntityNotFoundException(""));
         when(mockClient.createTable(any())).thenReturn(new CreateTableResult());
-        TableInfo info = TableInfo.create("prefix", "database", "schema", "table");
+        TableIdentifier info = new TableIdentifier("prefix", "database", "schema", "table");
         underTest.create(info, "table", mockDataframe);
         verify(mockClient, times(1)).createTable(any());
         verify(mockClient, times(0)).deleteTable(any());
@@ -120,7 +120,7 @@ public class DomainSchemaServiceTest {
         when(mockClient.getDatabase(any())).thenReturn(result);
         when(mockClient.getTable(any())).thenReturn(new GetTableResult());
         when(mockClient.createTable(any())).thenReturn(new CreateTableResult());
-        TableInfo info = TableInfo.create("prefix", "database", "schema", "table");
+        TableIdentifier info = new TableIdentifier("prefix", "database", "schema", "table");
         underTest.replace(info, "table", mockDataframe);
         verify(mockClient, times(1)).createTable(any());
         verify(mockClient, times(1)).deleteTable(any());
@@ -132,7 +132,7 @@ public class DomainSchemaServiceTest {
         GetDatabaseResult result = new GetDatabaseResult().withDatabase(new Database().withName("database"));
         when(mockClient.getDatabase(any())).thenReturn(result);
         when(mockClient.getTable(any())).thenReturn(new GetTableResult());
-        TableInfo info = TableInfo.create("prefix", "database", "schema", "table");
+        TableIdentifier info = new TableIdentifier("prefix", "database", "schema", "table");
         underTest.drop(info);
         verify(mockClient, times(0)).createTable(any());
         verify(mockClient, times(1)).deleteTable(any());

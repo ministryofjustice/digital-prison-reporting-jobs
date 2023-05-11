@@ -2,7 +2,6 @@ package uk.gov.justice.digital.config;
 
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
 public class BaseSparkTest {
@@ -33,7 +32,6 @@ public class BaseSparkTest {
 	@BeforeAll
 	public static void createSession() {
 		spark = createSparkSession();
-		Assertions.assertNotNull(spark);
     }
 
 	@AfterAll

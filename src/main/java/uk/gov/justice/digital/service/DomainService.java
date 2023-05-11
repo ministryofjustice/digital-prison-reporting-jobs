@@ -15,16 +15,15 @@ import java.util.regex.PatternSyntaxException;
 @Singleton
 public class DomainService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
+
     private final DomainRepository repo;
     private final DomainExecutor executor;
-
-    protected JobParameters parameters;
-
-    private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
+    private final JobParameters parameters;
 
     @Inject
     public DomainService(JobParameters parameters,
-                        DomainRepository repository,
+                         DomainRepository repository,
                          DomainExecutor executor) {
         this.parameters = parameters;
         this.repo = repository;
@@ -40,7 +39,7 @@ public class DomainService {
         );
     }
 
-    protected void runInternal(
+    private void runInternal(
         String domainRegistry,
         String domainTableName,
         String domainName,
@@ -65,7 +64,7 @@ public class DomainService {
         return repo.getForName(domainRegistry, domainName);
     }
 
-    protected void processDomain(
+    private void processDomain(
         DomainDefinition domain,
         String domainName,
         String domainTableName,
