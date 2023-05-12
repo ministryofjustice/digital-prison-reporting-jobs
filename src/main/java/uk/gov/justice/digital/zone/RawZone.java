@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.zone;
 
+import com.amazonaws.services.quicksight.model.DataSet;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -41,15 +42,12 @@ public class RawZone extends Zone {
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
         String rowOperation = table.getAs(OPERATION);
-
         val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
             .map(r -> this.storage.getTablePath(rawS3Path, r, rowOperation))
             // Revert to source and table from row where no match exists in the schema reference service.
             .orElse(this.storage.getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
 
-        val rawDataFrame = dataFrame
-            .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
-            .drop(SOURCE, TABLE, OPERATION);
+        val rawDataFrame = extractRawDataFrame(dataFrame, rowSource, rowTable);
 
         logger.info("Appending {} records to deltalake table: {}", rawDataFrame.count(), tablePath);
         this.storage.append(tablePath, rawDataFrame);
@@ -61,6 +59,12 @@ public class RawZone extends Zone {
                 System.currentTimeMillis() - startTime
         );
         return rawDataFrame;
+    }
+
+    protected Dataset<Row> extractRawDataFrame(Dataset<Row> dataFrame, String rowSource, String rowTable) {
+        return dataFrame
+                .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
+                .drop(SOURCE, TABLE, OPERATION);
     }
 
 }

@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.zone;
 
-
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -17,17 +16,18 @@ import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import static org.apache.spark.sql.types.DataTypes.StringType;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
+import static org.apache.spark.sql.types.DataTypes.StringType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.*;
 
-public class RawZoneTest extends BaseSparkTest {
+public class CuratedZoneTest extends BaseSparkTest {
 
-    private static final String S3_PATH_KEY = "dpr.raw.s3.path";
-    private static final String S3_PATH = "s3://loadjob/raw";
+    private static final String S3_PATH_KEY = "dpr.curated.s3.path";
+    private static final String S3_PATH = "s3://loadjob/curated";
 
     private final JobParameters jobParameters = new JobParameters(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
     private final DataStorageService storage = new DataStorageService();
@@ -44,17 +44,17 @@ public class RawZoneTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReturnValidRawS3Path() {
+    public void shouldReturnValidCuratedS3Path() {
         val source = "oms_owner";
         val table  = "agency_internal_locations";
         val operation = "load";
-        val expectedRawS3Path = String.join("/", S3_PATH, source, table, operation);
-        assertEquals(expectedRawS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
+        val expectedCuratedS3Path = String.join("/", S3_PATH, source, table, operation);
+        assertEquals(expectedCuratedS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
     }
 
     @Test
     @ExtendWith(MockitoExtension.class)
-    public void shouldProcessRawZone() {
+    public void shouldProcessCuratedZone() {
         // Define a schema for the row
         StructType schema = new StructType()
                 .add("source", StringType, false)
@@ -67,15 +67,14 @@ public class RawZoneTest extends BaseSparkTest {
         MockedStatic<SourceReferenceService> service = mockStatic(SourceReferenceService.class);
         DataStorageService storage1 = mock(DataStorageService.class);
         doNothing().when(storage1).append("testPath", mockedDataSet);
-        doReturn("testPath").when(storage1).getTablePath(S3_PATH, ref, table.getAs("operation"));
+        doReturn("testPath").when(storage1).getTablePath(S3_PATH, ref);
         service.when(() -> SourceReferenceService
                         .getSourceReference(table.getAs("source"), table.getAs("table")))
                 .thenReturn(Optional.of(ref));
-        RawZone rawZoneTest = spy(new RawZone(jobParameters, storage1));
+//        doReturn(true).when(ref).isPresent();
+        CuratedZone curatedZoneTest = spy(new CuratedZone(jobParameters, storage1));
         when(mockedDataSet.count()).thenReturn(10L);
-        doReturn(mockedDataSet).when(rawZoneTest).extractRawDataFrame(mockedDataSet, table.getAs("source"),
-                table.getAs("table"));
-        Dataset<Row> actual_result = rawZoneTest.process(spark, mockedDataSet, table);
+        Dataset<Row> actual_result = curatedZoneTest.process(spark, mockedDataSet, table);
         assertNotNull(actual_result);
     }
 }

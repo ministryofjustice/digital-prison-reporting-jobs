@@ -74,7 +74,7 @@ public class StructuredZone extends Zone {
         return structuredDataFrame;
     }
 
-    private Dataset<Row> handleSchemaFound(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
+    protected Dataset<Row> handleSchemaFound(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
 
         val tablePath = this.storage.getTablePath(structuredPath, sourceReference);
 
@@ -100,19 +100,19 @@ public class StructuredZone extends Zone {
         return handleValidRecords(spark, validatedDataFrame, tablePath);
     }
 
-    private Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {
+    protected Dataset<Row> validateJsonData(Dataset<Row> dataFrame, StructType schema, String source, String table) {
 
         logger.info("Validating data against schema: {}/{}", source, table);
 
         val jsonValidator = JsonValidator.createAndRegister(schema, dataFrame.sparkSession(), source, table);
-
+        System.out.println(jsonValidator);
         return dataFrame
             .select(col(DATA), col(METADATA))
             .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
             .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
     }
 
-    private Dataset<Row> handleValidRecords(SparkSession spark, Dataset<Row> dataFrame, String destinationPath) {
+    protected Dataset<Row> handleValidRecords(SparkSession spark, Dataset<Row> dataFrame, String destinationPath) {
         val validRecords = dataFrame
             .select(col(PARSED_DATA), col(VALID))
             .filter(col(VALID).equalTo(true))
@@ -128,7 +128,7 @@ public class StructuredZone extends Zone {
         else return createEmptyDataFrame(dataFrame);
     }
 
-    private void handleInValidRecords(SparkSession spark, Dataset<Row> dataFrame, String source,
+    protected void handleInValidRecords(SparkSession spark, Dataset<Row> dataFrame, String source,
                                       String table, String destinationPath) {
         val errorString = String.format("Record does not match schema %s/%s", source, table);
 
@@ -147,7 +147,7 @@ public class StructuredZone extends Zone {
         }
     }
 
-    private Dataset<Row> handleNoSchemaFound(SparkSession spark, Dataset<Row> dataFrame, String source, String table) {
+    protected Dataset<Row> handleNoSchemaFound(SparkSession spark, Dataset<Row> dataFrame, String source, String table) {
         logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
             source,
             table,
