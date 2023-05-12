@@ -160,8 +160,6 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     private void assertTargetDirectoryNotEmpty() {
-        val foo = new File(targetPath());
-        System.out.println("Checking file: " + foo.getAbsolutePath());
         assertTrue(Objects.requireNonNull(new File(targetPath()).list()).length > 0);
     }
 
