@@ -9,11 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.config.ResourceLoader;
+import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.test.SparkTestHelpers;
 
 import java.io.File;
 import java.io.IOException;
