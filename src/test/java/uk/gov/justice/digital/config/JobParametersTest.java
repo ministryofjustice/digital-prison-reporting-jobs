@@ -180,4 +180,14 @@ class JobParametersTest {
     public void shouldReturnOptionalWithDomainTargetPathWhenSet() {
         assertEquals(DOMAIN_S3_TARGET_PATH, validJobParameters.getDomainTargetPath());
     }
+
+
+    @Test
+    public void shouldParseArrayOf1DStringsIntoAMap() {
+        String[] args = new String[] {"--dpr.domain.registry", DOMAIN_REGISTRY, "--dpr.domain.operation", DOMAIN_OPERATION};
+        emptyJobParameters.parse(args);
+        assertEquals(DOMAIN_REGISTRY, emptyJobParameters.getDomainRegistry());
+        assertEquals(DOMAIN_OPERATION, emptyJobParameters.getDomainOperation());
+        assertFalse(emptyJobParameters.getStructuredS3Path().isPresent());
+    }
 }
