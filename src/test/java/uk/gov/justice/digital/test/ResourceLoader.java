@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.config;
+package uk.gov.justice.digital.test;
 
 import java.io.InputStream;
 import java.util.Optional;

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.config.ResourceLoader;
+import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.domain.model.TableDefinition;
@@ -17,7 +17,7 @@ import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainSchemaService;
-import uk.gov.justice.digital.service.SparkTestHelpers;
+import uk.gov.justice.digital.test.SparkTestHelpers;
 
 import java.io.IOException;
 import java.nio.file.Path;
