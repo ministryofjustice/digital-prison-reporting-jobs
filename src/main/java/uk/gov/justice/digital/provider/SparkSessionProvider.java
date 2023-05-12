@@ -14,7 +14,8 @@ public class SparkSessionProvider {
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.autoCompact.enabled", "true")
-                .set("spark.sql.legacy.charVarcharAsString", "true");
+                .set("spark.sql.legacy.charVarcharAsString", "true")
+                .set("spark.sql.codegen.wholeStage", "false");
 
         return SparkSession.builder()
                 .config(sparkConf)

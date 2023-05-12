@@ -2,7 +2,7 @@ package uk.gov.justice.digital.zone;
 
 import lombok.val;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.test.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.service.DataStorageService;
 

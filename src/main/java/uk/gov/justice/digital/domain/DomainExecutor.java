@@ -22,7 +22,6 @@ import uk.gov.justice.digital.service.DomainSchemaService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-
 @Singleton
 public class DomainExecutor {
 
@@ -59,14 +58,18 @@ public class DomainExecutor {
         String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         logger.info("Domain insert to disk started");
         try {
+            System.out.println("Verifying " + "info does not exist");
             if (!storage.exists(spark, info)) {
+                System.out.println("table does not exist - proceeding with insert");
                 storage.create(tablePath, dataFrame);
                 schema.create(info, tablePath, dataFrame);
                 logger.info("Creating delta table completed...");
             } else {
+                System.out.println("ERROR - table exists");
                 throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
             }
         } catch(DomainSchemaException dse) {
+            System.out.println("ERROR - caught exception: " + dse);
             throw new DomainExecutorException(dse);
         }
     }
@@ -120,7 +123,9 @@ public class DomainExecutor {
             throws DomainExecutorException {
         logger.info("DomainOperations::saveTable");
         if (domainOperation.equalsIgnoreCase("insert")) {
+            System.out.println("saveTable insert start");
             insertTable(info, dataFrame);
+            System.out.println("saveTable insert end");
         } else if (domainOperation.equalsIgnoreCase("update")) {
             updateTable(info, dataFrame);
         } else if (domainOperation.equalsIgnoreCase("sync")) {
@@ -130,7 +135,9 @@ public class DomainExecutor {
             logger.error("Invalid operation type " + domainOperation);
             throw new DomainExecutorException("Invalid operation type " + domainOperation);
         }
+        System.out.println("saveTable - endTableUpdates start");
         storage.endTableUpdates(spark, info);
+        System.out.println("saveTable - endTableUpdates end");
     }
 
     protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) {
@@ -319,7 +326,9 @@ public class DomainExecutor {
                     throw new DomainExecutorException("Table " + domainTableName + " not found");
                 } else {
                     // TODO no source table and df they are required only for unit testing
+                    System.out.println("df apply start");
                     val dfTarget = apply(table, null);
+                    System.out.println("df apply end");
                     saveTable(
                         new TableIdentifier(
                             targetRootPath,

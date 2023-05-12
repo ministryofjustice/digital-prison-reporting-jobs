@@ -2,7 +2,7 @@ package uk.gov.justice.digital.converter.dms;
 
 import lombok.val;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.test.BaseSparkTest;
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.job.model.Columns.DATA;

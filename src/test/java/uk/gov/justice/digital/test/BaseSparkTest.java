@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.config;
+package uk.gov.justice.digital.test;
 
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
@@ -10,6 +10,7 @@ public class BaseSparkTest {
 
 	@BeforeAll
 	public static void createSession() {
+		System.out.println("Starting spark");
 		spark = SparkSession.builder()
 			.appName("test")
 			.config("spark.master", "local")
@@ -27,6 +28,7 @@ public class BaseSparkTest {
 			.config("spark.ui.enabled", false)
 			.enableHiveSupport()
 			.getOrCreate();
+		System.out.println("Spark started");
     }
 
 	@AfterAll

@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service;
+package uk.gov.justice.digital.test;
 
 import lombok.val;
 import org.apache.commons.io.FileUtils;
@@ -10,6 +10,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
+import uk.gov.justice.digital.service.DataStorageService;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -48,9 +49,11 @@ public class SparkTestHelpers {
     }
 
     public void persistDataset(TableIdentifier location, Dataset<Row> df) {
+        System.out.println("Persisting: " + location);
         DataStorageService deltaService = new DataStorageService();
         String tablePath = deltaService.getTablePath(location.getBasePath(), location.getSchema(), location.getTable());
         deltaService.replace(tablePath, df);
+        System.out.println("Persist complete");
     }
 
     public Dataset<Row> createIncidentDomainDataframe() {
