@@ -6,8 +6,10 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.exception.DomainServiceException;
 import uk.gov.justice.digital.service.DomainService;
+import java.util.Arrays;
 
 
 /**
@@ -23,21 +25,29 @@ public class DomainRefreshJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DomainRefreshJob.class);
 
     private final DomainService domainService;
+    private final JobParameters jobParameters;
+
+    private static String[] jobArguments;
 
 
     @Inject
-    public DomainRefreshJob(DomainService domainService) {
+    public DomainRefreshJob(DomainService domainService, JobParameters jobParameters) {
         this.domainService = domainService;
+        this.jobParameters = jobParameters;
     }
 
     public static void main(String[] args) {
         logger.info("Job started");
+        logger.info("Arguments :" + Arrays.toString(args));
+        jobArguments = args;
+
         PicocliRunner.run(DomainRefreshJob.class);
     }
 
     @Override
     public void run() {
         try {
+            jobParameters.parse(jobArguments);
             domainService.run();
         } catch (Exception | DomainServiceException e) {
             logger.error("Caught exception during job run", e);

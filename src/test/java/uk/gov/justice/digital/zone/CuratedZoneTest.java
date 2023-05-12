@@ -71,7 +71,6 @@ public class CuratedZoneTest extends BaseSparkTest {
         service.when(() -> SourceReferenceService
                         .getSourceReference(table.getAs("source"), table.getAs("table")))
                 .thenReturn(Optional.of(ref));
-//        doReturn(true).when(ref).isPresent();
         CuratedZone curatedZoneTest = spy(new CuratedZone(jobParameters, storage1));
         when(mockedDataSet.count()).thenReturn(10L);
         Dataset<Row> actual_result = curatedZoneTest.process(spark, mockedDataSet, table);

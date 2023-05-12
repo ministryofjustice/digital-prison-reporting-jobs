@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service;
+package uk.gov.justice.digital.test;
 
 import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.model.AlreadyExistsException;

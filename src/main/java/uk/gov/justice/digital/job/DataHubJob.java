@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
+import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.zone.CuratedZone;
@@ -50,7 +51,8 @@ public class DataHubJob implements Runnable {
         StructuredZone structuredZone,
         CuratedZone curatedZone,
         @Named("converterForDMS_3_4_6") Converter converter,
-        SparkSessionProvider sparkSessionProvider
+        SparkSessionProvider sparkSessionProvider,
+        JobParameters jobParameters
     ) {
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
