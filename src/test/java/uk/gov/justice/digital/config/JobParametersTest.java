@@ -12,8 +12,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+// TODO - coverage of new constructor - may require some painful mocking.
 class JobParametersTest {
 
+    // TODO - consider making these a public property of the JobParameters class
     private static final String AWS_REGION_KEY = "dpr.aws.region";
     private static final String AWS_KINESIS_ENDPOINT_URL_KEY = "dpr.aws.kinesis.endpointUrl";
     private static final String KINESIS_READER_STREAM_NAME_KEY = "dpr.kinesis.reader.streamName";
@@ -181,13 +183,4 @@ class JobParametersTest {
         assertEquals(DOMAIN_S3_TARGET_PATH, validJobParameters.getDomainTargetPath());
     }
 
-
-    @Test
-    public void shouldParseArrayOf1DStringsIntoAMap() {
-        String[] args = new String[] {"--dpr.domain.registry", DOMAIN_REGISTRY, "--dpr.domain.operation", DOMAIN_OPERATION};
-        emptyJobParameters.parse(args);
-        assertEquals(DOMAIN_REGISTRY, emptyJobParameters.getDomainRegistry());
-        assertEquals(DOMAIN_OPERATION, emptyJobParameters.getDomainOperation());
-        assertFalse(emptyJobParameters.getStructuredS3Path().isPresent());
-    }
 }

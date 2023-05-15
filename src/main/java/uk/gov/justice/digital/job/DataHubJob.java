@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
+import io.micronaut.runtime.Micronaut;
 import lombok.val;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
@@ -10,17 +11,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
-import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.zone.RawZone;
 import uk.gov.justice.digital.zone.StructuredZone;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
@@ -51,8 +53,7 @@ public class DataHubJob implements Runnable {
         StructuredZone structuredZone,
         CuratedZone curatedZone,
         @Named("converterForDMS_3_4_6") Converter converter,
-        SparkSessionProvider sparkSessionProvider,
-        JobParameters jobParameters
+        SparkSessionProvider sparkSessionProvider
     ) {
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
@@ -64,7 +65,12 @@ public class DataHubJob implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job started");
-        PicocliRunner.run(DataHubJob.class);
+        // TODO - remove duplication of context creation
+        val context = Micronaut
+                .build(args)
+                .banner(false)
+                .start();
+        PicocliRunner.run(DataHubJob.class, context);
     }
 
     private void batchProcessor(JavaRDD<byte[]> batch) {
