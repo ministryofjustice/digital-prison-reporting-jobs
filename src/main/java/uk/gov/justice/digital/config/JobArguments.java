@@ -23,6 +23,22 @@ public class JobArguments {
 
     private static final Logger logger = LoggerFactory.getLogger(JobArguments.class);
 
+    public static final String AWS_REGION = "dpr.aws.region";
+    public static final String AWS_KINESIS_ENDPOINT_URL = "dpr.aws.kinesis.endpointUrl";
+    public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
+    public static final String KINESIS_READER_STREAM_NAME = "dpr.kinesis.reader.streamName";
+    public static final String KINESIS_READER_BATCH_DURATION_SECONDS = "dpr.kinesis.reader.batchDurationSeconds";
+    public static final String RAW_S3_PATH = "dpr.raw.s3.path";
+    public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
+    public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
+    public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
+    public static final String DOMAIN_NAME = "dpr.domain.name";
+    public static final String DOMAIN_TABLE_NAME = "dpr.domain.table.name";
+    public static final String DOMAIN_OPERATION = "dpr.domain.operation";
+    public static final String DOMAIN_REGISTRY = "dpr.domain.registry";
+    public static final String DOMAIN_S3_TARGET_PATH = "dpr.domain.target.path";
+    public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
+
     private final Map<String, String> config;
 
     @Inject
@@ -39,65 +55,65 @@ public class JobArguments {
     }
 
     public String getAwsRegion() {
-        return getMandatoryProperty("dpr.aws.region");
+        return getMandatoryProperty(AWS_REGION);
     }
 
     public String getAwsKinesisEndpointUrl() {
-        return getMandatoryProperty("dpr.aws.kinesis.endpointUrl");
+        return getMandatoryProperty(AWS_KINESIS_ENDPOINT_URL);
     }
 
     public String getAwsDynamoDBEndpointUrl() {
-        return getMandatoryProperty("dpr.aws.dynamodb.endpointUrl");
+        return getMandatoryProperty(AWS_DYNAMODB_ENDPOINT_URL);
     }
 
     public String getKinesisReaderStreamName() {
-        return getMandatoryProperty("dpr.kinesis.reader.streamName");
+        return getMandatoryProperty(KINESIS_READER_STREAM_NAME);
     }
 
     public Duration getKinesisReaderBatchDuration() {
-        String durationSeconds = getMandatoryProperty("dpr.kinesis.reader.batchDurationSeconds");
+        String durationSeconds = getMandatoryProperty(KINESIS_READER_BATCH_DURATION_SECONDS);
         long parsedDuration = Long.parseLong(durationSeconds);
         return Durations.seconds(parsedDuration);
     }
 
     public Optional<String> getRawS3Path() {
-        return getOptionalProperty("dpr.raw.s3.path");
+        return getOptionalProperty(RAW_S3_PATH);
     }
 
     public Optional<String> getStructuredS3Path() {
-        return getOptionalProperty("dpr.structured.s3.path");
+        return getOptionalProperty(STRUCTURED_S3_PATH);
     }
 
     public Optional<String> getViolationsS3Path() {
-        return getOptionalProperty("dpr.violations.s3.path");
+        return getOptionalProperty(VIOLATIONS_S3_PATH);
     }
 
     public String getCuratedS3Path() {
-        return getMandatoryProperty("dpr.curated.s3.path");
+        return getMandatoryProperty(CURATED_S3_PATH);
     }
 
     public String getDomainTargetPath() {
-        return getMandatoryProperty("dpr.domain.target.path");
+        return getMandatoryProperty(DOMAIN_S3_TARGET_PATH);
     }
 
     public String getDomainName() {
-        return getMandatoryProperty("dpr.domain.name");
+        return getMandatoryProperty(DOMAIN_NAME);
     }
 
     public String getDomainTableName() {
-        return getMandatoryProperty("dpr.domain.table.name");
+        return getMandatoryProperty(DOMAIN_TABLE_NAME);
     }
 
     public String getDomainRegistry() {
-        return getMandatoryProperty("dpr.domain.registry");
+        return getMandatoryProperty(DOMAIN_REGISTRY);
     }
 
     public String getDomainOperation() {
-        return getMandatoryProperty("dpr.domain.operation");
+        return getMandatoryProperty(DOMAIN_OPERATION);
     }
 
-    public Optional<String> getCatalogDatabase() {
-        return getOptionalProperty("dpr.domain.catalog.db");
+    public Optional<String> getDomainCatalogDatabaseName() {
+        return getOptionalProperty(DOMAIN_CATALOG_DATABASE_NAME);
     }
 
     private String getMandatoryProperty(String jobParameter) {
