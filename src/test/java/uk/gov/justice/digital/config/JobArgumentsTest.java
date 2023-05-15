@@ -13,7 +13,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 // TODO - coverage of new constructor - may require some painful mocking.
-class JobParametersTest {
+class JobArgumentsTest {
 
     // TODO - consider making these a public property of the JobParameters class
     private static final String AWS_REGION_KEY = "dpr.aws.region";
@@ -63,124 +63,124 @@ class JobParametersTest {
         testConfig.put(DOMAIN_S3_TARGET_PATH_KEY, DOMAIN_S3_TARGET_PATH);
     }
 
-    private static final JobParameters validJobParameters = new JobParameters(testConfig);
-    private static final JobParameters emptyJobParameters = new JobParameters(Collections.emptyMap());
+    private static final JobArguments validArguments = new JobArguments(testConfig);
+    private static final JobArguments emptyArguments = new JobArguments(Collections.emptyMap());
 
     @Test
     public void shouldRemoveLeadingHyphensFromParameterNames() {
-        val jobParameters = new JobParameters(
-                Collections.singletonMap("--" + AWS_REGION_KEY, AWS_REGION)
+        val jobParameters = new JobArguments(
+            Collections.singletonMap("--" + AWS_REGION_KEY, AWS_REGION)
         );
         assertEquals(AWS_REGION, jobParameters.getAwsRegion());
     }
 
     @Test
     public void shouldReturnAwsRegionWhenSet() {
-        assertEquals(AWS_REGION, validJobParameters.getAwsRegion());
+        assertEquals(AWS_REGION, validArguments.getAwsRegion());
     }
 
     @Test
     public void shouldThrowExceptionWhenAwsRegionNotSet() {
-        assertThrows(IllegalStateException.class, emptyJobParameters::getAwsRegion);
+        assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
     }
 
     @Test
     public void shouldReturnAwsKinesisEndpointUrlWhenSet() {
-        assertEquals(AWS_KINESIS_ENDPOINT_URL, validJobParameters.getAwsKinesisEndpointUrl());
+        assertEquals(AWS_KINESIS_ENDPOINT_URL, validArguments.getAwsKinesisEndpointUrl());
     }
 
     @Test
     public void shouldThrowExceptionWhenKinesisEndpointUrlNotSet() {
-        assertThrows(IllegalStateException.class, emptyJobParameters::getAwsKinesisEndpointUrl);
+        assertThrows(IllegalStateException.class, emptyArguments::getAwsKinesisEndpointUrl);
     }
 
     @Test
     public void shouldReturnKinesisReaderStreamNameWhenSet() {
-        assertEquals(KINESIS_READER_STREAM_NAME, validJobParameters.getKinesisReaderStreamName());
+        assertEquals(KINESIS_READER_STREAM_NAME, validArguments.getKinesisReaderStreamName());
     }
 
     @Test
     public void shouldThrowExceptionWhenKinesisReaderStreamNameNotSet() {
-        assertThrows(IllegalStateException.class, emptyJobParameters::getKinesisReaderStreamName);
+        assertThrows(IllegalStateException.class, emptyArguments::getKinesisReaderStreamName);
     }
 
     @Test
     public void shouldReturnKinesisReaderBatchDurationWhenSet() {
         Duration expectedDuration = Durations.seconds(Long.parseLong(KINESIS_READER_BATCH_DURATION_SECONDS));
-        assertEquals(expectedDuration, validJobParameters.getKinesisReaderBatchDuration());
+        assertEquals(expectedDuration, validArguments.getKinesisReaderBatchDuration());
     }
 
     @Test
     public void shouldThrowExceptionWhenKinesisReaderBatchDurationNotSet() {
-        assertThrows(IllegalStateException.class, emptyJobParameters::getKinesisReaderBatchDuration);
+        assertThrows(IllegalStateException.class, emptyArguments::getKinesisReaderBatchDuration);
     }
 
     @Test
     public void shouldThrowExceptionWhenKinesisReaderBatchDurationInvalid() {
-        JobParameters jobParameters = new JobParameters(
-                Collections.singletonMap(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, "this is not a number")
+        JobArguments jobArguments = new JobArguments(
+            Collections.singletonMap(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, "this is not a number")
         );
-        assertThrows(NumberFormatException.class, jobParameters::getKinesisReaderBatchDuration);
+        assertThrows(NumberFormatException.class, jobArguments::getKinesisReaderBatchDuration);
     }
 
     @Test
     public void shouldReturnOptionalWithRawPathWhenSet() {
-        assertEquals(Optional.of(RAW_S3_PATH), validJobParameters.getRawS3Path());
+        assertEquals(Optional.of(RAW_S3_PATH), validArguments.getRawS3Path());
     }
 
     @Test
     public void shouldReturnEmptyOptionalWhenRawPathNotSet() {
-        assertEquals(Optional.empty(), emptyJobParameters.getRawS3Path());
+        assertEquals(Optional.empty(), emptyArguments.getRawS3Path());
     }
 
     @Test
     public void shouldReturnOptionalWithStructuredPathWhenSet() {
-        assertEquals(Optional.of(STRUCTURED_S3_PATH), validJobParameters.getStructuredS3Path());
+        assertEquals(Optional.of(STRUCTURED_S3_PATH), validArguments.getStructuredS3Path());
     }
 
     @Test
     public void shouldReturnEmptyOptionalWhenStructuredPathNotSet() {
-        assertEquals(Optional.empty(), emptyJobParameters.getStructuredS3Path());
+        assertEquals(Optional.empty(), emptyArguments.getStructuredS3Path());
     }
 
     @Test
     public void shouldReturnOptionalWithViolationsPathWhenSet() {
-        assertEquals(Optional.of(VIOLATIONS_S3_PATH), validJobParameters.getViolationsS3Path());
+        assertEquals(Optional.of(VIOLATIONS_S3_PATH), validArguments.getViolationsS3Path());
     }
 
     @Test
     public void shouldReturnEmptyOptionalWhenViolationsPathNotSet() {
-        assertEquals(Optional.empty(), emptyJobParameters.getViolationsS3Path());
+        assertEquals(Optional.empty(), emptyArguments.getViolationsS3Path());
     }
 
     @Test
     public void shouldReturnOptionalWithCuratedPathWhenSet() {
-        assertEquals(CURATED_S3_PATH, validJobParameters.getCuratedS3Path());
+        assertEquals(CURATED_S3_PATH, validArguments.getCuratedS3Path());
     }
 
     @Test
     public void shouldReturnOptionalWithDomainNameWhenSet() {
-        assertEquals(DOMAIN_NAME, validJobParameters.getDomainName());
+        assertEquals(DOMAIN_NAME, validArguments.getDomainName());
     }
 
     @Test
     public void shouldReturnOptionalWithDomainTableNameWhenSet() {
-        assertEquals(DOMAIN_TABLE_NAME, validJobParameters.getDomainTableName());
+        assertEquals(DOMAIN_TABLE_NAME, validArguments.getDomainTableName());
     }
 
     @Test
     public void shouldReturnOptionalWithDomainOperationWhenSet() {
-        assertEquals(DOMAIN_OPERATION, validJobParameters.getDomainOperation());
+        assertEquals(DOMAIN_OPERATION, validArguments.getDomainOperation());
     }
 
     @Test
     public void shouldReturnOptionalWithDomainRegistryWhenSet() {
-        assertEquals(DOMAIN_REGISTRY, validJobParameters.getDomainRegistry());
+        assertEquals(DOMAIN_REGISTRY, validArguments.getDomainRegistry());
     }
 
     @Test
     public void shouldReturnOptionalWithDomainTargetPathWhenSet() {
-        assertEquals(DOMAIN_S3_TARGET_PATH, validJobParameters.getDomainTargetPath());
+        assertEquals(DOMAIN_S3_TARGET_PATH, validArguments.getDomainTargetPath());
     }
 
 }

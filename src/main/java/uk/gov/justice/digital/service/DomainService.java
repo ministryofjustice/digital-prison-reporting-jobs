@@ -7,7 +7,7 @@ import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
@@ -24,11 +24,11 @@ public class DomainService {
 
     private final DomainDefinitionClient dynamoDB;
     private final DomainExecutor executor;
-    private final JobParameters parameters;
+    private final JobArguments parameters;
 
     @Inject
-    public DomainService(JobParameters parameters,
-                         DomainDefinitionClient dynamoDB,
+    public DomainService(JobArguments parameters,
+                         DomainRepository repository,
                          DomainExecutor executor) {
         this.parameters = parameters;
         this.dynamoDB = dynamoDB;

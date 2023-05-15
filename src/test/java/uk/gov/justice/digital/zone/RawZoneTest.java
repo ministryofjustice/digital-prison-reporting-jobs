@@ -12,9 +12,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
@@ -33,11 +31,10 @@ class RawZoneTest extends BaseSparkTest {
     private static final String S3_PATH_KEY = "dpr.raw.s3.path";
     private static final String S3_PATH = "s3://loadjob/raw";
 
-    private final JobParameters jobParameters = new JobParameters(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
+    private final JobArguments jobArguments = new JobArguments(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
     private final DataStorageService storage = new DataStorageService();
 
-    @Mock
-    private Dataset<Row> mockedDataSet;
+    private final RawZone underTest = new RawZone(jobArguments, storage);
 
     @Test
     void shouldReturnValidRawS3Path() {

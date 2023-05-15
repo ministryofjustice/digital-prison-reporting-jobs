@@ -9,9 +9,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.ExplainMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.domain.model.TableDefinition;
+import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
@@ -41,7 +40,7 @@ public class DomainExecutor {
     private final DomainSchemaService schema;
 
     @Inject
-    public DomainExecutor(JobParameters jobParameters,
+    public DomainExecutor(JobArguments jobParameters,
                           DataStorageService storage,
                           DomainSchemaService schema,
                           SparkSessionProvider sparkSessionProvider

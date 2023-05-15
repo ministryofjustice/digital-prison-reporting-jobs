@@ -8,7 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
@@ -51,7 +52,7 @@ public class DomainServiceTest extends BaseSparkTest {
 
     @BeforeEach
     public void setup() {
-        val mockJobParameters = mock(JobParameters.class);
+        val mockJobParameters = mock(JobArguments.class);
         when(mockJobParameters.getCuratedS3Path()).thenReturn(sourcePath());
         when(mockJobParameters.getDomainTargetPath()).thenReturn(targetPath());
         when(mockJobParameters.getCatalogDatabase()).thenReturn(Optional.of(hiveDatabaseName));
