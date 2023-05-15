@@ -13,7 +13,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 
 import java.util.HashMap;
@@ -34,11 +34,11 @@ public class DynamoDBClient {
     private final AmazonDynamoDB dynamoDB;
 
     @Inject
-    public DynamoDBClient(JobParameters jobParameters) {
+    public DynamoDBClient(JobArguments jobArguments) {
         dynamoDB = AmazonDynamoDBClientBuilder.standard()
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                        jobParameters.getAwsDynamoDBEndpointUrl(),
-                        jobParameters.getAwsRegion()
+                        jobArguments.getAwsDynamoDBEndpointUrl(),
+                        jobArguments.getAwsRegion()
                 ))
                 .build();
     }

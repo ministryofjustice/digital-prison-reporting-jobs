@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
@@ -25,8 +25,8 @@ public class RawZone extends Zone {
     private final DataStorageService storage;
 
     @Inject
-    public RawZone(JobParameters jobParameters, DataStorageService storage) {
-        this.rawS3Path = jobParameters.getRawS3Path()
+    public RawZone(JobArguments jobArguments, DataStorageService storage) {
+        this.rawS3Path = jobArguments.getRawS3Path()
             .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
         this.storage = storage;
     }

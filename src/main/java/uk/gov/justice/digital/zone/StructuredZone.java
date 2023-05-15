@@ -7,7 +7,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.job.udf.JsonValidator;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -34,12 +34,12 @@ public class StructuredZone extends Zone {
     private final DataStorageService storage;
 
     @Inject
-    public StructuredZone(JobParameters jobParameters, DataStorageService storage) {
-        this.structuredPath = jobParameters.getStructuredS3Path()
+    public StructuredZone(JobArguments jobArguments, DataStorageService storage) {
+        this.structuredPath = jobArguments.getStructuredS3Path()
             .orElseThrow(() -> new IllegalStateException(
                 "structured s3 path not set - unable to create StructuredZone instance"
             ));
-        this.violationsPath = jobParameters.getViolationsS3Path()
+        this.violationsPath = jobArguments.getViolationsS3Path()
             .orElseThrow(() -> new IllegalStateException(
                 "violations s3 path not set - unable to create StructuredZone instance"
             ));

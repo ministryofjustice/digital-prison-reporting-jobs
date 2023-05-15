@@ -12,27 +12,25 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @Singleton
-public class JobParameters {
+public class JobArguments {
 
-    private static final Logger logger = LoggerFactory.getLogger(JobParameters.class);
+    private static final Logger logger = LoggerFactory.getLogger(JobArguments.class);
 
     private final Map<String, String> config;
 
     @Inject
-    public JobParameters(ApplicationContext context) {
+    public JobArguments(ApplicationContext context) {
         this(getCommandLineArgumentsFromContext(context));
     }
 
-    public JobParameters(Map<String, String> config) {
+    public JobArguments(Map<String, String> config) {
         this.config = config.entrySet()
                 .stream()
                 .map(this::cleanEntryKey)
@@ -127,11 +125,11 @@ public class JobParameters {
         return context.getEnvironment()
                 .getPropertySources()
                 .stream()
-                .filter(JobParameters::isCommandLinePropertySource)
+                .filter(JobArguments::isCommandLinePropertySource)
                 .findFirst()
-                .flatMap(JobParameters::castToCommandLinePropertySource)
+                .flatMap(JobArguments::castToCommandLinePropertySource)
                 .map(MapPropertySource::asMap)
-                .map(JobParameters::convertArgumentValuesToString)
+                .map(JobArguments::convertArgumentValuesToString)
                 .orElseGet(Collections::emptyMap);
     }
 
