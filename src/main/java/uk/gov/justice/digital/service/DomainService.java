@@ -54,7 +54,7 @@ public class DomainService {
             // TODO - instead of passing null private an alternate method/overload
             processDomain(null, domainName, domainTableName, domainOperation);
         } else {
-            val domains = getDomains(domainRegistry, domainName);
+            val domains = getDomains(domainRegistry, domainName, domainTableName);
             logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
             for (val domain : domains) {
                 processDomain(domain, domain.getName(), domainTableName, domainOperation);
@@ -62,15 +62,11 @@ public class DomainService {
         }
     }
 
-    public Set<DomainDefinition> getDomains(String domainRegistry, String domainName)
+    public Set<DomainDefinition> getDomains(String domainRegistry, String domainName, String domainTableName)
             throws PatternSyntaxException, DomainServiceException {
         //TODO: The purpose of the Set<> is to have multiple domains. Need change to this code later
         Set<DomainDefinition> domains = new HashSet<>();
-        String[] names = domainName.split("[.]");
-        if (names.length != 2)
-            throw new DomainServiceException("Invalid domain table name. Should be <domain_name>.<table_name>");
-        else
-            domains.add(getDomainDefinition(domainRegistry, names[0], names[1]));
+        domains.add(getDomainDefinition(domainRegistry, domainName, domainTableName));
         return domains;
     }
 

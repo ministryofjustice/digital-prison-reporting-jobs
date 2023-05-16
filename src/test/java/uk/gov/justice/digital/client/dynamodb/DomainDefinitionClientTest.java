@@ -85,7 +85,7 @@ class DomainDefinitionClientTest {
         when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
         when(domainDefinitionService.parse(result, null)).thenReturn(domainDef);
         Set<DomainDefinition> actualDomains = domainService.getDomains("test",
-                "incident.demographics");
+                "incident", "demographics");
         verify(mapper, times(1)).readValue(data, DomainDefinition.class);
         for (DomainDefinition actualDomain : actualDomains)
             assertEquals("test name", actualDomain.getName());
