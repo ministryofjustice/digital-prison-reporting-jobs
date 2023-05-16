@@ -84,7 +84,8 @@ public class DomainSchemaService {
                 deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
                 logger.info("Dropping Hive Schema completed " + info.getSchema() + "." + info.getTable());
             } else {
-                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
+                throw new DomainSchemaException("Glue catalog table '" + info.getSchema() + "." +
+                        info.getTable() + "' doesn't exist");
             }
         } else {
             throw new DomainSchemaException("Glue catalog " + info.getDatabase() + " doesn't exist");

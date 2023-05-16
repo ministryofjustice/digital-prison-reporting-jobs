@@ -113,7 +113,8 @@ public class DomainExecutor {
                 schema.drop(info);
                 storage.endTableUpdates(spark, info);
             } else {
-                throw new DomainExecutorException("Table " + info.getTable() + "doesn't exists");
+                throw new DomainExecutorException("Table " + info.getSchema() + "." + info.getTable() +
+                        " doesn't exists");
             }
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);

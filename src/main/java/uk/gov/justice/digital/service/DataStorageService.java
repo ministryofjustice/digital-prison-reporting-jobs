@@ -18,6 +18,7 @@ public class DataStorageService {
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     public boolean exists(final SparkSession spark, final TableIdentifier info) {
+        logger.info("Delta table path :" + getTablePath(info.getBasePath(), info.getSchema(), info.getTable()));
         return DeltaTable.isDeltaTable(spark, getTablePath(info.getBasePath(), info.getSchema(), info.getTable()));
     }
 
@@ -78,7 +79,7 @@ public class DataStorageService {
     }
 
     public void delete(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
-        logger.info("deleting Delta table..." + info.getTable());
+        logger.info("deleting Delta table..." + info.getSchema() + "." + info.getTable());
         String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         if (deltaTable != null) {
