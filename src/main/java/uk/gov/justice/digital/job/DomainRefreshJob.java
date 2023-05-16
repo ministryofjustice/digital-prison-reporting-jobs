@@ -1,11 +1,10 @@
 package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
-import io.micronaut.runtime.Micronaut;
-import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.service.DomainService;
 
 import javax.inject.Inject;
@@ -30,14 +29,9 @@ public class DomainRefreshJob implements Runnable {
         this.domainService = domainService;
     }
 
-    // TODO - remove duplication of context setup
     public static void main(String[] args) {
         logger.info("Job started");
-        val context = Micronaut
-                .build(args)
-                .banner(false)
-                .start();
-        PicocliRunner.run(DomainRefreshJob.class, context);
+        PicocliRunner.run(DomainRefreshJob.class, MicronautContext.withArgs(args));
     }
 
     @Override

@@ -54,7 +54,6 @@ public class JobArguments {
     public JobArguments(Map<String, String> config) {
         this.config = config.entrySet()
                 .stream()
-                .map(this::cleanEntryKey)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Job initialised with parameters: {}", config);
     }
@@ -76,8 +75,8 @@ public class JobArguments {
     }
 
     public Duration getKinesisReaderBatchDuration() {
-        String durationSeconds = getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
-        long parsedDuration = Long.parseLong(durationSeconds);
+        val durationSeconds = getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
+        val parsedDuration = Long.parseLong(durationSeconds);
         return Durations.seconds(parsedDuration);
     }
 
@@ -125,14 +124,6 @@ public class JobArguments {
         return Optional
                 .ofNullable(config.get(argumentName))
                 .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
-    }
-
-    // We expect job parameters to be specified with a leading -- prefix e.g. --some.job.setting consistent with how
-    // AWS glue specifies job parameters. The prefix is removed to clean up code handling parameters by name.
-    private Map.Entry<String, String> cleanEntryKey(Map.Entry<String, String> entry) {
-        // TODO - check this - we may not need this
-        val cleanedKey = entry.getKey().replaceFirst("--", "");
-        return new SimpleEntry<>(cleanedKey, entry.getValue());
     }
 
     // Where command line arguments are present Micronaut will create a CommandLinePropertySource instance which
