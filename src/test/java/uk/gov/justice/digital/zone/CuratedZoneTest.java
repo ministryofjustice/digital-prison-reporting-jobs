@@ -5,7 +5,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.StructType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -14,17 +13,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
+
 import static org.apache.spark.sql.types.DataTypes.StringType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
-public class CuratedZoneTest extends BaseSparkTest {
+@ExtendWith(MockitoExtension.class)
+class CuratedZoneTest extends BaseSparkTest {
 
     private static final String S3_PATH_KEY = "dpr.curated.s3.path";
     private static final String S3_PATH = "s3://loadjob/curated";
@@ -35,26 +38,17 @@ public class CuratedZoneTest extends BaseSparkTest {
     @Mock
     private Dataset<Row> mockedDataSet;
 
-    @Mock
-    private Row mockedRow;
-
-
-    @BeforeEach
-    void setUp() {
-    }
-
     @Test
-    public void shouldReturnValidCuratedS3Path() {
+    void shouldReturnValidCuratedS3Path() {
         val source = "oms_owner";
-        val table  = "agency_internal_locations";
+        val table = "agency_internal_locations";
         val operation = "load";
         val expectedCuratedS3Path = String.join("/", S3_PATH, source, table, operation);
         assertEquals(expectedCuratedS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
     }
 
     @Test
-    @ExtendWith(MockitoExtension.class)
-    public void shouldProcessCuratedZone() {
+    void shouldProcessCuratedZone() throws DataStorageException {
         // Define a schema for the row
         StructType schema = new StructType()
                 .add("source", StringType, false)

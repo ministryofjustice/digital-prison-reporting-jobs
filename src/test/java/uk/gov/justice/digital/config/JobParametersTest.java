@@ -3,7 +3,7 @@ package uk.gov.justice.digital.config;
 import lombok.val;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -67,7 +67,7 @@ class JobParametersTest {
     @Test
     public void shouldRemoveLeadingHyphensFromParameterNames() {
         val jobParameters = new JobParameters(
-            Collections.singletonMap("--" + AWS_REGION_KEY, AWS_REGION)
+                Collections.singletonMap("--" + AWS_REGION_KEY, AWS_REGION)
         );
         assertEquals(AWS_REGION, jobParameters.getAwsRegion());
     }
@@ -116,7 +116,7 @@ class JobParametersTest {
     @Test
     public void shouldThrowExceptionWhenKinesisReaderBatchDurationInvalid() {
         JobParameters jobParameters = new JobParameters(
-            Collections.singletonMap(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, "this is not a number")
+                Collections.singletonMap(KINESIS_READER_BATCH_DURATION_SECONDS_KEY, "this is not a number")
         );
         assertThrows(NumberFormatException.class, jobParameters::getKinesisReaderBatchDuration);
     }
@@ -184,7 +184,7 @@ class JobParametersTest {
 
     @Test
     public void shouldParseArrayOf1DStringsIntoAMap() {
-        String[] args = new String[] {"--dpr.domain.registry", DOMAIN_REGISTRY, "--dpr.domain.operation", DOMAIN_OPERATION};
+        String[] args = new String[]{"--dpr.domain.registry", DOMAIN_REGISTRY, "--dpr.domain.operation", DOMAIN_OPERATION};
         emptyJobParameters.parse(args);
         assertEquals(DOMAIN_REGISTRY, emptyJobParameters.getDomainRegistry());
         assertEquals(DOMAIN_OPERATION, emptyJobParameters.getDomainOperation());

@@ -29,28 +29,28 @@ public class KinesisReader {
         String jobName = jobProperties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
-            new SparkConf().setAppName(jobName),
-            jobParameters.getKinesisReaderBatchDuration()
+                new SparkConf().setAppName(jobName),
+                jobParameters.getKinesisReaderBatchDuration()
         );
 
         kinesisStream = JavaDStream.fromDStream(
-            KinesisInputDStream.builder()
-                .streamingContext(streamingContext)
-                .endpointUrl(jobParameters.getAwsKinesisEndpointUrl())
-                .regionName(jobParameters.getAwsRegion())
-                .streamName(jobParameters.getKinesisReaderStreamName())
-                .initialPosition(new KinesisInitialPositions.TrimHorizon())
-                .checkpointAppName(jobName)
-                .build(),
-            // We need to pass a Scala classtag which looks a little ugly in Java.
-            ClassTag$.MODULE$.apply(byte[].class)
+                KinesisInputDStream.builder()
+                        .streamingContext(streamingContext)
+                        .endpointUrl(jobParameters.getAwsKinesisEndpointUrl())
+                        .regionName(jobParameters.getAwsRegion())
+                        .streamName(jobParameters.getKinesisReaderStreamName())
+                        .initialPosition(new KinesisInitialPositions.TrimHorizon())
+                        .checkpointAppName(jobName)
+                        .build(),
+                // We need to pass a Scala classtag which looks a little ugly in Java.
+                ClassTag$.MODULE$.apply(byte[].class)
         );
 
         logger.info("Configuration - endpointUrl: {} awsRegion: {} streamName: {} batchDuration: {}",
-            jobParameters.getAwsKinesisEndpointUrl(),
-            jobParameters.getAwsRegion(),
-            jobParameters.getKinesisReaderStreamName(),
-            jobParameters.getKinesisReaderBatchDuration()
+                jobParameters.getAwsKinesisEndpointUrl(),
+                jobParameters.getAwsRegion(),
+                jobParameters.getKinesisReaderStreamName(),
+                jobParameters.getKinesisReaderBatchDuration()
         );
 
     }

@@ -10,17 +10,22 @@ import org.apache.spark.sql.execution.ExplainMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.domain.model.*;
+import uk.gov.justice.digital.domain.model.DomainDefinition;
+import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
+import uk.gov.justice.digital.domain.model.TableIdentifier;
+import uk.gov.justice.digital.domain.model.TableTuple;
+import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.exception.DomainSchemaException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
-import java.util.*;
-import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.service.DomainSchemaService;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.*;
 
 
 @Singleton
@@ -40,15 +45,15 @@ public class DomainExecutor {
                           DataStorageService storage,
                           DomainSchemaService schema,
                           SparkSessionProvider sparkSessionProvider
-                          ) {
+    ) {
 
         this.sourceRootPath = jobParameters.getCuratedS3Path();
         this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
         this.hiveDatabaseName = jobParameters.getCatalogDatabase()
-            .orElseThrow(() -> new IllegalStateException(
-                "Hive Catalog database not set - unable to create Hive Catalog schema"
-            ));
+                .orElseThrow(() -> new IllegalStateException(
+                        "Hive Catalog database not set - unable to create Hive Catalog schema"
+                ));
         this.schema = schema;
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
@@ -66,7 +71,7 @@ public class DomainExecutor {
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
             }
-        } catch(DomainSchemaException dse) {
+        } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
     }
@@ -83,13 +88,13 @@ public class DomainExecutor {
             } else {
                 throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exists");
             }
-        } catch(DomainSchemaException dse) {
+        } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
     }
 
     protected void syncTable(TableIdentifier info, Dataset<Row> dataFrame)
-            throws DomainExecutorException {
+            throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
         String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         if (storage.exists(spark, info)) {
@@ -110,14 +115,14 @@ public class DomainExecutor {
             } else {
                 throw new DomainExecutorException("Table " + info.getTable() + "doesn't exists");
             }
-        } catch(DomainSchemaException dse) {
+        } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
     }
 
     protected void saveTable(TableIdentifier info, Dataset<Row> dataFrame,
                              String domainOperation)
-            throws DomainExecutorException {
+            throws DomainExecutorException, DataStorageException {
         logger.info("DomainOperations::saveTable");
         if (domainOperation.equalsIgnoreCase("insert")) {
             insertTable(info, dataFrame);
@@ -133,7 +138,7 @@ public class DomainExecutor {
         storage.endTableUpdates(spark, info);
     }
 
-    protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) {
+    protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
         String tablePath = storage.getTablePath(target.getBasePath(), target.getSchema(), target.getTable());
         // save the violations to the specified location
         storage.append(tablePath, dataFrame);
@@ -142,25 +147,24 @@ public class DomainExecutor {
 
     public Dataset<Row> getAllSourcesForTable(String sourcePath, String source,
                                               TableTuple exclude) throws DomainExecutorException {
-        if(exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
+        if (exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
                 Dataset<Row> dataFrame = storage.load(
-                    spark,
-                    new TableIdentifier(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable())
+                        spark,
+                        new TableIdentifier(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable())
                 );
-                if(dataFrame != null) {
-                    logger.info("Loaded source '" + full.asString() +"'.");
+                if (dataFrame != null) {
+                    logger.info("Loaded source '" + full.asString() + "'.");
                     return dataFrame;
                 } else {
                     logger.error("Source " + full.asString() + " not found");
                     throw new DomainExecutorException("Source " + full.asString() + " not found");
                 }
-            } catch(Exception e) {
+            } catch (Exception e) {
                 logger.error("Unable to get the source information", e);
             }
         } else {
-            //TODO: this condition only for unit test
             // we already have this table
             logger.info("Table already present " + exclude.asString());
         }
@@ -168,21 +172,21 @@ public class DomainExecutor {
     }
 
 
-    protected Dataset<Row> applyViolations(Dataset<Row> dataFrame, List<ViolationDefinition> violations) {
+    protected Dataset<Row> applyViolations(Dataset<Row> dataFrame, List<ViolationDefinition> violations)
+            throws DataStorageException {
         var sourceDataframe = dataFrame;
         for (val violation : violations) {
             val applyCondition = violation.getCheck();
             val violationsDataframe = sourceDataframe.where(applyCondition).toDF();
             if (violationsDataframe.isEmpty()) {
                 logger.info("No Violation records found for condition " + applyCondition);
-            }
-            else {
+            } else {
                 logger.info("Removing violation records");
                 TableIdentifier info = new TableIdentifier(
-                    targetRootPath,
-                    hiveDatabaseName,
-                    violation.getLocation(),
-                    violation.getName()
+                        targetRootPath,
+                        hiveDatabaseName,
+                        violation.getLocation(),
+                        violation.getName()
                 );
                 saveViolations(info, violationsDataframe);
                 sourceDataframe = sourceDataframe.except(violationsDataframe);
@@ -203,13 +207,13 @@ public class DomainExecutor {
 
             for (String source : transform.getSources()) {
                 String src = source.toLowerCase().replace(".", "__");
-                Dataset<Row> df_source = dfs.get(source);
-                if (df_source != null) {
-                    df_source.createOrReplaceTempView(src);
+                Dataset<Row> sourceDf = dfs.get(source);
+                if (sourceDf != null) {
+                    sourceDf.createOrReplaceTempView(src);
                     logger.info("Added view '" + src + "'");
                     srcs.add(src);
-                    if (schemaContains(df_source, "_operation") &&
-                            schemaContains(df_source, "_timestamp")) {
+                    if (schemaContains(sourceDf, "_operation") &&
+                            schemaContains(sourceDf, "_timestamp")) {
                         view = view.replace(" from ", ", " + src + "._operation, " + src + "._timestamp from ");
                     }
                 }
@@ -242,9 +246,9 @@ public class DomainExecutor {
     }
 
 
-    // TODO: Mapping will be enhanced at later stage in future user stories
+    // Mapping will be enhanced at later stage in future user stories
     protected Dataset<Row> applyMappings(Dataset<Row> dataFrame, TableDefinition.MappingDefinition mapping) {
-        if(mapping != null && mapping.getViewText() != null && !mapping.getViewText().isEmpty()
+        if (mapping != null && mapping.getViewText() != null && !mapping.getViewText().isEmpty()
                 && !dataFrame.isEmpty()) {
             return dataFrame.sqlContext().sql(mapping.getViewText()).toDF();
         }
@@ -257,24 +261,24 @@ public class DomainExecutor {
 
             logger.info("Apply Method for " + table.getName() + "...");
             // Transform
-            Map<String,Dataset<Row>> refs = new HashMap<>();
+            Map<String, Dataset<Row>> refs = new HashMap<>();
             // Add sourceTable if present
             if (sourceTableMap != null && sourceTableMap.size() > 0) {
                 refs.putAll(sourceTableMap);
-            } else if(table.getTransform() != null && table.getTransform().getSources() != null
-                    && table.getTransform().getSources().size() > 0) {
+            } else if (table.getTransform() != null && table.getTransform().getSources() != null
+                    && !table.getTransform().getSources().isEmpty()) {
                 for (String source : table.getTransform().getSources()) {
                     Dataset<Row> sourceDataFrame = this.getAllSourcesForTable(sourceRootPath, source, null);
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
                     } else {
-                        logger.info("Unable to load source '" + source +"' for Table Definition '" + table.getName() + "'");
+                        logger.info("Unable to load source '" + source + "' for Table Definition '" + table.getName() + "'");
                         throw new DomainExecutorException("Unable to load source '" + source +
                                 "' for Table Definition '" + table.getName() + "'");
                     }
                 }
             } else {
-                //TODO: Expecting this condition should never be reached
+                // Expecting this condition should never be reached
                 logger.info("TableDefinition is invalid");
             }
 
@@ -290,20 +294,19 @@ public class DomainExecutor {
             // Mappings
             return applyMappings(postViolationsDataFrame, table.getMapping());
 
-        } catch(Exception e) {
+        } catch (Exception e) {
             logger.info("Apply Domain for " + table.getName() + " failed.");
-            throw new DomainExecutorException("Apply Domain for " + table.getName() + " failed.");
-        }
-        finally {
+            throw new DomainExecutorException("Apply Domain for " + table.getName() + " failed :", e);
+        } finally {
             logger.info("Apply Domain process for " + table.getName() + " completed.");
         }
     }
 
 
     public void doFullDomainRefresh(DomainDefinition domainDefinition,
-                       String domainName,
-                       String domainTableName,
-                       String domainOperation) {
+                                    String domainName,
+                                    String domainTableName,
+                                    String domainOperation) {
         try {
             if (domainOperation.equalsIgnoreCase("insert") ||
                     domainOperation.equalsIgnoreCase("update") ||
@@ -318,33 +321,33 @@ public class DomainExecutor {
                     logger.error("Table " + domainTableName + " not found");
                     throw new DomainExecutorException("Table " + domainTableName + " not found");
                 } else {
-                    // TODO no source table and df they are required only for unit testing
+                    // no source table and df they are required only for unit testing
                     val dfTarget = apply(table, null);
                     saveTable(
-                        new TableIdentifier(
-                            targetRootPath,
-                            hiveDatabaseName,
-                            domainDefinition.getName(),
-                            table.getName()
-                        ),
-                        dfTarget,
-                        domainOperation
+                            new TableIdentifier(
+                                    targetRootPath,
+                                    hiveDatabaseName,
+                                    domainDefinition.getName(),
+                                    table.getName()
+                            ),
+                            dfTarget,
+                            domainOperation
                     );
                 }
             } else if (domainOperation.equalsIgnoreCase("delete")) {
                 logger.info("domain operation is delete");
                 deleteTable(new TableIdentifier(
-                    targetRootPath,
-                    hiveDatabaseName,
-                    domainName,
-                    domainTableName
+                        targetRootPath,
+                        hiveDatabaseName,
+                        domainName,
+                        domainTableName
                 ));
             } else {
                 val message = "Unsupported domain operation: '" + domainOperation + "'";
                 logger.error(message);
                 throw new UnsupportedOperationException(message);
             }
-        } catch(Exception e) {
+        } catch (Exception e) {
             logger.error("Domain executor failed", e);
         }
     }

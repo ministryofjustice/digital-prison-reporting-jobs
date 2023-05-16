@@ -54,7 +54,6 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
-
     // TODO - check if this is provided on the classpath by AWS
     implementation "org.apache.hadoop:hadoop-aws:3.3.1"
 
@@ -78,9 +77,6 @@ dependencies {
     testImplementation 'org.mockito:mockito-inline:4.11.0'
     testImplementation "io.mockk:mockk:1.13.5"
     testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
-
-
-
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }

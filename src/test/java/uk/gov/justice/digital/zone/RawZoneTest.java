@@ -6,7 +6,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.StructType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -15,16 +14,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import static org.apache.spark.sql.types.DataTypes.StringType;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 
-public class RawZoneTest extends BaseSparkTest {
+import static org.apache.spark.sql.types.DataTypes.StringType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class RawZoneTest extends BaseSparkTest {
 
     private static final String S3_PATH_KEY = "dpr.raw.s3.path";
     private static final String S3_PATH = "s3://loadjob/raw";
@@ -35,26 +39,17 @@ public class RawZoneTest extends BaseSparkTest {
     @Mock
     private Dataset<Row> mockedDataSet;
 
-    @Mock
-    private Row mockedRow;
-
-
-    @BeforeEach
-    void setUp() {
-    }
-
     @Test
-    public void shouldReturnValidRawS3Path() {
+    void shouldReturnValidRawS3Path() {
         val source = "oms_owner";
-        val table  = "agency_internal_locations";
+        val table = "agency_internal_locations";
         val operation = "load";
         val expectedRawS3Path = String.join("/", S3_PATH, source, table, operation);
         assertEquals(expectedRawS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
     }
 
     @Test
-    @ExtendWith(MockitoExtension.class)
-    public void shouldProcessRawZone() {
+    void shouldProcessRawZone() throws DataStorageException {
         // Define a schema for the row
         StructType schema = new StructType()
                 .add("source", StringType, false)

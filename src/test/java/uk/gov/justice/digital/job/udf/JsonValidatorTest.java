@@ -26,10 +26,10 @@ class JsonValidatorTest {
     }
 
     private static final StructType schema =
-        new StructType()
-            .add(Fields.MANDATORY, StringType, false)
-            .add(Fields.OPTIONAL, StringType, true)
-            .add(Fields.NUMERIC, IntegerType, true);
+            new StructType()
+                    .add(Fields.MANDATORY, StringType, false)
+                    .add(Fields.OPTIONAL, StringType, true)
+                    .add(Fields.NUMERIC, IntegerType, true);
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -44,9 +44,9 @@ class JsonValidatorTest {
     @Test
     public void shouldPassValidJsonWithAllFieldsSet() throws JsonProcessingException {
         val json = createJsonForMapValues(Arrays.asList(
-            entry(Fields.MANDATORY, "somevalue"),
-            entry(Fields.OPTIONAL, "anotherValue"),
-            entry(Fields.NUMERIC, 1)
+                entry(Fields.MANDATORY, "somevalue"),
+                entry(Fields.OPTIONAL, "anotherValue"),
+                entry(Fields.NUMERIC, 1)
         ));
         assertTrue(underTest.validate(json, json, schema));
     }
@@ -61,8 +61,8 @@ class JsonValidatorTest {
     @Test
     public void shouldFailJsonWithMissingMandatoryValue() throws JsonProcessingException {
         val json = createJsonForMapValues(Arrays.asList(
-            entry(Fields.OPTIONAL, "anotherValue"),
-            entry(Fields.NUMERIC, 1)
+                entry(Fields.OPTIONAL, "anotherValue"),
+                entry(Fields.NUMERIC, 1)
         ));
         assertFalse(underTest.validate(json, json, schema));
     }
@@ -75,15 +75,15 @@ class JsonValidatorTest {
     @Test
     public void shouldFailWhenParsedJsonDoesNotMatchOriginalJson() throws JsonProcessingException {
         val json = createJsonForMapValues(Arrays.asList(
-            entry(Fields.MANDATORY, "somevalue"),
-            entry(Fields.OPTIONAL, "anotherValue"),
-            entry(Fields.NUMERIC, "this is not a number")
+                entry(Fields.MANDATORY, "somevalue"),
+                entry(Fields.OPTIONAL, "anotherValue"),
+                entry(Fields.NUMERIC, "this is not a number")
         ));
 
         // Here we replicate the invalid type handling by leaving the NUMERIC field unset.
         val fakeParsedJson = createJsonForMapValues(Arrays.asList(
-            entry(Fields.MANDATORY, "somevalue"),
-            entry(Fields.OPTIONAL, "anotherValue")
+                entry(Fields.MANDATORY, "somevalue"),
+                entry(Fields.OPTIONAL, "anotherValue")
         ));
 
         assertFalse(underTest.validate(json, fakeParsedJson, schema));
@@ -95,8 +95,8 @@ class JsonValidatorTest {
 
     private static String createJsonForMapValues(List<SimpleEntry<String, Object>> entries) throws JsonProcessingException {
         return objectMapper.writeValueAsString(
-            entries.stream()
-                .collect(Collectors.toMap(SimpleEntry::getKey, SimpleEntry::getValue))
+                entries.stream()
+                        .collect(Collectors.toMap(SimpleEntry::getKey, SimpleEntry::getValue))
         );
     }
 

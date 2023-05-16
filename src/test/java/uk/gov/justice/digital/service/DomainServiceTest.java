@@ -9,11 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.test.SparkTestHelpers;
 
 import java.io.File;
@@ -58,19 +59,19 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_incident_domain() throws IOException {
+    public void test_incident_domain() throws IOException, DataStorageException {
         val domainOperation = "insert";
         val domainTableName = "demographics";
         val domain = getDomain("/sample/domain/incident_domain.json");
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
-            helpers.getOffenders(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
+                helpers.getOffenders(folder)
         );
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
-            helpers.getOffenderBookings(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
+                helpers.getOffenderBookings(folder)
         );
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
@@ -78,19 +79,19 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_establishment_domain_insert() throws IOException {
+    public void test_establishment_domain_insert() throws IOException, DataStorageException {
         val domainOperation = "insert";
         val domainTableName = "establishment";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
+                helpers.getAgencyLocations(folder)
         );
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
+                helpers.getInternalAgencyLocations(folder)
         );
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
@@ -98,19 +99,19 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_living_unit_domain_insert() throws IOException {
+    public void test_living_unit_domain_insert() throws IOException, DataStorageException {
         val domainOperation = "insert";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
+                helpers.getAgencyLocations(folder)
         );
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
+                helpers.getInternalAgencyLocations(folder)
         );
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
@@ -118,38 +119,38 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_living_unit_domain_update() throws IOException {
+    public void test_living_unit_domain_update() throws IOException, DataStorageException {
         val domainOperation = "update";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
+                helpers.getAgencyLocations(folder)
         );
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
+                helpers.getInternalAgencyLocations(folder)
         );
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
     }
 
     @Test
-    public void test_establishment_domain_delete() throws IOException {
+    public void test_establishment_domain_delete() throws IOException, DataStorageException {
         val domainOperation = "delete";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-            helpers.getAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
+                helpers.getAgencyLocations(folder)
         );
 
         helpers.persistDataset(
-            new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-            helpers.getInternalAgencyLocations(folder)
+                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
+                helpers.getInternalAgencyLocations(folder)
         );
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);

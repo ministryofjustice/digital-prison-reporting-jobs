@@ -7,13 +7,15 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static uk.gov.justice.digital.job.model.Columns.SOURCE;
+import static uk.gov.justice.digital.job.model.Columns.TABLE;
 
 @Singleton
 public class CuratedZone extends Zone {
@@ -30,7 +32,7 @@ public class CuratedZone extends Zone {
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
         val count = dataFrame.count();
 
@@ -43,13 +45,13 @@ public class CuratedZone extends Zone {
             String tableName = table.getAs(TABLE);
 
             val sourceReference = SourceReferenceService
-                .getSourceReference(sourceName, tableName)
-                // This can only happen if the schema disappears after the structured zone has processed the data, so we
-                // should never see this in practise. However, if it does happen throwing here will make it clear what
-                // has happened.
-                .orElseThrow(() -> new IllegalStateException(
-                    "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
-                ));
+                    .getSourceReference(sourceName, tableName)
+                    // This can only happen if the schema disappears after the structured zone has processed the data, so we
+                    // should never see this in practise. However, if it does happen throwing here will make it clear what
+                    // has happened.
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
+                    ));
 
             val curatedTablePath = this.storage.getTablePath(curatedPath, sourceReference);
             logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), curatedTablePath);
@@ -63,7 +65,6 @@ public class CuratedZone extends Zone {
             );
 
             return dataFrame;
-        }
-        else return createEmptyDataFrame(dataFrame);
+        } else return createEmptyDataFrame(dataFrame);
     }
 }

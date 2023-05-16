@@ -8,9 +8,6 @@ import org.apache.spark.streaming.Durations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.JobClient;
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.Optional;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
@@ -24,7 +21,7 @@ public class JobParameters {
 
     private static final Logger logger = LoggerFactory.getLogger(JobParameters.class);
 
-    private Map<String, String> config = new HashMap<String,String>();
+    private Map<String, String> config = new HashMap<String, String>();
 
     @Inject
     public JobParameters(JobClient jobClient) {
@@ -33,14 +30,14 @@ public class JobParameters {
 
     public JobParameters(Map<String, String> config) {
         this.config.putAll(config.entrySet()
-            .stream()
-            .map(this::cleanEntryKey)
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                .stream()
+                .map(this::cleanEntryKey)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
         logger.info("Job initialised with parameters: {}", config);
     }
 
     public void parse(String[] args) {
-        Map<String,String> params = Arrays.stream(args).collect(new Collector<String, Map<String,String>, Map<String, String>>() {
+        Map<String, String> params = Arrays.stream(args).collect(new Collector<String, Map<String, String>, Map<String, String>>() {
 
             private String key;
 
@@ -130,30 +127,32 @@ public class JobParameters {
     }
 
     public String getDomainTableName() {
-        return getMandatoryProperty( "dpr.domain.table.name");
+        return getMandatoryProperty("dpr.domain.table.name");
     }
 
     public String getDomainRegistry() {
-        return getMandatoryProperty( "dpr.domain.registry");
+        return getMandatoryProperty("dpr.domain.registry");
     }
 
     public String getDomainOperation() {
-        return getMandatoryProperty( "dpr.domain.operation");
+        return getMandatoryProperty("dpr.domain.operation");
     }
 
-    public Optional<String> getCatalogDatabase() { return getOptionalProperty("dpr.domain.catalog.db");}
+    public Optional<String> getCatalogDatabase() {
+        return getOptionalProperty("dpr.domain.catalog.db");
+    }
 
     private String getMandatoryProperty(String jobParameter) {
         return Optional
-            .ofNullable(config.get(jobParameter))
-            .orElseThrow(() -> new IllegalStateException("Job Parameter: " + jobParameter + " is not set"));
+                .ofNullable(config.get(jobParameter))
+                .orElseThrow(() -> new IllegalStateException("Job Parameter: " + jobParameter + " is not set"));
     }
 
     // TODO - consider supporting a default value where if no value is provided we throw an exception if there is no
     //        value at all
     private Optional<String> getOptionalProperty(String jobParameter) {
         return Optional
-            .ofNullable(config.get(jobParameter));
+                .ofNullable(config.get(jobParameter));
     }
 
     // We expect job parameters to be specified with a leading -- prefix e.g. --some.job.setting consistent with how

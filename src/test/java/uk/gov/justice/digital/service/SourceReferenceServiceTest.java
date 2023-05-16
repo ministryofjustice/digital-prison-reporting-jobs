@@ -10,25 +10,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SourceReferenceServiceTest {
 
-	@Test
-	public void getSourceReferenceShouldReturnCorrectReferenceForExistingSourceAndTable() {
-		val sourceReference = SourceReferenceService.getSourceReference("OMS_OWNER", "OFFENDERS");
+    @Test
+    public void getSourceReferenceShouldReturnCorrectReferenceForExistingSourceAndTable() {
+        val sourceReference = SourceReferenceService.getSourceReference("OMS_OWNER", "OFFENDERS");
 
-		assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
-		assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
-	}
+        assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
+        assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
+    }
 
-	@Test
-	public void getSourceReferenceShouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
-		val sourceReference = SourceReferenceService.getSourceReference("oMs_oWnEr", "oFfEnDeRs");
+    @Test
+    public void getSourceReferenceShouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
+        val sourceReference = SourceReferenceService.getSourceReference("oMs_oWnEr", "oFfEnDeRs");
 
-		assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
-		assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
-	}
+        assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
+        assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
+    }
 
-	@Test
-	public void getSourceReferenceShouldReturnAnEmptyOptionalIfNoReferenceIsFound() {
-		assertEquals(Optional.empty(), SourceReferenceService.getSourceReference("DOES_NOT", "EXIST"));
-	}
+    @Test
+    public void getSourceReferenceShouldReturnAnEmptyOptionalIfNoReferenceIsFound() {
+        assertEquals(Optional.empty(), SourceReferenceService.getSourceReference("DOES_NOT", "EXIST"));
+    }
 
 }
