@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
  *
  * Arguments are taken from the values parsed by the CommandLinePropertySource.
  */
+// TODO - we can probably remove the concept of mandatory/optional here since it's up to the calling code.
 @Singleton
 public class JobArguments {
 
@@ -36,7 +37,7 @@ public class JobArguments {
     public static final String DOMAIN_NAME = "dpr.domain.name";
     public static final String DOMAIN_OPERATION = "dpr.domain.operation";
     public static final String DOMAIN_REGISTRY = "dpr.domain.registry";
-    public static final String DOMAIN_S3_TARGET_PATH = "dpr.domain.target.path";
+    public static final String DOMAIN_TARGET_PATH = "dpr.domain.target.path";
     public static final String DOMAIN_TABLE_NAME = "dpr.domain.table.name";
     public static final String KINESIS_READER_BATCH_DURATION_SECONDS = "dpr.kinesis.reader.batchDurationSeconds";
     public static final String KINESIS_READER_STREAM_NAME = "dpr.kinesis.reader.streamName";
@@ -60,78 +61,71 @@ public class JobArguments {
     }
 
     public String getAwsRegion() {
-        return getMandatoryProperty(AWS_REGION);
+        return getArgument(AWS_REGION);
     }
 
     public String getAwsKinesisEndpointUrl() {
-        return getMandatoryProperty(AWS_KINESIS_ENDPOINT_URL);
+        return getArgument(AWS_KINESIS_ENDPOINT_URL);
     }
 
     public String getAwsDynamoDBEndpointUrl() {
-        return getMandatoryProperty(AWS_DYNAMODB_ENDPOINT_URL);
+        return getArgument(AWS_DYNAMODB_ENDPOINT_URL);
     }
 
     public String getKinesisReaderStreamName() {
-        return getMandatoryProperty(KINESIS_READER_STREAM_NAME);
+        return getArgument(KINESIS_READER_STREAM_NAME);
     }
 
     public Duration getKinesisReaderBatchDuration() {
-        String durationSeconds = getMandatoryProperty(KINESIS_READER_BATCH_DURATION_SECONDS);
+        String durationSeconds = getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
         long parsedDuration = Long.parseLong(durationSeconds);
         return Durations.seconds(parsedDuration);
     }
 
-    public Optional<String> getRawS3Path() {
-        return getOptionalProperty(RAW_S3_PATH);
+    public String getRawS3Path() {
+        return getArgument(RAW_S3_PATH);
     }
 
-    public Optional<String> getStructuredS3Path() {
-        return getOptionalProperty(STRUCTURED_S3_PATH);
+    public String getStructuredS3Path() {
+        return getArgument(STRUCTURED_S3_PATH);
     }
 
-    public Optional<String> getViolationsS3Path() {
-        return getOptionalProperty(VIOLATIONS_S3_PATH);
+    public String getViolationsS3Path() {
+        return getArgument(VIOLATIONS_S3_PATH);
     }
 
     public String getCuratedS3Path() {
-        return getMandatoryProperty(CURATED_S3_PATH);
+        return getArgument(CURATED_S3_PATH);
     }
 
     public String getDomainTargetPath() {
-        return getMandatoryProperty(DOMAIN_S3_TARGET_PATH);
+        return getArgument(DOMAIN_TARGET_PATH);
     }
 
     public String getDomainName() {
-        return getMandatoryProperty(DOMAIN_NAME);
+        return getArgument(DOMAIN_NAME);
     }
 
     public String getDomainTableName() {
-        return getMandatoryProperty(DOMAIN_TABLE_NAME);
+        return getArgument(DOMAIN_TABLE_NAME);
     }
 
     public String getDomainRegistry() {
-        return getMandatoryProperty(DOMAIN_REGISTRY);
+        return getArgument(DOMAIN_REGISTRY);
     }
 
     public String getDomainOperation() {
-        return getMandatoryProperty(DOMAIN_OPERATION);
+        return getArgument(DOMAIN_OPERATION);
     }
 
-    public Optional<String> getDomainCatalogDatabaseName() {
-        return getOptionalProperty(DOMAIN_CATALOG_DATABASE_NAME);
+    public String getDomainCatalogDatabaseName() {
+        return getArgument(DOMAIN_CATALOG_DATABASE_NAME);
     }
 
-    private String getMandatoryProperty(String jobParameter) {
+    private String getArgument(String argumentName) {
         return Optional
-                .ofNullable(config.get(jobParameter))
-                .orElseThrow(() -> new IllegalStateException("Job Parameter: " + jobParameter + " is not set"));
-    }
-
-    // TODO - consider supporting a default value where if no value is provided we throw an exception if there is no
-    //        value at all
-    private Optional<String> getOptionalProperty(String jobParameter) {
-        return Optional
-                .ofNullable(config.get(jobParameter));
+                .ofNullable(config.get(argumentName))
+                .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
     }
 
     // We expect job parameters to be specified with a leading -- prefix e.g. --some.job.setting consistent with how

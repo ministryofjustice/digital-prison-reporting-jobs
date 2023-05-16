@@ -35,14 +35,8 @@ public class StructuredZone extends Zone {
 
     @Inject
     public StructuredZone(JobArguments jobArguments, DataStorageService storage) {
-        this.structuredPath = jobArguments.getStructuredS3Path()
-            .orElseThrow(() -> new IllegalStateException(
-                "structured s3 path not set - unable to create StructuredZone instance"
-            ));
-        this.violationsPath = jobArguments.getViolationsS3Path()
-            .orElseThrow(() -> new IllegalStateException(
-                "violations s3 path not set - unable to create StructuredZone instance"
-            ));
+        this.structuredPath = jobArguments.getStructuredS3Path();
+        this.violationsPath = jobArguments.getViolationsS3Path();
         this.storage = storage;
     }
 

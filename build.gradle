@@ -33,8 +33,9 @@ ext {
 dependencies {
     annotationProcessor 'info.picocli:picocli-codegen'
 
-    compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
-    compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
+    // TODO - revert these
+    implementation "org.apache.spark:spark-core_2.12:$sparkVersion"
+    implementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
 
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
