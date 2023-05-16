@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
  *
  * Arguments are taken from the values parsed by the CommandLinePropertySource.
  */
-// TODO - we can probably remove the concept of mandatory/optional here since it's up to the calling code.
 @Singleton
 public class JobArguments {
 
