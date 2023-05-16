@@ -26,8 +26,7 @@ public class RawZone extends Zone {
 
     @Inject
     public RawZone(JobArguments jobArguments, DataStorageService storage) {
-        this.rawS3Path = jobArguments.getRawS3Path()
-            .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
+        this.rawS3Path = jobArguments.getRawS3Path();
         this.storage = storage;
     }
 

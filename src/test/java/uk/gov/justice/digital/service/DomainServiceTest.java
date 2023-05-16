@@ -55,7 +55,7 @@ public class DomainServiceTest extends BaseSparkTest {
         val mockJobParameters = mock(JobArguments.class);
         when(mockJobParameters.getCuratedS3Path()).thenReturn(sourcePath());
         when(mockJobParameters.getDomainTargetPath()).thenReturn(targetPath());
-        when(mockJobParameters.getDomainCatalogDatabaseName()).thenReturn(Optional.of(hiveDatabaseName));
+        when(mockJobParameters.getDomainCatalogDatabaseName()).thenReturn(hiveDatabaseName);
         executor = new DomainExecutor(mockJobParameters, storage, schemaService, sparkSessionProvider);
     }
 

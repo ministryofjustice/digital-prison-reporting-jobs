@@ -49,10 +49,7 @@ public class DomainExecutor {
         this.sourceRootPath = jobParameters.getCuratedS3Path();
         this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
-        this.hiveDatabaseName = jobParameters.getDomainCatalogDatabaseName()
-            .orElseThrow(() -> new IllegalStateException(
-                "Hive Catalog database not set - unable to create Hive Catalog schema"
-            ));
+        this.hiveDatabaseName = jobParameters.getDomainCatalogDatabaseName();
         this.schema = schema;
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
