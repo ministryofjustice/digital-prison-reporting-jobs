@@ -94,16 +94,16 @@ class StructuredZoneTest extends BaseSparkTest {
         assertTrue(optionalSourceRef.isPresent());
         doCallRealMethod().when(storage1).getTablePath(S3_PATH, sourceRef);
         doCallRealMethod().when(storage1).getTablePath(any());
-        doReturn(Optional.of("s3://loadjob/violations")).when(jobParams).getViolationsS3Path();
-        doReturn(Optional.of("s3://loadjob/structured")).when(jobParams).getStructuredS3Path();
+        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
+        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
         StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));
         doReturn(mockedDataSet).when(structuredZoneTest).validateJsonData(any(), any(), any(), any(), any());
         doNothing().when(structuredZoneTest).handleInValidRecords(any(), any(), any(), any(), any());
         doReturn(mockedDataSet).when(structuredZoneTest).handleValidRecords(spark, mockedDataSet,
                 "s3://loadjob/structured/nomis/agency_internal_locations");
         when(mockedDataSet.count()).thenReturn(10L);
-        Dataset<Row> actual_result = structuredZoneTest.process(spark, mockedDataSet, table);
-        assertNotNull(actual_result);
+        Dataset<Row> actualResult = structuredZoneTest.process(spark, mockedDataSet, table);
+        assertNotNull(actualResult);
     }
 
     @Test
@@ -127,8 +127,8 @@ class StructuredZoneTest extends BaseSparkTest {
         val sourceRef = optionalSourceRef.orElse(null);
         assertTrue(optionalSourceRef.isPresent());
 
-        doReturn(Optional.of("s3://loadjob/violations")).when(jobParams).getViolationsS3Path();
-        doReturn(Optional.of("s3://loadjob/structured")).when(jobParams).getStructuredS3Path();
+        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
+        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
         StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));
         doReturn("s3://loadjob/structured")
                 .doReturn("s3://loadjob/violations").when(storage1)
@@ -140,16 +140,16 @@ class StructuredZoneTest extends BaseSparkTest {
                 sourceRef.getTable(), "s3://loadjob/violations");
         doReturn(mockedDataSet).when(structuredZoneTest).handleValidRecords(any(), any(), anyString());
         when(mockedDataSet.count()).thenReturn(10L);
-        Dataset<Row> actual_result = structuredZoneTest.process(spark, mockedDataSet, table);
-        assertNotNull(actual_result);
+        Dataset<Row> actualResult = structuredZoneTest.process(spark, mockedDataSet, table);
+        assertNotNull(actualResult);
     }
 
     @Test
     void shouldHandleSchemaFound() throws DataStorageException {
         DataStorageService storage1 = mock(DataStorageService.class);
         JobArguments jobParams = mock(JobArguments.class);
-        doReturn(Optional.of("s3://loadjob/violations")).when(jobParams).getViolationsS3Path();
-        doReturn(Optional.of("s3://loadjob/structured")).when(jobParams).getStructuredS3Path();
+        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
+        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
         sourceRefStatic.when(() -> SourceReferenceService
                         .generateKey("oms_owner", "offenders"))
                 .thenCallRealMethod();
@@ -171,9 +171,9 @@ class StructuredZoneTest extends BaseSparkTest {
                 sourceRef.getTable(), "s3://loadjob/violations");
         doReturn(mockedDataSet).when(structuredZoneTest).handleValidRecords(spark, mockedDataSet,
                 "s3://loadjob/structured");
-        Dataset<Row> actual_result = structuredZoneTest.handleSchemaFound(spark, mockedDataSet,
+        Dataset<Row> actualResult = structuredZoneTest.handleSchemaFound(spark, mockedDataSet,
                 sourceRef);
-        assertNotNull(actual_result);
+        assertNotNull(actualResult);
 
     }
 
@@ -191,8 +191,8 @@ class StructuredZoneTest extends BaseSparkTest {
         Dataset<Row> df = spark.createDataFrame(new ArrayList<>(), schema);
         DataStorageService storage1 = mock(DataStorageService.class);
         JobArguments jobParams = mock(JobArguments.class);
-        doReturn(Optional.of("s3://loadjob/violations")).when(jobParams).getViolationsS3Path();
-        doReturn(Optional.of("s3://loadjob/structured")).when(jobParams).getStructuredS3Path();
+        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
+        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
         StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));
         sourceRefStatic.when(() -> SourceReferenceService
                         .generateKey("oms_owner", "offenders"))
@@ -204,9 +204,9 @@ class StructuredZoneTest extends BaseSparkTest {
                 .getSourceReference("oms_owner", "offenders");
         val sourceRef = optionalSourceRef.orElse(null);
         assertTrue(optionalSourceRef.isPresent());
-        Dataset<Row> actual_result = structuredZoneTest.handleNoSchemaFound(spark, df,
+        Dataset<Row> actualResult = structuredZoneTest.handleNoSchemaFound(spark, df,
                 sourceRef.getSource(), sourceRef.getTable());
-        assertNotNull(actual_result);
+        assertNotNull(actualResult);
 
     }
 }
