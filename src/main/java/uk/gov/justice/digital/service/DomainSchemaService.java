@@ -57,7 +57,7 @@ public class DomainSchemaService {
                 createTable(info.getDatabase(), tableName, path, dataFrame);
                 logger.info("Creating hive schema completed:" + tableName);
             } else {
-                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' already exists");
+                throw new DomainSchemaException("Glue catalog table '" + tableName + "' already exists");
             }
         } else {
             throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
