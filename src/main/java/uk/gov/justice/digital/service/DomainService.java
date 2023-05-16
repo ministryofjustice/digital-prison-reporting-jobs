@@ -1,14 +1,19 @@
 package uk.gov.justice.digital.service;
 
+import com.amazonaws.services.dynamodbv2.model.QueryResult;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.repository.DomainRepository;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import uk.gov.justice.digital.exception.DatabaseClientException;
+import uk.gov.justice.digital.exception.DomainServiceException;
+
+import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
@@ -17,20 +22,20 @@ public class DomainService {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
 
-    private final DomainRepository repo;
+    private final DomainDefinitionClient dynamoDB;
     private final DomainExecutor executor;
     private final JobParameters parameters;
 
     @Inject
     public DomainService(JobParameters parameters,
-                         DomainRepository repository,
+                         DomainDefinitionClient dynamoDB,
                          DomainExecutor executor) {
         this.parameters = parameters;
-        this.repo = repository;
+        this.dynamoDB = dynamoDB;
         this.executor = executor;
     }
 
-    public void run() {
+    public void run() throws DomainServiceException {
         runInternal(
                 parameters.getDomainRegistry(),
                 parameters.getDomainTableName(),
@@ -40,35 +45,40 @@ public class DomainService {
     }
 
     private void runInternal(
-        String domainRegistry,
-        String domainTableName,
-        String domainName,
-        String domainOperation
-    ) throws PatternSyntaxException {
+            String domainRegistry,
+            String domainTableName,
+            String domainName,
+            String domainOperation
+    ) throws PatternSyntaxException, DomainServiceException {
         if (domainOperation.equalsIgnoreCase("delete")) {
             // TODO - instead of passing null private an alternate method/overload
             processDomain(null, domainName, domainTableName, domainOperation);
-        }
-        else {
+        } else {
             val domains = getDomains(domainRegistry, domainName);
-
             logger.info("Located " + domains.size() + " domains for name '" + domainName + "'");
-            for(val domain : domains) {
+            for (val domain : domains) {
                 processDomain(domain, domain.getName(), domainTableName, domainOperation);
             }
         }
-
     }
 
-    private Set<DomainDefinition> getDomains(String domainRegistry, String domainName) throws PatternSyntaxException {
-        return repo.getForName(domainRegistry, domainName);
+    public Set<DomainDefinition> getDomains(String domainRegistry, String domainName)
+            throws PatternSyntaxException, DomainServiceException {
+        //TODO: The purpose of the Set<> is to have multiple domains. Need change to this code later
+        Set<DomainDefinition> domains = new HashSet<>();
+        String[] names = domainName.split("[.]");
+        if (names.length != 2)
+            throw new DomainServiceException("Invalid domain table name. Should be <domain_name>.<table_name>");
+        else
+            domains.add(getDomainDefinition(domainRegistry, names[0], names[1]));
+        return domains;
     }
 
     private void processDomain(
-        DomainDefinition domain,
-        String domainName,
-        String domainTableName,
-        String domainOperation
+            DomainDefinition domain,
+            String domainName,
+            String domainTableName,
+            String domainOperation
     ) {
         val prefix = "processing of domain: '" + domainName + "' operation: " + domainOperation + " ";
 
@@ -76,8 +86,20 @@ public class DomainService {
             logger.info(prefix + "started");
             executor.doFullDomainRefresh(domain, domainName, domainTableName, domainOperation);
             logger.info(prefix + "completed");
-        } catch(Exception e) {
+        } catch (Exception e) {
             logger.error(prefix + "failed", e);
+        }
+    }
+
+    private DomainDefinition getDomainDefinition(final String domainRegistry,
+                                                 final String domainName, final String tableName)
+            throws DomainServiceException {
+        try {
+            QueryResult response = dynamoDB.executeQuery(domainRegistry, domainName);
+            return dynamoDB.parse(response, tableName);
+        } catch (DatabaseClientException e) {
+            logger.error("DynamoDB request failed: " + e.getMessage());
+            throw new DomainServiceException("DynamoDB request failed: ", e);
         }
     }
 }

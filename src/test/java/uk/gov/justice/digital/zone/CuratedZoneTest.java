@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.zone;
 
-
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -28,10 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RawZoneTest extends BaseSparkTest {
+class CuratedZoneTest extends BaseSparkTest {
 
-    private static final String S3_PATH_KEY = "dpr.raw.s3.path";
-    private static final String S3_PATH = "s3://loadjob/raw";
+    private static final String S3_PATH_KEY = "dpr.curated.s3.path";
+    private static final String S3_PATH = "s3://loadjob/curated";
 
     private final JobParameters jobParameters = new JobParameters(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
     private final DataStorageService storage = new DataStorageService();
@@ -40,16 +39,16 @@ class RawZoneTest extends BaseSparkTest {
     private Dataset<Row> mockedDataSet;
 
     @Test
-    void shouldReturnValidRawS3Path() {
+    void shouldReturnValidCuratedS3Path() {
         val source = "oms_owner";
         val table = "agency_internal_locations";
         val operation = "load";
-        val expectedRawS3Path = String.join("/", S3_PATH, source, table, operation);
-        assertEquals(expectedRawS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
+        val expectedCuratedS3Path = String.join("/", S3_PATH, source, table, operation);
+        assertEquals(expectedCuratedS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
     }
 
     @Test
-    void shouldProcessRawZone() throws DataStorageException {
+    void shouldProcessCuratedZone() throws DataStorageException {
         // Define a schema for the row
         StructType schema = new StructType()
                 .add("source", StringType, false)
@@ -62,15 +61,13 @@ class RawZoneTest extends BaseSparkTest {
         MockedStatic<SourceReferenceService> service = mockStatic(SourceReferenceService.class);
         DataStorageService storage1 = mock(DataStorageService.class);
         doNothing().when(storage1).append("testPath", mockedDataSet);
-        doReturn("testPath").when(storage1).getTablePath(S3_PATH, ref, table.getAs("operation"));
+        doReturn("testPath").when(storage1).getTablePath(S3_PATH, ref);
         service.when(() -> SourceReferenceService
                         .getSourceReference(table.getAs("source"), table.getAs("table")))
                 .thenReturn(Optional.of(ref));
-        RawZone rawZoneTest = spy(new RawZone(jobParameters, storage1));
+        CuratedZone curatedZoneTest = spy(new CuratedZone(jobParameters, storage1));
         when(mockedDataSet.count()).thenReturn(10L);
-        doReturn(mockedDataSet).when(rawZoneTest).extractRawDataFrame(mockedDataSet, table.getAs("source"),
-                table.getAs("table"));
-        Dataset<Row> actual_result = rawZoneTest.process(spark, mockedDataSet, table);
+        Dataset<Row> actual_result = curatedZoneTest.process(spark, mockedDataSet, table);
         assertNotNull(actual_result);
     }
 }

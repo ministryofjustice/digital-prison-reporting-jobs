@@ -7,7 +7,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.job.model.Columns.DATA;
 
-public class DMS_3_4_6_ConverterTest extends BaseSparkTest {
+class DMS_3_4_6_ConverterTest extends BaseSparkTest {
 
     private static final String DATA_PATH = "src/test/resources/data/dms_record.json";
 
@@ -15,7 +15,7 @@ public class DMS_3_4_6_ConverterTest extends BaseSparkTest {
 
 
     @Test
-    public void shouldConvertValidDataCorrectly() {
+    void shouldConvertValidDataCorrectly() {
         // Load JSON as text and slurp in the context of the whole file so we can read multiline JSON files.
         val rdd = spark
             .read()

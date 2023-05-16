@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
+import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
 
@@ -32,67 +33,75 @@ public class DataStorageService {
         return String.join("/", elements);
     }
 
-    public void append(final String tablePath, final Dataset<Row> df) {
+    public void append(final String tablePath, final Dataset<Row> df) throws DataStorageException {
         logger.info("Appending schema and data to " + tablePath);
-        df.write()
-                .format("delta")
-                .mode("append")
-                .option("path", tablePath)
-                .save();
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .mode("append")
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void create(final String tablePath, final Dataset<Row> df) {
+    public void create(final String tablePath, final Dataset<Row> df) throws DataStorageException {
         logger.info("Inserting schema and data to " + tablePath);
-        df.write()
-                .format("delta")
-                .option("path", tablePath)
-                .save();
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void replace(final String tablePath, final Dataset<Row> df) {
+    public void replace(final String tablePath, final Dataset<Row> df) throws DataStorageException {
         logger.info("Overwriting schema and data to " + tablePath);
-        df.write()
-                .format("delta")
-                .mode("overwrite")
-                .option("overwriteSchema", true)
-                .option("path", tablePath)
-                .save();
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .mode("overwrite")
+                    .option("overwriteSchema", true)
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void reload(final String tablePath, final Dataset<Row> df) {
+    public void reload(final String tablePath, final Dataset<Row> df) throws DataStorageException {
         logger.info("Syncing data to " + tablePath);
-        df.write()
-                .format("delta")
-                .mode("overwrite")
-                .option("path", tablePath)
-                .save();
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .mode("overwrite")
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void delete(final SparkSession spark, final TableIdentifier info) {
+    public void delete(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
         logger.info("deleting Delta table..." + info.getTable());
         String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
-        if(deltaTable != null) {
+        if (deltaTable != null) {
             deltaTable.delete();
-        }
+        } else throw new DataStorageException("Delta table delete failed");
     }
 
-    public void vacuum(final SparkSession spark, final TableIdentifier info) {
+    public void vacuum(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
         String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
-        if(deltaTable != null) {
+        if (deltaTable != null) {
             deltaTable.vacuum();
-        }
+        } else throw new DataStorageException("Delta table vaccum failed");
     }
 
-    public Dataset<Row> load(final SparkSession spark, final TableIdentifier info) {
+    public Dataset<Row> load(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
         String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         return deltaTable == null ? null : deltaTable.toDF();
     }
 
     protected DeltaTable getTable(final SparkSession spark, final String tablePath) {
-        if(DeltaTable.isDeltaTable(spark, tablePath))
+        if (DeltaTable.isDeltaTable(spark, tablePath))
             return DeltaTable.forPath(spark, tablePath);
         else {
             logger.warn("Cannot update manifest for table: {} - Not a delta table", tablePath);
@@ -100,7 +109,7 @@ public class DataStorageService {
         return null;
     }
 
-    public void endTableUpdates(final SparkSession spark, final TableIdentifier info) {
+    public void endTableUpdates(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
         String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         updateManifest(deltaTable);
@@ -109,7 +118,7 @@ public class DataStorageService {
     protected void updateManifest(final DeltaTable dt) {
         try {
             dt.generate("symlink_format_manifest");
-        } catch(Exception e) {
+        } catch (Exception e) {
             // TODO log error message
             // why are we here
         }

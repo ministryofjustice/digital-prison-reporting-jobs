@@ -11,12 +11,14 @@ import java.util.Scanner;
 
 /**
  * Temporary Internal Schema storage using json schema files.
- *
+ * <p>
  * This will be replaced by the Hive Metastore in later work.
- *
+ * <p>
  * See DPR-246 for further details.
  */
 public class SourceReferenceService {
+
+    private SourceReferenceService() {}
 
     private static final Map<String, SourceReference> sources = new HashMap<>();
 
@@ -36,18 +38,18 @@ public class SourceReferenceService {
 
     private static StructType getSchemaFromResource(String resource) {
         return (StructType) Optional.ofNullable(System.class.getResourceAsStream(resource))
-            .map(SourceReferenceService::readInputStream)
-            .map(StructType::fromJson)
-            .orElseThrow(() -> new IllegalStateException("Failed to read resource: " + resource));
+                .map(SourceReferenceService::readInputStream)
+                .map(StructType::fromJson)
+                .orElseThrow(() -> new IllegalStateException("Failed to read resource: " + resource));
     }
 
     private static String readInputStream(InputStream is) {
         return new Scanner(is, "UTF-8")
-            .useDelimiter("\\A") // Matches the next boundary which in our case will be EOF.
-            .next();
+                .useDelimiter("\\A") // Matches the next boundary which in our case will be EOF.
+                .next();
     }
 
-    private static String generateKey(String source, String table) {
+    public static String generateKey(String source, String table) {
         return String.join(".", source, table).toLowerCase();
     }
 

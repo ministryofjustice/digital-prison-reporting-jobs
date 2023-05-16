@@ -38,9 +38,9 @@ public class DomainSchemaService {
         GetDatabaseResult result = glueClient.getDatabase(request);
 
         return Optional.ofNullable(result.getDatabase())
-            .map(Database::getName)
-            .filter(n -> n.equals(databaseName))
-            .isPresent();
+                .map(Database::getName)
+                .filter(n -> n.equals(databaseName))
+                .isPresent();
     }
 
     // TODO - is the entire method only needed for testing or some condition within it?
@@ -82,7 +82,7 @@ public class DomainSchemaService {
             if (tableExists(info.getDatabase(),
                     info.getSchema() + "." + info.getTable())) {
                 deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
-                logger.info("Dropping Hive Schema completed " +  info.getSchema() + "." + info.getTable());
+                logger.info("Dropping Hive Schema completed " + info.getSchema() + "." + info.getTable());
             } else {
                 throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
             }
@@ -132,19 +132,19 @@ public class DomainSchemaService {
                         .withTableType("EXTERNAL_TABLE")
                         .withParameters(Collections.singletonMap("classification", "parquet"))
                         .withStorageDescriptor(
-                            new StorageDescriptor()
-                                .withColumns(getColumnsAndModifyTypes(dataframe.schema()))
-                                .withLocation(path + "/_symlink_format_manifest")
-                                .withInputFormat("org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat")
-                                .withOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
-                                .withSerdeInfo(
-                                    new SerDeInfo()
-                                        .withSerializationLibrary("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
-                                        .withParameters(Collections.singletonMap("serialization.format", ","))
-                                )
-                                .withCompressed(false)
-                                .withNumberOfBuckets(0)
-                                .withStoredAsSubDirectories(false)
+                                new StorageDescriptor()
+                                        .withColumns(getColumnsAndModifyTypes(dataframe.schema()))
+                                        .withLocation(path + "/_symlink_format_manifest")
+                                        .withInputFormat("org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat")
+                                        .withOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
+                                        .withSerdeInfo(
+                                                new SerDeInfo()
+                                                        .withSerializationLibrary("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
+                                                        .withParameters(Collections.singletonMap("serialization.format", ","))
+                                        )
+                                        .withCompressed(false)
+                                        .withNumberOfBuckets(0)
+                                        .withStoredAsSubDirectories(false)
                         )
                 );
 

@@ -1,20 +1,22 @@
 package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.service.DomainService;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+
 import java.util.Arrays;
+
 
 /**
  * Job that refreshes domains so that the data in the consumer-facing systems is correctly formatted and up-to-date.
- *  It reads domains from DomainRegistry (a DynamoDB table) and does one of the following:
- *   1. Refresh whole domain
- *   2. Refresh one table in a domain
+ * It reads domains from DomainRegistry (a DynamoDB table) and does one of the following:
+ * 1. Refresh whole domain
+ * 2. Refresh one table in a domain
  */
 @Singleton
 @CommandLine.Command(name = "DomainRefreshJob")

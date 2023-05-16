@@ -7,6 +7,7 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
@@ -27,12 +28,12 @@ public class RawZone extends Zone {
     @Inject
     public RawZone(JobParameters jobParameters, DataStorageService storage) {
         this.rawS3Path = jobParameters.getRawS3Path()
-            .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
+                .orElseThrow(() -> new IllegalStateException("raw s3 path not set - unable to create RawZone instance"));
         this.storage = storage;
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
         logger.info("Processing data frame with {} rows", dataFrame.count());
 
@@ -41,15 +42,11 @@ public class RawZone extends Zone {
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
         String rowOperation = table.getAs(OPERATION);
-
         val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
-            .map(r -> this.storage.getTablePath(rawS3Path, r, rowOperation))
-            // Revert to source and table from row where no match exists in the schema reference service.
-            .orElse(this.storage.getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
-
-        val rawDataFrame = dataFrame
-            .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
-            .drop(SOURCE, TABLE, OPERATION);
+                .map(r -> this.storage.getTablePath(rawS3Path, r, rowOperation))
+                // Revert to source and table from row where no match exists in the schema reference service.
+                .orElse(this.storage.getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
+        val rawDataFrame = extractRawDataFrame(dataFrame, rowSource, rowTable);
 
         logger.info("Appending {} records to deltalake table: {}", rawDataFrame.count(), tablePath);
         this.storage.append(tablePath, rawDataFrame);
@@ -61,6 +58,14 @@ public class RawZone extends Zone {
                 System.currentTimeMillis() - startTime
         );
         return rawDataFrame;
+    }
+
+    protected Dataset<Row> extractRawDataFrame(Dataset<Row> dataFrame, String rowSource, String rowTable) {
+        if (dataFrame != null)
+            return dataFrame
+                    .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
+                    .drop(SOURCE, TABLE, OPERATION);
+        else return null;
     }
 
 }

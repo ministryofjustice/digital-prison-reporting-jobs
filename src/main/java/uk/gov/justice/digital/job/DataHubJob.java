@@ -12,24 +12,27 @@ import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.config.JobParameters;
 import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.zone.RawZone;
 import uk.gov.justice.digital.zone.StructuredZone;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.job.model.Columns.*;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
- *  - validates the data to ensure it conforms to the expected input format - DPR-341
- *  - writes the raw data to the raw zone in s3
- *  - validates the data to ensure it confirms to the appropriate table schema
- *  - writes this validated data to the structured zone in s3
+ * - validates the data to ensure it conforms to the expected input format - DPR-341
+ * - writes the raw data to the raw zone in s3
+ * - validates the data to ensure it confirms to the appropriate table schema
+ * - writes this validated data to the structured zone in s3
  */
 @Singleton
 @Command(name = "DataHubJob")
@@ -46,13 +49,13 @@ public class DataHubJob implements Runnable {
 
     @Inject
     public DataHubJob(
-        KinesisReader kinesisReader,
-        RawZone rawZone,
-        StructuredZone structuredZone,
-        CuratedZone curatedZone,
-        @Named("converterForDMS_3_4_6") Converter converter,
-        SparkSessionProvider sparkSessionProvider,
-        JobParameters jobParameters
+            KinesisReader kinesisReader,
+            RawZone rawZone,
+            StructuredZone structuredZone,
+            CuratedZone curatedZone,
+            @Named("converterForDMS_3_4_6") Converter converter,
+            SparkSessionProvider sparkSessionProvider,
+            JobParameters jobParameters
     ) {
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
@@ -80,9 +83,15 @@ public class DataHubJob implements Runnable {
             val dataFrame = converter.convert(rowRdd, spark);
 
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
-                val rawDataFrame = rawZone.process(spark, dataFrame, table);
-                val structuredDataFrame = structuredZone.process(spark, rawDataFrame, table);
-                curatedZone.process(spark, structuredDataFrame, table);
+                Dataset<Row> rawDataFrame = null;
+                try {
+                    rawDataFrame = rawZone.process(spark, dataFrame, table);
+                    Dataset<Row> structuredDataFrame = null;
+                    structuredDataFrame = structuredZone.process(spark, rawDataFrame, table);
+                    curatedZone.process(spark, structuredDataFrame, table);
+                } catch (DataStorageException e) {
+                    logger.error("Datahub job failed" + e);
+                }
             });
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",

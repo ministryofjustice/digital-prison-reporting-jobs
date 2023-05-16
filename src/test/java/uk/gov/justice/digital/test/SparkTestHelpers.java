@@ -10,6 +10,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 
 import java.io.IOException;
@@ -54,7 +55,7 @@ public class SparkTestHelpers {
                 "updates.parquet");
     }
 
-    public void persistDataset(TableIdentifier location, Dataset<Row> df) {
+    public void persistDataset(TableIdentifier location, Dataset<Row> df) throws DataStorageException {
         DataStorageService deltaService = new DataStorageService();
         String tablePath = deltaService.getTablePath(location.getBasePath(), location.getSchema(), location.getTable());
         deltaService.replace(tablePath, df);
