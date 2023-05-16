@@ -10,37 +10,32 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 // TODO - explicit coverage recently added args
 class JobArgumentsTest {
 
-    // TODO - rename
-    private static final Map<String, String> testConfig;
+    private static final Map<String, String> testArguments = Stream.of(new String[][] {
+            { JobArguments.AWS_KINESIS_ENDPOINT_URL, "https://kinesis.example.com" },
+            { JobArguments.AWS_REGION, "test-region" },
+            { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
+            { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
+            { JobArguments.DOMAIN_NAME, "test_domain_name" },
+            { JobArguments.DOMAIN_OPERATION, "insert" },
+            { JobArguments.DOMAIN_REGISTRY, "test_registry" },
+            { JobArguments.DOMAIN_TARGET_PATH, "s3://somepath/domain/target" },
+            { JobArguments.DOMAIN_TABLE_NAME, "test_table" },
+            { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "5" },
+            { JobArguments.KINESIS_READER_STREAM_NAME, "some-kinesis-stream" },
+            { JobArguments.RAW_S3_PATH, "s3://somepath/raw" },
+            { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
+            { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
+            { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com" }
+    }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
-    static {
-        testConfig = new HashMap<>();
-        testConfig.put(JobArguments.AWS_KINESIS_ENDPOINT_URL, "https://kinesis.example.com");
-        testConfig.put(JobArguments.AWS_REGION, "test-region");
-        testConfig.put(JobArguments.CURATED_S3_PATH, "s3://somepath/curated");
-        testConfig.put(JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName");
-        testConfig.put(JobArguments.DOMAIN_NAME, "test_domain_name");
-        testConfig.put(JobArguments.DOMAIN_OPERATION, "insert");
-        testConfig.put(JobArguments.DOMAIN_REGISTRY, "test_registry");
-        testConfig.put(JobArguments.DOMAIN_TARGET_PATH, "s3://somepath/domain/target");
-        testConfig.put(JobArguments.DOMAIN_TABLE_NAME, "test_table");
-        testConfig.put(JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "5");
-        testConfig.put(JobArguments.KINESIS_READER_STREAM_NAME, "some-kinesis-stream");
-        testConfig.put(JobArguments.RAW_S3_PATH, "s3://somepath/raw");
-        testConfig.put(JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured");
-        testConfig.put(JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations");
-        testConfig.put(JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com");
-    }
-
-    private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testConfig));
+    private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
     private static final JobArguments emptyArguments = new JobArguments(givenAContextWithNoArguments());
 
     // TODO - check this - still needed?
@@ -54,7 +49,7 @@ class JobArgumentsTest {
 
     @Test
     public void shouldReturnCorrectValueForEachSupportedArgument() {
-        Map<String, Object> expectedArguments = Stream.of(new Object[][]{
+        Map<String, String> actualArguments = Stream.of(new Object[][] {
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
                 { JobArguments.AWS_KINESIS_ENDPOINT_URL, validArguments.getAwsKinesisEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
@@ -69,28 +64,17 @@ class JobArgumentsTest {
                 { JobArguments.RAW_S3_PATH, validArguments.getRawS3Path() },
                 { JobArguments.STRUCTURED_S3_PATH, validArguments.getStructuredS3Path() },
                 { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path( ) },
-                // Convert the Duration ms value into seconds which is what the argument uses
+                // Convert the Duration ms value into seconds to align with the argument.
                 { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS,
                         validArguments.getKinesisReaderBatchDuration().milliseconds() / 1000},
-        }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1]));
+        }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
-        assertEquals(expectedArguments, testConfig);
+        assertEquals(testArguments, actualArguments);
     }
 
     @Test
-    public void shouldThrowExceptionWhenKinesisEndpointUrlNotSet() {
-        assertThrows(IllegalStateException.class, emptyArguments::getAwsKinesisEndpointUrl);
-    }
-
-    @Test
-    public void shouldThrowExceptionWhenKinesisReaderStreamNameNotSet() {
-        assertThrows(IllegalStateException.class, emptyArguments::getKinesisReaderStreamName);
-    }
-
-
-    @Test
-    public void shouldThrowExceptionWhenKinesisReaderBatchDurationNotSet() {
-        assertThrows(IllegalStateException.class, emptyArguments::getKinesisReaderBatchDuration);
+    public void showThrowAnExceptionWhenAMissingArgumentIsRequested() {
+        assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
     }
 
     @Test
