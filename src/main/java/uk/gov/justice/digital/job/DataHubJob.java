@@ -13,6 +13,7 @@ import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.zone.CuratedZone;
 import uk.gov.justice.digital.zone.RawZone;
@@ -66,12 +67,7 @@ public class DataHubJob implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job started");
-        // TODO - remove duplication of context creation
-        val context = Micronaut
-                .build(args)
-                .banner(false)
-                .start();
-        PicocliRunner.run(DataHubJob.class, context);
+        PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
     }
 
     private void batchProcessor(JavaRDD<byte[]> batch) {

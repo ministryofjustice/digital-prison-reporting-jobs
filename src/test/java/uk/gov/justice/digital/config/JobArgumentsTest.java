@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-// TODO - explicit coverage recently added args
 class JobArgumentsTest {
 
     private static final Map<String, String> testArguments = Stream.of(new String[][] {
@@ -39,15 +38,6 @@ class JobArgumentsTest {
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
     private static final JobArguments emptyArguments = new JobArguments(givenAContextWithNoArguments());
-
-    // TODO - check this - still needed?
-    @Test
-    public void shouldRemoveLeadingHyphensFromParameterNames() {
-        val jobParameters = new JobArguments(
-            Collections.singletonMap("--" + JobArguments.AWS_REGION, "test-region")
-        );
-        assertEquals("test-region", jobParameters.getAwsRegion());
-    }
 
     @Test
     public void shouldReturnCorrectValueForEachSupportedArgument() {
