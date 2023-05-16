@@ -28,7 +28,7 @@ public class DomainService {
 
     @Inject
     public DomainService(JobArguments parameters,
-                         DomainRepository repository,
+                         DomainDefinitionClient dynamoDB,
                          DomainExecutor executor) {
         this.parameters = parameters;
         this.dynamoDB = dynamoDB;

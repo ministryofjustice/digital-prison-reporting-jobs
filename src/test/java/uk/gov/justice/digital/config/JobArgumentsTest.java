@@ -4,8 +4,6 @@ import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.CommandLinePropertySource;
 import io.micronaut.context.env.Environment;
 import lombok.val;
-import org.apache.spark.streaming.Duration;
-import org.apache.spark.streaming.Durations;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -110,44 +108,4 @@ class JobArgumentsTest {
 
         return mockContext;
     }
-<<<<<<< HEAD
-
-    @Test
-    public void shouldReturnEmptyOptionalWhenViolationsPathNotSet() {
-        assertEquals(Optional.empty(), emptyArguments.getViolationsS3Path());
-    }
-
-    @Test
-    public void shouldReturnOptionalWithCuratedPathWhenSet() {
-        assertEquals(CURATED_S3_PATH, validArguments.getCuratedS3Path());
-    }
-
-    @Test
-    public void shouldReturnOptionalWithDomainNameWhenSet() {
-        assertEquals(DOMAIN_NAME, validArguments.getDomainName());
-    }
-
-    @Test
-    public void shouldReturnOptionalWithDomainTableNameWhenSet() {
-        assertEquals(DOMAIN_TABLE_NAME, validArguments.getDomainTableName());
-    }
-
-    @Test
-    public void shouldReturnOptionalWithDomainOperationWhenSet() {
-        assertEquals(DOMAIN_OPERATION, validArguments.getDomainOperation());
-    }
-
-    @Test
-    public void shouldReturnOptionalWithDomainRegistryWhenSet() {
-        assertEquals(DOMAIN_REGISTRY, validArguments.getDomainRegistry());
-    }
-
-    @Test
-    public void shouldReturnOptionalWithDomainTargetPathWhenSet() {
-        assertEquals(DOMAIN_S3_TARGET_PATH, validArguments.getDomainTargetPath());
-    }
-
 }
-=======
-}
->>>>>>> d8b3396 (DPR-422 parking WIP changes to review code)

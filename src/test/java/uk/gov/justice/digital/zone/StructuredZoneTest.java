@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -37,7 +37,7 @@ class StructuredZoneTest extends BaseSparkTest {
     private static final String S3_PATH_KEY = "dpr.structured.s3.path";
     private static final String S3_PATH = "s3://loadjob/structured";
 
-    private final JobParameters jobParameters = new JobParameters(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
+    private final JobArguments jobArguments = new JobArguments(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
     private final DataStorageService storage = new DataStorageService();
 
     @Mock
@@ -68,7 +68,7 @@ class StructuredZoneTest extends BaseSparkTest {
     void shouldThrowExceptionWhenViolationsPathNotSet() {
         DataStorageService storage1 = mock(DataStorageService.class);
         assertThrows(IllegalStateException.class, () ->
-                new StructuredZone(jobParameters, storage1), "Expected to throw exception, but it didn't"
+                new StructuredZone(jobArguments, storage1), "Expected to throw exception, but it didn't"
         );
     }
 
@@ -80,7 +80,7 @@ class StructuredZoneTest extends BaseSparkTest {
                 .add("operation", StringType, false);
         Row table = new GenericRowWithSchema(Arrays.asList("oms_owner", "agency_internal_locations", "load").toArray(),
                 schema);
-        JobParameters jobParams = mock(JobParameters.class);
+        JobArguments jobParams = mock(JobArguments.class);
         DataStorageService storage1 = mock(DataStorageService.class);
         sourceRefStatic.when(() -> SourceReferenceService
                         .generateKey(table.getAs("source"), table.getAs("table")))
@@ -114,7 +114,7 @@ class StructuredZoneTest extends BaseSparkTest {
                 .add("operation", StringType, false);
         Row table = new GenericRowWithSchema(Arrays.asList("oms_owner", "agency_internal_locations", "load").toArray(),
                 schema);
-        JobParameters jobParams = mock(JobParameters.class);
+        JobArguments jobParams = mock(JobArguments.class);
         DataStorageService storage1 = mock(DataStorageService.class);
         sourceRefStatic.when(() -> SourceReferenceService
                         .generateKey(table.getAs("source"), table.getAs("table")))
@@ -147,7 +147,7 @@ class StructuredZoneTest extends BaseSparkTest {
     @Test
     void shouldHandleSchemaFound() throws DataStorageException {
         DataStorageService storage1 = mock(DataStorageService.class);
-        JobParameters jobParams = mock(JobParameters.class);
+        JobArguments jobParams = mock(JobArguments.class);
         doReturn(Optional.of("s3://loadjob/violations")).when(jobParams).getViolationsS3Path();
         doReturn(Optional.of("s3://loadjob/structured")).when(jobParams).getStructuredS3Path();
         sourceRefStatic.when(() -> SourceReferenceService
@@ -190,7 +190,7 @@ class StructuredZoneTest extends BaseSparkTest {
         // Create an empty DataFrame with the schema
         Dataset<Row> df = spark.createDataFrame(new ArrayList<>(), schema);
         DataStorageService storage1 = mock(DataStorageService.class);
-        JobParameters jobParams = mock(JobParameters.class);
+        JobArguments jobParams = mock(JobArguments.class);
         doReturn(Optional.of("s3://loadjob/violations")).when(jobParams).getViolationsS3Path();
         doReturn(Optional.of("s3://loadjob/structured")).when(jobParams).getStructuredS3Path();
         StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));

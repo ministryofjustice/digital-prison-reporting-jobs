@@ -3,8 +3,6 @@ package uk.gov.justice.digital.job;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import io.micronaut.runtime.Micronaut;
-import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -37,7 +35,12 @@ public class DomainRefreshJob implements Runnable {
 
     @Override
     public void run() {
-        domainService.run();
+        try {
+            domainService.run();
+        } catch (Exception e) {
+            logger.error("Caught exception during job run", e);
+        }
+
     }
 
 }
