@@ -69,7 +69,7 @@ public class DomainExecutor {
                 schema.create(info, tablePath, dataFrame);
                 logger.info("Creating delta table completed...");
             } else {
-                throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
+                throw new DomainExecutorException("Delta table " + info.getTable() + " already exists");
             }
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
@@ -86,7 +86,8 @@ public class DomainExecutor {
                 schema.replace(info, tablePath, dataFrame);
                 logger.info("Updating delta table completed...");
             } else {
-                throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exists");
+                throw new DomainExecutorException("Delta table " + info.getSchema()
+                        + "_" + info.getTable() + " doesn't exists");
             }
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
@@ -307,23 +308,22 @@ public class DomainExecutor {
     public void doFullDomainRefresh(DomainDefinition domainDefinition,
                                     String domainName,
                                     String domainTableName,
-                                    String domainOperation) {
-        try {
-            if (domainOperation.equalsIgnoreCase("insert") ||
-                    domainOperation.equalsIgnoreCase("update") ||
-                    domainOperation.equalsIgnoreCase("sync")) {
+                                    String domainOperation) throws DomainExecutorException {
+        if (domainOperation.equalsIgnoreCase("insert") ||
+                domainOperation.equalsIgnoreCase("update") ||
+                domainOperation.equalsIgnoreCase("sync")) {
 
-                val table = domainDefinition.getTables().stream()
-                        .filter(t -> domainTableName.equals(t.getName()))
-                        .findAny()
-                        .orElse(null);
-
-                if (table == null) {
-                    logger.error("Table " + domainTableName + " not found");
-                    throw new DomainExecutorException("Table " + domainTableName + " not found");
-                } else {
-                    // no source table and df they are required only for unit testing
-                    val dfTarget = apply(table, null);
+            val table = domainDefinition.getTables().stream()
+                    .filter(t -> domainTableName.equals(t.getName()))
+                    .findAny()
+                    .orElse(null);
+            if (table == null) {
+                logger.error("Table " + domainTableName + " not found");
+                throw new DomainExecutorException("Table " + domainTableName + " not found");
+            } else {
+                // no source table and df they are required only for unit testing
+                val dfTarget = apply(table, null);
+                try {
                     saveTable(
                             new TableIdentifier(
                                     targetRootPath,
@@ -334,22 +334,22 @@ public class DomainExecutor {
                             dfTarget,
                             domainOperation
                     );
+                } catch (DataStorageException e) {
+                    throw new DomainExecutorException(e.getMessage());
                 }
-            } else if (domainOperation.equalsIgnoreCase("delete")) {
-                logger.info("domain operation is delete");
-                deleteTable(new TableIdentifier(
-                        targetRootPath,
-                        hiveDatabaseName,
-                        domainName,
-                        domainTableName
-                ));
-            } else {
-                val message = "Unsupported domain operation: '" + domainOperation + "'";
-                logger.error(message);
-                throw new UnsupportedOperationException(message);
             }
-        } catch (Exception e) {
-            logger.error("Domain executor failed", e);
+        } else if (domainOperation.equalsIgnoreCase("delete")) {
+            logger.info("domain operation is delete");
+            deleteTable(new TableIdentifier(
+                    targetRootPath,
+                    hiveDatabaseName,
+                    domainName,
+                    domainTableName
+            ));
+        } else {
+            val message = "Unsupported domain operation: '" + domainOperation + "'";
+            logger.error(message);
+            throw new DomainExecutorException(message);
         }
     }
 

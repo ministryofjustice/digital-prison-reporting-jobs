@@ -13,6 +13,7 @@ import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.test.SparkTestHelpers;
@@ -59,7 +60,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_incident_domain() throws IOException, DataStorageException {
+    void shouldTestIncidentDomain() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "demographics";
         val domain = getDomain("/sample/domain/incident_domain.json");
@@ -79,7 +80,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_establishment_domain_insert() throws IOException, DataStorageException {
+    void shouldTestEstablishmentDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "establishment";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -99,7 +100,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_living_unit_domain_insert() throws IOException, DataStorageException {
+    void shouldTestLivingUnitDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -119,7 +120,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_living_unit_domain_update() throws IOException, DataStorageException {
+    void shouldTestLivingUnitDomainUpdate() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "update";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -138,7 +139,8 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_establishment_domain_delete() throws IOException, DataStorageException {
+    public void shouldTestEstablishmentDomainDelete() throws IOException, DataStorageException,
+            DomainExecutorException {
         val domainOperation = "delete";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");

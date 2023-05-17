@@ -26,10 +26,16 @@ public class KinesisReader {
     @Inject
     public KinesisReader(JobParameters jobParameters,
                          JobProperties jobProperties) {
+        this(jobParameters, jobProperties,
+                new SparkConf().setAppName(jobProperties.getSparkJobName()));
+    }
+
+    public KinesisReader(JobParameters jobParameters,
+                         JobProperties jobProperties, SparkConf sparkConf) {
         String jobName = jobProperties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
-                new SparkConf().setAppName(jobName),
+                sparkConf,
                 jobParameters.getKinesisReaderBatchDuration()
         );
 
@@ -52,7 +58,6 @@ public class KinesisReader {
                 jobParameters.getKinesisReaderStreamName(),
                 jobParameters.getKinesisReaderBatchDuration()
         );
-
     }
 
     public void setBatchProcessor(VoidFunction<JavaRDD<byte[]>> batchProcessor) {
