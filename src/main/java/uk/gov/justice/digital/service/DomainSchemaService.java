@@ -103,7 +103,7 @@ public class DomainSchemaService {
             logger.info("Hive Catalog Table '" + tableName + "' found");
             return Boolean.TRUE;
         } catch (EntityNotFoundException e) {
-            logger.error(e.getMessage());
+            logger.info("Hive Catalog Table '" + tableName + "' not found");
             return Boolean.FALSE;
         }
     }
