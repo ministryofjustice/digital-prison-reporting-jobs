@@ -19,10 +19,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 // TODO - this should not use the glueClient directly
 @Singleton
 public class DomainSchemaService {
+
+    private final static String TABLE_NAME_PATTERN = "^\\w*$";
+    private final static String SCHEMA_TABLE_SEPARATOR = "_";
 
     private static final Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
 
@@ -48,13 +52,12 @@ public class DomainSchemaService {
     public void create(TableIdentifier info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
         if (databaseExists(info.getDatabase())) {
             logger.info("Hive Schema insert started for " + info.getDatabase());
-            if (!tableExists(info.getDatabase(),
-                    info.getSchema() + "." + info.getTable())) {
-                createTable(info.getDatabase(),
-                        info.getSchema() + "." + info.getTable(), path, dataFrame);
-                logger.info("Creating hive schema completed:" + info.getSchema() + "." + info.getTable());
+            String tableName = combineTableName(info.getSchema(), info.getTable());
+            if (!tableExists(info.getDatabase(),  tableName)) {
+                createTable(info.getDatabase(), tableName, path, dataFrame);
+                logger.info("Creating hive schema completed:" + tableName);
             } else {
-                throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' already exists");
+                throw new DomainSchemaException("Glue catalog table '" + tableName + "' already exists");
             }
         } else {
             throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
@@ -64,11 +67,10 @@ public class DomainSchemaService {
     public void replace(TableIdentifier info, String path, Dataset<Row> dataFrame) throws DomainSchemaException {
         if (databaseExists(info.getDatabase())) {
             logger.info("Hive Schema insert started for " + info.getDatabase());
-            if (tableExists(info.getDatabase(),
-                    info.getSchema() + "." + info.getTable())) {
-                updateTable(info.getDatabase(),
-                        info.getSchema() + "." + info.getTable(), path, dataFrame);
-                logger.info("Replacing Hive Schema completed " + info.getSchema() + "." + info.getTable());
+            final String tableName = combineTableName(info.getSchema(), info.getTable());
+            if (tableExists(info.getDatabase(), tableName)) {
+                updateTable(info.getDatabase(), tableName, path, dataFrame);
+                logger.info("Replacing Hive Schema completed " + tableName);
             } else {
                 throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
             }
@@ -79,13 +81,13 @@ public class DomainSchemaService {
 
     public void drop(TableIdentifier info) throws DomainSchemaException {
         if (databaseExists(info.getDatabase())) {
+            final String tableName = combineTableName(info.getSchema(), info.getTable());
             if (tableExists(info.getDatabase(),
-                    info.getSchema() + "." + info.getTable())) {
-                deleteTable(info.getDatabase(), info.getSchema() + "." + info.getTable());
-                logger.info("Dropping Hive Schema completed " + info.getSchema() + "." + info.getTable());
+                    tableName)) {
+                deleteTable(info.getDatabase(), tableName);
+                logger.info("Dropping Hive Schema completed " + tableName);
             } else {
-                throw new DomainSchemaException("Glue catalog table '" + info.getSchema() + "." +
-                        info.getTable() + "' doesn't exist");
+                throw new DomainSchemaException("Glue catalog table '" + tableName + "' doesn't exist");
             }
         } else {
             throw new DomainSchemaException("Glue catalog " + info.getDatabase() + " doesn't exist");
@@ -125,6 +127,9 @@ public class DomainSchemaService {
 
     public void createTable(final String databaseName, final String tableName, final String path,
                             final Dataset<Row> dataframe) {
+        if(!validateTableName(tableName)) {
+            throw new RuntimeException("Tablename " + tableName + " is not supported. Use [a-zA-Z_0-9]");
+        }
         // Create a CreateTableRequest
         CreateTableRequest createTableRequest = new CreateTableRequest()
                 .withDatabaseName(databaseName)
@@ -178,5 +183,12 @@ public class DomainSchemaService {
             columns.add(col);
         }
         return columns;
+    }
+
+    private String combineTableName(String schema, String table) {
+        return schema + SCHEMA_TABLE_SEPARATOR + table;
+    }
+    private boolean validateTableName(String tablename) {
+        return Pattern.matches(TABLE_NAME_PATTERN, tablename);
     }
 }
