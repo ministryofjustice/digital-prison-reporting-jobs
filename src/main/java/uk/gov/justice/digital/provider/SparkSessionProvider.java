@@ -7,6 +7,9 @@ import org.apache.spark.sql.SparkSession;
 @Singleton
 public class SparkSessionProvider {
 
+    private static final String WARN = "WARN";
+    private static final String ERROR = "ERROR";
+
     public SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
         sparkConf
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
@@ -16,10 +19,14 @@ public class SparkSessionProvider {
                 .set("spark.databricks.delta.autoCompact.enabled", "true")
                 .set("spark.sql.legacy.charVarcharAsString", "true");
 
-        return SparkSession.builder()
-                .config(sparkConf)
-                .enableHiveSupport()
-                .getOrCreate();
+        SparkSession session = SparkSession.builder()
+                                .config(sparkConf)
+                                .enableHiveSupport()
+                                .getOrCreate();
+
+        session.sparkContext().setLogLevel(WARN);
+
+        return session;
     }
 
     public SparkSession getConfiguredSparkSession() {
