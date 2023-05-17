@@ -1,6 +1,6 @@
-package uk.gov.justice.digital.job.model;
+package uk.gov.justice.digital.common;
 
-public class Columns {
+public class ColumnNames {
     public static final String DATA = "data";
     public static final String ERROR = "error";
     public static final String JSON_DATA = "jsonData";
@@ -11,5 +11,5 @@ public class Columns {
     public static final String TABLE = "table";
     public static final String VALID = "valid";
 
-    private Columns() {}
+    private ColumnNames() {}
 }

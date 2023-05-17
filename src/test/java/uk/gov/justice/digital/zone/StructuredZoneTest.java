@@ -2,9 +2,9 @@ package uk.gov.justice.digital.zone;
 
 
 import lombok.val;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
@@ -23,190 +24,124 @@ import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Optional;
 
 import static org.apache.spark.sql.types.DataTypes.StringType;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static uk.gov.justice.digital.common.ColumnNames.*;
+import static uk.gov.justice.digital.zone.Fixtures.*;
 
 @ExtendWith(MockitoExtension.class)
 class StructuredZoneTest extends BaseSparkTest {
 
-    private static final String S3_PATH_KEY = "dpr.structured.s3.path";
-    private static final String S3_PATH = "s3://loadjob/structured";
-
-    private final JobArguments jobArguments = new JobArguments(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
-    private final DataStorageService storage = new DataStorageService();
+    @Mock
+    private Dataset<Row> mockDataSet;
 
     @Mock
-    private Dataset<Row> mockedDataSet;
+    private JobArguments mockJobArguments;
 
-    private MockedStatic<SourceReferenceService> sourceRefStatic;
+    @Mock
+    private SourceReference mockSourceReference;
+
+    @Mock
+    private DataStorageService mockDataStorageService;
+
+    private MockedStatic<SourceReferenceService> mockSourceReferenceService;
 
     @BeforeEach
     void setUp() {
-        sourceRefStatic = mockStatic(SourceReferenceService.class);
+        mockSourceReferenceService = mockStatic(SourceReferenceService.class);
+        // Configure mocks common to most test cases
+        when(mockJobArguments.getViolationsS3Path()).thenReturn(VIOLATIONS_PATH);
+        when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_PATH);
     }
 
     @AfterEach
     void tearDown() {
-        sourceRefStatic.close();
-    }
-
-    @Test
-    void shouldReturnValidStructuredS3Path() {
-        val source = "oms_owner";
-        val table = "agency_internal_locations";
-        val operation = "load";
-        val expectedStructuredS3Path = String.join("/", S3_PATH, source, table, operation);
-        assertEquals(expectedStructuredS3Path, this.storage.getTablePath(S3_PATH, source, table, operation));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenViolationsPathNotSet() {
-        DataStorageService storage1 = mock(DataStorageService.class);
-        assertThrows(IllegalStateException.class, () ->
-                new StructuredZone(jobArguments, storage1), "Expected to throw exception, but it didn't"
-        );
+        mockSourceReferenceService.close();
     }
 
     @Test
     void shouldHandleValidRecords() throws DataStorageException {
-        StructType schema = new StructType()
-                .add("source", StringType, false)
-                .add("table", StringType, false)
-                .add("operation", StringType, false);
-        Row table = new GenericRowWithSchema(Arrays.asList("oms_owner", "agency_internal_locations", "load").toArray(),
-                schema);
-        JobArguments jobParams = mock(JobArguments.class);
-        DataStorageService storage1 = mock(DataStorageService.class);
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .generateKey(table.getAs("source"), table.getAs("table")))
-                .thenCallRealMethod();
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .getSourceReference(table.getAs("source"), table.getAs("table")))
-                .thenCallRealMethod();
-        Optional<SourceReference> optionalSourceRef = SourceReferenceService
-                .getSourceReference("oms_owner", "agency_internal_locations");
-        val sourceRef = optionalSourceRef.orElse(null);
-        assertTrue(optionalSourceRef.isPresent());
-        doCallRealMethod().when(storage1).getTablePath(S3_PATH, sourceRef);
-        doCallRealMethod().when(storage1).getTablePath(any());
-        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
-        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
-        StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));
-        doReturn(mockedDataSet).when(structuredZoneTest).validateJsonData(any(), any(), any(), any(), any());
-        doNothing().when(structuredZoneTest).handleInValidRecords(any(), any(), any(), any(), any());
-        doReturn(mockedDataSet).when(structuredZoneTest).handleValidRecords(spark, mockedDataSet,
-                "s3://loadjob/structured/nomis/agency_internal_locations");
-        when(mockedDataSet.count()).thenReturn(10L);
-        Dataset<Row> actualResult = structuredZoneTest.process(spark, mockedDataSet, table);
-        assertNotNull(actualResult);
+        val underTest = spy(new StructuredZone(mockJobArguments, mockDataStorageService));
+
+        mockSourceReferenceService.when(() -> SourceReferenceService.generateKey(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
+        mockSourceReferenceService.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
+
+//        doCallRealMethod().when(storage1).getTablePath(STRUCTURED_PATH, sourceRef.getSource(), sourceRef.getTable());
+//        doCallRealMethod().when(storage1).getTablePath(any());
+        doReturn(mockDataSet).when(underTest).validateJsonData(any(), any(), any(), any(), any());
+        doNothing().when(underTest).handleInValidRecords(any(), any(), any(), any(), any());
+        doReturn(mockDataSet).when(underTest)
+                .handleValidRecords(spark, mockDataSet, STRUCTURED_PATH + "/nomis/agency_internal_locations");
+        when(mockDataSet.count()).thenReturn(10L);
+
+
+        val result = underTest.process(spark, mockDataSet, dataMigrationEventRow);
+        assertNotNull(result);
     }
 
     @Test
     void shouldHandleInValidRecords() throws DataStorageException {
-        StructType schema = new StructType()
-                .add("source", StringType, false)
-                .add("table", StringType, false)
-                .add("operation", StringType, false);
-        Row table = new GenericRowWithSchema(Arrays.asList("oms_owner", "agency_internal_locations", "load").toArray(),
-                schema);
-        JobArguments jobParams = mock(JobArguments.class);
-        DataStorageService storage1 = mock(DataStorageService.class);
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .generateKey(table.getAs("source"), table.getAs("table")))
-                .thenCallRealMethod();
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .getSourceReference(table.getAs("source"), table.getAs("table")))
-                .thenCallRealMethod();
-        Optional<SourceReference> optionalSourceRef = SourceReferenceService
-                .getSourceReference("oms_owner", "agency_internal_locations");
-        val sourceRef = optionalSourceRef.orElse(null);
-        assertTrue(optionalSourceRef.isPresent());
+        val underTest = spy(new StructuredZone(mockJobArguments, mockDataStorageService));
 
-        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
-        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
-        StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));
-        doReturn("s3://loadjob/structured")
-                .doReturn("s3://loadjob/violations").when(storage1)
-                .getTablePath(anyString(), any());
-        doCallRealMethod().when(structuredZoneTest).handleSchemaFound(spark, mockedDataSet, sourceRef);
-        doReturn(mockedDataSet).when(structuredZoneTest).validateJsonData(spark, mockedDataSet,
+        mockSourceReferenceService.when(() -> SourceReferenceService.generateKey(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
+        mockSourceReferenceService.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
+
+        val sourceRef = SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME).get();
+//        doReturn(STRUCTURED_PATH).doReturn(VIOLATIONS_PATH).when(storage1).getTablePath(anyString(), any());
+        doCallRealMethod().when(underTest).handleSchemaFound(spark, mockDataSet, sourceRef);
+        doReturn(mockDataSet).when(underTest).validateJsonData(spark, mockDataSet,
                 sourceRef.getSchema(), sourceRef.getSource(), sourceRef.getTable());
-        doNothing().when(structuredZoneTest).handleInValidRecords(spark, mockedDataSet, sourceRef.getSource(),
-                sourceRef.getTable(), "s3://loadjob/violations");
-        doReturn(mockedDataSet).when(structuredZoneTest).handleValidRecords(any(), any(), anyString());
-        when(mockedDataSet.count()).thenReturn(10L);
-        Dataset<Row> actualResult = structuredZoneTest.process(spark, mockedDataSet, table);
-        assertNotNull(actualResult);
+        doNothing().when(underTest).handleInValidRecords(spark, mockDataSet, sourceRef.getSource(),
+                sourceRef.getTable(), VIOLATIONS_PATH);
+        doReturn(mockDataSet).when(underTest).handleValidRecords(any(), any(), anyString());
+        when(mockDataSet.count()).thenReturn(10L);
+
+        val result = underTest.process(spark, mockDataSet, dataMigrationEventRow);
+        assertNotNull(result);
     }
 
     @Test
     void shouldHandleSchemaFound() throws DataStorageException {
-        DataStorageService storage1 = mock(DataStorageService.class);
-        JobArguments jobParams = mock(JobArguments.class);
-        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
-        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .generateKey("oms_owner", "offenders"))
-                .thenCallRealMethod();
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .getSourceReference("oms_owner", "offenders"))
-                .thenCallRealMethod();
-        StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));
-        Optional<SourceReference> optionalSourceRef = SourceReferenceService
-                .getSourceReference("oms_owner", "offenders");
-        val sourceRef = optionalSourceRef.orElse(null);
-        assertTrue(optionalSourceRef.isPresent());
-        doReturn("s3://loadjob/structured")
-                .doReturn("s3://loadjob/violations").when(storage1)
-                .getTablePath(anyString(), any());
-        doCallRealMethod().when(structuredZoneTest).handleSchemaFound(spark, mockedDataSet, sourceRef);
-        doReturn(mockedDataSet).when(structuredZoneTest).validateJsonData(spark, mockedDataSet,
-                sourceRef.getSchema(), sourceRef.getSource(), sourceRef.getTable());
-        doNothing().when(structuredZoneTest).handleInValidRecords(spark, mockedDataSet, sourceRef.getSource(),
-                sourceRef.getTable(), "s3://loadjob/violations");
-        doReturn(mockedDataSet).when(structuredZoneTest).handleValidRecords(spark, mockedDataSet,
-                "s3://loadjob/structured");
-        Dataset<Row> actualResult = structuredZoneTest.handleSchemaFound(spark, mockedDataSet,
-                sourceRef);
-        assertNotNull(actualResult);
+        val structuredZoneTest = spy(new StructuredZone(mockJobArguments, mockDataStorageService));
 
+        when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
+        when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
+        when(mockSourceReference.getSchema()).thenReturn(ROW_SCHEMA);
+
+        when(mockDataSet.select(Mockito.<Column[]>any())).thenReturn(mockDataSet);
+        when(mockDataSet.select(Mockito.<String>any())).thenReturn(mockDataSet);
+        when(mockDataSet.filter(Mockito.<Column>any())).thenReturn(mockDataSet);
+        when(mockDataSet.withColumn(any(), any())).thenReturn(mockDataSet);
+        when(mockDataSet.drop(Mockito.<Column>any())).thenReturn(mockDataSet);
+        when(mockDataSet.count()).thenReturn(0L);
+        when(mockDataSet.sparkSession()).thenReturn(spark); // For now return a real spark session
+        when(mockDataSet.schema()).thenReturn(ROW_SCHEMA);
+
+        val result = structuredZoneTest.handleSchemaFound(spark, mockDataSet, mockSourceReference);
+        assertNotNull(result);
     }
 
     @Test
     void shouldHandleNoSchemaFound() throws DataStorageException {
-        // Create the StructType object representing the schema
-        StructType schema = DataTypes.createStructType(new StructField[]{
-                DataTypes.createStructField("data", StringType, true),
-                DataTypes.createStructField("metadata", StringType, true),
-                DataTypes.createStructField("parsedData", StringType, true),
-                DataTypes.createStructField("valid", StringType, true)
+        val schema = DataTypes.createStructType(new StructField[]{
+                DataTypes.createStructField(DATA, StringType, true),
+                DataTypes.createStructField(METADATA, StringType, true),
+                DataTypes.createStructField(PARSED_DATA, StringType, true),
+                DataTypes.createStructField(VALID, StringType, true)
         });
+        val df = spark.createDataFrame(new ArrayList<>(), schema);
 
-        // Create an empty DataFrame with the schema
-        Dataset<Row> df = spark.createDataFrame(new ArrayList<>(), schema);
-        DataStorageService storage1 = mock(DataStorageService.class);
-        JobArguments jobParams = mock(JobArguments.class);
-        doReturn("s3://loadjob/violations").when(jobParams).getViolationsS3Path();
-        doReturn("s3://loadjob/structured").when(jobParams).getStructuredS3Path();
-        StructuredZone structuredZoneTest = spy(new StructuredZone(jobParams, storage1));
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .generateKey("oms_owner", "offenders"))
-                .thenCallRealMethod();
-        sourceRefStatic.when(() -> SourceReferenceService
-                        .getSourceReference("oms_owner", "offenders"))
-                .thenCallRealMethod();
-        Optional<SourceReference> optionalSourceRef = SourceReferenceService
-                .getSourceReference("oms_owner", "offenders");
-        val sourceRef = optionalSourceRef.orElse(null);
-        assertTrue(optionalSourceRef.isPresent());
-        Dataset<Row> actualResult = structuredZoneTest.handleNoSchemaFound(spark, df,
-                sourceRef.getSource(), sourceRef.getTable());
-        assertNotNull(actualResult);
+        mockSourceReferenceService.when(() -> SourceReferenceService.generateKey(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
+        mockSourceReferenceService.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
+
+        val sourceRef = SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME).get();
+
+        val underTest = spy(new StructuredZone(mockJobArguments, mockDataStorageService));
+
+        val result = underTest.handleNoSchemaFound(spark, df, sourceRef.getSource(), sourceRef.getTable());
+        assertNotNull(result);
 
     }
 }

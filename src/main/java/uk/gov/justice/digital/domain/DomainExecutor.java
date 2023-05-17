@@ -26,12 +26,15 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
 
+import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
+
 
 @Singleton
 public class DomainExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
+    // TODO - review usages
     private final String sourceRootPath;
     private final String targetRootPath;
     private final DataStorageService storage;
@@ -57,7 +60,7 @@ public class DomainExecutor {
     protected void insertTable(TableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: insertTable");
-        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         logger.info("Domain insert to disk started");
         try {
             if(storage.exists(spark, info)) {
@@ -83,7 +86,7 @@ public class DomainExecutor {
     protected void updateTable(TableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: updateTable");
-        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         try {
             if (storage.exists(spark, info)) {
                 storage.replace(tablePath, dataFrame);
@@ -100,7 +103,7 @@ public class DomainExecutor {
     protected void syncTable(TableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
-        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         if (storage.exists(spark, info)) {
             storage.reload(tablePath, dataFrame);
             logger.info("Syncing delta table completed..." + info.getTable());
@@ -144,14 +147,15 @@ public class DomainExecutor {
     }
 
     protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
-        String tablePath = storage.getTablePath(target.getBasePath(), target.getSchema(), target.getTable());
+        String tablePath = createValidatedPath(target.getBasePath(), target.getSchema(), target.getTable());
         // save the violations to the specified location
         storage.append(tablePath, dataFrame);
         storage.endTableUpdates(spark, target);
     }
 
-    public Dataset<Row> getAllSourcesForTable(String sourcePath, String source,
-                                              TableTuple exclude) throws DomainExecutorException {
+    public Dataset<Row> getAllSourcesForTable(String sourcePath,
+                                              String source,
+                                              TableTuple exclude) {
         if (exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);

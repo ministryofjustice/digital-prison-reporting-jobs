@@ -8,7 +8,7 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static uk.gov.justice.digital.common.ColumnNames.*;
 
 public abstract class Zone {
 

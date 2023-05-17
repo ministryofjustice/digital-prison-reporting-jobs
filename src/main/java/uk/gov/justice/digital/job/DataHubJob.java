@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
-import io.micronaut.runtime.Micronaut;
 import lombok.val;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
@@ -26,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static uk.gov.justice.digital.common.ColumnNames.*;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows

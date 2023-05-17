@@ -15,7 +15,7 @@ import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
 import static org.apache.spark.sql.types.DataTypes.StringType;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static uk.gov.justice.digital.common.ColumnNames.*;
 
 /**
  * Converter that takes raw data from DMS v3.4.6 and converts it into the standardised data representation for
