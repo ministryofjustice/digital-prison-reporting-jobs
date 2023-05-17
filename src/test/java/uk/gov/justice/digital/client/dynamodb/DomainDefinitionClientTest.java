@@ -9,8 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
@@ -39,7 +38,7 @@ class DomainDefinitionClientTest {
         dynamoDB = mock(AmazonDynamoDB.class);
         mapper = mock(ObjectMapper.class);
         domainDefinitionService = new DomainDefinitionClient(dynamoDB, mapper);
-        domainService = new DomainService(mock(JobParameters.class), domainDefinitionService,
+        domainService = new DomainService(mock(JobArguments.class), domainDefinitionService,
                 mock(DomainExecutor.class));
     }
 
@@ -58,7 +57,7 @@ class DomainDefinitionClientTest {
         String domainTableName = "test";
         String domainName = "incident";
         when(dynamoDB.query(any(QueryRequest.class))).thenThrow(AmazonDynamoDBException.class);
-        DatabaseClientException thrown = assertThrows(
+        assertThrows(
                 DatabaseClientException.class,
                 () -> domainDefinitionService.executeQuery(domainTableName, domainName),
                 "Expected executeQuery() to throw, but it didn't"
@@ -147,7 +146,7 @@ class DomainDefinitionClientTest {
         when(result.getItems()).thenReturn(l);
         String data = l.get(0).get("data").getS();
         when(mapper.readValue(data, DomainDefinition.class)).thenThrow(JsonProcessingException.class);
-        DatabaseClientException thrown = assertThrows(
+        assertThrows(
                 DatabaseClientException.class,
                 () -> domainDefinitionService.parse(result, null),
                 "Expected parse() to throw, but it didn't"

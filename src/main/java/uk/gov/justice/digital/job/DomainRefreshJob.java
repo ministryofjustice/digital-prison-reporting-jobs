@@ -6,11 +6,8 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.service.DomainService;
-
-import java.util.Arrays;
-
 
 /**
  * Job that refreshes domains so that the data in the consumer-facing systems is correctly formatted and up-to-date.
@@ -25,29 +22,20 @@ public class DomainRefreshJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DomainRefreshJob.class);
 
     private final DomainService domainService;
-    private final JobParameters jobParameters;
-
-    private static String[] jobArguments;
-
 
     @Inject
-    public DomainRefreshJob(DomainService domainService, JobParameters jobParameters) {
+    public DomainRefreshJob(DomainService domainService) {
         this.domainService = domainService;
-        this.jobParameters = jobParameters;
     }
 
     public static void main(String[] args) {
         logger.info("Job started");
-        logger.info("Arguments :" + Arrays.toString(args));
-        jobArguments = args;
-
-        PicocliRunner.run(DomainRefreshJob.class);
+        PicocliRunner.run(DomainRefreshJob.class, MicronautContext.withArgs(args));
     }
 
     @Override
     public void run() {
         try {
-            jobParameters.parse(jobArguments);
             domainService.run();
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);

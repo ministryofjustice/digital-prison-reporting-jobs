@@ -12,7 +12,7 @@ import org.apache.spark.streaming.kinesis.KinesisInputDStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.reflect.ClassTag$;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 
 @Bean
@@ -24,33 +24,33 @@ public class KinesisReader {
     private final JavaDStream<byte[]> kinesisStream;
 
     @Inject
-    public KinesisReader(JobParameters jobParameters,
+    public KinesisReader(JobArguments jobArguments,
                          JobProperties jobProperties) {
         String jobName = jobProperties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
-                new SparkConf().setAppName(jobName),
-                jobParameters.getKinesisReaderBatchDuration()
+            new SparkConf().setAppName(jobName),
+            jobArguments.getKinesisReaderBatchDuration()
         );
 
         kinesisStream = JavaDStream.fromDStream(
-                KinesisInputDStream.builder()
-                        .streamingContext(streamingContext)
-                        .endpointUrl(jobParameters.getAwsKinesisEndpointUrl())
-                        .regionName(jobParameters.getAwsRegion())
-                        .streamName(jobParameters.getKinesisReaderStreamName())
-                        .initialPosition(new KinesisInitialPositions.TrimHorizon())
-                        .checkpointAppName(jobName)
-                        .build(),
-                // We need to pass a Scala classtag which looks a little ugly in Java.
-                ClassTag$.MODULE$.apply(byte[].class)
+            KinesisInputDStream.builder()
+                .streamingContext(streamingContext)
+                .endpointUrl(jobArguments.getAwsKinesisEndpointUrl())
+                .regionName(jobArguments.getAwsRegion())
+                .streamName(jobArguments.getKinesisReaderStreamName())
+                .initialPosition(new KinesisInitialPositions.TrimHorizon())
+                .checkpointAppName(jobName)
+                .build(),
+            // We need to pass a Scala classtag which looks a little ugly in Java.
+            ClassTag$.MODULE$.apply(byte[].class)
         );
 
         logger.info("Configuration - endpointUrl: {} awsRegion: {} streamName: {} batchDuration: {}",
-                jobParameters.getAwsKinesisEndpointUrl(),
-                jobParameters.getAwsRegion(),
-                jobParameters.getKinesisReaderStreamName(),
-                jobParameters.getKinesisReaderBatchDuration()
+            jobArguments.getAwsKinesisEndpointUrl(),
+            jobArguments.getAwsRegion(),
+            jobArguments.getKinesisReaderStreamName(),
+            jobArguments.getKinesisReaderBatchDuration()
         );
 
     }
