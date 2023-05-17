@@ -199,16 +199,17 @@ public class DomainExecutorTest extends BaseSparkTest {
         );
 
         val domainTableName = "prisoner";
+        val fullpath = targetPath() + "/" + domain.getName() + "/" + domainTableName;
         // Insert first
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "insert");
         // then update
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "update");
 
-        verify(schemaService, times(1)).create(any(), any(), any());
-        verify(schemaService, times(1)).replace(any(), any(), any());
+        verify(schemaService, times(1)).create(any(), eq(fullpath), any());
+        verify(schemaService, times(1)).replace(any(), eq(fullpath), any());
 
         // there should be a target table
-        val info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
+        val info = new TableIdentifier(targetPath(), hiveDatabaseName, domain.getName(), domainTableName);
         assertTrue(storage.exists(spark, info));
 
         // it should have all the offenders in it

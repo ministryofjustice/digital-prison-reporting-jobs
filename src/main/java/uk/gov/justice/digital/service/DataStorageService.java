@@ -6,6 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Array;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -32,6 +33,16 @@ public class DataStorageService {
 
     public String getTablePath(String... elements) {
         return String.join("/", elements);
+    }
+
+    public boolean hasRecords(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
+        logger.info("Checking details for Delta table..." + info.getSchema() + "." + info.getTable());
+        if(exists(spark, info)) {
+            Dataset<Row> df = load(spark, info);
+            return !df.isEmpty();
+        } else {
+            return false;
+        }
     }
 
     public void append(final String tablePath, final Dataset<Row> df) throws DataStorageException {
