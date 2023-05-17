@@ -60,13 +60,21 @@ public class DomainExecutor {
         String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         logger.info("Domain insert to disk started");
         try {
-            if (!storage.exists(spark, info)) {
-                storage.create(tablePath, dataFrame);
-                schema.create(info, tablePath, dataFrame);
-                logger.info("Creating delta table completed...");
+            if(storage.exists(spark, info)) {
+                if(storage.hasRecords(spark, info)) {
+                    // this is trying to overwrite so throw an exception
+                    throw new DomainExecutorException("Delta table " + info.getTable() + " already exists and has records. Try replace");
+                } else {
+                    storage.replace(tablePath, dataFrame);
+                    logger.warn("Storage is empty so performing a replace instead");
+                }
             } else {
-                throw new DomainExecutorException("Delta table " + info.getTable() + "already exists");
+                storage.create(tablePath, dataFrame);
             }
+            // create the schema
+            schema.create(info, tablePath, dataFrame);
+            logger.info("Creating delta table completed...");
+
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
@@ -106,12 +114,12 @@ public class DomainExecutor {
         try {
             if (storage.exists(spark, info)) {
                 storage.delete(spark, info);
-                schema.drop(info);
                 storage.endTableUpdates(spark, info);
             } else {
-                throw new DomainExecutorException("Table " + info.getSchema() + "." + info.getTable() +
-                        " doesn't exists");
+                logger.warn("Delete table " + info.getSchema() + "." + info.getTable() + " not executed as table doesn't exist");
             }
+
+            schema.drop(info);
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
