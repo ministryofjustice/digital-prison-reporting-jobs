@@ -7,7 +7,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +25,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import java.util.ArrayList;
 
 import static org.apache.spark.sql.types.DataTypes.StringType;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ColumnNames.*;
 import static uk.gov.justice.digital.zone.Fixtures.*;
@@ -68,8 +67,6 @@ class StructuredZoneTest extends BaseSparkTest {
         mockSourceReferenceService.when(() -> SourceReferenceService.generateKey(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
         mockSourceReferenceService.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
 
-//        doCallRealMethod().when(storage1).getTablePath(STRUCTURED_PATH, sourceRef.getSource(), sourceRef.getTable());
-//        doCallRealMethod().when(storage1).getTablePath(any());
         doReturn(mockDataSet).when(underTest).validateJsonData(any(), any(), any(), any(), any());
         doNothing().when(underTest).handleInValidRecords(any(), any(), any(), any(), any());
         doReturn(mockDataSet).when(underTest)
@@ -77,34 +74,29 @@ class StructuredZoneTest extends BaseSparkTest {
         when(mockDataSet.count()).thenReturn(10L);
 
 
-        val result = underTest.process(spark, mockDataSet, dataMigrationEventRow);
-        assertNotNull(result);
+        assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
-    void shouldHandleInValidRecords() throws DataStorageException {
+    void shouldHandleInvalidRecords() throws DataStorageException {
         val underTest = spy(new StructuredZone(mockJobArguments, mockDataStorageService));
 
         mockSourceReferenceService.when(() -> SourceReferenceService.generateKey(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
         mockSourceReferenceService.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
 
-        val sourceRef = SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME).get();
-//        doReturn(STRUCTURED_PATH).doReturn(VIOLATIONS_PATH).when(storage1).getTablePath(anyString(), any());
-        doCallRealMethod().when(underTest).handleSchemaFound(spark, mockDataSet, sourceRef);
-        doReturn(mockDataSet).when(underTest).validateJsonData(spark, mockDataSet,
-                sourceRef.getSchema(), sourceRef.getSource(), sourceRef.getTable());
-        doNothing().when(underTest).handleInValidRecords(spark, mockDataSet, sourceRef.getSource(),
-                sourceRef.getTable(), VIOLATIONS_PATH);
-        doReturn(mockDataSet).when(underTest).handleValidRecords(any(), any(), anyString());
+        when(mockDataSet.select(Mockito.<Column[]>any())).thenReturn(mockDataSet);
+        when(mockDataSet.select(Mockito.<String>any())).thenReturn(mockDataSet);
+        when(mockDataSet.filter(Mockito.<Column>any())).thenReturn(mockDataSet);
+        when(mockDataSet.withColumn(any(), any())).thenReturn(mockDataSet);
+        when(mockDataSet.drop(Mockito.<Column>any())).thenReturn(mockDataSet);
         when(mockDataSet.count()).thenReturn(10L);
 
-        val result = underTest.process(spark, mockDataSet, dataMigrationEventRow);
-        assertNotNull(result);
+        assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
     void shouldHandleSchemaFound() throws DataStorageException {
-        val structuredZoneTest = spy(new StructuredZone(mockJobArguments, mockDataStorageService));
+        val structuredZoneTest = new StructuredZone(mockJobArguments, mockDataStorageService);
 
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
@@ -115,17 +107,14 @@ class StructuredZoneTest extends BaseSparkTest {
         when(mockDataSet.filter(Mockito.<Column>any())).thenReturn(mockDataSet);
         when(mockDataSet.withColumn(any(), any())).thenReturn(mockDataSet);
         when(mockDataSet.drop(Mockito.<Column>any())).thenReturn(mockDataSet);
-        when(mockDataSet.count()).thenReturn(0L);
-        when(mockDataSet.sparkSession()).thenReturn(spark); // For now return a real spark session
-        when(mockDataSet.schema()).thenReturn(ROW_SCHEMA);
+        when(mockDataSet.count()).thenReturn(10L);
 
-        val result = structuredZoneTest.handleSchemaFound(spark, mockDataSet, mockSourceReference);
-        assertNotNull(result);
+        assertNotNull(structuredZoneTest.handleSchemaFound(spark, mockDataSet, mockSourceReference));
     }
 
     @Test
     void shouldHandleNoSchemaFound() throws DataStorageException {
-        val schema = DataTypes.createStructType(new StructField[]{
+        val schema = DataTypes.createStructType(new StructField[] {
                 DataTypes.createStructField(DATA, StringType, true),
                 DataTypes.createStructField(METADATA, StringType, true),
                 DataTypes.createStructField(PARSED_DATA, StringType, true),
@@ -140,8 +129,7 @@ class StructuredZoneTest extends BaseSparkTest {
 
         val underTest = spy(new StructuredZone(mockJobArguments, mockDataStorageService));
 
-        val result = underTest.handleNoSchemaFound(spark, df, sourceRef.getSource(), sourceRef.getTable());
-        assertNotNull(result);
+        assertNotNull(underTest.handleNoSchemaFound(spark, df, sourceRef.getSource(), sourceRef.getTable()));
 
     }
 }
