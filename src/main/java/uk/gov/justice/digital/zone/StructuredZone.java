@@ -42,7 +42,6 @@ public class StructuredZone extends Zone {
     }
 
     @Override
-    // TODO - why are we passing spark session?
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
         val rowCount = dataFrame.count();
@@ -70,7 +69,6 @@ public class StructuredZone extends Zone {
         return structuredDataFrame;
     }
 
-    // TODO - why are we passing spark session?
     protected Dataset<Row> handleSchemaFound(SparkSession spark,
                                              Dataset<Row> dataFrame,
                                              SourceReference sourceReference) throws DataStorageException {
@@ -79,14 +77,13 @@ public class StructuredZone extends Zone {
                 sourceReference.getSource(),
                 sourceReference.getTable()
         );
+
         val validationFailedViolationPath = createValidatedPath(
                 violationsPath,
                 sourceReference.getSource(),
                 sourceReference.getTable()
         );
 
-        // TODO - review any path construction here too
-        // TODO - look into why we're passing the spark session too - from the dataframe was fine before...
         val validatedDataFrame = validateJsonData(
                 spark,
                 dataFrame,
@@ -106,7 +103,7 @@ public class StructuredZone extends Zone {
         return handleValidRecords(spark, validatedDataFrame, tablePath);
     }
 
-    protected Dataset<Row> validateJsonData(SparkSession spark,
+    private Dataset<Row> validateJsonData(SparkSession spark,
                                             Dataset<Row> dataFrame,
                                             StructType schema,
                                             String source,
@@ -122,7 +119,7 @@ public class StructuredZone extends Zone {
                 .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
     }
 
-    protected Dataset<Row> handleValidRecords(SparkSession spark,
+    private Dataset<Row> handleValidRecords(SparkSession spark,
                                               Dataset<Row> dataFrame,
                                               String destinationPath) throws DataStorageException {
         val validRecords = dataFrame
@@ -139,7 +136,7 @@ public class StructuredZone extends Zone {
         } else return createEmptyDataFrame(dataFrame);
     }
 
-    protected void handleInValidRecords(SparkSession spark,
+    private void handleInValidRecords(SparkSession spark,
                                         Dataset<Row> dataFrame,
                                         String source,
                                         String table,

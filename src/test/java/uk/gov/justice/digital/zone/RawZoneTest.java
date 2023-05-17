@@ -28,8 +28,6 @@ import static uk.gov.justice.digital.zone.Fixtures.*;
 @ExtendWith(MockitoExtension.class)
 class RawZoneTest {
 
-    private static final SparkSession spark = mock(SparkSession.class);
-
     private static final JobArguments jobArguments =
             new JobArguments(Collections.singletonMap(JobArguments.RAW_S3_PATH, RAW_PATH));
 
@@ -41,6 +39,9 @@ class RawZoneTest {
 
     @Mock
     private DataStorageService mockDataStorageService;
+
+    @Mock
+    private SparkSession mockSparkSession;
 
     @Test
     void shouldProcessRawZone() throws DataStorageException {
@@ -61,7 +62,7 @@ class RawZoneTest {
 
             val underTest = new RawZone(jobArguments, mockDataStorageService);
 
-            assertEquals(mockDataset, underTest.process(spark, mockDataset, dataMigrationEventRow));
+            assertEquals(mockDataset, underTest.process(mockSparkSession, mockDataset, dataMigrationEventRow));
         }
     }
 }

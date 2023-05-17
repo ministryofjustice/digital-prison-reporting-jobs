@@ -26,8 +26,6 @@ import static uk.gov.justice.digital.zone.Fixtures.*;
 @ExtendWith(MockitoExtension.class)
 class CuratedZoneTest {
 
-    private static final SparkSession spark = mock(SparkSession.class);
-
     private static final JobArguments jobArguments =
             new JobArguments(Collections.singletonMap(CURATED_S3_PATH, CURATED_PATH));
 
@@ -39,6 +37,9 @@ class CuratedZoneTest {
 
     @Mock
     private DataStorageService mockDataStorageService;
+
+    @Mock
+    private SparkSession mockSparkSession;
 
     @Test
     void shouldProcessCuratedZone() throws DataStorageException {
@@ -57,7 +58,7 @@ class CuratedZoneTest {
 
             val underTest = new CuratedZone(jobArguments, mockDataStorageService);
 
-            assertNotNull(underTest.process(spark, mockedDataSet, dataMigrationEventRow));
+            assertNotNull(underTest.process(mockSparkSession, mockedDataSet, dataMigrationEventRow));
         }
     }
 }
