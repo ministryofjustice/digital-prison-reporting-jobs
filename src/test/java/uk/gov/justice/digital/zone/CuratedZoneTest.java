@@ -42,7 +42,7 @@ class CuratedZoneTest {
     private SparkSession mockSparkSession;
 
     @Test
-    void shouldProcessCuratedZone() throws DataStorageException {
+    public void shouldProcessCuratedZone() throws DataStorageException {
         try (val service = mockStatic(SourceReferenceService.class)) {
             val curatedPath = createValidatedPath(CURATED_PATH, TABLE_SOURCE, TABLE_NAME);
 

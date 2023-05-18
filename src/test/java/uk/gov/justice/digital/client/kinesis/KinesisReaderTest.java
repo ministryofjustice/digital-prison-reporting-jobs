@@ -24,12 +24,12 @@ class KinesisReaderTest {
     private KinesisReader reader;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         reader = mock(KinesisReader.class);
     }
 
     @Test
-    void shouldTestConstructorObjectCreate() {
+    public void shouldTestConstructorObjectCreate() {
         val jobParameters = spy(new JobArguments(Collections.emptyMap()));
         val jobProperties = spy(new JobProperties());
         System.out.println(jobProperties);
@@ -44,13 +44,13 @@ class KinesisReaderTest {
     }
 
     @Test
-    void shouldTestSetBatchProcessor() {
+    public void shouldTestSetBatchProcessor() {
         reader.setBatchProcessor(batchProcessor);
         verify(reader, atLeastOnce()).setBatchProcessor(any());
     }
 
     @Test
-    void shouldTestStartAndAwaitTermination() throws InterruptedException {
+    public void shouldTestStartAndAwaitTermination() throws InterruptedException {
         reader.startAndAwaitTermination();
         verify(reader, atLeastOnce()).startAndAwaitTermination();
     }

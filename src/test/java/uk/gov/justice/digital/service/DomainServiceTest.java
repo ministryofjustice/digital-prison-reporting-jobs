@@ -60,7 +60,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldTestIncidentDomain() throws IOException, DataStorageException, DomainExecutorException {
+    public void shouldTestIncidentDomain() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "demographics";
         val domain = getDomain("/sample/domain/incident_domain.json");
@@ -80,7 +80,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldTestEstablishmentDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
+    public void shouldTestEstablishmentDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "establishment";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -100,7 +100,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldTestLivingUnitDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
+    public void shouldTestLivingUnitDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -120,7 +120,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldTestLivingUnitDomainUpdate() throws IOException, DataStorageException, DomainExecutorException, DomainSchemaException {
+    public void shouldTestLivingUnitDomainUpdate() throws IOException, DataStorageException, DomainExecutorException, DomainSchemaException {
         val domainOperation = "update";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -143,7 +143,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldTestEstablishmentDomainDelete() throws IOException, DataStorageException,
+    public void shouldTestEstablishmentDomainDelete() throws IOException, DataStorageException,
             DomainExecutorException, DomainSchemaException {
         val domainOperation = "delete";
         val domainTableName = "living_unit";

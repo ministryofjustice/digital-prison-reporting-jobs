@@ -53,7 +53,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
 
     @Test
-    void shouldGetAllSourcesForTable() throws Exception {
+    public void shouldGetAllSourcesForTable() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -77,7 +77,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldTestApplyDomain() throws Exception {
+    public void shouldTestApplyDomain() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -89,7 +89,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldApplyTransform() throws Exception {
+    public void shouldApplyTransform() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -101,7 +101,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldApplyViolationsIfEmpty() throws Exception {
+    public void shouldApplyViolationsIfEmpty() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -114,7 +114,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldApplyViolationsIfNonEmpty() throws Exception {
+    public void shouldApplyViolationsIfNonEmpty() throws Exception {
         val domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, targetPath(), storage, testSchemaService);
@@ -130,7 +130,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
 
     @Test
-    void shouldApplyMappings() throws Exception {
+    public void shouldApplyMappings() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -144,7 +144,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldSaveTable() throws Exception {
+    public void shouldSaveTable() throws Exception {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
@@ -165,7 +165,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldOverwriteWhenTableExists()
+    public void shouldOverwriteWhenTableExists()
             throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
@@ -177,7 +177,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldCreateSchemaAndTable() throws DomainExecutorException, DomainSchemaException {
+    public void shouldCreateSchemaAndTable() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(false).when(testStorage).exists(spark, tbl);
@@ -188,7 +188,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldInsertTableIfTableDoesNotExists() throws DomainExecutorException, DomainSchemaException {
+    public void shouldInsertTableIfTableDoesNotExists() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(false).when(testStorage).exists(spark, tbl);
@@ -200,7 +200,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldUpdateTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
+    public void shouldUpdateTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(true).when(testStorage).exists(spark, tbl);
@@ -212,7 +212,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldSyncTableIfTableExists() throws DomainExecutorException, DataStorageException {
+    public void shouldSyncTableIfTableExists() throws DomainExecutorException, DataStorageException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(true).when(testStorage).exists(spark, tbl);
@@ -224,7 +224,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldDeleteTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
+    public void shouldDeleteTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(true).when(testStorage).exists(spark, tbl);
@@ -237,7 +237,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
 
     @Test
-    void shouldDeleteTable() throws Exception {
+    public void shouldDeleteTable() throws Exception {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
@@ -272,7 +272,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldRunWithFullUpdateIfTableIsInDomain() throws Exception {
+    public void shouldRunWithFullUpdateIfTableIsInDomain() throws Exception {
         val domain = getDomain("/sample/domain/sample-domain-execution.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
@@ -300,7 +300,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldRunWithFullUpdateIfMultipleTablesAreInDomain() throws Exception {
+    public void shouldRunWithFullUpdateIfMultipleTablesAreInDomain() throws Exception {
         val domain1 = getDomain("/sample/domain/sample-domain-execution-insert.json");
         val domain2 = getDomain("/sample/domain/sample-domain-execution-join.json");
 
@@ -340,7 +340,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldRunWith0ChangesIfTableIsNotInDomain() throws Exception {
+    public void shouldRunWith0ChangesIfTableIsNotInDomain() throws Exception {
 
         val domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
         val testSchemaService = mock(DomainSchemaService.class);
@@ -363,7 +363,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldThrowExceptionIfNoSqlDefinedOnTransform() {
+    public void shouldThrowExceptionIfNoSqlDefinedOnTransform() {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
@@ -379,7 +379,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldNotExecuteTransformIfSqlIsBad() throws Exception {
+    public void shouldNotExecuteTransformIfSqlIsBad() throws Exception {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
@@ -393,7 +393,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldDeriveNewColumnIfFunctionProvided() throws Exception {
+    public void shouldDeriveNewColumnIfFunctionProvided() throws Exception {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
@@ -425,7 +425,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldNotWriteViolationsIfThereAreNone() throws DataStorageException {
+    public void shouldNotWriteViolationsIfThereAreNone() throws DataStorageException {
         val sourcePath = this.tmp.toFile().getAbsolutePath() + "/source";
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath, targetPath(), storage, testSchemaService);
@@ -448,7 +448,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldWriteViolationsIfThereAreSome() throws DataStorageException {
+    public void shouldWriteViolationsIfThereAreSome() throws DataStorageException {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
