@@ -1,16 +1,19 @@
 package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.common.ResourcePath;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
+
+import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
 public class DataStorageService {
@@ -18,20 +21,9 @@ public class DataStorageService {
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     public boolean exists(final SparkSession spark, final TableIdentifier info) {
-        logger.info("Delta table path :" + getTablePath(info.getBasePath(), info.getSchema(), info.getTable()));
-        return DeltaTable.isDeltaTable(spark, getTablePath(info.getBasePath(), info.getSchema(), info.getTable()));
-    }
-
-    public String getTablePath(String prefix, SourceReference ref, String operation) {
-        return getTablePath(prefix, ref.getSource(), ref.getTable(), operation);
-    }
-
-    public String getTablePath(String prefix, SourceReference ref) {
-        return getTablePath(prefix, ref.getSource(), ref.getTable());
-    }
-
-    public String getTablePath(String... elements) {
-        return String.join("/", elements);
+        val tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
+        logger.info("Delta table path {}", tablePath);
+        return DeltaTable.isDeltaTable(spark, tablePath);
     }
 
     public boolean hasRecords(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
@@ -90,7 +82,7 @@ public class DataStorageService {
 
     public void delete(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
         logger.info("deleting Delta table..." + info.getSchema() + "." + info.getTable());
-        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         if (deltaTable != null) {
             deltaTable.delete();
@@ -98,15 +90,15 @@ public class DataStorageService {
     }
 
     public void vacuum(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
-        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         if (deltaTable != null) {
             deltaTable.vacuum();
         } else throw new DataStorageException("Delta table vaccum failed");
     }
 
-    public Dataset<Row> load(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
-        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+    public Dataset<Row> load(final SparkSession spark, final TableIdentifier info) {
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         return deltaTable == null ? null : deltaTable.toDF();
     }
@@ -121,7 +113,7 @@ public class DataStorageService {
     }
 
     public void endTableUpdates(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
-        String tablePath = getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         final DeltaTable deltaTable = getTable(spark, tablePath);
         updateManifest(deltaTable);
     }

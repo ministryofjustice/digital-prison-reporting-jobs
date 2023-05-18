@@ -14,8 +14,9 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static uk.gov.justice.digital.job.model.Columns.SOURCE;
-import static uk.gov.justice.digital.job.model.Columns.TABLE;
+import static uk.gov.justice.digital.common.ColumnNames.SOURCE;
+import static uk.gov.justice.digital.common.ColumnNames.TABLE;
+import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
 public class CuratedZone extends Zone {
@@ -53,11 +54,16 @@ public class CuratedZone extends Zone {
                             "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
                     ));
 
-            val curatedTablePath = this.storage.getTablePath(curatedPath, sourceReference);
+            val curatedTablePath = createValidatedPath(
+                    curatedPath,
+                    sourceReference.getSource(),
+                    sourceReference.getTable()
+            );
+
             logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), curatedTablePath);
-            this.storage.append(curatedTablePath, dataFrame);
+            storage.append(curatedTablePath, dataFrame);
             logger.info("Append completed successfully");
-            this.storage.updateDeltaManifestForTable(spark, curatedTablePath);
+            storage.updateDeltaManifestForTable(spark, curatedTablePath);
 
             logger.info("Processed dataframe with {} rows in {}ms",
                     count,
