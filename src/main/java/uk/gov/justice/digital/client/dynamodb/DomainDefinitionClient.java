@@ -9,14 +9,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import uk.gov.justice.digital.client.dynamodb.DynamoDBClientProvider;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static uk.gov.justice.digital.job.model.Columns.DATA;
+import static uk.gov.justice.digital.common.ColumnNames.DATA;
 
 @Singleton
 public class DomainDefinitionClient {

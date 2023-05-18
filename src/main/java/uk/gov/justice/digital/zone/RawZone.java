@@ -15,7 +15,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static uk.gov.justice.digital.common.ColumnNames.*;
+import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
 public class RawZone extends Zone {
@@ -41,30 +42,32 @@ public class RawZone extends Zone {
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
         String rowOperation = table.getAs(OPERATION);
+        // TODO - review table path construction here
         val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
-                .map(r -> this.storage.getTablePath(rawS3Path, r, rowOperation))
+                .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable(), rowOperation))
                 // Revert to source and table from row where no match exists in the schema reference service.
-                .orElse(this.storage.getTablePath(rawS3Path, rowSource, rowTable, rowOperation));
+                .orElse(createValidatedPath(rawS3Path, rowSource, rowTable, rowOperation));
+
         val rawDataFrame = extractRawDataFrame(dataFrame, rowSource, rowTable);
 
         logger.info("Appending {} records to deltalake table: {}", rawDataFrame.count(), tablePath);
-        this.storage.append(tablePath, rawDataFrame);
+        storage.append(tablePath, rawDataFrame);
         logger.info("Append completed successfully");
-        this.storage.updateDeltaManifestForTable(spark, tablePath);
+        storage.updateDeltaManifestForTable(spark, tablePath);
 
         logger.info("Processed data frame with {} rows in {}ms",
                 rawDataFrame.count(),
                 System.currentTimeMillis() - startTime
         );
+
         return rawDataFrame;
     }
 
     protected Dataset<Row> extractRawDataFrame(Dataset<Row> dataFrame, String rowSource, String rowTable) {
-        if (dataFrame != null)
-            return dataFrame
+        return (dataFrame == null) ? null
+                : dataFrame
                     .filter(col(SOURCE).equalTo(rowSource).and(col(TABLE).equalTo(rowTable)))
                     .drop(SOURCE, TABLE, OPERATION);
-        else return null;
     }
 
 }

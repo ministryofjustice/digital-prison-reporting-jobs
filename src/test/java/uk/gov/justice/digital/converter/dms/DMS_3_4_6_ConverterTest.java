@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.justice.digital.job.model.Columns.DATA;
+import static uk.gov.justice.digital.common.ColumnNames.DATA;
 
 class DMS_3_4_6_ConverterTest extends BaseSparkTest {
 

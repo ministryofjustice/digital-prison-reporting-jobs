@@ -26,6 +26,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
 
+import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
+
 
 @Singleton
 public class DomainExecutor {
@@ -57,7 +59,7 @@ public class DomainExecutor {
     protected void insertTable(TableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: insertTable");
-        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         logger.info("Domain insert to disk started");
         try {
             if(storage.exists(spark, info)) {
@@ -83,7 +85,7 @@ public class DomainExecutor {
     protected void updateTable(TableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: updateTable");
-        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         try {
             if (storage.exists(spark, info)) {
                 storage.replace(tablePath, dataFrame);
@@ -100,7 +102,7 @@ public class DomainExecutor {
     protected void syncTable(TableIdentifier info, Dataset<Row> dataFrame)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
-        String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         if (storage.exists(spark, info)) {
             storage.reload(tablePath, dataFrame);
             logger.info("Syncing delta table completed..." + info.getTable());
@@ -144,14 +146,15 @@ public class DomainExecutor {
     }
 
     protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
-        String tablePath = storage.getTablePath(target.getBasePath(), target.getSchema(), target.getTable());
+        String tablePath = createValidatedPath(target.getBasePath(), target.getSchema(), target.getTable());
         // save the violations to the specified location
         storage.append(tablePath, dataFrame);
         storage.endTableUpdates(spark, target);
     }
 
-    public Dataset<Row> getAllSourcesForTable(String sourcePath, String source,
-                                              TableTuple exclude) throws DomainExecutorException {
+    public Dataset<Row> getAllSourcesForTable(String sourcePath,
+                                              String source,
+                                              TableTuple exclude) {
         if (exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
@@ -202,7 +205,7 @@ public class DomainExecutor {
 
     protected Dataset<Row> applyTransform(Map<String, Dataset<Row>> dfs, TransformDefinition transform)
             throws DomainExecutorException {
-        List<String> srcs = new ArrayList<>();
+        List<String> sources = new ArrayList<>();
         String view = transform.getViewText().toLowerCase();
         try {
             if (view.isEmpty()) {
@@ -216,7 +219,7 @@ public class DomainExecutor {
                 if (sourceDf != null) {
                     sourceDf.createOrReplaceTempView(src);
                     logger.info("Added view '" + src + "'");
-                    srcs.add(src);
+                    sources.add(src);
                     if (schemaContains(sourceDf, "_operation") &&
                             schemaContains(sourceDf, "_timestamp")) {
                         view = view.replace(" from ", ", " + src + "._operation, " + src + "._timestamp from ");
@@ -230,9 +233,7 @@ public class DomainExecutor {
             return validateSQLAndExecute(view);
         } finally {
             if (!view.isEmpty()) {
-                for (String source : srcs) {
-                    spark.catalog().dropTempView(source);
-                }
+                sources.forEach(s -> spark.catalog().dropTempView(s));
             }
         }
     }
@@ -273,7 +274,7 @@ public class DomainExecutor {
             } else if (table.getTransform() != null && table.getTransform().getSources() != null
                     && !table.getTransform().getSources().isEmpty()) {
                 for (String source : table.getTransform().getSources()) {
-                    Dataset<Row> sourceDataFrame = this.getAllSourcesForTable(sourceRootPath, source, null);
+                    Dataset<Row> sourceDataFrame = getAllSourcesForTable(sourceRootPath, source, null);
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
                     } else {

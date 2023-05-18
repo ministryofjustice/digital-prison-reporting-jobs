@@ -20,7 +20,8 @@ import java.util.Collections;
 import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
-import static uk.gov.justice.digital.job.model.Columns.*;
+import static uk.gov.justice.digital.common.ColumnNames.*;
+import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
 public class StructuredZone extends Zone {
@@ -53,6 +54,7 @@ public class StructuredZone extends Zone {
         String tableName = table.getAs(TABLE);
 
         val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
+
         logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
 
         val structuredDataFrame = sourceReference.isPresent()
@@ -67,23 +69,31 @@ public class StructuredZone extends Zone {
         return structuredDataFrame;
     }
 
-    protected Dataset<Row> handleSchemaFound(SparkSession spark, Dataset<Row> dataFrame,
-                                             SourceReference sourceReference)
-            throws DataStorageException {
-        val tablePath = this.storage.getTablePath(structuredPath, sourceReference);
-        val validationFailedViolationPath = this.storage.getTablePath(
-                violationsPath,
-                sourceReference
+    protected Dataset<Row> handleSchemaFound(SparkSession spark,
+                                             Dataset<Row> dataFrame,
+                                             SourceReference sourceReference) throws DataStorageException {
+        val tablePath = createValidatedPath(
+                structuredPath,
+                sourceReference.getSource(),
+                sourceReference.getTable()
         );
 
-        val validatedDataFrame = validateJsonData(spark,
+        val validationFailedViolationPath = createValidatedPath(
+                violationsPath,
+                sourceReference.getSource(),
+                sourceReference.getTable()
+        );
+
+        val validatedDataFrame = validateJsonData(
+                spark,
                 dataFrame,
                 sourceReference.getSchema(),
                 sourceReference.getSource(),
                 sourceReference.getTable()
         );
 
-        handleInValidRecords(spark,
+        handleInValidRecords(
+                spark,
                 validatedDataFrame,
                 sourceReference.getSource(),
                 sourceReference.getTable(),
@@ -93,20 +103,25 @@ public class StructuredZone extends Zone {
         return handleValidRecords(spark, validatedDataFrame, tablePath);
     }
 
-    protected Dataset<Row> validateJsonData(SparkSession spark, Dataset<Row> dataFrame, StructType schema,
-                                            String source, String table) {
+    private Dataset<Row> validateJsonData(SparkSession spark,
+                                            Dataset<Row> dataFrame,
+                                            StructType schema,
+                                            String source,
+                                            String table) {
 
         logger.info("Validating data against schema: {}/{}", source, table);
 
         val jsonValidator = JsonValidator.createAndRegister(schema, spark, source, table);
+
         return dataFrame
                 .select(col(DATA), col(METADATA))
                 .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
                 .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
     }
 
-    protected Dataset<Row> handleValidRecords(SparkSession spark, Dataset<Row> dataFrame, String destinationPath)
-            throws DataStorageException {
+    private Dataset<Row> handleValidRecords(SparkSession spark,
+                                              Dataset<Row> dataFrame,
+                                              String destinationPath) throws DataStorageException {
         val validRecords = dataFrame
                 .select(col(PARSED_DATA), col(VALID))
                 .filter(col(VALID).equalTo(true))
@@ -121,9 +136,14 @@ public class StructuredZone extends Zone {
         } else return createEmptyDataFrame(dataFrame);
     }
 
-    protected void handleInValidRecords(SparkSession spark, Dataset<Row> dataFrame, String source,
-                                        String table, String destinationPath) throws DataStorageException {
+    private void handleInValidRecords(SparkSession spark,
+                                        Dataset<Row> dataFrame,
+                                        String source,
+                                        String table,
+                                        String destinationPath) throws DataStorageException {
+
         val errorString = String.format("Record does not match schema %s/%s", source, table);
+
         // Write invalid records where schema validation failed
         val invalidRecords = dataFrame
                 .select(col(DATA), col(METADATA), col(VALID))
@@ -139,8 +159,11 @@ public class StructuredZone extends Zone {
         }
     }
 
-    protected Dataset<Row> handleNoSchemaFound(SparkSession spark, Dataset<Row> dataFrame, String source, String table)
-            throws DataStorageException {
+    protected Dataset<Row> handleNoSchemaFound(SparkSession spark,
+                                               Dataset<Row> dataFrame,
+                                               String source,
+                                               String table) throws DataStorageException {
+
         logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
                 source,
                 table,
@@ -151,16 +174,21 @@ public class StructuredZone extends Zone {
                 .select(col(DATA), col(METADATA))
                 .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
 
-        appendDataAndUpdateManifestForTable(spark, missingSchemaRecords,
-                this.storage.getTablePath(violationsPath, source, table));
+        appendDataAndUpdateManifestForTable(
+                spark,
+                missingSchemaRecords,
+                createValidatedPath(violationsPath, source, table)
+        );
+
         return createEmptyDataFrame(dataFrame);
     }
 
-    private void appendDataAndUpdateManifestForTable(SparkSession spark, Dataset<Row> dataFrame, String tablePath)
-            throws DataStorageException {
+    private void appendDataAndUpdateManifestForTable(SparkSession spark,
+                                                     Dataset<Row> dataFrame,
+                                                     String tablePath) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
-        this.storage.append(tablePath, dataFrame);
+        storage.append(tablePath, dataFrame);
         logger.info("Append completed successfully");
-        this.storage.updateDeltaManifestForTable(spark, tablePath);
+        storage.updateDeltaManifestForTable(spark, tablePath);
     }
 }
