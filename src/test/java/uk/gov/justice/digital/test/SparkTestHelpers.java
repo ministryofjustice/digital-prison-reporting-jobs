@@ -19,8 +19,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-
 public class SparkTestHelpers {
 
     private final SparkSession spark;
@@ -53,9 +51,7 @@ public class SparkTestHelpers {
     }
 
     public void persistDataset(TableIdentifier location, Dataset<Row> df) throws DataStorageException {
-        DataStorageService deltaService = new DataStorageService();
-        String tablePath = createValidatedPath(location.getBasePath(), location.getSchema(), location.getTable());
-        deltaService.replace(tablePath, df);
+        new DataStorageService().replace(location.toPath(), df);
     }
 
     public Dataset<Row> createIncidentDomainDataframe() {
