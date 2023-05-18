@@ -13,6 +13,9 @@ public abstract class Converter {
 
     private static final boolean NOT_NULL = false;
 
+    // TODO - at the moment we haven't really formalised the idea of our internal format which we could do instead of
+    //        defining the fields and the struct here.
+
     // Constants defining the fields used in the common output format.
     public static class ParsedDataFields {
         public static final String DATA = "data";
