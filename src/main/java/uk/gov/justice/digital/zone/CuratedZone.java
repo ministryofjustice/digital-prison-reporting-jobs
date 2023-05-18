@@ -14,9 +14,9 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static uk.gov.justice.digital.common.ColumnNames.SOURCE;
-import static uk.gov.justice.digital.common.ColumnNames.TABLE;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
+import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.SOURCE;
+import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.TABLE;
 
 @Singleton
 public class CuratedZone extends Zone {

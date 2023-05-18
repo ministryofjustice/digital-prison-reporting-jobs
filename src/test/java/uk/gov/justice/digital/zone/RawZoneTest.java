@@ -46,7 +46,7 @@ class RawZoneTest {
     @Test
     public void shouldProcessRawZone() throws DataStorageException {
         try (val service = mockStatic(SourceReferenceService.class)) {
-            val rawPath = createValidatedPath(RAW_PATH, TABLE_SOURCE, TABLE_NAME, OPERATION);
+            val rawPath = createValidatedPath(RAW_PATH, TABLE_SOURCE, TABLE_NAME, TABLE_OPERATION);
 
             service.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
                     .thenReturn(Optional.of(mockSourceReference));

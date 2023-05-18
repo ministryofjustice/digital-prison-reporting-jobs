@@ -26,9 +26,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
 
-import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-
-
 @Singleton
 public class DomainExecutor {
 
@@ -56,16 +53,16 @@ public class DomainExecutor {
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
 
-    protected void insertTable(TableIdentifier info, Dataset<Row> dataFrame)
+    protected void insertTable(TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: insertTable");
-        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = tableId.toPath();
         logger.info("Domain insert to disk started");
         try {
-            if(storage.exists(spark, info)) {
-                if(storage.hasRecords(spark, info)) {
+            if(storage.exists(spark, tableId)) {
+                if(storage.hasRecords(spark, tableId)) {
                     // this is trying to overwrite so throw an exception
-                    throw new DomainExecutorException("Delta table " + info.getTable() + " already exists and has records. Try replace");
+                    throw new DomainExecutorException("Delta table " + tableId.getTable() + " already exists and has records. Try replace");
                 } else {
                     storage.replace(tablePath, dataFrame);
                     logger.warn("Storage is empty so performing a replace instead");
@@ -74,7 +71,7 @@ public class DomainExecutor {
                 storage.create(tablePath, dataFrame);
             }
             // create the schema
-            schema.create(info, tablePath, dataFrame);
+            schema.create(tableId, tablePath, dataFrame);
             logger.info("Creating delta table completed...");
 
         } catch (DomainSchemaException | DataStorageException dse) {
@@ -82,73 +79,70 @@ public class DomainExecutor {
         }
     }
 
-    protected void updateTable(TableIdentifier info, Dataset<Row> dataFrame)
+    protected void updateTable(TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: updateTable");
-        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
+        String tablePath = tableId.toPath();
         try {
-            if (storage.exists(spark, info)) {
+            if (storage.exists(spark, tableId)) {
                 storage.replace(tablePath, dataFrame);
-                schema.replace(info, tablePath, dataFrame);
+                schema.replace(tableId, tablePath, dataFrame);
                 logger.info("Updating delta table completed...");
             } else {
-                throw new DomainExecutorException("Delta table " + tablePath + " doesn't exists");
+                throw new DomainExecutorException("Delta table " + tablePath + " doesn't exist");
             }
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
     }
 
-    protected void syncTable(TableIdentifier info, Dataset<Row> dataFrame)
+    protected void syncTable(TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
-        String tablePath = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
-        if (storage.exists(spark, info)) {
-            storage.reload(tablePath, dataFrame);
-            logger.info("Syncing delta table completed..." + info.getTable());
+        if (storage.exists(spark, tableId)) {
+            storage.reload(tableId.toPath(), dataFrame);
+            logger.info("Syncing delta table completed..." + tableId.getTable());
         } else {
-            throw new DomainExecutorException("Delta table " + info.getTable() + "doesn't exist");
+            throw new DomainExecutorException("Delta table " + tableId.getTable() + "doesn't exist");
         }
     }
 
-    protected void deleteTable(TableIdentifier info) throws DomainExecutorException {
+    protected void deleteTable(TableIdentifier tableId) throws DomainExecutorException {
         logger.info("DomainOperations:: deleteSchemaAndTableData");
         try {
-            if (storage.exists(spark, info)) {
-                storage.delete(spark, info);
-                storage.endTableUpdates(spark, info);
+            if (storage.exists(spark, tableId)) {
+                storage.delete(spark, tableId);
+                storage.endTableUpdates(spark, tableId);
             } else {
-                logger.warn("Delete table " + info.getSchema() + "." + info.getTable() + " not executed as table doesn't exist");
+                logger.warn("Delete table " + tableId.getSchema() + "." + tableId.getTable() + " not executed as table doesn't exist");
             }
 
-            schema.drop(info);
+            schema.drop(tableId);
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
     }
 
-    protected void saveTable(TableIdentifier info, Dataset<Row> dataFrame,
+    protected void saveTable(TableIdentifier tableId, Dataset<Row> dataFrame,
                              String domainOperation)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainOperations::saveTable");
         if (domainOperation.equalsIgnoreCase("insert")) {
-            insertTable(info, dataFrame);
+            insertTable(tableId, dataFrame);
         } else if (domainOperation.equalsIgnoreCase("update")) {
-            updateTable(info, dataFrame);
+            updateTable(tableId, dataFrame);
         } else if (domainOperation.equalsIgnoreCase("sync")) {
-            syncTable(info, dataFrame);
+            syncTable(tableId, dataFrame);
         } else {
             // Handle invalid operation type
             logger.error("Invalid operation type " + domainOperation);
             throw new DomainExecutorException("Invalid operation type " + domainOperation);
         }
-        storage.endTableUpdates(spark, info);
+        storage.endTableUpdates(spark, tableId);
     }
 
     protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
-        String tablePath = createValidatedPath(target.getBasePath(), target.getSchema(), target.getTable());
-        // save the violations to the specified location
-        storage.append(tablePath, dataFrame);
+        storage.append(target.toPath(), dataFrame);
         storage.endTableUpdates(spark, target);
     }
 
