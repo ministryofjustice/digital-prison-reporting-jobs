@@ -92,8 +92,7 @@ public class DomainExecutor {
                 schema.replace(info, tablePath, dataFrame);
                 logger.info("Updating delta table completed...");
             } else {
-                throw new DomainExecutorException("Delta table " + info.getSchema()
-                        + "_" + info.getTable() + " doesn't exists");
+                throw new DomainExecutorException("Delta table " + tablePath + " doesn't exists");
             }
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
