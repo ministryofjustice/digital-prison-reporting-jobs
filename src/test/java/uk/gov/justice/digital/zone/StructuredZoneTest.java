@@ -43,7 +43,7 @@ class StructuredZoneTest extends BaseSparkTest {
     private StructuredZone underTest;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         mockSourceReferenceService = mockStatic(SourceReferenceService.class);
         mockSourceReferenceService.when(() -> SourceReferenceService.generateKey(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
         mockSourceReferenceService.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
@@ -53,31 +53,31 @@ class StructuredZoneTest extends BaseSparkTest {
     }
 
     @AfterEach
-    void tearDown() {
+    public void tearDown() {
         mockSourceReferenceService.close();
     }
 
     @Test
-    void shouldHandleValidRecords() throws DataStorageException {
+    public void shouldHandleValidRecords() throws DataStorageException {
         givenTheDatasetSupportsTheProcessFlow();
         assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
-    void shouldHandleInvalidRecords() throws DataStorageException {
+    public void shouldHandleInvalidRecords() throws DataStorageException {
         givenTheDatasetSupportsTheProcessFlow();
         assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
-    void shouldHandleSchemaFound() throws DataStorageException {
+    public void shouldHandleSchemaFound() throws DataStorageException {
         givenTheDatasetSupportsTheProcessFlow();
         givenTheSourceReferenceIsValid();
         assertNotNull(underTest.handleSchemaFound(spark, mockDataSet, mockSourceReference));
     }
 
     @Test
-    void shouldHandleNoSchemaFound() throws DataStorageException {
+    public void shouldHandleNoSchemaFound() throws DataStorageException {
         givenTheDatasetSupportsTheNoSchemaFoundFlow();
         assertNotNull(underTest.handleNoSchemaFound(spark, mockDataSet, TABLE_SOURCE, TABLE_NAME));
     }

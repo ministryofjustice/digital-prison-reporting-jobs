@@ -34,7 +34,7 @@ class DomainDefinitionClientTest {
 
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         dynamoDB = mock(AmazonDynamoDB.class);
         mapper = mock(ObjectMapper.class);
         domainDefinitionService = new DomainDefinitionClient(dynamoDB, mapper);
@@ -43,7 +43,7 @@ class DomainDefinitionClientTest {
     }
 
     @Test
-    void shouldExecuteQueryForGivenDomain() throws DatabaseClientException {
+    public void shouldExecuteQueryForGivenDomain() throws DatabaseClientException {
         String domainTableName = "test";
         String domainName = "incident";
         QueryResult result = mock(QueryResult.class);
@@ -53,7 +53,7 @@ class DomainDefinitionClientTest {
     }
 
     @Test
-    void shouldReturnErrorIfDomainTableDoesntExists() {
+    public void shouldReturnErrorIfDomainTableDoesntExists() {
         String domainTableName = "test";
         String domainName = "incident";
         when(dynamoDB.query(any(QueryRequest.class))).thenThrow(AmazonDynamoDBException.class);
@@ -66,7 +66,7 @@ class DomainDefinitionClientTest {
 
 
     @Test
-    void shouldReturnDomainDefinitionForGivenDomain() throws DatabaseClientException, DomainServiceException,
+    public void shouldReturnDomainDefinitionForGivenDomain() throws DatabaseClientException, DomainServiceException,
             JsonProcessingException {
         DomainDefinition domainDef = new DomainDefinition();
         domainDef.setName("test name");
@@ -92,7 +92,7 @@ class DomainDefinitionClientTest {
 
 
     @Test
-    void shouldParseQueryResultForGivenDomainName() throws IOException, DatabaseClientException {
+    public void shouldParseQueryResultForGivenDomainName() throws IOException, DatabaseClientException {
         QueryResult result = mock(QueryResult.class);
         DomainDefinition domainDef = new DomainDefinition();
         domainDef.setName("test name");
@@ -111,7 +111,7 @@ class DomainDefinitionClientTest {
     }
 
     @Test
-    void shouldParseQueryResultForGivenDomainAndTableName() throws IOException, DatabaseClientException {
+    public void shouldParseQueryResultForGivenDomainAndTableName() throws IOException, DatabaseClientException {
         QueryResult result = mock(QueryResult.class);
         DomainDefinition domainDef = new DomainDefinition();
         domainDef.setName("living_unit");
@@ -132,7 +132,7 @@ class DomainDefinitionClientTest {
     }
 
     @Test
-    void shouldParseQueryResultProducesException() throws IOException {
+    public void shouldParseQueryResultProducesException() throws IOException {
         QueryResult result = mock(QueryResult.class);
         DomainDefinition domainDef = new DomainDefinition();
         domainDef.setName("test name");

@@ -44,7 +44,7 @@ class RawZoneTest {
     private SparkSession mockSparkSession;
 
     @Test
-    void shouldProcessRawZone() throws DataStorageException {
+    public void shouldProcessRawZone() throws DataStorageException {
         try (val service = mockStatic(SourceReferenceService.class)) {
             val rawPath = createValidatedPath(RAW_PATH, TABLE_SOURCE, TABLE_NAME, OPERATION);
 

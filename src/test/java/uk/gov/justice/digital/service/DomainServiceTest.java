@@ -13,6 +13,8 @@ import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DomainExecutorException;
+import uk.gov.justice.digital.exception.DomainSchemaException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.test.SparkTestHelpers;
@@ -24,8 +26,8 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
 
 public class DomainServiceTest extends BaseSparkTest {
 
@@ -58,7 +60,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_incident_domain() throws IOException, DataStorageException {
+    public void shouldTestIncidentDomain() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "demographics";
         val domain = getDomain("/sample/domain/incident_domain.json");
@@ -78,7 +80,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_establishment_domain_insert() throws IOException, DataStorageException {
+    public void shouldTestEstablishmentDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "establishment";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -98,7 +100,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_living_unit_domain_insert() throws IOException, DataStorageException {
+    public void shouldTestLivingUnitDomainInsert() throws IOException, DataStorageException, DomainExecutorException {
         val domainOperation = "insert";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -118,7 +120,7 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void test_living_unit_domain_update() throws IOException, DataStorageException {
+    public void shouldTestLivingUnitDomainUpdate() throws IOException, DataStorageException, DomainExecutorException, DomainSchemaException {
         val domainOperation = "update";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -132,12 +134,17 @@ public class DomainServiceTest extends BaseSparkTest {
                 new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
                 helpers.getInternalAgencyLocations(folder)
         );
-
+        // first insert
+        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "insert");
+        // then update
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
+        verify(schemaService, times(1)).create(any(), any(), any());
+        verify(schemaService, times(1)).replace(any(), any(), any());
     }
 
     @Test
-    public void test_establishment_domain_delete() throws IOException, DataStorageException {
+    public void shouldTestEstablishmentDomainDelete() throws IOException, DataStorageException,
+            DomainExecutorException, DomainSchemaException {
         val domainOperation = "delete";
         val domainTableName = "living_unit";
         val domain = getDomain("/sample/domain/establishment.domain.json");
@@ -153,6 +160,7 @@ public class DomainServiceTest extends BaseSparkTest {
         );
 
         executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
+        verify(schemaService, times(1)).drop(any());
     }
 
     private DomainDefinition getDomain(String resource) throws JsonProcessingException {
