@@ -1,15 +1,15 @@
 package uk.gov.justice.digital.common;
 
 public class ColumnNames {
-    public static final String DATA = "data";
-    public static final String ERROR = "error";
-    public static final String JSON_DATA = "jsonData";
-    public static final String METADATA = "metadata";
+    // Zone Job Converter
     public static final String OPERATION = "operation";
-    public static final String PARSED_DATA = "parsedData";
+
+    // Zone Job Converter
     public static final String SOURCE = "source";
+
+    // Zone Job Converter
     public static final String TABLE = "table";
-    public static final String VALID = "valid";
+
 
     private ColumnNames() {}
 }

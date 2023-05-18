@@ -15,7 +15,7 @@ import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
 import static org.apache.spark.sql.types.DataTypes.StringType;
-import static uk.gov.justice.digital.common.ColumnNames.*;
+import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.*;
 
 /**
  * Converter that takes raw data from DMS v3.4.6 and converts it into the standardised data representation for
@@ -28,6 +28,8 @@ import static uk.gov.justice.digital.common.ColumnNames.*;
 @Singleton
 @Named("converterForDMS_3_4_6")
 public class DMS_3_4_6 extends Converter {
+
+    public static final String JSON_DATA = "jsonData";
 
     private static final StructType eventsSchema =
         new StructType()

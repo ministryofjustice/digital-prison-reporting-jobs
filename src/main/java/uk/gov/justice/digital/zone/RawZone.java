@@ -15,8 +15,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.common.ColumnNames.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
+import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.*;
 
 @Singleton
 public class RawZone extends Zone {

@@ -15,17 +15,15 @@ import uk.gov.justice.digital.exception.DatabaseClientException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static uk.gov.justice.digital.common.ColumnNames.DATA;
-
 @Singleton
 public class DomainDefinitionClient {
 
     private static final String indexName = "secondaryId-type-index";
     private static final String sortKeyName = "secondaryId";
+    private static final String dataField = "data";
 
     private final AmazonDynamoDB dynamoDB;
     private final ObjectMapper mapper;
-
 
     @Inject
     public DomainDefinitionClient(DynamoDBClientProvider dynamoDBClientProvider) {
@@ -37,13 +35,12 @@ public class DomainDefinitionClient {
         this.mapper = mapper;
     }
 
-
     public DomainDefinition parse(QueryResult response, String tableName) throws DatabaseClientException {
         DomainDefinition domainDef = null;
         if (response != null) {
             for (Map<String, AttributeValue> items : response.getItems()) {
                 try {
-                    String data = items.get(DATA).getS();
+                    String data = items.get(dataField).getS();
                     domainDef = mapper.readValue(data, DomainDefinition.class);
                     if (tableName != null)
                         domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(tableName));

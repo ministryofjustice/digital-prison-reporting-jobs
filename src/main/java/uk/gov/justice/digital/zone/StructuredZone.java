@@ -20,11 +20,15 @@ import java.util.Collections;
 import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
-import static uk.gov.justice.digital.common.ColumnNames.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
+import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.*;
 
 @Singleton
 public class StructuredZone extends Zone {
+
+    public static final String ERROR = "error";
+    public static final String PARSED_DATA = "parsedData";
+    public static final String VALID = "valid";
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
 
