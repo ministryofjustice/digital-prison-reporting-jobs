@@ -61,7 +61,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldReturnFalseWhenStorageDoesNotExists() {
+    void shouldReturnFalseWhenStorageDoesNotExist() {
         val identifier = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(false);
         val actualResult = testStorage.exists(spark, info);
@@ -74,7 +74,7 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         TableIdentifier info = new TableIdentifier("s3://test-bucket", "domain",
                 "incident", "demographics");
-        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String identifier = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(true);
         boolean actualResult = testStorage.exists(spark, info);
         assertTrue(actualResult);
@@ -91,7 +91,7 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         TableIdentifier info = new TableIdentifier("s3://test-bucket", "domain",
                 "incident", "demographics");
-        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String identifier = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(true);
         boolean actualResult = testStorage.exists(spark, info);
         assertTrue(actualResult);
@@ -106,7 +106,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     void shouldReturnFalseForHasRecordsWhenStorageDoesNotExist() throws DataStorageException {
         TableIdentifier info = new TableIdentifier("s3://test-bucket", "domain",
                 "incident", "demographics");
-        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        String identifier = createValidatedPath(info.getBasePath(), info.getSchema(), info.getTable());
         when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(false);
         boolean actualResult = testStorage.exists(spark, info);
         assertFalse(actualResult);
@@ -114,33 +114,6 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(DeltaTable.forPath(spark, identifier)).thenReturn(mockedDeltaTable);
         boolean hasRecords = testStorage.hasRecords(spark, info);
         assertFalse(hasRecords);
-    }
-
-    @Test
-    void shouldReturnTablePathWithSourceReference() {
-        String prefix = "s3://test-bucket";
-        SourceReference ref = mock(SourceReference.class);
-        String operation = "insert";
-        when(ref.getSource()).thenReturn("test");
-        when(ref.getTable()).thenReturn("table");
-        String actual_path = testStorage.getTablePath(prefix, ref, operation);
-        assertEquals(actual_path, "s3://test-bucket/test/table/insert");
-    }
-
-    @Test
-    void shouldReturnTablePathWithSourceReferenceAndNoOperation() {
-        String prefix = "s3://test-bucket";
-        SourceReference ref = mock(SourceReference.class);
-        when(ref.getSource()).thenReturn("test");
-        when(ref.getTable()).thenReturn("table");
-        String path = testStorage.getTablePath(prefix, ref);
-        assertNotNull(path);
-    }
-
-    @Test
-    void shouldReturnTablePathWithVarArgString() {
-        String path = testStorage.getTablePath("test");
-        assertNotNull(path);
     }
 
     @Test

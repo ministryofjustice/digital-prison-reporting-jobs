@@ -34,7 +34,6 @@ public class DomainExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
-    // TODO - review usages
     private final String sourceRootPath;
     private final String targetRootPath;
     private final DataStorageService storage;
@@ -206,7 +205,7 @@ public class DomainExecutor {
 
     protected Dataset<Row> applyTransform(Map<String, Dataset<Row>> dfs, TransformDefinition transform)
             throws DomainExecutorException {
-        List<String> srcs = new ArrayList<>();
+        List<String> sources = new ArrayList<>();
         String view = transform.getViewText().toLowerCase();
         try {
             if (view.isEmpty()) {
@@ -220,7 +219,7 @@ public class DomainExecutor {
                 if (sourceDf != null) {
                     sourceDf.createOrReplaceTempView(src);
                     logger.info("Added view '" + src + "'");
-                    srcs.add(src);
+                    sources.add(src);
                     if (schemaContains(sourceDf, "_operation") &&
                             schemaContains(sourceDf, "_timestamp")) {
                         view = view.replace(" from ", ", " + src + "._operation, " + src + "._timestamp from ");
@@ -234,9 +233,7 @@ public class DomainExecutor {
             return validateSQLAndExecute(view);
         } finally {
             if (!view.isEmpty()) {
-                for (String source : srcs) {
-                    spark.catalog().dropTempView(source);
-                }
+                sources.forEach(s -> spark.catalog().dropTempView(s));
             }
         }
     }
@@ -277,7 +274,7 @@ public class DomainExecutor {
             } else if (table.getTransform() != null && table.getTransform().getSources() != null
                     && !table.getTransform().getSources().isEmpty()) {
                 for (String source : table.getTransform().getSources()) {
-                    Dataset<Row> sourceDataFrame = this.getAllSourcesForTable(sourceRootPath, source, null);
+                    Dataset<Row> sourceDataFrame = getAllSourcesForTable(sourceRootPath, source, null);
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
                     } else {

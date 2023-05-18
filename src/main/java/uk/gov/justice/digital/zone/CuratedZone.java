@@ -54,7 +54,6 @@ public class CuratedZone extends Zone {
                             "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
                     ));
 
-            // TODO - review this
             val curatedTablePath = createValidatedPath(
                     curatedPath,
                     sourceReference.getSource(),
