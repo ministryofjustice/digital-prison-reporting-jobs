@@ -25,7 +25,7 @@ public class DataStorageService {
 
     public boolean hasRecords(SparkSession spark, TableIdentifier info) throws DataStorageException {
         logger.info("Checking details for Delta table..." + info.getSchema() + "." + info.getTable());
-        if(exists(spark, info)) {
+        if (exists(spark, info)) {
             Dataset<Row> df = load(spark, info);
             return !df.isEmpty();
         } else {
@@ -79,15 +79,14 @@ public class DataStorageService {
 
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
         logger.info("deleting Delta table..." + tableId.getSchema() + "." + tableId.getTable());
-        String tablePath = tableId.toPath();
-        DeltaTable deltaTable = getTable(spark, tablePath);
+        val deltaTable = getTable(spark, tableId.toPath());
         if (deltaTable != null) {
             deltaTable.delete();
         } else throw new DataStorageException("Delta table delete failed");
     }
 
     public void vacuum(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
-        DeltaTable deltaTable = getTable(spark, tableId.toPath());
+        val deltaTable = getTable(spark, tableId.toPath());
         if (deltaTable != null) {
             deltaTable.vacuum();
         } else throw new DataStorageException("Delta table vaccum failed");
