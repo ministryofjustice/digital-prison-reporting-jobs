@@ -9,10 +9,8 @@ import org.apache.spark.streaming.Durations;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-
-import java.time.Duration;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,7 +30,7 @@ class KinesisReaderTest {
 
     @Test
     void shouldTestConstructorObjectCreate() {
-        val jobParameters = spy(new JobParameters(Collections.emptyMap()));
+        val jobParameters = spy(new JobArguments(Collections.emptyMap()));
         val jobProperties = spy(new JobProperties());
         System.out.println(jobProperties);
         doReturn("test").when(jobProperties).getSparkJobName();

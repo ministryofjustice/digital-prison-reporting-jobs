@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -26,8 +26,8 @@ public class CuratedZone extends Zone {
     private final DataStorageService storage;
 
     @Inject
-    public CuratedZone(JobParameters jobParameters, DataStorageService storage) {
-        this.curatedPath = jobParameters.getCuratedS3Path();
+    public CuratedZone(JobArguments jobArguments, DataStorageService storage) {
+        this.curatedPath = jobArguments.getCuratedS3Path();
         this.storage = storage;
     }
 

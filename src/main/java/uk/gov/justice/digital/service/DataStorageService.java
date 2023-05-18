@@ -34,6 +34,16 @@ public class DataStorageService {
         return String.join("/", elements);
     }
 
+    public boolean hasRecords(final SparkSession spark, final TableIdentifier info) throws DataStorageException {
+        logger.info("Checking details for Delta table..." + info.getSchema() + "." + info.getTable());
+        if(exists(spark, info)) {
+            Dataset<Row> df = load(spark, info);
+            return !df.isEmpty();
+        } else {
+            return false;
+        }
+    }
+
     public void append(final String tablePath, final Dataset<Row> df) throws DataStorageException {
         logger.info("Appending schema and data to " + tablePath);
         if (tablePath != null && df != null)

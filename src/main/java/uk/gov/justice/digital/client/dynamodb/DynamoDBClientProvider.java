@@ -6,25 +6,25 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import uk.gov.justice.digital.client.ClientProvider;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 
 
 @Singleton
 public class DynamoDBClientProvider implements ClientProvider<AmazonDynamoDB> {
 
-    private final JobParameters jobParameters;
+    private final JobArguments jobArguments;
 
     @Inject
-    public DynamoDBClientProvider(JobParameters jobParameters) {
-        this.jobParameters = jobParameters;
+    public DynamoDBClientProvider(JobArguments jobArguments) {
+        this.jobArguments = jobArguments;
     }
 
     @Override
     public AmazonDynamoDB getClient() {
         return AmazonDynamoDBClientBuilder.standard()
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                        jobParameters.getAwsDynamoDBEndpointUrl(),
-                        jobParameters.getAwsRegion()
+                        jobArguments.getAwsDynamoDBEndpointUrl(),
+                        jobArguments.getAwsRegion()
                 ))
                 .build();
     }

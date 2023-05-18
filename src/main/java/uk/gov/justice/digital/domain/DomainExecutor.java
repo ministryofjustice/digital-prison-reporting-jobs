@@ -9,9 +9,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.ExplainMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobParameters;
-import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.domain.model.TableDefinition;
+import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
@@ -41,7 +40,7 @@ public class DomainExecutor {
     private final DomainSchemaService schema;
 
     @Inject
-    public DomainExecutor(JobParameters jobParameters,
+    public DomainExecutor(JobArguments jobParameters,
                           DataStorageService storage,
                           DomainSchemaService schema,
                           SparkSessionProvider sparkSessionProvider
@@ -50,10 +49,7 @@ public class DomainExecutor {
         this.sourceRootPath = jobParameters.getCuratedS3Path();
         this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
-        this.hiveDatabaseName = jobParameters.getCatalogDatabase()
-                .orElseThrow(() -> new IllegalStateException(
-                        "Hive Catalog database not set - unable to create Hive Catalog schema"
-                ));
+        this.hiveDatabaseName = jobParameters.getDomainCatalogDatabaseName();
         this.schema = schema;
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }
@@ -64,13 +60,21 @@ public class DomainExecutor {
         String tablePath = storage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
         logger.info("Domain insert to disk started");
         try {
-            if (!storage.exists(spark, info)) {
-                storage.create(tablePath, dataFrame);
-                schema.create(info, tablePath, dataFrame);
-                logger.info("Creating delta table completed...");
+            if(storage.exists(spark, info)) {
+                if(storage.hasRecords(spark, info)) {
+                    // this is trying to overwrite so throw an exception
+                    throw new DomainExecutorException("Delta table " + info.getTable() + " already exists and has records. Try replace");
+                } else {
+                    storage.replace(tablePath, dataFrame);
+                    logger.warn("Storage is empty so performing a replace instead");
+                }
             } else {
-                throw new DomainExecutorException("Delta table " + info.getTable() + " already exists");
+                storage.create(tablePath, dataFrame);
             }
+            // create the schema
+            schema.create(info, tablePath, dataFrame);
+            logger.info("Creating delta table completed...");
+
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
@@ -111,12 +115,12 @@ public class DomainExecutor {
         try {
             if (storage.exists(spark, info)) {
                 storage.delete(spark, info);
-                schema.drop(info);
                 storage.endTableUpdates(spark, info);
             } else {
-                throw new DomainExecutorException("Table " + info.getSchema() + "." + info.getTable() +
-                        " doesn't exists");
+                logger.warn("Delete table " + info.getSchema() + "." + info.getTable() + " not executed as table doesn't exist");
             }
+
+            schema.drop(info);
         } catch (DomainSchemaException | DataStorageException dse) {
             throw new DomainExecutorException(dse);
         }
@@ -148,7 +152,7 @@ public class DomainExecutor {
     }
 
     public Dataset<Row> getAllSourcesForTable(String sourcePath, String source,
-                                              TableTuple exclude) throws DomainExecutorException {
+                                              TableTuple exclude) {
         if (exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
@@ -260,7 +264,6 @@ public class DomainExecutor {
     public Dataset<Row> apply(TableDefinition table, Map<String, Dataset<Row>> sourceTableMap)
             throws DomainExecutorException {
         try {
-
             logger.info("Apply Method for " + table.getName() + "...");
             // Transform
             Map<String, Dataset<Row>> refs = new HashMap<>();

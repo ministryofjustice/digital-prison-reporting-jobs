@@ -65,6 +65,54 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
+    void shouldReturnTrueForHasRecordsWhenStorageExistsAndRecordsArePresent() throws DataStorageException {
+        val df = spark.sql("select cast(10 as LONG) as numFiles");
+
+        TableIdentifier info = new TableIdentifier("s3://test-bucket", "domain",
+                "incident", "demographics");
+        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(true);
+        boolean actualResult = testStorage.exists(spark, info);
+        assertTrue(actualResult);
+
+        when(DeltaTable.forPath(spark, identifier)).thenReturn(mockedDeltaTable);
+        when(mockedDeltaTable.toDF()).thenReturn(df);
+        boolean hasRecords = testStorage.hasRecords(spark, info);
+        assertTrue(hasRecords);
+    }
+
+    @Test
+    void shouldReturnFalseForHasRecordsWhenStorageExistsAndRecordsAreNotPresent() throws DataStorageException {
+        val df = spark.emptyDataFrame();
+
+        TableIdentifier info = new TableIdentifier("s3://test-bucket", "domain",
+                "incident", "demographics");
+        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(true);
+        boolean actualResult = testStorage.exists(spark, info);
+        assertTrue(actualResult);
+
+        when(DeltaTable.forPath(spark, identifier)).thenReturn(mockedDeltaTable);
+        when(mockedDeltaTable.toDF()).thenReturn(df);
+        boolean hasRecords = testStorage.hasRecords(spark, info);
+        assertFalse(hasRecords);
+    }
+
+    @Test
+    void shouldReturnFalseForHasRecordsWhenStorageDoesNotExist() throws DataStorageException {
+        TableIdentifier info = new TableIdentifier("s3://test-bucket", "domain",
+                "incident", "demographics");
+        String identifier = testStorage.getTablePath(info.getBasePath(), info.getSchema(), info.getTable());
+        when(DeltaTable.isDeltaTable(spark, identifier)).thenReturn(false);
+        boolean actualResult = testStorage.exists(spark, info);
+        assertFalse(actualResult);
+
+        when(DeltaTable.forPath(spark, identifier)).thenReturn(mockedDeltaTable);
+        boolean hasRecords = testStorage.hasRecords(spark, info);
+        assertFalse(hasRecords);
+    }
+
+    @Test
     void shouldReturnTablePathWithSourceReference() {
         String prefix = "s3://test-bucket";
         SourceReference ref = mock(SourceReference.class);

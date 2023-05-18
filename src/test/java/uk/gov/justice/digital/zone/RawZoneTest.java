@@ -12,7 +12,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobParameters;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -33,7 +33,7 @@ class RawZoneTest extends BaseSparkTest {
     private static final String S3_PATH_KEY = "dpr.raw.s3.path";
     private static final String S3_PATH = "s3://loadjob/raw";
 
-    private final JobParameters jobParameters = new JobParameters(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
+    private final JobArguments jobArguments = new JobArguments(Collections.singletonMap(S3_PATH_KEY, S3_PATH));
     private final DataStorageService storage = new DataStorageService();
 
     @Mock
@@ -66,7 +66,7 @@ class RawZoneTest extends BaseSparkTest {
         service.when(() -> SourceReferenceService
                         .getSourceReference(table.getAs("source"), table.getAs("table")))
                 .thenReturn(Optional.of(ref));
-        RawZone rawZoneTest = spy(new RawZone(jobParameters, storage1));
+        RawZone rawZoneTest = spy(new RawZone(jobArguments, storage1));
         when(mockedDataSet.count()).thenReturn(10L);
         doReturn(mockedDataSet).when(rawZoneTest).extractRawDataFrame(mockedDataSet, table.getAs("source"),
                 table.getAs("table"));
