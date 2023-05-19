@@ -5,13 +5,8 @@
   "required": [
     "contacts",
     "database",
-    "description",
-    "name",
-    "namespace",
     "service",
-    "table-type",
-    "type",
-    "version"
+    "type"
   ],
   "properties": {
     "contacts": {
@@ -32,14 +27,30 @@
         "name": { "type":  "string" }
       }
     },
-    "description": { "type": "string" },
-    "name": { "type": "string" },
-    "namespace": { "type": "string" },
-    "propagation-policy": { "type":  "string" },
-    "retention-policy": { "type":  "string" },
     "service": { "type": "string" },
-    "table-type": { "enum": [ "table", "view", "materialized-view" ] },
     "type": { "enum": [ "record" ] },
-    "version": { "type": "string" }
+    "version": { "$ref": "#/definitions/version" }
+  },
+  "definitions": {
+    "version": { "type":  "string" },
+    "table": {
+      "type": "object",
+      "required": [
+        "description",
+        "name",
+        "namespace",
+        "type",
+        "version"
+      ],
+      "properties": {
+        "description": { "type": "string" },
+        "type": { "enum": [ "table", "view", "materialized-view" ] },
+        "name": { "type": "string" },
+        "namespace": { "type": "string" },
+        "propagation-policy": { "type":  "string" },
+        "retention-policy": { "type":  "string" },
+        "version": { "$ref": "#/definitions/version" }
+      }
+    }
   }
 }
