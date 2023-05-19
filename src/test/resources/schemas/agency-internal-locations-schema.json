@@ -22,207 +22,173 @@
       "retention-policy": "999.years",
       "fields": [
         {
+          "description": "The unique identifier of the Internal Location. PK",
+          "glossary": "location:id",
           "name": "INTERNAL_LOCATION_ID",
-          "type": "long",
           "nullable": false,
-          "metadata": {
-            "description": "The unique identifier of the Internal Location. PK",
-            "glossary": "location:id",
-            "primary": "true",
-            "sensitivity": "public"
-          }
+          "primary": "true",
+          "sensitivity": "public",
+          "type": "long"
         },
         {
           "name": "INTERNAL_LOCATION_CODE",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AGY_LOC_ID",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "INTERNAL_LOCATION_TYPE",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "DESCRIPTION",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "SECURITY_LEVEL_CODE",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "CAPACITY",
           "type": "long",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "CREATE_USER_ID",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "PARENT_INTERNAL_LOCATION_ID",
           "type": "long",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "ACTIVE_FLAG",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "LIST_SEQ",
           "type": "long",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "CREATE_DATETIME",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "MODIFY_DATETIME",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "MODIFY_USER_ID",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "CNA_NO",
           "type": "long",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "CERTIFIED_FLAG",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "DEACTIVATE_DATE",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "REACTIVATE_DATE",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "DEACTIVATE_REASON_CODE",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "COMMENT_TEXT",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "USER_DESC",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "ACA_CAP_RATING",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "UNIT_TYPE",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "OPERATION_CAPACITY",
           "type": "long",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "NO_OF_OCCUPANT",
           "type": "long",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "TRACKING_FLAG",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AUDIT_TIMESTAMP",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AUDIT_USER_ID",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AUDIT_MODULE_NAME",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AUDIT_CLIENT_USER_ID",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AUDIT_CLIENT_IP_ADDRESS",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AUDIT_CLIENT_WORKSTATION_NAME",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         },
         {
           "name": "AUDIT_ADDITIONAL_INFO",
           "type": "string",
-          "nullable": true,
-          "metadata": {}
+          "nullable": true
         }
       ]
     }

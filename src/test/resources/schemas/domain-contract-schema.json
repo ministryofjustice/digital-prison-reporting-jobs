@@ -31,25 +31,39 @@
     "service": { "type": "string" },
     "tables": {
       "type": "array",
-      "items": {
-        "anyOf": [
-          {
-            "$ref": "#/definitions/table"
-          }
-        ]
-      },
+      "items": { "anyOf": [ { "$ref": "#/definitions/table" } ] },
       "minItems": 1,
       "maxItems": 1
     },
     "type": { "enum": [ "record" ] },
-    "version": { "$ref": "#/definitions/version" }
+    "version": { "type": "string" }
   },
   "definitions": {
-    "version": { "type":  "string" },
+    "field": {
+      "type": "object",
+      "required": [
+        "name",
+        "nullable",
+        "type"
+      ],
+      "properties": {
+        "certified": { "type": "boolean" },
+        "description": { "type":  "string" },
+        "glossary-index": { "type": "string" },
+        "name": { "type":  "string" },
+        "nullable": { "type":  "boolean" },
+        "pii-index": { "type": "string" },
+        "sensitivity": { "enum": [ "public", "private", "internal", "confidential", "restricted" ]},
+        "key": { "enum": [ "primary", "foreign" ] },
+        "tags": { "type": "array", "items": { "type": "string" }},
+        "type": { "enum":  [ "null", "boolean", "int", "long", "float", "double", "bytes", "string" ] }
+      }
+    },
     "table": {
       "type": "object",
       "required": [
         "description",
+        "fields",
         "name",
         "namespace",
         "type",
@@ -57,12 +71,17 @@
       ],
       "properties": {
         "description": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": { "anyOf": [ { "$ref": "#/definitions/field" } ] },
+          "minItems": 1
+        },
         "type": { "enum": [ "table", "view", "materialized-view" ] },
         "name": { "type": "string" },
         "namespace": { "type": "string" },
         "propagation-policy": { "type":  "string" },
         "retention-policy": { "type":  "string" },
-        "version": { "$ref": "#/definitions/version" }
+        "version": { "type": "string" }
       }
     }
   }

@@ -2,13 +2,16 @@ package uk.gov.justice.digital.schema;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import lombok.val;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.test.ResourceLoader;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 
 public class DomainSchemaValidationTest {
 
@@ -18,20 +21,14 @@ public class DomainSchemaValidationTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    private static final JsonSchema validator = JsonSchemaFactory
+            .getInstance(SpecVersion.VersionFlag.V202012)
+            .getSchema(getResource(RESOURCE_PATH + "/" + DOMAIN_CONTRACT_SCHEMA));
+
     @Test
     public void agencyInternalLocationsSchemaShouldPassValidation() throws JsonProcessingException {
-        val validator = JsonSchemaFactory
-                .getInstance(SpecVersion.VersionFlag.V202012)
-                .getSchema(ResourceLoader.getResource(RESOURCE_PATH + "/" + DOMAIN_CONTRACT_SCHEMA));
-
-        val schema = mapper.readTree(ResourceLoader.getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_SCHEMA));
-
-        val validationErrors = validator.validate(schema);
-
-        if (validationErrors.isEmpty()) System.out.println("No errors");
-        else System.out.println("Got validation errors: " + validationErrors);
-
-        assertTrue(validationErrors.isEmpty());
+        val domain = mapper.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_SCHEMA));
+        assertEquals(Collections.emptySet(), validator.validate(domain));
     }
 
 }
