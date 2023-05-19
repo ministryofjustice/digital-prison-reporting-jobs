@@ -189,6 +189,12 @@
           "name": "AUDIT_ADDITIONAL_INFO",
           "type": "string",
           "nullable": true
+        },
+        {
+          "name": "FAKE_ENUM_FIELD_FOR_TESTING",
+          "type": "enum",
+          "symbols": [ "FOO", "BAR", "BAZ" ],
+          "nullable": false
         }
       ]
     }

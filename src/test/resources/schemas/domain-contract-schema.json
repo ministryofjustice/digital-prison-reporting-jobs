@@ -40,7 +40,29 @@
   },
   "additionalProperties": false,
   "definitions": {
-    "field": {
+    "enum-field": {
+      "type": "object",
+      "required": [
+        "type",
+        "name",
+        "symbols",
+        "nullable"
+      ],
+      "properties": {
+        "certified": { "type": "boolean" },
+        "description": { "type":  "string" },
+        "glossary-index": { "type": "string" },
+        "key": { "enum": [ "primary", "foreign" ] },
+        "type": { "enum": [ "enum" ] },
+        "name": { "type": "string" },
+        "nullable": { "type": "boolean" },
+        "pii-index": { "type": "string" },
+        "sensitivity": { "enum": [ "public", "private", "internal", "confidential", "restricted" ]},
+        "symbols": { "type": "array", "items":  { "type":  "string" }},
+        "tags": { "type": "array", "items": { "type": "string" }}
+      }
+    },
+    "simple-field": {
       "type": "object",
       "required": [
         "name",
@@ -75,7 +97,12 @@
         "description": { "type": "string" },
         "fields": {
           "type": "array",
-          "items": { "anyOf": [ { "$ref": "#/definitions/field" } ] },
+          "items": {
+            "anyOf": [
+              { "$ref": "#/definitions/simple-field" },
+              { "$ref": "#/definitions/enum-field" }
+            ]
+          },
           "minItems": 1
         },
         "type": { "enum": [ "table", "view", "materialized-view" ] },
