@@ -28,6 +28,9 @@ public class DomainSchemaValidationTest {
 
         val validationErrors = validator.validate(schema);
 
+        if (validationErrors.isEmpty()) System.out.println("No errors");
+        else System.out.println("Got validation errors: " + validationErrors);
+
         assertTrue(validationErrors.isEmpty());
     }
 

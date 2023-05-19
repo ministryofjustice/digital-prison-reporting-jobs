@@ -1,1 +1,38 @@
-{ }
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Digital Prison Reporting Domain Contract Schema",
+  "type": "object",
+  "required": [
+    "type",
+    "namespace",
+    "service",
+    "name",
+    "version",
+    "description",
+    "table-type"
+  ],
+  "properties": {
+    "type": {
+      "enum": [ "record" ],
+      "description": "Base type of this schema which will always be record."
+    },
+    "namespace": {
+      "type": "string"
+    },
+    "service": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "table-type": {
+        "enum": [ "table", "view", "materialized-view" ]
+    }
+  }
+}
