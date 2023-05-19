@@ -23,10 +23,10 @@
       "fields": [
         {
           "description": "The unique identifier of the Internal Location. PK",
-          "glossary": "location:id",
+          "glossary-index": "location:id",
           "name": "INTERNAL_LOCATION_ID",
           "nullable": false,
-          "primary": "true",
+          "key": "primary",
           "sensitivity": "public",
           "type": "long"
         },

@@ -38,6 +38,7 @@
     "type": { "enum": [ "record" ] },
     "version": { "type": "string" }
   },
+  "additionalProperties": false,
   "definitions": {
     "field": {
       "type": "object",
@@ -57,7 +58,8 @@
         "key": { "enum": [ "primary", "foreign" ] },
         "tags": { "type": "array", "items": { "type": "string" }},
         "type": { "enum":  [ "null", "boolean", "int", "long", "float", "double", "bytes", "string" ] }
-      }
+      },
+      "additionalProperties": false
     },
     "table": {
       "type": "object",
@@ -82,7 +84,8 @@
         "propagation-policy": { "type":  "string" },
         "retention-policy": { "type":  "string" },
         "version": { "type": "string" }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }
