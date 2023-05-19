@@ -17,7 +17,7 @@
       "version": "1.0.0",
       "name": "AGENCY_INTERNAL_LOCATIONS",
       "description": "A physical location within an establishment (prison) specific Agency Location. e.g. B Wing, Gymnasium, Cell 105. NOTE: The following exceptional Agency Internal Location case exists: - Internal Location Code = RTU - Stands for Return To Unit and does NOT represent a physical internal location. Instead, it provides a target for an internal movement of an offender returning to their assigned cell (from the Gymnasium, for example).",
-      "table-type": "table",
+      "type": "table",
       "propagation-policy": "1.day",
       "retention-policy": "999.years",
       "fields": [

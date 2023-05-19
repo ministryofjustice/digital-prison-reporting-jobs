@@ -6,6 +6,7 @@
     "contacts",
     "database",
     "service",
+    "tables",
     "type"
   ],
   "properties": {
@@ -28,6 +29,18 @@
       }
     },
     "service": { "type": "string" },
+    "tables": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/table"
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 1
+    },
     "type": { "enum": [ "record" ] },
     "version": { "$ref": "#/definitions/version" }
   },
