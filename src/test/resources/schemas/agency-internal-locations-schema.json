@@ -13,14 +13,12 @@
    		"slack": "#ask_dpr"
    },
    "database": {
-   		"name": "Oracle",
+   		"type": "oracle",
    		"version": "12",
    		"name": "CNOMT3"
    },
-   "policies": [
-   		{ "type": "propagation", "value": "1.day"},
-   		{ "type": "retention", "value": "999.years"}
-   ],
+   "propagation-policy": "1.day",
+   "retention-policy": "999.years",
    "fields" : [
    {
       "name": "INTERNAL_LOCATION_ID",

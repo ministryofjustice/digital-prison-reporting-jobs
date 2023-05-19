@@ -3,36 +3,43 @@
   "title": "Digital Prison Reporting Domain Contract Schema",
   "type": "object",
   "required": [
-    "type",
+    "contacts",
+    "database",
+    "description",
+    "name",
     "namespace",
     "service",
-    "name",
-    "version",
-    "description",
-    "table-type"
+    "table-type",
+    "type",
+    "version"
   ],
   "properties": {
-    "type": {
-      "enum": [ "record" ],
-      "description": "Base type of this schema which will always be record."
+    "contacts": {
+      "type": "object",
+      "required": [ "author", "team", "slack" ],
+      "properties": {
+        "author": { "type": "string" },
+        "team": { "type": "string" },
+        "slack": { "type": "string" }
+      }
     },
-    "namespace": {
-      "type": "string"
+    "database": {
+      "type": "object",
+      "required": [ "type", "version", "name" ],
+      "properties": {
+        "type": { "enum": [ "mysql", "postgres", "oracle", "aurora", "redshift"] },
+        "version": { "type":  "string" },
+        "name": { "type":  "string" }
+      }
     },
-    "service": {
-      "type": "string"
-    },
-    "name": {
-      "type": "string"
-    },
-    "version": {
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "table-type": {
-        "enum": [ "table", "view", "materialized-view" ]
-    }
+    "description": { "type": "string" },
+    "name": { "type": "string" },
+    "namespace": { "type": "string" },
+    "propagation-policy": { "type":  "string" },
+    "retention-policy": { "type":  "string" },
+    "service": { "type": "string" },
+    "table-type": { "enum": [ "table", "view", "materialized-view" ] },
+    "type": { "enum": [ "record" ] },
+    "version": { "type": "string" }
   }
 }
