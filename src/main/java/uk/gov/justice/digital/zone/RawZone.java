@@ -35,14 +35,14 @@ public class RawZone extends Zone {
     @Override
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
-        logger.info("Processing data frame with {} rows", dataFrame.count());
+        logger.info("Processing batch with {} records", dataFrame.count());
 
         val startTime = System.currentTimeMillis();
 
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
         String rowOperation = table.getAs(OPERATION);
-        // TODO - review table path construction here
+
         val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
                 .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable(), rowOperation))
                 // Revert to source and table from row where no match exists in the schema reference service.
@@ -55,7 +55,7 @@ public class RawZone extends Zone {
         logger.info("Append completed successfully");
         storage.updateDeltaManifestForTable(spark, tablePath);
 
-        logger.info("Processed data frame with {} rows in {}ms",
+        logger.info("Processed batch with {} records in {}ms",
                 rawDataFrame.count(),
                 System.currentTimeMillis() - startTime
         );

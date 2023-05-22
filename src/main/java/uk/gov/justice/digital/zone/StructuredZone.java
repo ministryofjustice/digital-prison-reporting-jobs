@@ -65,7 +65,7 @@ public class StructuredZone extends Zone {
                 ? handleSchemaFound(spark, dataFrame, sourceReference.get())
                 : handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
 
-        logger.info("Processed data frame with {} rows in {}ms",
+        logger.info("Processed batch with {} rows in {}ms",
                 rowCount,
                 System.currentTimeMillis() - startTime
         );
