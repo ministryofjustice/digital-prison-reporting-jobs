@@ -20,30 +20,28 @@ public class DomainService {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
 
-    private final DomainDefinitionClient dynamoDB;
+    private final DomainDefinitionClient domainClient;
     private final DomainExecutor executor;
-    private final JobArguments parameters;
+    private final JobArguments arguments;
 
     @Inject
-    public DomainService(JobArguments parameters,
-                         DomainDefinitionClient dynamoDB,
+    public DomainService(JobArguments arguments,
+                         DomainDefinitionClient domainClient,
                          DomainExecutor executor) {
-        this.parameters = parameters;
-        this.dynamoDB = dynamoDB;
+        this.arguments = arguments;
+        this.domainClient = domainClient;
         this.executor = executor;
     }
 
     public void run() throws DomainServiceException, DomainExecutorException {
         runInternal(
-                parameters.getDomainRegistry(),
-                parameters.getDomainTableName(),
-                parameters.getDomainName(),
-                parameters.getDomainOperation()
+                arguments.getDomainTableName(),
+                arguments.getDomainName(),
+                arguments.getDomainOperation()
         );
     }
 
     private void runInternal(
-            String domainRegistry,
             String domainTableName,
             String domainName,
             String domainOperation
@@ -51,7 +49,7 @@ public class DomainService {
         if (domainOperation.equalsIgnoreCase("delete"))
             executor.doDomainDelete(domainName, domainTableName);
         else {
-            val domain = getDomainDefinition(domainRegistry, domainName, domainTableName);
+            val domain = getDomainDefinition(domainName, domainTableName);
             processDomain(domain, domain.getName(), domainTableName, domainOperation);
         }
     }
@@ -73,14 +71,11 @@ public class DomainService {
         }
     }
 
-    private DomainDefinition getDomainDefinition(String domainRegistry,
-                                                 String domainName,
-                                                 String tableName)
-            throws DomainServiceException {
+    private DomainDefinition getDomainDefinition(String domainName,
+                                                 String tableName) throws DomainServiceException {
         try {
-            val response = dynamoDB.executeQuery(domainRegistry, domainName);
-            val domainDefinition = dynamoDB.parse(response, tableName);
-            logger.info("Retrieved domain definition for '{}'", domainName);
+            val domainDefinition = domainClient.getDomainDefinition(domainName, tableName);
+            logger.info("Retrieved domain definition for domain: '{}' table: '{}'", domainName, tableName);
             return domainDefinition;
         } catch (DatabaseClientException e) {
             logger.error("DynamoDB request failed: " + e.getMessage());

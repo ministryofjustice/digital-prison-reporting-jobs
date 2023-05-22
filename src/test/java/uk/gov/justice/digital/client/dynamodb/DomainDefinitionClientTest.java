@@ -5,35 +5,28 @@ import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
-import java.io.IOException;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 
 class DomainDefinitionClientTest {
 
     private static DomainDefinitionClient underTest;
     private static AmazonDynamoDB dynamoDB;
-    private static ObjectMapper mapper;
-
 
     @BeforeEach
     public void setUp() {
         dynamoDB = mock(AmazonDynamoDB.class);
-        mapper = mock(ObjectMapper.class);
-        underTest = new DomainDefinitionClient(dynamoDB, mapper);
+        underTest = new DomainDefinitionClient(dynamoDB, "Some table name");
     }
 
     @Test
@@ -42,24 +35,23 @@ class DomainDefinitionClientTest {
         val domainName = "incident";
         val result = mock(QueryResult.class);
         when(dynamoDB.query(any(QueryRequest.class))).thenReturn(result);
-        val queryResult = underTest.executeQuery(domainTableName, domainName);
-        assertTrue(queryResult.getItems().isEmpty());
+        underTest.getDomainDefinition(domainTableName, domainName);
     }
 
     @Test
-    public void shouldReturnErrorIfDomainTableDoesntExists() {
+    public void shouldReturnErrorIfDomainTableDoesntExist() {
         val domainTableName = "test";
         val domainName = "incident";
         when(dynamoDB.query(any(QueryRequest.class))).thenThrow(AmazonDynamoDBException.class);
         assertThrows(
                 DatabaseClientException.class,
-                () -> underTest.executeQuery(domainTableName, domainName),
+                () -> underTest.getDomainDefinition(domainTableName, domainName),
                 "Expected executeQuery() to throw, but it didn't"
         );
     }
 
     @Test
-    public void shouldParseQueryResultForGivenDomainName() throws IOException, DatabaseClientException {
+    public void shouldParseQueryResultForGivenDomainName() throws DatabaseClientException {
         val result = mock(QueryResult.class);
         val domainDef = new DomainDefinition();
         domainDef.setName("test name");
@@ -71,14 +63,13 @@ class DomainDefinitionClientTest {
                                 .withS("{\"id\": \"123\", \"name\": \"test name\", " +
                                         "\"description\": \"test description\"}")));
         when(result.getItems()).thenReturn(l);
-        val data = l.get(0).get("data").getS();
-        when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        val expectedDomainDef = underTest.parse(result, null);
+        when(dynamoDB.query(any())).thenReturn(result);
+        val expectedDomainDef = underTest.getDomainDefinition("test name", null);
         assertEquals("test name", expectedDomainDef.getName());
     }
 
     @Test
-    public void shouldParseQueryResultForGivenDomainAndTableName() throws IOException, DatabaseClientException {
+    public void shouldParseQueryResultForGivenDomainAndTableName() throws DatabaseClientException {
         val result = mock(QueryResult.class);
         val domainDef = new DomainDefinition();
         domainDef.setName("living_unit");
@@ -92,14 +83,16 @@ class DomainDefinitionClientTest {
                                 .withS("{\"id\": \"123\", \"name\": \"living_unit\", " +
                                         "\"description\": \"test description\"}")));
         when(result.getItems()).thenReturn(l);
-        val data = l.get(0).get("data").getS();
-        when(mapper.readValue(data, DomainDefinition.class)).thenReturn(domainDef);
-        val expectedDomainDef = underTest.parse(result, "demographics");
-        assertEquals("living_unit", expectedDomainDef.getName());
+        when(dynamoDB.query(any())).thenReturn(result);
+
+        val response = underTest.getDomainDefinition("living_unit", "demographics");
+        assertEquals("living_unit", response.getName());
+        // Confirm that getTables was called which allows us to verify that the table filtering was attempted.
+        verify(result).getItems();
     }
 
     @Test
-    public void shouldParseQueryResultProducesException() throws IOException {
+    public void shouldThrowAnExceptionGivenAnInvalidResponse() {
         val result = mock(QueryResult.class);
         val domainDef = new DomainDefinition();
         domainDef.setName("test name");
@@ -111,11 +104,9 @@ class DomainDefinitionClientTest {
                                 .withS("{\"id\": \"123\", \"name\": \"test name\"," +
                                         " \"description\": \"test description\"}")));
         when(result.getItems()).thenReturn(l);
-        val data = l.get(0).get("data").getS();
-        when(mapper.readValue(data, DomainDefinition.class)).thenThrow(JsonProcessingException.class);
         assertThrows(
                 DatabaseClientException.class,
-                () -> underTest.parse(result, null),
+                () -> underTest.getDomainDefinition("test name", null),
                 "Expected parse() to throw, but it didn't"
         );
     }
