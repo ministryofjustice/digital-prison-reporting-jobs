@@ -96,7 +96,7 @@ public class StructuredZone extends Zone {
                 sourceReference.getTable()
         );
 
-        handleInValidRecords(
+        handleInvalidRecords(
                 spark,
                 validatedDataFrame,
                 sourceReference.getSource(),
@@ -140,11 +140,11 @@ public class StructuredZone extends Zone {
         } else return createEmptyDataFrame(dataFrame);
     }
 
-    private void handleInValidRecords(SparkSession spark,
-                                        Dataset<Row> dataFrame,
-                                        String source,
-                                        String table,
-                                        String destinationPath) throws DataStorageException {
+    private void handleInvalidRecords(SparkSession spark,
+                                      Dataset<Row> dataFrame,
+                                      String source,
+                                      String table,
+                                      String destinationPath) throws DataStorageException {
 
         val errorString = String.format("Record does not match schema %s/%s", source, table);
 

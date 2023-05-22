@@ -1,14 +1,12 @@
 package uk.gov.justice.digital.provider;
 
+import io.micronaut.logging.LogLevel;
 import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 
 @Singleton
 public class SparkSessionProvider {
-
-    private static final String WARN = "WARN";
-    private static final String ERROR = "ERROR";
 
     public SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
         sparkConf
@@ -24,7 +22,7 @@ public class SparkSessionProvider {
                                 .enableHiveSupport()
                                 .getOrCreate();
 
-        session.sparkContext().setLogLevel(WARN);
+        session.sparkContext().setLogLevel(LogLevel.INFO.name());
 
         return session;
     }
