@@ -254,7 +254,6 @@ class DomainExecutorTest extends BaseSparkTest {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         executor.doFullDomainRefresh(
                 domainDefinition,
-                domainDefinition.getName(),
                 "demographics",
                 "insert"
         );
@@ -285,9 +284,9 @@ class DomainExecutorTest extends BaseSparkTest {
 
         val domainTableName = "prisoner";
         // Insert first
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "insert");
+        executor.doFullDomainRefresh(domain, domainTableName, "insert");
         // then update
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "update");
+        executor.doFullDomainRefresh(domain, domainTableName, "update");
         verify(testSchemaService, times(1)).create(any(), any(), any());
         verify(testSchemaService, times(1)).replace(any(), any(), any());
 
@@ -319,7 +318,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
-        executor.doFullDomainRefresh(domain1, domain1.getName(), domainTableName, "insert");
+        executor.doFullDomainRefresh(domain1, domainTableName, "insert");
 
         verify(testSchemaService, times(1)).create(any(), any(), any());
 
@@ -330,7 +329,7 @@ class DomainExecutorTest extends BaseSparkTest {
         assertEquals(1, storage.load(spark, info).count());
 
         // now the reverse
-        executor.doFullDomainRefresh(domain2, domain2.getName(), domainTableName, "update");
+        executor.doFullDomainRefresh(domain2, domainTableName, "update");
         verify(testSchemaService, times(1)).replace(any(), any(), any());
 
         // there should be a target table
@@ -340,7 +339,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRunWith0ChangesIfTableIsNotInDomain() throws Exception {
+    public void shouldRunWithNoChangesIfTableIsNotInDomain() throws Exception {
 
         val domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
         val testSchemaService = mock(DomainSchemaService.class);
@@ -353,8 +352,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
         assertThrows(
                 DomainExecutorException.class,
-                () -> executor.doFullDomainRefresh(domain, domain.getName(),
-                        "prisoner", "insert")
+                () -> executor.doFullDomainRefresh(domain, "prisoner", "insert")
         );
 
         // there shouldn't be a target table
@@ -480,7 +478,6 @@ class DomainExecutorTest extends BaseSparkTest {
                 Arrays.equals(a.collectAsList().toArray(), b.collectAsList().toArray());
     }
 
-    // TODO - this also exists in DomainServiceTest
     private DomainExecutor createExecutor(String source, String target, DataStorageService storage,
                                           DomainSchemaService schemaService) {
         val mockJobParameters = mock(JobArguments.class);

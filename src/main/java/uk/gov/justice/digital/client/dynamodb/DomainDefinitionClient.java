@@ -35,6 +35,7 @@ public class DomainDefinitionClient {
         this.mapper = mapper;
     }
 
+    // TODO - parse should be part of the internal API
     public DomainDefinition parse(QueryResult response, String tableName) throws DatabaseClientException {
         DomainDefinition domainDef = null;
         if (response != null) {
