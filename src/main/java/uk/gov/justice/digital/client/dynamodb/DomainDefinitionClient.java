@@ -68,10 +68,11 @@ public class DomainDefinitionClient {
         if (response != null) {
             for (Map<String, AttributeValue> items : response.getItems()) {
                 try {
-                    String data = items.get(dataField).getS();
+                    val data = items.get(dataField).getS();
                     domainDef = mapper.readValue(data, DomainDefinition.class);
                     if (tableName != null)
                         domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(tableName));
+
                 } catch (JsonProcessingException e) {
                     throw new DatabaseClientException("JSON Processing failed ", e);
                 }
