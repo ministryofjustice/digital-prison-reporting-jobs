@@ -78,7 +78,7 @@ public class DataStorageService {
     }
 
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
-        logger.info("deleting Delta table..." + tableId.getSchema() + "." + tableId.getTable());
+        logger.info("Deleting Delta table..." + tableId.getSchema() + "." + tableId.getTable());
         val deltaTable = getTable(spark, tableId.toPath());
         if (deltaTable != null) {
             deltaTable.delete();

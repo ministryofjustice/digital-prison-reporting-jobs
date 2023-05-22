@@ -9,10 +9,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import lombok.val;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 @Singleton
@@ -22,28 +24,55 @@ public class DomainDefinitionClient {
     private static final String sortKeyName = "secondaryId";
     private static final String dataField = "data";
 
-    private final AmazonDynamoDB dynamoDB;
-    private final ObjectMapper mapper;
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    private final AmazonDynamoDB client;
+    private final String tableName;
 
     @Inject
-    public DomainDefinitionClient(DynamoDBClientProvider dynamoDBClientProvider) {
-        this(dynamoDBClientProvider.getClient(), new ObjectMapper());
+    public DomainDefinitionClient(DynamoDBClientProvider dynamoDBClientProvider,
+                                  JobArguments jobArguments) {
+        this(dynamoDBClientProvider.getClient(), jobArguments.getDomainRegistry());
     }
 
-    public DomainDefinitionClient(AmazonDynamoDB dynamoDB, ObjectMapper mapper) {
-        this.dynamoDB = dynamoDB;
-        this.mapper = mapper;
+    public DomainDefinitionClient(AmazonDynamoDB dynamoDB, String tableName) {
+        this.client = dynamoDB;
+        this.tableName = tableName;
     }
 
-    public DomainDefinition parse(QueryResult response, String tableName) throws DatabaseClientException {
+    public DomainDefinition getDomainDefinition(String domainName, String tableName) throws DatabaseClientException {
+        val result = makeRequest(domainName);
+        return parseResponse(result, tableName);
+    }
+
+
+    private QueryResult makeRequest(String domainName) throws DatabaseClientException {
+        // Set up mapping of the partition name with the value
+        val attributeValues = Collections.singletonMap(":" + sortKeyName, new AttributeValue().withS(domainName));
+        try {
+            QueryRequest queryReq = new QueryRequest()
+                    .withTableName(tableName)
+                    .withIndexName(indexName)
+                    .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
+                    .withExpressionAttributeValues(attributeValues);
+            return client.query(queryReq);
+        } catch (AmazonDynamoDBException e) {
+            throw new DatabaseClientException("DynamoDB client request failed", e);
+        }
+
+    }
+
+    // TODO - the table filtering should happen in the service
+    private DomainDefinition parseResponse(QueryResult response, String tableName) throws DatabaseClientException {
         DomainDefinition domainDef = null;
         if (response != null) {
             for (Map<String, AttributeValue> items : response.getItems()) {
                 try {
-                    String data = items.get(dataField).getS();
+                    val data = items.get(dataField).getS();
                     domainDef = mapper.readValue(data, DomainDefinition.class);
                     if (tableName != null)
                         domainDef.getTables().removeIf(table -> !table.getName().equalsIgnoreCase(tableName));
+
                 } catch (JsonProcessingException e) {
                     throw new DatabaseClientException("JSON Processing failed ", e);
                 }
@@ -54,21 +83,4 @@ public class DomainDefinitionClient {
         return domainDef;
     }
 
-    public QueryResult executeQuery(final String domainTableName, final String domainName)
-            throws DatabaseClientException {
-        // Set up mapping of the partition name with the value
-        HashMap<String, AttributeValue> attrValues = new HashMap<>();
-        attrValues.put(":" + sortKeyName, new AttributeValue().withS(domainName));
-        try {
-            QueryRequest queryReq = new QueryRequest()
-                    .withTableName(domainTableName)
-                    .withIndexName(indexName)
-                    .withKeyConditionExpression(sortKeyName + " = :" + sortKeyName)
-                    .withExpressionAttributeValues(attrValues);
-            return dynamoDB.query(queryReq);
-        } catch (AmazonDynamoDBException e) {
-            throw new DatabaseClientException("Query execution failed", e);
-        }
-
-    }
 }

@@ -31,6 +31,8 @@ public class DomainExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
+    private static final List<String> fullRefreshOperations = Arrays.asList("insert", "update", "sync");
+
     private final String sourceRootPath;
     private final String targetRootPath;
     private final DataStorageService storage;
@@ -302,50 +304,47 @@ public class DomainExecutor {
         }
     }
 
+    public void doDomainDelete(String domainName, String domainTableName) throws DomainExecutorException {
+        val tableId = new TableIdentifier(targetRootPath, hiveDatabaseName, domainName, domainTableName);
+        logger.info("Executing delete for {}", tableId);
+        deleteTable(tableId);
+    }
 
     public void doFullDomainRefresh(DomainDefinition domainDefinition,
-                                    String domainName,
                                     String domainTableName,
-                                    String domainOperation) throws DomainExecutorException {
-        if (domainOperation.equalsIgnoreCase("insert") ||
-                domainOperation.equalsIgnoreCase("update") ||
-                domainOperation.equalsIgnoreCase("sync")) {
+                                    String operation) throws DomainExecutorException {
 
+        if (fullRefreshOperations.contains(operation.toLowerCase())) {
             val table = domainDefinition.getTables().stream()
                     .filter(t -> domainTableName.equals(t.getName()))
                     .findAny()
-                    .orElse(null);
-            if (table == null) {
-                logger.error("Table " + domainTableName + " not found");
-                throw new DomainExecutorException("Table " + domainTableName + " not found");
-            } else {
-                // no source table and df they are required only for unit testing
-                val dfTarget = apply(table, null);
-                try {
-                    saveTable(
-                            new TableIdentifier(
-                                    targetRootPath,
-                                    hiveDatabaseName,
-                                    domainDefinition.getName(),
-                                    table.getName()
-                            ),
-                            dfTarget,
-                            domainOperation
-                    );
-                } catch (DataStorageException e) {
-                    throw new DomainExecutorException(e.getMessage());
-                }
+                    .orElseThrow(() -> new DomainExecutorException(
+                            "Table '" + domainTableName +
+                                    "' not present in definition for domain: " +
+                                    domainDefinition.getName()));
+
+
+            // no source table and df they are required only for unit testing
+            val dfTarget = apply(table, null);
+
+            try {
+                saveTable(
+                        new TableIdentifier(
+                                targetRootPath,
+                                hiveDatabaseName,
+                                domainDefinition.getName(),
+                                table.getName()
+                        ),
+                        dfTarget,
+                        operation
+                );
+            } catch (DataStorageException e) {
+                throw new DomainExecutorException(e.getMessage(), e);
             }
-        } else if (domainOperation.equalsIgnoreCase("delete")) {
-            logger.info("domain operation is delete");
-            deleteTable(new TableIdentifier(
-                    targetRootPath,
-                    hiveDatabaseName,
-                    domainName,
-                    domainTableName
-            ));
-        } else {
-            val message = "Unsupported domain operation: '" + domainOperation + "'";
+
+        }
+        else {
+            val message = "Unsupported domain operation: '" + operation + "'";
             logger.error(message);
             throw new DomainExecutorException(message);
         }

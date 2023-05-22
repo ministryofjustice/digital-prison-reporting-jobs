@@ -1,176 +1,64 @@
 package uk.gov.justice.digital.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.val;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.domain.model.TableIdentifier;
-import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.test.ResourceLoader;
-import uk.gov.justice.digital.test.SparkTestHelpers;
 
-import java.io.File;
-import java.nio.file.Path;
-import java.util.Objects;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+@ExtendWith(MockitoExtension.class)
+public class DomainServiceTest {
 
-public class DomainServiceTest extends BaseSparkTest {
+    private static final String domainName = "SomeDomain";
+    private static final String domainTableName = "SomeDomainTable";
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-    private static final String hiveDatabaseName = "test_db";
-    private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
-    private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
+    @Mock private JobArguments mockJobArguments;
+    @Mock private DomainDefinitionClient mockDomainDefinitionClient;
+    @Mock private DomainExecutor mockDomainExecutor;
+    @Mock private DomainDefinition mockDomainDefinition;
 
-    private static final DomainSchemaService schemaService = mock(DomainSchemaService.class);
-    private static final DataStorageService storage = new DataStorageService();
-
-    private DomainExecutor executor;
-
-    @TempDir
-    private Path folder;
-
-    @BeforeAll
-    public static void setupCommonMocks() {
-        when(schemaService.databaseExists(any())).thenReturn(true);
-        when(schemaService.tableExists(any(), any())).thenReturn(true);
-    }
+    private DomainService underTest;
 
     @BeforeEach
     public void setup() {
-        val mockJobParameters = mock(JobArguments.class);
-        when(mockJobParameters.getCuratedS3Path()).thenReturn(sourcePath());
-        when(mockJobParameters.getDomainTargetPath()).thenReturn(targetPath());
-        when(mockJobParameters.getDomainCatalogDatabaseName()).thenReturn(hiveDatabaseName);
-        executor = new DomainExecutor(mockJobParameters, storage, schemaService, sparkSessionProvider);
+        underTest = new DomainService(mockJobArguments, mockDomainDefinitionClient, mockDomainExecutor);
     }
 
     @Test
-    public void shouldTestIncidentDomain() throws Exception {
-        val domainOperation = "insert";
-        val domainTableName = "demographics";
-        val domain = getDomain("/sample/domain/incident_domain.json");
+    public void shouldRunDeleteWhenOperationIsDelete() throws Exception {
+        givenJobArgumentsWithOperation("delete");
 
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
-                helpers.getOffenders(folder)
-        );
+        underTest.run();
 
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
-                helpers.getOffenderBookings(folder)
-        );
-
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
-        assertTargetDirectoryNotEmpty();
+        verify(mockDomainExecutor).doDomainDelete(domainName, domainTableName);
     }
 
     @Test
-    public void shouldTestEstablishmentDomainInsert() throws Exception {
-        val domainOperation = "insert";
-        val domainTableName = "establishment";
-        val domain = getDomain("/sample/domain/establishment.domain.json");
+    public void shouldRunFullRefreshWhenOperationIsInsert() throws Exception {
+        givenJobArgumentsWithOperation("insert");
+        givenTheClientReturnsADomainDefinition();
 
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-                helpers.getAgencyLocations(folder)
-        );
+        underTest.run();
 
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-                helpers.getInternalAgencyLocations(folder)
-        );
-
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
-        assertTargetDirectoryNotEmpty();
+        verify(mockDomainExecutor).doFullDomainRefresh(mockDomainDefinition, domainTableName, "insert");
     }
 
-    @Test
-    public void shouldTestLivingUnitDomainInsert() throws Exception {
-        val domainOperation = "insert";
-        val domainTableName = "living_unit";
-        val domain = getDomain("/sample/domain/establishment.domain.json");
-
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-                helpers.getAgencyLocations(folder)
-        );
-
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-                helpers.getInternalAgencyLocations(folder)
-        );
-
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
-        assertTargetDirectoryNotEmpty();
+    private void givenJobArgumentsWithOperation(String operation) {
+        when(mockJobArguments.getDomainTableName()).thenReturn(domainTableName);
+        when(mockJobArguments.getDomainName()).thenReturn(domainName);
+        when(mockJobArguments.getDomainOperation()).thenReturn(operation);
     }
 
-    @Test
-    public void shouldTestLivingUnitDomainUpdate() throws Exception {
-        val domainOperation = "update";
-        val domainTableName = "living_unit";
-        val domain = getDomain("/sample/domain/establishment.domain.json");
-
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-                helpers.getAgencyLocations(folder)
-        );
-
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-                helpers.getInternalAgencyLocations(folder)
-        );
-        // first insert
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, "insert");
-        // then update
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
-        verify(schemaService, times(1)).create(any(), any(), any());
-        verify(schemaService, times(1)).replace(any(), any(), any());
-    }
-
-    @Test
-    public void shouldTestEstablishmentDomainDelete() throws Exception {
-        val domainOperation = "delete";
-        val domainTableName = "living_unit";
-        val domain = getDomain("/sample/domain/establishment.domain.json");
-
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_locations"),
-                helpers.getAgencyLocations(folder)
-        );
-
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "agency_internal_locations"),
-                helpers.getInternalAgencyLocations(folder)
-        );
-
-        executor.doFullDomainRefresh(domain, domain.getName(), domainTableName, domainOperation);
-        verify(schemaService, times(1)).drop(any());
-    }
-
-    private DomainDefinition getDomain(String resource) throws JsonProcessingException {
-        return mapper.readValue(ResourceLoader.getResource(resource), DomainDefinition.class);
-    }
-
-    private void assertTargetDirectoryNotEmpty() {
-        assertTrue(Objects.requireNonNull(new File(targetPath()).list()).length > 0);
-    }
-
-    private String sourcePath() {
-        return folder.toFile().getAbsolutePath() + "/source";
-    }
-
-    private String targetPath() {
-        return folder.toFile().getAbsolutePath() + "/target";
+    private void givenTheClientReturnsADomainDefinition() throws Exception {
+        when(mockDomainDefinition.getName()).thenReturn(domainName);
+        when(mockDomainDefinitionClient.getDomainDefinition(domainName, domainTableName)).thenReturn(mockDomainDefinition);
     }
 
 }

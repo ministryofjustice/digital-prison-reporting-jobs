@@ -65,7 +65,7 @@ public class CuratedZone extends Zone {
             logger.info("Append completed successfully");
             storage.updateDeltaManifestForTable(spark, curatedTablePath);
 
-            logger.info("Processed dataframe with {} rows in {}ms",
+            logger.info("Processed batch with {} records in {}ms",
                     count,
                     System.currentTimeMillis() - startTime
             );
