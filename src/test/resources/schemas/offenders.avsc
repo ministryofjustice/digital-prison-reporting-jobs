@@ -1,0 +1,748 @@
+{
+  "type" : "record",
+  "namespace" : "prisons",
+  "service": "nomis",
+  "version": "1.0.0",
+  "keys": ["OMS_OWNER.OFFENDERS", "SYSTEM.OFFENDERS"],
+  "name" : "OFFENDERS",
+  "description": "A person who is recorded as being convicted of a criminal activity or held on remand awaiting judicial process in order that they may be tracked within the Prison and / or Probation services. This may be as a remand prisoner, a prisoner, a person subject to probation supervision. ISSUE: Potential duplication of attribute values on occurrences which are recording aliases of the offender.",
+  "table-type":"table",
+  "contacts" : {
+    "author": "dominic.messenger@digital.justice.gov.uk",
+    "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
+    "slack": "#ask_dpr"
+  },
+  "database": {
+    "type": "Oracle",
+    "version": "12",
+    "name": "CNOMT3"
+  },
+  "propagation-policy": "1.day",
+  "retention-policy": "999.years",
+  "fields" : [
+    {
+      "name": "OFFENDER_ID",
+      "type": "long",
+      "nullable": false,
+      "metadata": {
+        "description": "The unique identifier number for the offenders. PK",
+        "glossary": "offender:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "OFFENDER_NAME_SEQ",
+      "type": "long",
+      "nullable": true,
+      "metadata": {
+        "description": "Sequence name of offenders",
+        "glossary": "offender:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "ID_SOURCE_CODE",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "source code ID",
+        "glossary": "offender:source:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "LAST_NAME",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Last name of offender",
+        "glossary": "offender:last:name",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "NAME_TYPE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender name type",
+        "glossary": "offender:name:type",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "FIRST_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender first name",
+        "glossary": "offender:first:name",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "MIDDLE_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender middle name",
+        "glossary": "offender:middle:name",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "BIRTH_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": true,
+      "metadata": {
+        "description": "offender birth date",
+        "glossary": "offender:birth:date",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "SEX_CODE",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "offender sex code",
+        "glossary": "offender:sex:code",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "SUFFIX",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender suffix",
+        "glossary": "offender:suffix",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "LAST_NAME_SOUNDEX",
+      "type": "long",
+      "nullable": true,
+      "metadata": {
+        "description": "offender last name soundex",
+        "glossary": "offender:name:soundex",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "BIRTH_PLACE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender birth place",
+        "glossary": "offender:birth:place",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "BIRTH_COUNTRY_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender birth country code",
+        "glossary": "offender:birth:country:code",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "CREATE_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": false,
+      "metadata": {
+        "description": "offender create date",
+        "glossary": "offender:create:date",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "LAST_NAME_KEY",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "offender last name key",
+        "glossary": "offender:last:name:key",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "ALIAS_OFFENDER_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {
+        "description": "offender alias id",
+        "glossary": "offender:alias:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "FIRST_NAME_KEY",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender first name key",
+        "glossary": "offender:first:name:key",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "MIDDLE_NAME_KEY",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender middle name key",
+        "glossary": "offender:middle:name:key",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "OFFENDER_ID_DISPLAY",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "offender id display",
+        "glossary": "offender:id:display",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "ROOT_OFFENDER_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {
+        "description": "offender root id",
+        "glossary": "offender:root:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "CASELOAD_TYPE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender caseload type",
+        "glossary": "offender:caseload:type",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "MODIFY_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender modify user id",
+        "glossary": "offender:modify:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "MODIFY_DATETIME",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": true,
+      "metadata": {
+        "description": "offender modify date time",
+        "glossary": "offender:modify:datetime",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "ALIAS_NAME_TYPE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender alias name type",
+        "glossary": "offender:alias:name:type",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "PARENT_OFFENDER_ID",
+      "type": "long",
+      "nullable": true,
+      "metadata": {
+        "description": "offender parent id",
+        "glossary": "offender:parent:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "UNIQUE_OBLIGATION_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender unique obligation flag",
+        "glossary": "offender:obligation:flag",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+
+    {
+      "name": "SUSPENDED_FLAG",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender suspended flag",
+        "glossary": "offender:suspended:flag",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "SUSPENDED_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": true,
+      "metadata": {
+        "description": "offender suspended date",
+        "glossary": "offender:suspended:date",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "RACE_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender race code",
+        "glossary": "offender:race:code",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "REMARK_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender remark code",
+        "glossary": "offender:remark:code",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "ADD_INFO_CODE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender add info code",
+        "glossary": "offender:add:infocode",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "BIRTH_COUNTY",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender birth country",
+        "glossary": "offender:birth:country",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "BIRTH_STATE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender birth state",
+        "glossary": "offender:birth:state",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "MIDDLE_NAME_2",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender alternate middle name",
+        "glossary": "offender:middle:name:2",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "TITLE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender title",
+        "glossary": "offender:title",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AGE",
+      "type": "long",
+      "nullable": true,
+      "metadata": {
+        "description": "offender age",
+        "glossary": "offender:age",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "CREATE_USER_ID",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "offender create user id",
+        "glossary": "offender:create:user:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "LAST_NAME_ALPHA_KEY",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender last name alpha key",
+        "glossary": "offender:last:name:alpha:key",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "CREATE_DATETIME",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": false,
+      "metadata": {
+        "description": "offender create datetime",
+        "glossary": "offender:create:datetime",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "NAME_SEQUENCE",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender name sequence",
+        "glossary": "offender:name:seq",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AUDIT_TIMESTAMP",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": true,
+      "metadata": {
+        "description": "offender audit timestamp",
+        "glossary": "offender:audit:timestamp",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AUDIT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender audit user id",
+        "glossary": "offender:audit:user:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AUDIT_MODULE_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender audit module name",
+        "glossary": "offender:audit:name",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AUDIT_CLIENT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender audit client user id",
+        "glossary": "offender:audit:user:id",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AUDIT_CLIENT_IP_ADDRESS",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender audit client ip address",
+        "glossary": "offender:audit:ip",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AUDIT_CLIENT_WORKSTATION_NAME",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender audit client workstation name",
+        "glossary": "offender:audit:workstation:name",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    },
+    {
+      "name": "AUDIT_ADDITIONAL_INFO",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "offender audit additional info",
+        "glossary": "offender:audit:info",
+        "primary": "true",
+        "sensitivity": "public",
+        "certified": false,
+        "pii-index": "",
+        "tags": [],
+        "validation": ""
+      }
+    }
+  ]
+}
