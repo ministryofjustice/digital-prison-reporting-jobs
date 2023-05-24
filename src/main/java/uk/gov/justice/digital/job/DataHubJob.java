@@ -70,7 +70,10 @@ public class DataHubJob implements Runnable {
     }
 
     private void batchProcessor(JavaRDD<byte[]> batch) {
-        if (!batch.isEmpty()) {
+        if (batch.isEmpty()) {
+            logger.info("Batch: {} - Skipping empty batch", batch.id());
+        }
+        else {
             val batchCount = batch.count();
 
             logger.info("Batch: {} - Processing {} records", batch.id(), batchCount);
