@@ -186,6 +186,6 @@
       "name": "AUDIT_ADDITIONAL_INFO",
       "type": "string",
       "nullable": true
-    },
+    }
   ]
 }
