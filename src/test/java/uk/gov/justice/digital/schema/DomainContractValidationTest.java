@@ -15,9 +15,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 
-public class DomainSchemaValidationTest {
+public class DomainContractValidationTest {
 
-    private static final String RESOURCE_PATH = "/schemas";
+    private static final String RESOURCE_PATH = "/contracts";
     private static final String REFERENCE_CONTRACT = "reference-contract.avsc";
     private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACTS = "agency-internal-locations-contract.avsc";
     private static final String DOMAIN_CONTRACT_SCHEMA = "domain-contract-schema.json";
