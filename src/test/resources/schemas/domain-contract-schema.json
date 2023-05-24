@@ -136,7 +136,14 @@
         "name": { "type": "string" },
         "type": { "enum": [ "int" ] },
         "logicalType": { "enum":  [ "date", "time-millis" ] },
-        "nullable": { "type":  "boolean" }
+        "nullable": { "type":  "boolean" },
+        "certified": { "$ref": "#/definitions/certified" },
+        "description": { "type":  "string" },
+        "glossary-index": { "type": "string" },
+        "pii-index": { "type": "string" },
+        "sensitivity": { "$ref": "#/definitions/sensitivity" },
+        "key": { "$ref": "#/definitions/key" },
+        "tags": { "$ref": "#/definitions/tags" }
       }
     },
     "temporal-long-field": {
@@ -151,7 +158,14 @@
         "name": { "type": "string" },
         "type": { "enum": [ "long" ] },
         "logicalType": { "enum":  [ "time-micros", "timestamp-millis", "timestamp-micros" ] },
-        "nullable": { "type":  "boolean" }
+        "nullable": { "type":  "boolean" },
+        "certified": { "$ref": "#/definitions/certified" },
+        "description": { "type":  "string" },
+        "glossary-index": { "type": "string" },
+        "pii-index": { "type": "string" },
+        "sensitivity": { "$ref": "#/definitions/sensitivity" },
+        "key": { "$ref": "#/definitions/key" },
+        "tags": { "$ref": "#/definitions/tags" }
       }
     }
   }

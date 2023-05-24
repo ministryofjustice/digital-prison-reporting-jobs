@@ -82,17 +82,19 @@
         "symbols": ["foo", "bar", "baz"]
       },
       "nullable": false,
-      "default": "foo",
-      "certified": false,
-      "description": "An example field with all optional fields set",
-      "glossary-index": "some:glossary:identifier",
-      "pii-index": "pii:name",
-      "sensitivity": "confidential",
-      "key": "foreign",
-      "tags": [ "some", "arbitrary", "tags" ]
+      "default": "foo"
     },
     {
       "name": "example_int_temporal_field",
+      "type": "int",
+      "logicalType": "date",
+      "nullable": false
+    },
+    {
+      "name": "example_long_temporal_field",
+      "type": "long",
+      "logicalType": "time-micros",
+      "nullable": false
     }
   ]
 }
