@@ -1,0 +1,467 @@
+{
+  "type" : "record",
+  "namespace" : "prisons",
+  "service": "nomis",
+  "version": "1.0.0",
+  "keys": ["OMS_OWNER.OFFENDERS", "SYSTEM.OFFENDERS"],
+  "name" : "OFFENDERS",
+  "description": "A person who is recorded as being convicted of a criminal activity or held on remand awaiting judicial process in order that they may be tracked within the Prison and / or Probation services. This may be as a remand prisoner, a prisoner, a person subject to probation supervision. ISSUE: Potential duplication of attribute values on occurrences which are recording aliases of the offender.",
+  "table-type":"table",
+  "contacts" : {
+    "author": "dominic.messenger@digital.justice.gov.uk",
+    "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
+    "slack": "#ask_dpr"
+  },
+  "database": {
+    "type": "oracle",
+    "version": "12",
+    "name": "CNOMT3"
+  },
+  "propagation-policy": "1.day",
+  "retention-policy": "999.years",
+  "fields" : [
+    {
+      "name": "OFFENDER_ID",
+      "type": "long",
+      "nullable": false,
+      "description": "The unique identifier number for the offenders. PK",
+      "glossary-index": "offender:id",
+      "key": "primary",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "OFFENDER_NAME_SEQ",
+      "type": "long",
+      "nullable": true,
+      "description": "Sequence name of offenders",
+      "glossary-index": "offender:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "ID_SOURCE_CODE",
+      "type": "string",
+      "nullable": false,
+      "description": "source code ID",
+      "glossary-index": "offender:source:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "LAST_NAME",
+      "type": "string",
+      "nullable": false,
+      "description": "Last name of offender",
+      "glossary-index": "offender:last:name",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "NAME_TYPE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender name type",
+      "glossary-index": "offender:name:type",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "FIRST_NAME",
+      "type": "string",
+      "nullable": true,
+      "description": "offender first name",
+      "glossary-index": "offender:first:name",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "MIDDLE_NAME",
+      "type": "string",
+      "nullable": true,
+      "description": "offender middle name",
+      "glossary-index": "offender:middle:name",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "BIRTH_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": true,
+      "description": "offender birth date",
+      "glossary-index": "offender:birth:date",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "SEX_CODE",
+      "type": "string",
+      "nullable": false,
+      "description": "offender sex code",
+      "glossary-index": "offender:sex:code",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "SUFFIX",
+      "type": "string",
+      "nullable": true,
+      "description": "offender suffix",
+      "glossary-index": "offender:suffix",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "LAST_NAME_SOUNDEX",
+      "type": "long",
+      "nullable": true,
+      "description": "offender last name soundex",
+      "glossary-index": "offender:name:soundex",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "BIRTH_PLACE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender birth place",
+      "glossary-index": "offender:birth:place",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "BIRTH_COUNTRY_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender birth country code",
+      "glossary-index": "offender:birth:country:code",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "CREATE_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": false,
+      "description": "offender create date",
+      "glossary-index": "offender:create:date",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "LAST_NAME_KEY",
+      "type": "string",
+      "nullable": false,
+      "description": "offender last name key",
+      "glossary-index": "offender:last:name:key",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "ALIAS_OFFENDER_ID",
+      "type": "long",
+      "nullable": true,
+      "description": "offender alias id",
+      "glossary-index": "offender:alias:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "FIRST_NAME_KEY",
+      "type": "string",
+      "nullable": true,
+      "description": "offender first name key",
+      "glossary-index": "offender:first:name:key",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "MIDDLE_NAME_KEY",
+      "type": "string",
+      "nullable": true,
+      "description": "offender middle name key",
+      "glossary-index": "offender:middle:name:key",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "OFFENDER_ID_DISPLAY",
+      "type": "string",
+      "nullable": false,
+      "description": "offender id display",
+      "glossary-index": "offender:id:display",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "ROOT_OFFENDER_ID",
+      "type": "long",
+      "nullable": true,
+      "description": "offender root id",
+      "glossary-index": "offender:root:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "CASELOAD_TYPE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender caseload type",
+      "glossary-index": "offender:caseload:type",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "MODIFY_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "description": "offender modify user id",
+      "glossary-index": "offender:modify:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "MODIFY_DATETIME",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": true,
+      "description": "offender modify date time",
+      "glossary-index": "offender:modify:datetime",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "ALIAS_NAME_TYPE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender alias name type",
+      "glossary-index": "offender:alias:name:type",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "PARENT_OFFENDER_ID",
+      "type": "long",
+      "nullable": true,
+      "description": "offender parent id",
+      "glossary-index": "offender:parent:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "UNIQUE_OBLIGATION_FLAG",
+      "type": "string",
+      "nullable": true,
+      "description": "offender unique obligation flag",
+      "glossary-index": "offender:obligation:flag",
+      "sensitivity": "public",
+      "certified": false
+    },
+
+    {
+      "name": "SUSPENDED_FLAG",
+      "type": "string",
+      "nullable": true,
+      "description": "offender suspended flag",
+      "glossary-index": "offender:suspended:flag",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "SUSPENDED_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": true,
+      "description": "offender suspended date",
+      "glossary-index": "offender:suspended:date",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "RACE_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender race code",
+      "glossary-index": "offender:race:code",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "REMARK_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender remark code",
+      "glossary-index": "offender:remark:code",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "ADD_INFO_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender add info code",
+      "glossary-index": "offender:add:infocode",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "BIRTH_COUNTY",
+      "type": "string",
+      "nullable": true,
+      "description": "offender birth country",
+      "glossary-index": "offender:birth:country",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "BIRTH_STATE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender birth state",
+      "glossary-index": "offender:birth:state",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "MIDDLE_NAME_2",
+      "type": "string",
+      "nullable": true,
+      "description": "offender alternate middle name",
+      "glossary-index": "offender:middle:name:2",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "TITLE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender title",
+      "glossary-index": "offender:title",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AGE",
+      "type": "long",
+      "nullable": true,
+      "description": "offender age",
+      "glossary-index": "offender:age",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "CREATE_USER_ID",
+      "type": "string",
+      "nullable": false,
+      "description": "offender create user id",
+      "glossary-index": "offender:create:user:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "LAST_NAME_ALPHA_KEY",
+      "type": "string",
+      "nullable": true,
+      "description": "offender last name alpha key",
+      "glossary-index": "offender:last:name:alpha:key",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "CREATE_DATETIME",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": false,
+      "description": "offender create datetime",
+      "glossary-index": "offender:create:datetime",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "NAME_SEQUENCE",
+      "type": "string",
+      "nullable": true,
+      "description": "offender name sequence",
+      "glossary-index": "offender:name:seq",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AUDIT_TIMESTAMP",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": true,
+      "description": "offender audit timestamp",
+      "glossary-index": "offender:audit:timestamp",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AUDIT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit user id",
+      "glossary-index": "offender:audit:user:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AUDIT_MODULE_NAME",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit module name",
+      "glossary-index": "offender:audit:name",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AUDIT_CLIENT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit client user id",
+      "glossary-index": "offender:audit:user:id",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AUDIT_CLIENT_IP_ADDRESS",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit client ip address",
+      "glossary-index": "offender:audit:ip",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AUDIT_CLIENT_WORKSTATION_NAME",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit client workstation name",
+      "glossary-index": "offender:audit:workstation:name",
+      "sensitivity": "public",
+      "certified": false
+    },
+    {
+      "name": "AUDIT_ADDITIONAL_INFO",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit additional info",
+      "glossary-index": "offender:audit:info",
+      "sensitivity": "public",
+      "certified": false
+    }
+  ]
+}
