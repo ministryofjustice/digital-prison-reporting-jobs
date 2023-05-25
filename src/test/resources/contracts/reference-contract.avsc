@@ -86,14 +86,18 @@
     },
     {
       "name": "example_int_temporal_field",
-      "type": "int",
-      "logicalType": "date",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
       "nullable": false
     },
     {
       "name": "example_long_temporal_field",
-      "type": "long",
-      "logicalType": "time-micros",
+      "type": {
+        "type": "long",
+        "logicalType": "time-micros"
+      },
       "nullable": false
     }
   ]
