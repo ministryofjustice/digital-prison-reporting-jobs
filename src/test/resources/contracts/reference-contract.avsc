@@ -1,0 +1,100 @@
+{
+  "type": "record",
+  "name": "some_table_name",
+  "contacts": {
+    "author": "someone@example.com",
+    "team": "https://www.example.com/team-confluence-page",
+    "slack": "#public-channel-for-team"
+  },
+  "database": {
+    "type": "oracle",
+    "version": "12",
+    "name": "CNOMT3"
+  },
+  "service": "nomis",
+  "namespace": "prisons",
+  "version": "1.0.0",
+  "description": "A physical location within an establishment (prison) specific Agency Location. e.g. B Wing, Gymnasium, Cell 105. NOTE: The following exceptional Agency Internal Location case exists: - Internal Location Code = RTU - Stands for Return To Unit and does NOT represent a physical internal location. Instead, it provides a target for an internal movement of an offender returning to their assigned cell (from the Gymnasium, for example).",
+  "propagation-policy": "1.day",
+  "retention-policy": "999.years",
+  "fields": [
+    {
+      "name": "example_primary_key_field",
+      "type": "long",
+      "nullable": false,
+      "description": "The primary key",
+      "glossary-index": "example:id",
+      "key": "primary",
+      "sensitivity": "public"
+    },
+    {
+      "name": "example_field_with_all_optional_properties_set",
+      "type": "null",
+      "nullable": true,
+      "certified": false,
+      "description": "An example field with all optional fields set",
+      "glossary-index": "some:glossary:identifier",
+      "pii-index": "pii:name",
+      "sensitivity": "confidential",
+      "key": "foreign",
+      "tags": [ "some", "arbitrary", "tags" ]
+    },
+    {
+      "name": "example_boolean_field",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "example_int_field",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "example_long_field",
+      "type": "long",
+      "nullable": true
+    },
+    {
+      "name": "example_float_field",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "example_double_field",
+      "type": "double",
+      "nullable": true
+    },
+    {
+      "name": "example_byte_field",
+      "type": "bytes",
+      "nullable": true
+    },
+    {
+      "name": "example_string_field",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "example_enum_field",
+      "type": {
+        "name": "example_enum_values",
+        "type": "enum",
+        "symbols": ["foo", "bar", "baz"]
+      },
+      "nullable": false,
+      "default": "foo"
+    },
+    {
+      "name": "example_int_temporal_field",
+      "type": "int",
+      "logicalType": "date",
+      "nullable": false
+    },
+    {
+      "name": "example_long_temporal_field",
+      "type": "long",
+      "logicalType": "time-micros",
+      "nullable": false
+    }
+  ]
+}
