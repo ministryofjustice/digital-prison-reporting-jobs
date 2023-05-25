@@ -29,7 +29,9 @@ public class KinesisReader {
         String jobName = jobProperties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
-                new SparkConf().setAppName(jobName),
+                new SparkConf()
+                        .setAppName(jobName)
+                        .set("spark.streaming.backpressure.enabled", "true"),
                 jobArguments.getKinesisReaderBatchDuration()
         );
 
