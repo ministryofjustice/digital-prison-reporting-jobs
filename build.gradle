@@ -28,6 +28,9 @@ ext {
     micronautVersion = '3.8.7'
     mockitoVersion = '4.11.0'
     sparkVersion = '3.3.0'
+    hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.3' downgraded for Glue 4.0
+    awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
+    glueSdkVersion = '1.12.425'
 }
 
 dependencies {
@@ -35,6 +38,10 @@ dependencies {
 
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
+    compileOnly "org.apache.hadoop:hadoop-aws:$hadoopVersion"
+    compileOnly "com.amazonaws:amazon-kinesis-client:$awsKinesisVersion" // transitively brings in java-sdk-core
+
+    implementation "com.amazonaws:aws-java-sdk-glue:$glueSdkVersion" // transitively brings in java-sdk-core
 
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
@@ -46,16 +53,11 @@ dependencies {
     implementation "io.micronaut:micronaut-runtime:$micronautVersion"
     implementation "io.micronaut:micronaut-validation"
     implementation "jakarta.annotation:jakarta.annotation-api"
-    implementation 'com.amazonaws:amazon-kinesis-client:1.14.10'
-    implementation 'com.amazonaws:aws-java-sdk-core:1.12.421'
-    implementation 'com.amazonaws:aws-java-sdk-glue:1.12.425'
     implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
-    // TODO - check if this is provided on the classpath by AWS
-    implementation "org.apache.hadoop:hadoop-aws:3.3.1"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
