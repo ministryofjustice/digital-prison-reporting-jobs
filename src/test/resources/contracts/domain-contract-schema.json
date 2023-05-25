@@ -129,13 +129,22 @@
       "required": [
         "name",
         "nullable",
-        "type",
-        "logicalType"
+        "type"
       ],
       "properties": {
         "name": { "type": "string" },
-        "type": { "enum": [ "int" ] },
-        "logicalType": { "enum":  [ "date", "time-millis" ] },
+        "type": {
+          "type": "object",
+          "required": [
+            "type",
+            "logicalType"
+          ],
+          "properties": {
+            "type": { "enum": [ "int" ] },
+            "logicalType": { "enum": [ "date", "time-millis" ] }
+          },
+          "additionalProperties": false
+        },
         "nullable": { "type":  "boolean" },
         "certified": { "$ref": "#/definitions/certified" },
         "description": { "type":  "string" },
@@ -151,13 +160,22 @@
       "required": [
         "name",
         "nullable",
-        "type",
-        "logicalType"
+        "type"
       ],
       "properties": {
         "name": { "type": "string" },
-        "type": { "enum": [ "long" ] },
-        "logicalType": { "enum":  [ "time-micros", "timestamp-millis", "timestamp-micros" ] },
+        "type": {
+          "type": "object",
+          "required": [
+            "type",
+            "logicalType"
+          ],
+          "properties": {
+            "type": { "enum": [ "long" ] },
+            "logicalType": { "enum": [ "time-micros", "timestamp-millis", "timestamp-micros" ] }
+          },
+          "additionalProperties": false
+        },
         "nullable": { "type":  "boolean" },
         "certified": { "$ref": "#/definitions/certified" },
         "description": { "type":  "string" },
