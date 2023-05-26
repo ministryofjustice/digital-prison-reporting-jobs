@@ -83,10 +83,9 @@ public class AvroToSparkSchemaConverter {
         val name = node.get("name").asText();
         val nullable = node.get("nullable").asBoolean();
         val typeNode = node.get("type");
-        // TODO - review this - what if it's another type
-        val type = (typeNode.isTextual())
-                ? typeNode.asText()
-                : typeNode.get("logicalType").asText();
+        val type = (typeNode.isObject())
+                ? typeNode.get("logicalType").asText()
+                : typeNode.asText();
 
         if (isSimpleType(type)) {
             return new StructField(
