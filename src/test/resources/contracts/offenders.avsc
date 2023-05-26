@@ -15,8 +15,6 @@
     "version": "12",
     "name": "CNOMT3"
   },
-  "propagation-policy": "",
-  "retention-policy": "",
   "fields" : [
     {
       "name": "OFFENDER_ID",
