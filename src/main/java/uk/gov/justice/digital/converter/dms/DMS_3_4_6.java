@@ -10,7 +10,6 @@ import uk.gov.justice.digital.converter.Converter;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 
