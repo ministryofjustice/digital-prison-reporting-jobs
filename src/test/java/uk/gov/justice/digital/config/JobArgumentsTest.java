@@ -31,7 +31,8 @@ class JobArgumentsTest {
             { JobArguments.RAW_S3_PATH, "s3://somepath/raw" },
             { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
             { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
-            { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com" }
+            { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com" },
+            { JobArguments.CONTRACT_REGISTRY_NAME, "SomeContractRegistryName" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -53,7 +54,8 @@ class JobArgumentsTest {
                 { JobArguments.KINESIS_READER_STREAM_NAME, validArguments.getKinesisReaderStreamName() },
                 { JobArguments.RAW_S3_PATH, validArguments.getRawS3Path() },
                 { JobArguments.STRUCTURED_S3_PATH, validArguments.getStructuredS3Path() },
-                { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path( ) },
+                { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path() },
+                { JobArguments.CONTRACT_REGISTRY_NAME, validArguments.getContractRegistryName() },
                 // Convert the Duration ms value into seconds to align with the argument.
                 { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS,
                         validArguments.getKinesisReaderBatchDuration().milliseconds() / 1000},
