@@ -7,6 +7,7 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,7 +22,7 @@ class AvroToSparkSchemaConverterTest {
     public void shouldConvertAllSimpleFieldTypesToCorrectSparkType() {
         val typeMappings = Stream.of(
                 new SimpleEntry<>("boolean", DataTypes.BooleanType),
-                new SimpleEntry<>("bytes",   DataTypes.ByteType),
+                new SimpleEntry<>("bytes",   DataTypes.BinaryType),
                 new SimpleEntry<>("double",  DataTypes.DoubleType),
                 new SimpleEntry<>("float",   DataTypes.FloatType),
                 new SimpleEntry<>("int",     DataTypes.IntegerType),
@@ -34,7 +35,7 @@ class AvroToSparkSchemaConverterTest {
             val avroSchema = avroSchemaWithSimpleType(avroType);
             val expectedSchema = sparkSchemaWithType(sparkType);
             val result = underTest.convert(avroSchema);
-            assertEquals(expectedSchema, result);
+            assertEquals(expectedSchema, result, String.format("Failed to convert avro: %s to spark: %s", avroType, sparkType));
         });
     }
 
@@ -44,20 +45,23 @@ class AvroToSparkSchemaConverterTest {
                 new SimpleEntry<>("date",             DataTypes.DateType),
                 new SimpleEntry<>("timestamp-millis", DataTypes.TimestampType),
                 new SimpleEntry<>("timestamp-micros", DataTypes.TimestampType),
-                new SimpleEntry<>("time-micros",      DataTypes.TimestampType),
-                new SimpleEntry<>("time-millis",      DataTypes.TimestampType)
+                // Note - spark does not support these types so the schema converter retains the original avro type.
+                new SimpleEntry<>("time-micros",      DataTypes.LongType),
+                new SimpleEntry<>("time-millis",      DataTypes.IntegerType)
         ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         typeMappings.forEach((avroType, sparkType) -> {
             val avroSchema = avroSchemaWithLogicalType(avroType);
             val expectedSchema = sparkSchemaWithType(sparkType);
             val result = underTest.convert(avroSchema);
-            assertEquals(expectedSchema, result);
+            assertEquals(expectedSchema, result, String.format("Failed to convert avro: %s to spark: %s", avroType, sparkType));
         });
     }
 
     private String avroSchemaWithSimpleType(String type) {
         val fakeSchema = "{ " +
+                "\"name\": \"test\"," +
+                "\"type\": \"record\"," +
                 "\"fields\": [{ " +
                     "\"name\": \"aField\", " +
                     "\"type\": \"TYPE\", " +
@@ -68,19 +72,28 @@ class AvroToSparkSchemaConverterTest {
 
     private String avroSchemaWithLogicalType(String type) {
         val fakeSchema = "{ " +
+                "\"name\": \"test\"," +
+                "\"type\": \"record\"," +
                 "\"fields\": [{ " +
                     "\"name\": \"aField\", " +
                     "\"type\": { " +
-                        "\"type\": \"int\", " +
+                        "\"type\": \"INTERNAL_TYPE\", " +
                         "\"logicalType\": \"TYPE\" " +
                     "}, " +
                     "\"nullable\": false " +
                 " }]} ";
-        return fakeSchema.replace("TYPE", type);
+
+        val intTypes = Arrays.asList("date", "time-millis");
+        val internalType = (intTypes.contains(type)) ? "int" : "long";
+
+        return fakeSchema
+                .replace("INTERNAL_TYPE", internalType)
+                .replace("TYPE", type);
     }
 
     private StructType sparkSchemaWithType(DataType type) {
-        return new StructType().add("aField", type, false);
+        val isNullable = type == DataTypes.NullType;
+        return new StructType().add("aField", type, isNullable);
     }
 
 }
