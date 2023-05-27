@@ -8,6 +8,15 @@ import org.apache.spark.sql.types.StructType;
 
 import java.util.Optional;
 
+/**
+ * Avro Schema to Spark Schema (StructType) converter.
+ * <p>
+ * Makes use of the SchemaConverters class provided by spark-avro.
+ * <p>
+ * Avro types are converted to Spark types as per the documentation.
+ * <p>
+ * See <a href="https://spark.apache.org/docs/3.3.0/sql-data-sources-avro.html#supported-types-for-avro---spark-sql-conversion">Avro to Spark Schema Conversion Documentation</a>
+ */
 @Singleton
 public class AvroToSparkSchemaConverter {
 

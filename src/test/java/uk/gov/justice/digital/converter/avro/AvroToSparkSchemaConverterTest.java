@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.converter.avro;
 
 import lombok.val;
+import org.apache.avro.Schema;
+import org.apache.avro.SchemaBuilder;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
@@ -58,37 +60,50 @@ class AvroToSparkSchemaConverterTest {
         });
     }
 
-    private String avroSchemaWithSimpleType(String type) {
-        val fakeSchema = "{ " +
-                "\"name\": \"test\"," +
-                "\"type\": \"record\"," +
-                "\"fields\": [{ " +
-                    "\"name\": \"aField\", " +
-                    "\"type\": \"TYPE\", " +
-                    "\"nullable\": false " +
-                " }]} ";
-       return fakeSchema.replace("TYPE", type);
+    @Test
+    public void shouldConvertAvroEnumToSparkEnum() {
+        val avroEnumSchema = SchemaBuilder.record("test")
+                .fields()
+                    .name("aField")
+                    .type()
+                        .enumeration("things")
+                        .symbols("foo", "bar", "baz")
+                    .noDefault()
+                .endRecord();
+
+        // Avro enums are converted to non-nullable String fields.
+        val sparkEnumSchema = new StructType()
+                .add("aField", DataTypes.StringType, false);
+
+        assertEquals(sparkEnumSchema, underTest.convert(avroEnumSchema.toString()));
     }
 
-    private String avroSchemaWithLogicalType(String type) {
-        val fakeSchema = "{ " +
-                "\"name\": \"test\"," +
-                "\"type\": \"record\"," +
-                "\"fields\": [{ " +
-                    "\"name\": \"aField\", " +
-                    "\"type\": { " +
-                        "\"type\": \"INTERNAL_TYPE\", " +
-                        "\"logicalType\": \"TYPE\" " +
-                    "}, " +
-                    "\"nullable\": false " +
-                " }]} ";
+    private String avroSchemaWithSimpleType(String type) {
+        return SchemaBuilder.record("test")
+                .fields()
+                    .name("aField")
+                    .type(type)
+                    .noDefault()
+                .endRecord()
+                .toString();
+    }
 
+    private String avroSchemaWithLogicalType(String logicalType) {
+        return SchemaBuilder.record("test")
+                .fields()
+                    .name("aField")
+                    .type(logicalTypeSchema(logicalType))
+                    .noDefault()
+                .endRecord()
+                .toString(true);
+    }
+
+    private Schema logicalTypeSchema(String logicalType) {
         val intTypes = Arrays.asList("date", "time-millis");
-        val internalType = (intTypes.contains(type)) ? "int" : "long";
-
-        return fakeSchema
-                .replace("INTERNAL_TYPE", internalType)
-                .replace("TYPE", type);
+        val internalType = (intTypes.contains(logicalType)) ? "int" : "long";
+        val logicalTypeSchema = SchemaBuilder.builder().type(internalType);
+        logicalTypeSchema.addProp("logicalType", logicalType);
+        return logicalTypeSchema;
     }
 
     private StructType sparkSchemaWithType(DataType type) {
