@@ -18,8 +18,6 @@ import java.util.Map;
 import static org.apache.spark.sql.functions.*;
 import static org.apache.spark.sql.types.DataTypes.StringType;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.DATA;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 
 /**
  * Converter that takes raw data from DMS v3.4.6 and converts it into the standardised data representation for
