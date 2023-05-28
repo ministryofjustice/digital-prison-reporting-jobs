@@ -5,6 +5,7 @@ import org.apache.avro.Schema;
 import org.apache.spark.sql.avro.SchemaConverters;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
+import uk.gov.justice.digital.converter.Converter;
 
 import java.util.Optional;
 
@@ -18,8 +19,9 @@ import java.util.Optional;
  * See <a href="https://spark.apache.org/docs/3.3.0/sql-data-sources-avro.html#supported-types-for-avro---spark-sql-conversion">Avro to Spark Schema Conversion Documentation</a>
  */
 @Singleton
-public class AvroToSparkSchemaConverter {
+public class AvroToSparkSchemaConverter implements Converter<String, StructType> {
 
+    @Override
     public StructType convert(String avroSchemaString) {
         return Optional.of(avroSchemaString)
                 .map(this::toAvroSchema)

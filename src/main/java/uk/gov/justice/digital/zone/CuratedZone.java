@@ -15,8 +15,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.SOURCE;
-import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.TABLE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 
 @Singleton
 public class CuratedZone extends Zone {
