@@ -11,9 +11,17 @@ import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Singleton
 public class DataStorageService {
+
+    private static final String SOURCE = "source";
+    private static final String TARGET = "target";
+    private static final List<String> exclusions = Arrays.<String>asList();
 
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
@@ -26,7 +34,7 @@ public class DataStorageService {
     public boolean hasRecords(SparkSession spark, TableIdentifier info) throws DataStorageException {
         logger.info("Checking details for Delta table..." + info.getSchema() + "." + info.getTable());
         if (exists(spark, info)) {
-            Dataset<Row> df = load(spark, info);
+            Dataset<Row> df = get(spark, info);
             return !df.isEmpty();
         } else {
             return false;
@@ -42,6 +50,22 @@ public class DataStorageService {
                     .option("path", tablePath)
                     .save();
         else throw new DataStorageException("Path is not set or dataframe is null");
+    }
+
+    public void appendDistinct(String tablePath, Dataset<Row> df, String primaryKey) throws DataStorageException {
+        if(!df.isEmpty()) {
+            final DeltaTable dt = getTable(df.sparkSession(), tablePath);
+            if(dt != null) {
+                final String spk = SOURCE + "." + primaryKey;
+                final String tpk = TARGET + "." + primaryKey;
+                dt.as(SOURCE)
+                        .merge(df.as(TARGET), spk + "=" + tpk )
+                        .whenNotMatched().insertAll()
+                        .execute();
+            } else {
+                append(tablePath, df);
+            }
+        }
     }
 
     public void create(String tablePath, Dataset<Row> df) throws DataStorageException {
@@ -66,7 +90,7 @@ public class DataStorageService {
         else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void reload(String tablePath, Dataset<Row> df) throws DataStorageException {
+    public void resync(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.info("Syncing data to " + tablePath);
         if (tablePath != null && df != null)
             df.write()
@@ -92,8 +116,11 @@ public class DataStorageService {
         } else throw new DataStorageException("Delta table vaccum failed");
     }
 
-    public Dataset<Row> load(SparkSession spark, TableIdentifier tableId) {
-        String tablePath = tableId.toPath();
+    public Dataset<Row> get(SparkSession spark, TableIdentifier tableId) {
+        return get(spark, tableId.toPath());
+    }
+
+    public Dataset<Row> get(SparkSession spark, String tablePath) {
         DeltaTable deltaTable = getTable(spark, tablePath);
         return deltaTable == null ? null : deltaTable.toDF();
     }
@@ -120,4 +147,5 @@ public class DataStorageService {
         DeltaTable deltaTable = getTable(spark, tablePath);
         updateManifest(deltaTable);
     }
+
 }

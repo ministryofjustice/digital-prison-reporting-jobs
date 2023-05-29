@@ -30,6 +30,7 @@ public class JobArguments {
     public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
     public static final String AWS_KINESIS_ENDPOINT_URL = "dpr.aws.kinesis.endpointUrl";
     public static final String AWS_REGION = "dpr.aws.region";
+    public static final String CONTRACT_REGISTRY_NAME = "dpr.contract.registryName";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
     public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
     public static final String DOMAIN_NAME = "dpr.domain.name";
@@ -117,6 +118,10 @@ public class JobArguments {
 
     public String getDomainCatalogDatabaseName() {
         return getArgument(DOMAIN_CATALOG_DATABASE_NAME);
+    }
+
+    public String getContractRegistryName() {
+        return getArgument(CONTRACT_REGISTRY_NAME);
     }
 
     private String getArgument(String argumentName) {

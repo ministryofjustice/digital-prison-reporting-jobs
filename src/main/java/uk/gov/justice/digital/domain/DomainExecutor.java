@@ -102,7 +102,7 @@ public class DomainExecutor {
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
         if (storage.exists(spark, tableId)) {
-            storage.reload(tableId.toPath(), dataFrame);
+            storage.resync(tableId.toPath(), dataFrame);
             logger.info("Syncing delta table completed..." + tableId.getTable());
         } else {
             throw new DomainExecutorException("Delta table " + tableId.getTable() + "doesn't exist");
@@ -155,7 +155,7 @@ public class DomainExecutor {
         if (exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
-                Dataset<Row> dataFrame = storage.load(
+                Dataset<Row> dataFrame = storage.get(
                         spark,
                         new TableIdentifier(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable())
                 );

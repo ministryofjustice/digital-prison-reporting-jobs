@@ -49,7 +49,7 @@ class CuratedZoneTest {
             service.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
                     .thenReturn(Optional.of(mockSourceReference));
 
-            doNothing().when(mockDataStorageService).append(curatedPath, mockedDataSet);
+            doNothing().when(mockDataStorageService).appendDistinct(eq(curatedPath), eq(mockedDataSet), any());
 
             when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
             when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);

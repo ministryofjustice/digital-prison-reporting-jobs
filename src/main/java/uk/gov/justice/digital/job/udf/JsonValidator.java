@@ -84,6 +84,9 @@ public class JsonValidator implements Serializable {
         StructType schema
     ) throws JsonProcessingException {
 
+        // null content is still valid
+        if(originalJson == null || parsedJson == null) return true;
+
         val originalData = objectMapper.readTree(originalJson);
 
         // Check that the original and parsed json trees match. If there are discrepancies then the initial parse by

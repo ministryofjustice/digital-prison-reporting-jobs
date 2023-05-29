@@ -87,9 +87,15 @@ public class DataHubJob implements Runnable {
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
                 Dataset<Row> rawDataFrame = null;
                 try {
-                    rawDataFrame = rawZone.process(spark, dataFrame, table);
+
+                    Dataset<Row> startDataFrame = extractDataFrameForSourceTable(dataFrame, table);
+
+                    rawDataFrame = rawZone.process(spark, startDataFrame, table);
+                    Dataset<Row> loadOnlySorted = rawDataFrame
+                            .filter(col(OPERATION).equalTo("load"))
+                            .orderBy(col(TIMESTAMP));
                     Dataset<Row> structuredDataFrame = null;
-                    structuredDataFrame = structuredZone.process(spark, rawDataFrame, table);
+                    structuredDataFrame = structuredZone.process(spark, loadOnlySorted, table);
                     curatedZone.process(spark, structuredDataFrame, table);
                 } catch (DataStorageException e) {
                     logger.error("Datahub job failed" + e);
@@ -120,5 +126,14 @@ public class DataHubJob implements Runnable {
                 .select(TABLE, SOURCE, OPERATION)
                 .distinct()
                 .collectAsList();
+    }
+
+    private Dataset<Row> extractDataFrameForSourceTable(Dataset<Row> dataFrame, Row row) {
+        final String source = row.getAs(SOURCE);
+        final String table = row.getAs(TABLE);
+        return (dataFrame == null) ? null
+                : dataFrame
+                .filter(col(SOURCE).equalTo(source).and(col(TABLE).equalTo(table)))
+                .orderBy(col(TIMESTAMP));
     }
 }

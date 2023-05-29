@@ -29,15 +29,17 @@ import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.*;
 @Named("converterForDMS_3_4_6")
 public class DMS_3_4_6 extends Converter {
 
+    public static final String CONVERTER_VERSION = "dms:3.4.6";
+    public static final String ORIGINAL = "original";
     public static final String JSON_DATA = "jsonData";
 
     private static final StructType eventsSchema =
         new StructType()
-            .add(DATA, StringType);
+            .add(ORIGINAL, StringType);
 
     private static final StructType recordSchema =
         new StructType()
-            .add(DATA, StringType) // Data varies per table, so we leave parsing to the StructuredZone.
+            .add(DATA, StringType, true) // Data varies per table, so we leave parsing to the StructuredZone.
             .add(METADATA, new StructType()
                 .add("timestamp", StringType)
                 .add("record-type", StringType)
@@ -54,21 +56,25 @@ public class DMS_3_4_6 extends Converter {
     @Override
     public Dataset<Row> convert(JavaRDD<Row> rdd, SparkSession spark) {
         val df = spark.createDataFrame(rdd, eventsSchema)
-            .withColumn(JSON_DATA, from_json(col(DATA), recordSchema, jsonOptions))
-            .drop(DATA)
-            .select(JSON_DATA + ".*")
-            .select(DATA, METADATA, METADATA + ".*")
-            // Ignore control records since they contain no data
-            .filter(lower(col("record-type")).notEqual("control"))
-            // Construct a dataframe that aligns to the parsed data schema
-            .select(
-                col(DATA),
-                to_json(col(METADATA)),
-                lower(col("schema-name")).as(SOURCE),
-                lower(col("table-name").as(TABLE)),
-                lower(col("operation").as(OPERATION))
-            );
+                .withColumn(RAW, col(ORIGINAL))
+            .withColumn(JSON_DATA, from_json(col(ORIGINAL), recordSchema, jsonOptions))
+            .select(RAW,JSON_DATA + ".*")
+            .select(RAW, DATA, METADATA, METADATA + ".*")
 
+                // Construct a dataframe that aligns to the parsed data schema
+            .select(
+                col(RAW),
+                col(DATA),
+                to_json(col(METADATA)).as(METADATA),
+
+                col("timestamp").as(TIMESTAMP),
+                col("partition-key-value").as(KEY),
+                col("record-type").as(DATA_TYPE),
+                lower(col("schema-name")).as(SOURCE),
+                lower(col("table-name")).as(TABLE),
+                lower(col("operation")).as(OPERATION),
+                lit(CONVERTER_VERSION).as(CONVERTER)
+            );
         // Strictly apply the parsed data schema which will fail if any values are null.
         return spark.createDataFrame(df.javaRDD(), PARSED_DATA_SCHEMA);
     }

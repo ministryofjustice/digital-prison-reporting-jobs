@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -51,17 +52,17 @@ class RawZoneTest {
             service.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
                     .thenReturn(Optional.of(mockSourceReference));
 
-            doNothing().when(mockDataStorageService).append(rawPath, mockDataset);
+            doNothing().when(mockDataStorageService).appendDistinct(rawPath, mockDataset, RawZone.PRIMARY_KEY_NAME);
 
             when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
             when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
 
             when(mockDataset.count()).thenReturn(10L);
-            when(mockDataset.filter(Mockito.<Column>any())).thenReturn(mockDataset);
-            when(mockDataset.drop(Mockito.<String[]>any())).thenReturn(mockDataset);
+            when(mockDataset.select(Mockito.<Column>any())).thenReturn(mockDataset);
 
             val underTest = new RawZone(jobArguments, mockDataStorageService);
 
+            // assert that the mockDataset is the result of the call
             assertEquals(mockDataset, underTest.process(mockSparkSession, mockDataset, dataMigrationEventRow));
         }
     }
