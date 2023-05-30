@@ -30,11 +30,15 @@ public class RawZone extends Zone {
 
     private final String rawS3Path;
     private final DataStorageService storage;
+    private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public RawZone(JobArguments jobArguments, DataStorageService storage) {
+    public RawZone(JobArguments jobArguments,
+                   DataStorageService storage,
+                   SourceReferenceService sourceReferenceService) {
         this.rawS3Path = jobArguments.getRawS3Path();
         this.storage = storage;
+        this.sourceReferenceService = sourceReferenceService;
     }
 
     @Override
@@ -48,17 +52,19 @@ public class RawZone extends Zone {
 
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
+
         Optional<Operation> rowOperation = Operation.getOperation(table.getAs(OPERATION));
 
-        if(rowOperation.isPresent()) {
+        // TODO - log on not present
+        if (rowOperation.isPresent()) {
 
-            val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
+            val tablePath = sourceReferenceService.getSourceReference(rowSource, rowTable)
                     .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable(), rowOperation.get().getName()))
                     // Revert to source and table from row where no match exists in the schema reference service.
                     .orElse(createValidatedPath(rawS3Path, rowSource, rowTable, rowOperation.get().getName()));
 
-
             logger.info("AppendDistinct {} records to deltalake table: {}", dataFrame.count(), tablePath);
+
             // this is the format that raw takes
             val dataFrameToWrite = dataFrame.select(
                     concat(col(KEY), lit(":"), col(TIMESTAMP), lit(":"), col(OPERATION)).as(PRIMARY_KEY_NAME),
@@ -67,6 +73,7 @@ public class RawZone extends Zone {
             storage.appendDistinct(tablePath, dataFrameToWrite, PRIMARY_KEY_NAME);
 
             logger.info("Append completed successfully");
+
             storage.updateDeltaManifestForTable(spark, tablePath);
         }
 

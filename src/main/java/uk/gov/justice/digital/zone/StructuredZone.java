@@ -37,12 +37,16 @@ public class StructuredZone extends Zone {
     private final String structuredPath;
     private final String violationsPath;
     private final DataStorageService storage;
+    private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public StructuredZone(JobArguments jobArguments, DataStorageService storage) {
+    public StructuredZone(JobArguments jobArguments,
+                          DataStorageService storage,
+                          SourceReferenceService sourceReferenceService) {
         this.structuredPath = jobArguments.getStructuredS3Path();
         this.violationsPath = jobArguments.getViolationsS3Path();
         this.storage = storage;
+        this.sourceReferenceService = sourceReferenceService;
     }
 
     @Override
@@ -57,7 +61,7 @@ public class StructuredZone extends Zone {
         String sourceName = table.getAs(SOURCE);
         String tableName = table.getAs(TABLE);
 
-        val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
+        val sourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
 
         logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
 

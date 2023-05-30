@@ -41,24 +41,25 @@ class CuratedZoneTest {
     @Mock
     private SparkSession mockSparkSession;
 
+    @Mock
+    private SourceReferenceService mockSourceReferenceService;
+
     @Test
-    public void shouldProcessCuratedZone() throws DataStorageException {
-        try (val service = mockStatic(SourceReferenceService.class)) {
-            val curatedPath = createValidatedPath(CURATED_PATH, TABLE_SOURCE, TABLE_NAME);
+    public void processShouldCompleteSuccessfully() throws DataStorageException {
+        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
+                .thenReturn(Optional.of(mockSourceReference));
 
-            service.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
-                    .thenReturn(Optional.of(mockSourceReference));
+        val curatedPath = createValidatedPath(CURATED_PATH, TABLE_SOURCE, TABLE_NAME);
 
-            doNothing().when(mockDataStorageService).appendDistinct(eq(curatedPath), eq(mockedDataSet), any());
+        doNothing().when(mockDataStorageService).appendDistinct(eq(curatedPath), eq(mockedDataSet), any());
 
-            when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
-            when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
+        when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
+        when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
 
-            when(mockedDataSet.count()).thenReturn(10L);
+        when(mockedDataSet.count()).thenReturn(10L);
 
-            val underTest = new CuratedZone(jobArguments, mockDataStorageService);
+        val underTest = new CuratedZone(jobArguments, mockDataStorageService, mockSourceReferenceService);
 
-            assertNotNull(underTest.process(mockSparkSession, mockedDataSet, dataMigrationEventRow));
-        }
+        assertNotNull(underTest.process(mockSparkSession, mockedDataSet, dataMigrationEventRow));
     }
 }

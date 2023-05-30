@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import jakarta.inject.Singleton;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
@@ -9,16 +10,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Scanner;
 
-/**
- * Temporary Internal Schema storage using json schema files.
- * <p>
- * This will be replaced by the Hive Metastore in later work.
- * <p>
- * See DPR-246 for further details.
- */
+@Singleton
 public class SourceReferenceService {
 
-    private SourceReferenceService() {}
+    public SourceReferenceService() {
+        // For now the constructor takes no parameters.
+    }
 
     private static final Map<String, SourceReference> sources = new HashMap<>();
 
@@ -29,7 +26,7 @@ public class SourceReferenceService {
         sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
     }
 
-    public static Optional<SourceReference> getSourceReference(String source, String table) {
+    public Optional<SourceReference> getSourceReference(String source, String table) {
         return Optional.ofNullable(sources.get(generateKey(source, table)));
     }
 
@@ -46,7 +43,7 @@ public class SourceReferenceService {
                 .next();
     }
 
-    public static String generateKey(String source, String table) {
+    private String generateKey(String source, String table) {
         return String.join(".", source, table).toLowerCase();
     }
 

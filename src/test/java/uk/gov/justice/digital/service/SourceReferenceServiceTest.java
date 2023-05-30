@@ -10,9 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SourceReferenceServiceTest {
 
+    private static final SourceReferenceService underTest = new SourceReferenceService();
+
     @Test
     public void getSourceReferenceShouldReturnCorrectReferenceForExistingSourceAndTable() {
-        val sourceReference = SourceReferenceService.getSourceReference("OMS_OWNER", "OFFENDERS");
+        val sourceReference = underTest.getSourceReference("OMS_OWNER", "OFFENDERS");
 
         assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
         assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
@@ -20,7 +22,7 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void getSourceReferenceShouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
-        val sourceReference = SourceReferenceService.getSourceReference("oMs_oWnEr", "oFfEnDeRs");
+        val sourceReference = underTest.getSourceReference("oMs_oWnEr", "oFfEnDeRs");
 
         assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
         assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
@@ -28,7 +30,7 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void getSourceReferenceShouldReturnAnEmptyOptionalIfNoReferenceIsFound() {
-        assertEquals(Optional.empty(), SourceReferenceService.getSourceReference("DOES_NOT", "EXIST"));
+        assertEquals(Optional.empty(), underTest.getSourceReference("DOES_NOT", "EXIST"));
     }
 
 }
