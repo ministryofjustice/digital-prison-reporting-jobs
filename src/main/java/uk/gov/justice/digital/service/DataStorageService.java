@@ -11,17 +11,12 @@ import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Singleton
 public class DataStorageService {
 
     private static final String SOURCE = "source";
     private static final String TARGET = "target";
-    private static final List<String> exclusions = Arrays.<String>asList();
 
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
