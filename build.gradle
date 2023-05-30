@@ -43,6 +43,7 @@ dependencies {
 
     implementation "com.amazonaws:aws-java-sdk-glue:$glueSdkVersion" // transitively brings in java-sdk-core
 
+    implementation "org.apache.spark:spark-avro_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"

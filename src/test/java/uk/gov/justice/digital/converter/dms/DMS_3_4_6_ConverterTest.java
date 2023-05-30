@@ -5,26 +5,25 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.BaseSparkTest;
-
 import java.util.Arrays;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.*;
-import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 class DMS_3_4_6_ConverterTest extends BaseSparkTest {
 
     private static final String DATA_PATH = "src/test/resources/data/dms_record.json";
     private static final String CONTROL_PATH = "src/test/resources/data/null-data-dms-record.json";
-    private static final DMS_3_4_6 underTest = new DMS_3_4_6();
-
+    private static final DMS_3_4_6 underTest = new DMS_3_4_6(new SparkSessionProvider());
 
     @Test
     void shouldConvertValidDataCorrectly() {
         // Load JSON as text and slurp in the context of the whole file so we can read multiline JSON files.
         val rdd = getData(DATA_PATH);
 
-        val converted = underTest.convert(rdd, spark);
+        val converted = underTest.convert(rdd);
 
         // Strict schema validation is applied so checking accounts agree should be sufficient here.
         assertEquals(rdd.count(), converted.count());
@@ -34,10 +33,7 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
     void shouldConvertARawDataRecordIntoTheCorrectColumns() {
         val rdd = getData(DATA_PATH);
 
-        val converted = underTest.convert(rdd, spark);
-        System.out.println("3.4.6 Dataframe");
-
-        converted.show(false);
+        val converted = underTest.convert(rdd);
 
         val columnNames = Arrays.asList(converted.columns());
 
@@ -53,7 +49,9 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertTrue(columnNames.contains(CONVERTER));
 
         assertFalse(converted.isEmpty());
+
         val row = converted.first();
+
         assertNotNull(row);
 
         assertNotNull(row.getAs(RAW));
@@ -73,10 +71,7 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
     void shouldConvertARawControlRecordIntoTheCorrectColumns() {
         val rdd = getData(CONTROL_PATH);
 
-        val converted = underTest.convert(rdd, spark);
-        System.out.println("3.4.6 Dataframe");
-
-        converted.show(false);
+        val converted = underTest.convert(rdd);
 
         val columnNames = Arrays.asList(converted.columns());
 
@@ -92,7 +87,9 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertTrue(columnNames.contains(CONVERTER));
 
         assertFalse(converted.isEmpty());
+
         val row = converted.first();
+
         assertNotNull(row);
 
         assertNotNull(row.getAs(RAW));
