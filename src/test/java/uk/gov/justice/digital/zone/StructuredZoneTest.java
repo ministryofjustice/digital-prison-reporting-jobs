@@ -58,7 +58,7 @@ class StructuredZoneTest extends BaseSparkTest {
 
     @Test
     public void shouldHandleValidRecords() throws DataStorageException {
-        givenTheSourceReferenceExists();
+        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         givenTheDatasetSupportsTheProcessFlow();
         assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
@@ -66,28 +66,26 @@ class StructuredZoneTest extends BaseSparkTest {
 
     @Test
     public void shouldHandleInvalidRecords() throws DataStorageException {
-        givenTheSourceReferenceExists();
+        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         givenTheDatasetSupportsTheProcessFlow();
         assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
-    public void shouldHandleSchemaFound() throws DataStorageException {
-        givenTheSourceReferenceIsValid();
-        givenTheDatasetSupportsTheProcessFlow();
-        assertNotNull(underTest.handleSchemaFound(spark, mockDataSet, mockSourceReference));
-    }
-
-    @Test
     public void shouldHandleNoSchemaFound() throws DataStorageException {
+        givenTheSchemaDoesNotExist();
         givenTheDatasetSupportsTheNoSchemaFoundFlow();
-        assertNotNull(underTest.handleNoSchemaFound(spark, mockDataSet, TABLE_SOURCE, TABLE_NAME));
+        assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
-    private void givenTheSourceReferenceExists() {
+    private void givenTheSchemaExists() {
         when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
                 .thenReturn(Optional.of(mockSourceReference));
+    }
+
+    private void givenTheSchemaDoesNotExist() {
+        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenReturn(Optional.empty());
     }
 
     private void givenTheSourceReferenceIsValid() {

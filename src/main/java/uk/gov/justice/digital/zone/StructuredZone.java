@@ -77,7 +77,7 @@ public class StructuredZone extends Zone {
         return structuredDataFrame;
     }
 
-    protected Dataset<Row> handleSchemaFound(SparkSession spark,
+    private Dataset<Row> handleSchemaFound(SparkSession spark,
                                              Dataset<Row> dataFrame,
                                              SourceReference sourceReference) throws DataStorageException {
         val tablePath = createValidatedPath(
@@ -168,7 +168,7 @@ public class StructuredZone extends Zone {
         }
     }
 
-    protected Dataset<Row> handleNoSchemaFound(SparkSession spark,
+    private Dataset<Row> handleNoSchemaFound(SparkSession spark,
                                                Dataset<Row> dataFrame,
                                                String source,
                                                String table) throws DataStorageException {
