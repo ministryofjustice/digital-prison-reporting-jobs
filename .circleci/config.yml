@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@dev:7fe7bba5b6201ffb84bdb41648e741f03f8b5e63
+  reporting: ministryofjustice/hmpps-reporting@dev:a0d611eebfcf60978745ba8ac50bfb2874e2a8e2
   
 workflows:
   checkout-build-publish:
@@ -21,7 +21,6 @@ workflows:
           bucket_prefix: dpr-artifact-store ## S3 Artifacts Store, Defaults to "dpr-artifact-store"
           build_args: --debug ## Build Extra Args
           sync_args: "--exclude '*' --include '*jar'" ## Extra Args for Artifacts Sync, OPTIONAL
-          deploy_to_dev: false
           deploy_script: true ## Deploy Placeholder Script for GlueJobs, defaults to False         
           notify_jira: false ## Notify Jira
           notify_slack: false ## Notify Slack
