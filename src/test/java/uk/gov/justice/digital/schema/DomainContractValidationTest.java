@@ -19,8 +19,10 @@ public class DomainContractValidationTest {
 
     private static final String RESOURCE_PATH = "/contracts";
     private static final String REFERENCE_CONTRACT = "reference-contract.avsc";
-    private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACTS = "agency-internal-locations-contract.avsc";
+    private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACTS = "agency-internal-locations.avsc";
+    private static final String AGENCY_LOCATIONS_CONTRACTS = "agency-locations.avsc";
     private static final String OFFENDERS_CONTRACTS = "offenders.avsc";
+    private static final String OFFENDER_BOOKINGS_CONTRACTS = "offender-bookings.avsc";
     private static final String DOMAIN_CONTRACT_SCHEMA = "domain-contract-schema.json";
 
     private static final ObjectMapper jsonParser = new ObjectMapper();
@@ -66,5 +68,32 @@ public class DomainContractValidationTest {
         val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACTS));
         assertEquals(Collections.emptySet(), validator.validate(contract));
     }
+
+    @Test
+    public void setOffenderBookingsContractShouldBeValidAvro() {
+        assertDoesNotThrow(() ->
+                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACTS))
+        );
+    }
+
+    @Test
+    public void offenderBookingsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
+        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACTS));
+        assertEquals(Collections.emptySet(), validator.validate(contract));
+    }
+
+    @Test
+    public void setAgencyLocationsContractShouldBeValidAvro() {
+        assertDoesNotThrow(() ->
+                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACTS))
+        );
+    }
+
+    @Test
+    public void agencyLocationsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
+        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACTS));
+        assertEquals(Collections.emptySet(), validator.validate(contract));
+    }
+
 
 }

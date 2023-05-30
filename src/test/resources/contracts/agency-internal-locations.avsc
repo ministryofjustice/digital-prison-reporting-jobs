@@ -1,0 +1,228 @@
+{
+  "type": "record",
+  "namespace": "prisons",
+  "service": "nomis",
+  "version": "1.0.0",
+  "name": "AGENCY_INTERNAL_LOCATIONS",
+  "description": "A physical location within an establishment (prison) specific Agency Location. e.g. B Wing, Gymnasium, Cell 105. NOTE: The following exceptional Agency Internal Location case exists: - Internal Location Code = RTU - Stands for Return To Unit and does NOT represent a physical internal location. Instead, it provides a target for an internal movement of an offender returning to their assigned cell (from the Gymnasium, for example).",
+  "contacts": {
+    "author": "dominic.messenger@digital.justice.gov.uk",
+    "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
+    "slack": "#ask_dpr"
+  },
+  "database": {
+    "type": "oracle",
+    "version": "12",
+    "name": "CNOMT3"
+  },
+  "fields": [
+    {
+      "name": "INTERNAL_LOCATION_ID",
+      "type": "long",
+      "nullable": false,
+      "description": "The unique identifier of the Internal Location. PK",
+      "glossary-index": "location:id",
+      "key": "primary"
+    },
+    {
+      "name": "INTERNAL_LOCATION_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "The short code for an internal location."
+    },
+    {
+      "name": "AGY_LOC_ID",
+      "type": "string",
+      "nullable": true,
+      "glossary-index": "location:id",
+      "description": "The location residing within an agency location which the internal location is in. FK to Agency Locations",
+      "key": "foreign"
+    },
+    {
+      "name": "INTERNAL_LOCATION_TYPE",
+      "type": "string",
+      "nullable": true,
+      "description": "The internal location type ie. Cell Block, Tier, Cell, Bed. Reference Code ( INT_LOC )"
+    },
+    {
+      "name": "DESCRIPTION",
+      "type": "string",
+      "nullable": true,
+      "description": "The long description code of the internal location code."
+    },
+    {
+      "name": "SECURITY_LEVEL_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "The security level of Internal Location : Reference Code ( SECURITY_LVL )"
+    },
+    {
+      "name": "CAPACITY",
+      "type": "long",
+      "nullable": true,
+      "description": "The actual number of beds created for a specific location."
+    },
+    {
+      "name": "CREATE_USER_ID",
+      "type": "string",
+      "nullable": false,
+      "description": "The user who creates the record. Default value USER"
+    },
+    {
+      "name": "PARENT_INTERNAL_LOCATION_ID",
+      "type": "long",
+      "nullable": true,
+      "glossary-index": "location:id",
+      "description": "Refers back to higher level in living unit designations."
+    },
+    {
+      "name": "ACTIVE_FLAG",
+      "type": "string",
+      "nullable": false,
+      "description": "Location may be active or inactive. Default value 'Y'"
+    },
+    {
+      "name": "LIST_SEQ",
+      "type": "long",
+      "nullable": true,
+      "description": "The default sorting order for display"
+    },
+    {
+      "name": "CREATE_DATETIME",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": false,
+      "description": "The timestamp when the record is created. Default value systimestamp"
+    },
+    {
+      "name": "MODIFY_DATETIME",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": true,
+      "description": "The timestamp when the record is modified"
+    },
+    {
+      "name": "MODIFY_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "description": "The user who modifies the record"
+    },
+    {
+      "name": "CNA_NO",
+      "type": "long",
+      "nullable": true,
+      "description": "The total number of sub internal location"
+    },
+    {
+      "name": "CERTIFIED_FLAG",
+      "type": "string",
+      "nullable": false,
+      "description": "if the capacity certified by officers ?. Default value 'N'"
+    },
+    {
+      "name": "DEACTIVATE_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": true,
+      "description": "the usage de-activated date of the internal location"
+    },
+    {
+      "name": "REACTIVATE_DATE",
+      "type": {
+        "type": "int",
+        "logicalType": "date"
+      },
+      "nullable": true,
+      "description": "the proposed re-activated date of the usage"
+    },
+    {
+      "name": "DEACTIVATE_REASON_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "The reason for deactivation. Reference code(DEACT_RSN)"
+    },
+    {
+      "name": "COMMENT_TEXT",
+      "type": "string",
+      "nullable": true,
+      "description": "The general comments"
+    },
+    {
+      "name": "USER_DESC",
+      "type": "string",
+      "nullable": true,
+      "description": "The user defined description"
+    },
+    {
+      "name": "ACA_CAP_RATING",
+      "type": "string",
+      "nullable": true,
+      "description": "The Cellular Normal Accommodation that the cell is designed for."
+    },
+    {
+      "name": "UNIT_TYPE",
+      "type": "string",
+      "nullable": true,
+      "description": "The internal location unit type."
+    },
+    {
+      "name": "OPERATION_CAPACITY",
+      "type": "long",
+      "nullable": true,
+      "description": "The operation capacity of the unit"
+    },
+    {
+      "name": "NO_OF_OCCUPANT",
+      "type": "long",
+      "nullable": false,
+      "description": "No of occupant in the location (Living_units). Default value 0"
+    },
+    {
+      "name": "TRACKING_FLAG",
+      "type": "string",
+      "nullable": false,
+      "description": "Default value 'N'"
+    },
+    {
+      "name": "AUDIT_TIMESTAMP",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_USER_ID",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_MODULE_NAME",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_CLIENT_USER_ID",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_CLIENT_IP_ADDRESS",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_CLIENT_WORKSTATION_NAME",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_ADDITIONAL_INFO",
+      "type": "string",
+      "nullable": true
+    }
+  ]
+}
