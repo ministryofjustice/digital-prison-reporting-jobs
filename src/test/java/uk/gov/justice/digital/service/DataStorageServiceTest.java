@@ -170,8 +170,8 @@ class DataStorageServiceTest extends BaseSparkTest {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
         val mockService = spy(DataStorageService.class);
-        doCallRealMethod().when(mockService).reload(tablePath, df);
-        mockService.reload(tablePath, df);
+        doCallRealMethod().when(mockService).resync(tablePath, df);
+        mockService.resync(tablePath, df);
         assertTrue(true);
     }
 
@@ -181,8 +181,8 @@ class DataStorageServiceTest extends BaseSparkTest {
         val df = spark.sql("select cast(null as string) test_col");
         val mockService = spy(DataStorageService.class);
         try {
-            doThrow(DataStorageException.class).when(mockService).reload(tablePath, df);
-            mockService.reload(tablePath, df);
+            doThrow(DataStorageException.class).when(mockService).resync(tablePath, df);
+            mockService.resync(tablePath, df);
         } catch (DataStorageException de) {
             assertTrue(true);
         }
@@ -226,7 +226,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         doReturn(mockedDeltaTable).when(mockService).getTable(spark, tablePath);
         doReturn(mockedDataSet).when(mockedDeltaTable).toDF();
-        val result = mockService.load(spark, info);
+        val result = mockService.get(spark, info);
         assertNull(result);
     }
 

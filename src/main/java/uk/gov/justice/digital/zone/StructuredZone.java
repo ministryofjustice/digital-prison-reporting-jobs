@@ -104,7 +104,7 @@ public class StructuredZone extends Zone {
                 validationFailedViolationPath
         );
 
-        return handleValidRecords(spark, validatedDataFrame, tablePath);
+        return handleValidRecords(spark, validatedDataFrame, tablePath, sourceReference.getPrimaryKey());
     }
 
     private Dataset<Row> validateJsonData(SparkSession spark,
@@ -125,7 +125,8 @@ public class StructuredZone extends Zone {
 
     private Dataset<Row> handleValidRecords(SparkSession spark,
                                               Dataset<Row> dataFrame,
-                                              String destinationPath) throws DataStorageException {
+                                              String destinationPath,
+                                              String primaryKey) throws DataStorageException {
         val validRecords = dataFrame
                 .select(col(PARSED_DATA), col(VALID))
                 .filter(col(VALID).equalTo(true))
@@ -135,7 +136,7 @@ public class StructuredZone extends Zone {
 
         if (validRecordsCount > 0) {
             logger.info("Writing {} valid records", validRecordsCount);
-            appendDataAndUpdateManifestForTable(spark, validRecords, destinationPath);
+            appendDataAndUpdateManifestForTable(spark, validRecords, destinationPath, primaryKey);
             return validRecords;
         } else return createEmptyDataFrame(dataFrame);
     }
@@ -192,6 +193,16 @@ public class StructuredZone extends Zone {
                                                      String tablePath) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
         storage.append(tablePath, dataFrame);
+        logger.info("Append completed successfully");
+        storage.updateDeltaManifestForTable(spark, tablePath);
+    }
+
+    private void appendDataAndUpdateManifestForTable(SparkSession spark,
+                                                     Dataset<Row> dataFrame,
+                                                     String tablePath,
+                                                     String primaryKey) throws DataStorageException {
+        logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
+        storage.appendDistinct(tablePath, dataFrame, primaryKey);
         logger.info("Append completed successfully");
         storage.updateDeltaManifestForTable(spark, tablePath);
     }

@@ -220,7 +220,7 @@ class DomainExecutorTest extends BaseSparkTest {
         when(testSchemaService.tableExists("test", "incident_demographics")).thenReturn(true);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), testStorage, testSchemaService);
         executor.syncTable(tbl, mockedDataSet);
-        verify(testStorage, times(1)).reload(any(), any());
+        verify(testStorage, times(1)).resync(any(), any());
     }
 
     @Test
@@ -295,7 +295,7 @@ class DomainExecutorTest extends BaseSparkTest {
         assertTrue(storage.exists(spark, info));
 
         // it should have all the offenders in it
-        assertTrue(areEqual(helpers.getOffenders(tmp), storage.load(spark, info)));
+        assertTrue(areEqual(helpers.getOffenders(tmp), storage.get(spark, info)));
     }
 
     @Test
@@ -326,7 +326,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
         assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
-        assertEquals(1, storage.load(spark, info).count());
+        assertEquals(1, storage.get(spark, info).count());
 
         // now the reverse
         executor.doFullDomainRefresh(domain2, domainTableName, "update");
@@ -335,7 +335,7 @@ class DomainExecutorTest extends BaseSparkTest {
         // there should be a target table
         assertTrue(storage.exists(spark, info));
         // it should have all the joined records in it
-        assertEquals(1, storage.load(spark, info).count());
+        assertEquals(1, storage.get(spark, info).count());
     }
 
     @Test

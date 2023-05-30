@@ -89,6 +89,18 @@ class JsonValidatorTest {
         assertFalse(underTest.validate(json, fakeParsedJson, schema));
     }
 
+    @Test
+    public void shouldPassWhenThereIsNoContent() throws JsonProcessingException {
+        val json = createJsonForMapValues(Arrays.asList(
+                entry(Fields.MANDATORY, "somevalue"),
+                entry(Fields.OPTIONAL, "anotherValue"),
+                entry(Fields.NUMERIC, "this is not a number")
+        ));
+
+        assertTrue(underTest.validate(null, json, schema));
+        assertTrue(underTest.validate(json, null, schema));
+    }
+
     private static SimpleEntry<String, Object> entry(String key, Object value) {
         return new SimpleEntry<>(key, value);
     }
