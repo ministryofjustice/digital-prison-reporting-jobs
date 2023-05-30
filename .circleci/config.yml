@@ -34,16 +34,16 @@ workflows:
           context:
             - hmpps-reporting-common ## Reporting Common ORB 
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
-      - reporting/trigger_reporting_stream: ## Start, Demo Glue JOB on Sandbox
-          job_name: dpr-265-domain-refresh-job-karthik
-          filters:
-            branches:
-              only: main
-            tags:
-              ignore: /.*/          
-          context:
-            - hmpps-reporting-common ## Reporting Common ORB 
-            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
+#      - reporting/trigger_reporting_stream: ## Start, Demo Glue JOB on Sandbox
+#          job_name: dpr-265-domain-refresh-job-karthik
+#          filters:
+#            branches:
+#              only: main
+#            tags:
+#              ignore: /.*/          
+#          context:
+#            - hmpps-reporting-common ## Reporting Common ORB 
+#            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
 
   owasp-security: ## Security Jobs Cron
     triggers:
