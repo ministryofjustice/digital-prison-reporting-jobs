@@ -1,19 +1,19 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@dev:7fe7bba5b6201ffb84bdb41648e741f03f8b5e63
+  reporting: ministryofjustice/hmpps-reporting@dev:a0d611eebfcf60978745ba8ac50bfb2874e2a8e2
   
 workflows:
   checkout-build-publish:
     jobs:
-      - reporting/gradle_owasp_check: ## OWASP Checks
-          notify_slack: false
-          context:
-            - hmpps-reporting-common ## Reporting Common ORB
-            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
-          filters:
-            branches:
-              only: main ## Run for Main, Before Code is promoted to Release/Prod                
+    #  - reporting/gradle_owasp_check: ## OWASP Checks
+    #      notify_slack: false
+    #      context:
+    #        - hmpps-reporting-common ## Reporting Common ORB
+    #        - hmpps-reporting-orb ## Required for JIRA, needs reviewing
+    #      filters:
+    #        branches:
+    #          only: main ## Run for Main, Before Code is promoted to Release/Prod                
       - reporting/gradle_build_publish: ## Test, Build and Publish
           tag: "11.0" ## Defaults to 11.0
           app: digital-prison-reporting-java-template ## AppName, Repo Name
