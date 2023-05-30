@@ -25,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
@@ -44,7 +44,7 @@ public class DataHubJob implements Runnable {
     private final RawZone rawZone;
     private final StructuredZone structuredZone;
     private final CuratedZone curatedZone;
-    private final Converter converter;
+    private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
     private final SparkSessionProvider sparkSessionProvider;
 
     @Inject
@@ -53,7 +53,7 @@ public class DataHubJob implements Runnable {
         RawZone rawZone,
         StructuredZone structuredZone,
         CuratedZone curatedZone,
-        @Named("converterForDMS_3_4_6") Converter converter,
+        @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
         SparkSessionProvider sparkSessionProvider
     ) {
         this.kinesisReader = kinesisReader;
@@ -82,7 +82,7 @@ public class DataHubJob implements Runnable {
 
             val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf());
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
-            val dataFrame = converter.convert(rowRdd, spark);
+            val dataFrame = converter.convert(rowRdd);
 
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
                 Dataset<Row> rawDataFrame = null;

@@ -7,7 +7,7 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -20,7 +20,7 @@ import java.util.Optional;
 
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.Converter.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 @Singleton
 public class RawZone extends Zone {
@@ -48,7 +48,7 @@ public class RawZone extends Zone {
 
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
-        Optional<Converter.Operation> rowOperation = Converter.Operation.getOperation(table.getAs(OPERATION));
+        Optional<Operation> rowOperation = Operation.getOperation(table.getAs(OPERATION));
 
         if(rowOperation.isPresent()) {
 
