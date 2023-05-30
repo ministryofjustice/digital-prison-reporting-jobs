@@ -35,8 +35,6 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
 
         val converted = underTest.convert(rdd);
 
-        converted.show(false);
-
         val columnNames = Arrays.asList(converted.columns());
 
         assertTrue(columnNames.contains(RAW));
@@ -51,7 +49,9 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertTrue(columnNames.contains(CONVERTER));
 
         assertFalse(converted.isEmpty());
+
         val row = converted.first();
+
         assertNotNull(row);
 
         assertNotNull(row.getAs(RAW));
@@ -73,8 +73,6 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
 
         val converted = underTest.convert(rdd);
 
-        converted.show(false);
-
         val columnNames = Arrays.asList(converted.columns());
 
         assertTrue(columnNames.contains(RAW));
@@ -89,7 +87,9 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertTrue(columnNames.contains(CONVERTER));
 
         assertFalse(converted.isEmpty());
+
         val row = converted.first();
+
         assertNotNull(row);
 
         assertNotNull(row.getAs(RAW));
