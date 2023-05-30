@@ -27,6 +27,11 @@ public class Fixtures {
             ROW_SCHEMA
         );
 
+    public static final GenericRowWithSchema dataMigrationEventRowWithInvalidOperation = new GenericRowWithSchema(
+            new Object[] { TABLE_SOURCE, TABLE_NAME, "makeTea" },
+            ROW_SCHEMA
+    );
+
     private Fixtures() { }
 
 }

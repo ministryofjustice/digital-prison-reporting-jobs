@@ -8,14 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation;
-import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
 import java.util.Optional;
 
 import static org.apache.spark.sql.functions.*;
@@ -52,16 +50,15 @@ public class RawZone extends Zone {
 
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
+        String rowOperation = table.getAs(OPERATION);
 
-        Optional<Operation> rowOperation = Operation.getOperation(table.getAs(OPERATION));
+        Optional<Operation> validatedOperation = Operation.getOperation(rowOperation);
 
-        // TODO - log on not present
-        if (rowOperation.isPresent()) {
-
+        if (validatedOperation.isPresent()) {
             val tablePath = sourceReferenceService.getSourceReference(rowSource, rowTable)
-                    .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable(), rowOperation.get().getName()))
+                    .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable(), validatedOperation.get().getName()))
                     // Revert to source and table from row where no match exists in the schema reference service.
-                    .orElse(createValidatedPath(rawS3Path, rowSource, rowTable, rowOperation.get().getName()));
+                    .orElse(createValidatedPath(rawS3Path, rowSource, rowTable, validatedOperation.get().getName()));
 
             logger.info("AppendDistinct {} records to deltalake table: {}", dataFrame.count(), tablePath);
 
@@ -75,6 +72,9 @@ public class RawZone extends Zone {
             logger.info("Append completed successfully");
 
             storage.updateDeltaManifestForTable(spark, tablePath);
+        }
+        else {
+            logger.warn("Unsupported operation: {} Skipping batch", rowOperation);
         }
 
         logger.info("Processed batch with {} records in {}ms",

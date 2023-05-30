@@ -70,4 +70,17 @@ class RawZoneTest {
 
         assertEquals(mockDataset, underTest.process(mockSparkSession, mockDataset, dataMigrationEventRow));
     }
+
+    @Test
+    public void processShouldSkipProcessingGivenInvalidOperation() throws DataStorageException {
+        when(mockDataset.count()).thenReturn(10L);
+
+        val underTest = new RawZone(
+                jobArguments,
+                mockDataStorageService,
+                mockSourceReferenceService
+        );
+
+        assertEquals(mockDataset, underTest.process(mockSparkSession, mockDataset, dataMigrationEventRowWithInvalidOperation));
+    }
 }
