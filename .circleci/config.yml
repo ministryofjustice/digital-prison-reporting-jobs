@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@dev:ff51ecf85d5945ba51d9dacdf60aa89845897c99
+  reporting: ministryofjustice/hmpps-reporting@dev:0bb03cf32093e926e425a074ee2c98ad780d3116
   
 workflows:
   checkout-build-publish:
@@ -34,16 +34,16 @@ workflows:
           context:
             - hmpps-reporting-common ## Reporting Common ORB 
             - hmpps-reporting-orb ## Required for JIRA, needs reviewing
-      - reporting/trigger_reporting_stream: ## Start, Demo Glue JOB on Sandbox
-          job_name: dpr-265-domain-refresh-job-karthik
-          filters:
-            branches:
-              only: main
-            tags:
-              ignore: /.*/          
-          context:
-            - hmpps-reporting-common ## Reporting Common ORB 
-            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
+#      - reporting/trigger_reporting_stream: ## Start, Demo Glue JOB on Sandbox
+#          job_name: dpr-265-domain-refresh-job-karthik
+#          filters:
+#            branches:
+#              only: main
+#            tags:
+#              ignore: /.*/          
+#          context:
+#            - hmpps-reporting-common ## Reporting Common ORB 
+#            - hmpps-reporting-orb ## Required for JIRA, needs reviewing
 
   owasp-security: ## Security Jobs Cron
     triggers:
