@@ -98,149 +98,75 @@ class DataStorageServiceTest extends BaseSparkTest {
         assertFalse(underTest.hasRecords(tableId));
     }
 
-    // TODO - review this
+    // TODO - this test takes 30s
     @Test
     public void shouldAppendCompleteForDeltaTable() throws DataStorageException {
         val tablePath = folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
-        val mockService = mock(DataStorageService.class);
-        doCallRealMethod().when(mockService).append(tablePath, df);
-        mockService.append(tablePath, df);
+        underTest.append(tablePath, df);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 
-    // TODO - this isn't testing anything
-    @Test
-    public void shouldAppendThrowExceptionForDeltaTable() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        val mockService = mock(DataStorageService.class);
-        try {
-            doThrow(DataStorageException.class).when(mockService).append(tablePath, df);
-            mockService.append(tablePath, df);
-        } catch (DataStorageException de) {
-            assertTrue(true);
-        }
-    }
-
-    // TODO - is this testing anything?
     @Test
     public void shouldCreateCompleteForDeltaTable() throws DataStorageException {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
-        val mockService = mock(DataStorageService.class);
-        doCallRealMethod().when(mockService).create(tablePath, df);
-        mockService.create(tablePath, df);
+        underTest.create(tablePath, df);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 
-    // TODO - this test isn't testing anything
-    @Test
-    public void shouldCreateThrowExceptionForDeltaTable() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        val mockService = mock(DataStorageService.class);
-        try {
-            doThrow(DataStorageException.class).when(mockService).create(tablePath, df);
-            mockService.create(tablePath, df);
-        } catch (DataStorageException de) {
-            assertTrue(true);
-        }
-    }
-
-    // TODO -review this
     @Test
     public void shouldReplaceCompleteForDeltaTable() throws DataStorageException {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
-        val mockService = mock(DataStorageService.class);
-        doCallRealMethod().when(mockService).replace(tablePath, df);
-        mockService.replace(tablePath, df);
+        underTest.replace(tablePath, df);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
-    }
-
-    // TODO - this test isn't testing anything
-    @Test
-    public void shouldReplaceThrowExceptionForDeltaTable() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        val mockService = mock(DataStorageService.class);
-        try {
-            doThrow(DataStorageException.class).when(mockService).replace(tablePath, df);
-            mockService.replace(tablePath, df);
-        } catch (DataStorageException de) {
-            assertTrue(true);
-        }
     }
 
     @Test
     public void shouldReloadCompleteForDeltaTable() throws DataStorageException {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
-//        val mockService = spy(DataStorageService.class);
-//        doCallRealMethod().when(mockService).resync(tablePath, df);
         underTest.resync(tablePath, df);
-        // TODO - review this
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 
-    // TODO - this test isn't testing anything...
-    @Test
-    public void shouldReloadThrowExceptionForDeltaTable() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        val mockService = mock(DataStorageService.class);
-        try {
-            doThrow(DataStorageException.class).when(mockService).resync(tablePath, df);
-            mockService.resync(tablePath, df);
-        } catch (DataStorageException de) {
-            assertTrue(true);
-        }
-    }
-
-    // TODO - this doesn't seem to be testing anything
     @Test
     public void shouldDeleteCompleteForDeltaTable() throws DataStorageException {
-        val mockService = mock(DataStorageService.class);
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
                 "incident", "demographics");
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
-        doNothing().when(mockedDeltaTable).delete();
-        mockService.delete(info);
-        // TODO - fix this
+        when(DeltaTable.isDeltaTable(spark, info.toPath())).thenReturn(true);
+        when(DeltaTable.forPath(spark, info.toPath())).thenReturn(mockedDeltaTable);
+        underTest.delete(info);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 
-    // TODO -review this
     @Test
     public void shouldVacuumCompleteForDeltaTable() throws DataStorageException {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
                 "incident", "demographics");
-        val mockService = mock(DataStorageService.class);
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
-        doReturn(mockedDataSet).when(mockedDeltaTable).vacuum();
-        mockService.vacuum(info);
+        when(DeltaTable.isDeltaTable(spark, info.toPath())).thenReturn(true);
+        when(DeltaTable.forPath(spark, info.toPath())).thenReturn(mockedDeltaTable);
+        underTest.vacuum(info);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 
     @Test
     public void shouldLoadCompleteForDeltaTable() {
-        val mockService = mock(DataStorageService.class);
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
                 "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
         doReturn(mockedDataSet).when(mockedDeltaTable).toDF();
-        val result = mockService.get(info);
-        assertNull(result);
+        // TODO - review this
+        assertNull(underTest.get(info));
     }
 
     @Test
@@ -261,39 +187,36 @@ class DataStorageServiceTest extends BaseSparkTest {
         assertNull(actualResult);
     }
 
-    // TODO -review this - what is it testing?
     @Test
-    public void shouldUpdateendTableUpdates() throws DataStorageException {
-        val mockService = mock(DataStorageService.class);
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
+    public void shouldUpdateendTableUpdates() {
         val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
                 "incident", "demographics");
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
-        doNothing().when(mockService).updateManifest(mockedDeltaTable);
-        mockService.endTableUpdates(info);
+
+        when(DeltaTable.isDeltaTable(spark, info.toPath())).thenReturn(true);
+        when(DeltaTable.forPath(spark, info.toPath())).thenReturn(mockedDeltaTable);
+
+        doNothing().when(mockedDeltaTable).generate("symlink_format_manifest");
+
+        underTest.endTableUpdates(info);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 
-    // TODO -review this
     @Test
     public void shouldUpdateManifest() {
         doNothing().when(mockedDeltaTable).generate("test");
         underTest.updateManifest(mockedDeltaTable);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 
-    // TODO - review this - what is it actually testing
     @Test
     public void shouldUpdateDeltaManifestForTable() {
-        val mockService = mock(DataStorageService.class);
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
-        doNothing().when(mockService).updateManifest(mockedDeltaTable);
-        mockService.updateDeltaManifestForTable(tablePath);
+        underTest.updateDeltaManifestForTable(tablePath);
+        // TODO - is there anything we can assert on?
         assertTrue(true);
     }
 }

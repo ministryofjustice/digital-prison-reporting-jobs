@@ -126,6 +126,7 @@ public class DataStorageService {
         return deltaTable == null ? null : deltaTable.toDF();
     }
 
+    // TODO - review log message
     protected DeltaTable getTable(String tablePath) {
         if (DeltaTable.isDeltaTable(spark, tablePath))
             return DeltaTable.forPath(spark, tablePath);
@@ -135,7 +136,7 @@ public class DataStorageService {
         return null;
     }
 
-    public void endTableUpdates(TableIdentifier tableId) throws DataStorageException {
+    public void endTableUpdates(TableIdentifier tableId) {
         DeltaTable deltaTable = getTable(tableId.toPath());
         updateManifest(deltaTable);
     }
