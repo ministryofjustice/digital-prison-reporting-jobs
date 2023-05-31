@@ -6,7 +6,7 @@
   "name" : "OFFENDERS",
   "description": "A person who is recorded as being convicted of a criminal activity or held on remand awaiting judicial process in order that they may be tracked within the Prison and / or Probation services. This may be as a remand prisoner, a prisoner, a person subject to probation supervision. ISSUE: Potential duplication of attribute values on occurrences which are recording aliases of the offender.",
   "contacts" : {
-    "author": "dominic.messenger@digital.justice.gov.uk",
+    "author": "karthik.nagaraj@digital.justice.gov.uk",
     "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
     "slack": "#ask_dpr"
   },

@@ -6,7 +6,7 @@
   "name": "AGENCY_INTERNAL_LOCATIONS",
   "description": "A physical location within an establishment (prison) specific Agency Location. e.g. B Wing, Gymnasium, Cell 105. NOTE: The following exceptional Agency Internal Location case exists: - Internal Location Code = RTU - Stands for Return To Unit and does NOT represent a physical internal location. Instead, it provides a target for an internal movement of an offender returning to their assigned cell (from the Gymnasium, for example).",
   "contacts": {
-    "author": "dominic.messenger@digital.justice.gov.uk",
+    "author": "karthik.nagaraj@digital.justice.gov.uk",
     "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
     "slack": "#ask_dpr"
   },

@@ -6,7 +6,7 @@
   "name": "AGENCY_LOCATIONS",
   "description": "A physical location of an agency involved in the management or administration of offenders on a day to day basis, e.g. a prison, a probation office, a court. NOTE: The following special Agency Location cases exist: - Agy Loc Id = TRN - Represents a Pending Transfer status typically used following an Offender Transfer Out operation and awaiting a Transfer In at the destination establishment; Agy Loc Id = OUT - Represents an Outside status typically associated with offenders that are the subject of an out of jurisdiction transfer or personal property that has been disposed to relatives, for example.",
   "contacts": {
-    "author": "dominic.messenger@digital.justice.gov.uk",
+    "author": "karthik.nagaraj@digital.justice.gov.uk",
     "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
     "slack": "#ask_dpr"
   },

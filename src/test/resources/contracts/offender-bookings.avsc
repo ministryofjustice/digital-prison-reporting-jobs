@@ -6,7 +6,7 @@
   "name" : "OFFENDER_BOOKINGS",
   "description": "A period of supervision of the identified offender while under the supervision of the Prison and/or Probation services. This may include the actual period of a custodial sentence from initial incarceration through to actual release and any follow up period of supervision during probation and subsequently. This may be for one sentence, but may also be extended by additional periods (possibly due to other sentences) which are determined during the period of supervision.",
   "contacts" : {
-    "author": "dominic.messenger@digital.justice.gov.uk",
+    "author": "karthik.nagaraj@digital.justice.gov.uk",
     "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
     "slack": "#ask_dpr"
   },
@@ -30,7 +30,7 @@
         "type": "int",
         "logicalType": "date"
       },
-      "nullable": true,
+      "nullable": false,
       "description": "The date the booking was created."
     },
     {
@@ -66,7 +66,7 @@
       "name": "LIVING_UNIT_ID",
       "type": "long",
       "nullable": true,
-      "glossary-index": "living_unit:id",
+      "glossary-index": "internal-location:id",
       "description": "System generated id for offender bed location."
     },
     {
@@ -96,7 +96,7 @@
     {
       "name": "YOUTH_ADULT_CODE",
       "type": "string",
-      "nullable": true,
+      "nullable": false,
       "description": "Reference Code ( YOUTH_ADULT ) : Indicates whether the offender is currently a youth or adult."
     },
     {
