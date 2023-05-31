@@ -21,7 +21,7 @@
       "type": "long",
       "nullable": false,
       "description": "The unique identifier of the Internal Location. PK",
-      "glossary-index": "location:id",
+      "glossary-index": "internal-location:id",
       "key": "primary"
     },
     {

@@ -34,9 +34,7 @@
       "name": "AGENCY_LOCATION_TYPE",
       "type": "string",
       "nullable": true,
-      "glossary-index": "location:id",
-      "description": "Reference Code [ AGY_LOC_TYPE ]",
-      "key": "foreign"
+      "description": "Reference Code [ AGY_LOC_TYPE ]"
     },
     {
       "name": "DISTRICT_CODE",
@@ -75,7 +73,6 @@
       "name": "PRINT_QUEUE",
       "type": "string",
       "nullable": true,
-      "glossary-index": "location:id",
       "description": "- Column already exists"
     },
     {

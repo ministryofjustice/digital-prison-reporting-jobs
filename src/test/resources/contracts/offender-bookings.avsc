@@ -39,7 +39,7 @@
         "type": "int",
         "logicalType": "date"
       },
-      "nullable": false,
+      "nullable": true,
       "description": "The date the booking was closed."
     },
     {
@@ -108,13 +108,13 @@
     {
       "name": "SEARCH_STAFF_ID",
       "type": "long",
-      "nullable": false,
+      "nullable": true,
       "description": "Id of staff member who searched offender."
     },
     {
       "name": "PHOTO_TAKING_STAFF_ID",
       "type": "long",
-      "nullable": false,
+      "nullable": true,
       "description": "Id of staff member who took offender's image"
     },
     {
@@ -254,7 +254,7 @@
     {
       "name": "TOTAL_UNEXCUSED_ABSENCES",
       "type": "long",
-      "nullable": false,
+      "nullable": true,
       "description": "Captures the total unexcused absences for the offender within the booking based on the event_outcome column in offender_schedules table."
     },
     {
@@ -347,7 +347,7 @@
     {
       "name": "BOOKING_SEQ",
       "type": "long",
-      "nullable": true
+      "nullable": false
     },
     {
       "name": "ADMISSION_REASON",
