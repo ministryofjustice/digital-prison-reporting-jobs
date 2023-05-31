@@ -71,7 +71,7 @@ public class RawZone extends Zone {
 
             logger.info("Append completed successfully");
 
-            storage.updateDeltaManifestForTable(spark, tablePath);
+            storage.updateDeltaManifestForTable(tablePath);
         }
         else {
             logger.warn("Unsupported operation: {} Skipping batch", rowOperation);

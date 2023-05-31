@@ -11,6 +11,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 
 import java.io.IOException;
@@ -51,7 +52,7 @@ public class SparkTestHelpers {
     }
 
     public void persistDataset(TableIdentifier location, Dataset<Row> df) throws DataStorageException {
-        new DataStorageService().replace(location.toPath(), df);
+        new DataStorageService(new SparkSessionProvider()).replace(location.toPath(), df);
     }
 
     public Dataset<Row> createIncidentDomainDataframe() {

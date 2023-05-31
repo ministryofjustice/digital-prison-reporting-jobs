@@ -198,7 +198,7 @@ public class StructuredZone extends Zone {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
         storage.append(tablePath, dataFrame);
         logger.info("Append completed successfully");
-        storage.updateDeltaManifestForTable(spark, tablePath);
+        storage.updateDeltaManifestForTable(tablePath);
     }
 
     private void appendDataAndUpdateManifestForTable(SparkSession spark,
@@ -208,6 +208,6 @@ public class StructuredZone extends Zone {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
         storage.appendDistinct(tablePath, dataFrame, primaryKey);
         logger.info("Append completed successfully");
-        storage.updateDeltaManifestForTable(spark, tablePath);
+        storage.updateDeltaManifestForTable(tablePath);
     }
 }

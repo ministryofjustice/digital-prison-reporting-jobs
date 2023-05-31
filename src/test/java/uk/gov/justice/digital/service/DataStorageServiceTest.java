@@ -13,6 +13,7 @@ import org.mockito.MockedStatic;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import java.nio.file.Path;
 
@@ -27,9 +28,11 @@ class DataStorageServiceTest extends BaseSparkTest {
             "incident",
             "demographics"
     );
+
     private static final String tablePath = tableId.toPath();
 
-    private static DataStorageService testStorage;
+    private final DataStorageService underTest = new DataStorageService(new SparkSessionProvider());
+
     private MockedStatic<DeltaTable> mockedStatic;
     private DeltaTable mockedDeltaTable;
 
@@ -41,7 +44,6 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @BeforeEach
     void setUp() {
-        testStorage = new DataStorageService();
         mockedStatic = mockStatic(DeltaTable.class);
         mockedDeltaTable = mock(DeltaTable.class);
     }
@@ -54,13 +56,13 @@ class DataStorageServiceTest extends BaseSparkTest {
     @Test
     public void shouldReturnTrueWhenStorageExists() {
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        assertTrue(testStorage.exists(spark, tableId));
+        assertTrue(underTest.exists(tableId));
     }
 
     @Test
     public void shouldReturnFalseWhenStorageDoesNotExist() {
         when(DeltaTable.isDeltaTable(spark, tableId.toPath())).thenReturn(false);
-        assertFalse(testStorage.exists(spark, tableId));
+        assertFalse(underTest.exists(tableId));
     }
 
     @Test
@@ -68,11 +70,11 @@ class DataStorageServiceTest extends BaseSparkTest {
         val df = spark.sql("select cast(10 as LONG) as numFiles");
 
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        assertTrue(testStorage.exists(spark, tableId));
+        assertTrue(underTest.exists(tableId));
 
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         when(mockedDeltaTable.toDF()).thenReturn(df);
-        assertTrue(testStorage.hasRecords(spark, tableId));
+        assertTrue(underTest.hasRecords(tableId));
     }
 
     @Test
@@ -80,22 +82,23 @@ class DataStorageServiceTest extends BaseSparkTest {
         val df = spark.emptyDataFrame();
 
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        assertTrue(testStorage.exists(spark, tableId));
+        assertTrue(underTest.exists(tableId));
 
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         when(mockedDeltaTable.toDF()).thenReturn(df);
-        assertFalse(testStorage.hasRecords(spark, tableId));
+        assertFalse(underTest.hasRecords(tableId));
     }
 
     @Test
     public void shouldReturnFalseForHasRecordsWhenStorageDoesNotExist() throws DataStorageException {
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(false);
-        assertFalse(testStorage.exists(spark, tableId));
+        assertFalse(underTest.exists(tableId));
 
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        assertFalse(testStorage.hasRecords(spark, tableId));
+        assertFalse(underTest.hasRecords(tableId));
     }
 
+    // TODO - review this
     @Test
     public void shouldAppendCompleteForDeltaTable() throws DataStorageException {
         val tablePath = folder.toFile().getAbsolutePath() + "/source";
@@ -106,6 +109,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         assertTrue(true);
     }
 
+    // TODO - this isn't testing anything
     @Test
     public void shouldAppendThrowExceptionForDeltaTable() {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
@@ -119,6 +123,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         }
     }
 
+    // TODO - is this testing anything?
     @Test
     public void shouldCreateCompleteForDeltaTable() throws DataStorageException {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
@@ -129,6 +134,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         assertTrue(true);
     }
 
+    // TODO - this test isn't testing anything
     @Test
     public void shouldCreateThrowExceptionForDeltaTable() {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
@@ -142,6 +148,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         }
     }
 
+    // TODO -review this
     @Test
     public void shouldReplaceCompleteForDeltaTable() throws DataStorageException {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
@@ -152,11 +159,12 @@ class DataStorageServiceTest extends BaseSparkTest {
         assertTrue(true);
     }
 
+    // TODO - this test isn't testing anything
     @Test
     public void shouldReplaceThrowExceptionForDeltaTable() {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
-        val mockService = spy(DataStorageService.class);
+        val mockService = mock(DataStorageService.class);
         try {
             doThrow(DataStorageException.class).when(mockService).replace(tablePath, df);
             mockService.replace(tablePath, df);
@@ -169,17 +177,19 @@ class DataStorageServiceTest extends BaseSparkTest {
     public void shouldReloadCompleteForDeltaTable() throws DataStorageException {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
-        val mockService = spy(DataStorageService.class);
-        doCallRealMethod().when(mockService).resync(tablePath, df);
-        mockService.resync(tablePath, df);
+//        val mockService = spy(DataStorageService.class);
+//        doCallRealMethod().when(mockService).resync(tablePath, df);
+        underTest.resync(tablePath, df);
+        // TODO - review this
         assertTrue(true);
     }
 
+    // TODO - this test isn't testing anything...
     @Test
     public void shouldReloadThrowExceptionForDeltaTable() {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         val df = spark.sql("select cast(null as string) test_col");
-        val mockService = spy(DataStorageService.class);
+        val mockService = mock(DataStorageService.class);
         try {
             doThrow(DataStorageException.class).when(mockService).resync(tablePath, df);
             mockService.resync(tablePath, df);
@@ -188,6 +198,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         }
     }
 
+    // TODO - this doesn't seem to be testing anything
     @Test
     public void shouldDeleteCompleteForDeltaTable() throws DataStorageException {
         val mockService = mock(DataStorageService.class);
@@ -196,12 +207,14 @@ class DataStorageServiceTest extends BaseSparkTest {
                 "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(spark, tablePath);
+        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
         doNothing().when(mockedDeltaTable).delete();
-        mockService.delete(spark, info);
+        mockService.delete(info);
+        // TODO - fix this
         assertTrue(true);
     }
 
+    // TODO -review this
     @Test
     public void shouldVacuumCompleteForDeltaTable() throws DataStorageException {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
@@ -210,9 +223,9 @@ class DataStorageServiceTest extends BaseSparkTest {
         val mockService = mock(DataStorageService.class);
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(spark, tablePath);
+        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
         doReturn(mockedDataSet).when(mockedDeltaTable).vacuum();
-        mockService.vacuum(spark, info);
+        mockService.vacuum(info);
         assertTrue(true);
     }
 
@@ -224,9 +237,9 @@ class DataStorageServiceTest extends BaseSparkTest {
                 "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(spark, tablePath);
+        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
         doReturn(mockedDataSet).when(mockedDeltaTable).toDF();
-        val result = mockService.get(spark, info);
+        val result = mockService.get(info);
         assertNull(result);
     }
 
@@ -235,7 +248,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        val result = testStorage.getTable(spark, tablePath);
+        val result = underTest.getTable(tablePath);
         assertNotNull(result);
     }
 
@@ -244,10 +257,11 @@ class DataStorageServiceTest extends BaseSparkTest {
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(false);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        val actualResult = testStorage.getTable(spark, tablePath);
+        val actualResult = underTest.getTable(tablePath);
         assertNull(actualResult);
     }
 
+    // TODO -review this - what is it testing?
     @Test
     public void shouldUpdateendTableUpdates() throws DataStorageException {
         val mockService = mock(DataStorageService.class);
@@ -256,28 +270,30 @@ class DataStorageServiceTest extends BaseSparkTest {
                 "incident", "demographics");
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(spark, tablePath);
+        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
         doNothing().when(mockService).updateManifest(mockedDeltaTable);
-        mockService.endTableUpdates(spark, info);
+        mockService.endTableUpdates(info);
         assertTrue(true);
     }
 
+    // TODO -review this
     @Test
     public void shouldUpdateManifest() {
         doNothing().when(mockedDeltaTable).generate("test");
-        testStorage.updateManifest(mockedDeltaTable);
+        underTest.updateManifest(mockedDeltaTable);
         assertTrue(true);
     }
 
+    // TODO - review this - what is it actually testing
     @Test
     public void shouldUpdateDeltaManifestForTable() {
         val mockService = mock(DataStorageService.class);
         val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDeltaTable).when(mockService).getTable(spark, tablePath);
+        doReturn(mockedDeltaTable).when(mockService).getTable(tablePath);
         doNothing().when(mockService).updateManifest(mockedDeltaTable);
-        mockService.updateDeltaManifestForTable(spark, tablePath);
+        mockService.updateDeltaManifestForTable(tablePath);
         assertTrue(true);
     }
 }
