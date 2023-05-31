@@ -111,7 +111,8 @@ test {
     testLogging {
         events "passed", "skipped", "failed"
     }
-    maxParallelForks = Runtime.runtime.availableProcessors()
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+    println("\nUsing $maxParallelForks executors")
 }
 
 assemble {
