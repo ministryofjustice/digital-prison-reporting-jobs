@@ -18,11 +18,11 @@ import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 public class DomainContractValidationTest {
 
     private static final String RESOURCE_PATH = "/contracts";
+
     private static final String REFERENCE_CONTRACT = "reference-contract.avsc";
-    private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACTS = "agency-internal-locations.avsc";
-    private static final String AGENCY_LOCATIONS_CONTRACTS = "agency-locations.avsc";
-    private static final String OFFENDERS_CONTRACTS = "offenders.avsc";
-    private static final String OFFENDER_BOOKINGS_CONTRACTS = "offender-bookings.avsc";
+    private static final String AGENCY_LOCATIONS_CONTRACT = "agency-locations.avsc";
+    private static final String OFFENDERS_CONTRACT = "offenders.avsc";
+    private static final String OFFENDER_BOOKINGS_CONTRACT = "offender-bookings.avsc";
     private static final String DOMAIN_CONTRACT_SCHEMA = "domain-contract-schema.json";
 
     private static final ObjectMapper jsonParser = new ObjectMapper();
@@ -44,54 +44,54 @@ public class DomainContractValidationTest {
     }
 
     @Test
-    public void setAgencyInternalLocationsContractShouldBeValidAvro() {
+    public void agencyInternalLocationsContractShouldBeValidAvro() throws JsonProcessingException {
         assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACTS))
+                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT))
         );
     }
 
     @Test
     public void agencyInternalLocationsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACTS));
+        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT));
         assertEquals(Collections.emptySet(), validator.validate(contract));
     }
 
     @Test
-    public void setOffendersContractShouldBeValidAvro() {
+    public void offendersContractShouldBeValidAvro() {
         assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACTS))
+                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT))
         );
     }
 
     @Test
     public void offendersContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACTS));
+        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT));
         assertEquals(Collections.emptySet(), validator.validate(contract));
     }
 
     @Test
     public void setOffenderBookingsContractShouldBeValidAvro() {
         assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACTS))
+                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACT))
         );
     }
 
     @Test
     public void offenderBookingsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACTS));
+        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACT));
         assertEquals(Collections.emptySet(), validator.validate(contract));
     }
 
     @Test
     public void setAgencyLocationsContractShouldBeValidAvro() {
         assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACTS))
+                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACT))
         );
     }
 
     @Test
     public void agencyLocationsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACTS));
+        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACT));
         assertEquals(Collections.emptySet(), validator.validate(contract));
     }
 

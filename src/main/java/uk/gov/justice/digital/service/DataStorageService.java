@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -24,6 +25,7 @@ public class DataStorageService {
 
     private final SparkSession spark;
 
+    @Inject
     public DataStorageService(SparkSessionProvider sparkSessionProvider) {
         this.spark = sparkSessionProvider.getConfiguredSparkSession();
     }

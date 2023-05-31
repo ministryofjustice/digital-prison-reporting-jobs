@@ -106,7 +106,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldAppendCompleteForDeltaTable() throws DataStorageException {
+    public void shouldAppendCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -120,7 +120,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldCreateCompleteForDeltaTable() throws DataStorageException {
+    public void shouldCreateCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -132,7 +132,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReplaceCompleteForDeltaTable() throws DataStorageException {
+    public void shouldReplaceCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -148,7 +148,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReloadCompleteForDeltaTable() throws DataStorageException {
+    public void shouldReloadCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
