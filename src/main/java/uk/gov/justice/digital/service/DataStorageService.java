@@ -121,33 +121,33 @@ public class DataStorageService {
         return get(tableId.toPath());
     }
 
-    public Dataset<Row> get(String tablePath) {
+    public void endTableUpdates(TableIdentifier tableId) {
+        DeltaTable deltaTable = getTable(tableId.toPath());
+        updateManifest(deltaTable);
+    }
+
+    public void updateDeltaManifestForTable(String tablePath) {
+        DeltaTable deltaTable = getTable(tablePath);
+        updateManifest(deltaTable);
+    }
+
+    private void updateManifest(DeltaTable dt) {
+        dt.generate("symlink_format_manifest");
+    }
+
+    private Dataset<Row> get(String tablePath) {
         DeltaTable deltaTable = getTable(tablePath);
         return deltaTable == null ? null : deltaTable.toDF();
     }
 
     // TODO - review log message
-    protected DeltaTable getTable(String tablePath) {
+    private DeltaTable getTable(String tablePath) {
         if (DeltaTable.isDeltaTable(spark, tablePath))
             return DeltaTable.forPath(spark, tablePath);
         else {
             logger.warn("Cannot update manifest for table: {} - Not a delta table", tablePath);
         }
         return null;
-    }
-
-    public void endTableUpdates(TableIdentifier tableId) {
-        DeltaTable deltaTable = getTable(tableId.toPath());
-        updateManifest(deltaTable);
-    }
-
-    protected void updateManifest(DeltaTable dt) {
-        dt.generate("symlink_format_manifest");
-    }
-
-    public void updateDeltaManifestForTable(String tablePath) {
-        DeltaTable deltaTable = getTable(tablePath);
-        updateManifest(deltaTable);
     }
 
 }

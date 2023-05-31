@@ -183,26 +183,9 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReturnDeltaTableWhenExists() {
-        givenDeltaTableExists();
-        assertEquals(mockDeltaTable, underTest.getTable(tablePath));
-    }
-
-    @Test
-    public void shouldReturnNullWhenNotExists() {
-        assertNull(underTest.getTable(tablePath));
-    }
-
-    @Test
     public void shouldUpdateendTableUpdates() {
         givenDeltaTableExists();
         underTest.endTableUpdates(tableId);
-        verifyManifestGeneratedWithExpectedModeString();
-    }
-
-    @Test
-    public void shouldUpdateManifest() {
-        underTest.updateManifest(mockDeltaTable);
         verifyManifestGeneratedWithExpectedModeString();
     }
 

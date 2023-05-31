@@ -127,7 +127,6 @@ class DomainExecutorTest extends BaseSparkTest {
         }
     }
 
-
     @Test
     public void shouldApplyMappings() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
