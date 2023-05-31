@@ -2,14 +2,17 @@ package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
 import lombok.val;
+import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -20,37 +23,44 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class DataStorageServiceTest extends BaseSparkTest {
 
-    private static final TableIdentifier tableId = new TableIdentifier(
-            "s3://test-bucket",
-            "domain",
-            "incident",
-            "demographics"
-    );
+    private static final DataStorageService underTest = new DataStorageService(new SparkSessionProvider());
 
-    private static final String tablePath = tableId.toPath();
-
-    private final DataStorageService underTest = new DataStorageService(new SparkSessionProvider());
-
-    private MockedStatic<DeltaTable> mockedStatic;
-    private DeltaTable mockedDeltaTable;
+    private MockedStatic<DeltaTable> mockDeltaTableStatic;
 
     @Mock
-    private Dataset<Row> mockedDataSet;
+    private DeltaTable mockDeltaTable;
+
+    @Mock
+    private Dataset<Row> mockDataSet;
+
+    @Mock
+    private DataFrameWriter<Row> mockDataFrameWriter;
 
     @TempDir
     private Path folder;
 
+    private TableIdentifier tableId;
+
+    private String tablePath;
+
     @BeforeEach
     void setUp() {
-        mockedStatic = mockStatic(DeltaTable.class);
-        mockedDeltaTable = mock(DeltaTable.class);
+        mockDeltaTableStatic = mockStatic(DeltaTable.class);
+        tableId = new TableIdentifier(
+                folder.toAbsolutePath().toString(),
+                "domain",
+                "incident",
+                "demographics"
+        );
+        tablePath = tableId.toPath();
     }
 
     @AfterEach
     void tearDown() {
-        mockedStatic.close();
+        mockDeltaTableStatic.close();
     }
 
     @Test
@@ -67,156 +77,148 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @Test
     public void shouldReturnTrueForHasRecordsWhenStorageExistsAndRecordsArePresent() throws DataStorageException {
+        givenDeltaTableExists();
+
         val df = spark.sql("select cast(10 as LONG) as numFiles");
 
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        assertTrue(underTest.exists(tableId));
+        when(mockDeltaTable.toDF()).thenReturn(df);
 
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        when(mockedDeltaTable.toDF()).thenReturn(df);
+        assertTrue(underTest.exists(tableId));
         assertTrue(underTest.hasRecords(tableId));
     }
 
     @Test
     public void shouldReturnFalseForHasRecordsWhenStorageExistsAndRecordsAreNotPresent() throws DataStorageException {
+        givenDeltaTableExists();
+
         val df = spark.emptyDataFrame();
 
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        assertTrue(underTest.exists(tableId));
+        when(mockDeltaTable.toDF()).thenReturn(df);
 
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        when(mockedDeltaTable.toDF()).thenReturn(df);
+        assertTrue(underTest.exists(tableId));
         assertFalse(underTest.hasRecords(tableId));
     }
 
     @Test
     public void shouldReturnFalseForHasRecordsWhenStorageDoesNotExist() throws DataStorageException {
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(false);
         assertFalse(underTest.exists(tableId));
-
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
         assertFalse(underTest.hasRecords(tableId));
     }
 
-    // TODO - this test takes 30s
     @Test
     public void shouldAppendCompleteForDeltaTable() throws DataStorageException {
-        val tablePath = folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        underTest.append(tablePath, df);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
+
+        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.mode(anyString())).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
+
+        underTest.append(tablePath, mockDataSet);
+
+        verify(mockDataFrameWriter).mode("append");
+        verify(mockDataFrameWriter).save();
     }
 
     @Test
     public void shouldCreateCompleteForDeltaTable() throws DataStorageException {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        underTest.create(tablePath, df);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
+
+        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
+
+        underTest.create(tablePath, mockDataSet);
+
+        verify(mockDataFrameWriter).save();
     }
 
     @Test
     public void shouldReplaceCompleteForDeltaTable() throws DataStorageException {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        underTest.replace(tablePath, df);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
+
+        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.mode(anyString())).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.option(anyString(), anyBoolean())).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
+
+        underTest.replace(tablePath, mockDataSet);
+
+        verify(mockDataFrameWriter).mode("overwrite");
+        verify(mockDataFrameWriter).option("overwriteSchema", true);
+        verify(mockDataFrameWriter).save();
     }
 
     @Test
     public void shouldReloadCompleteForDeltaTable() throws DataStorageException {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val df = spark.sql("select cast(null as string) test_col");
-        underTest.resync(tablePath, df);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
+
+        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.mode(anyString())).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
+
+        underTest.resync(tablePath, mockDataSet);
+
+        verify(mockDataFrameWriter).mode("overwrite");
+        verify(mockDataFrameWriter).save();
     }
 
     @Test
     public void shouldDeleteCompleteForDeltaTable() throws DataStorageException {
-        val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
-                "incident", "demographics");
-        when(DeltaTable.isDeltaTable(spark, info.toPath())).thenReturn(true);
-        when(DeltaTable.forPath(spark, info.toPath())).thenReturn(mockedDeltaTable);
-        underTest.delete(info);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        givenDeltaTableExists();
+        underTest.delete(tableId);
+        verify(mockDeltaTable).delete();
     }
 
     @Test
     public void shouldVacuumCompleteForDeltaTable() throws DataStorageException {
-        val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
-                "incident", "demographics");
-        when(DeltaTable.isDeltaTable(spark, info.toPath())).thenReturn(true);
-        when(DeltaTable.forPath(spark, info.toPath())).thenReturn(mockedDeltaTable);
-        underTest.vacuum(info);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        givenDeltaTableExists();
+        underTest.vacuum(tableId);
+        verify(mockDeltaTable).vacuum();
     }
 
     @Test
-    public void shouldLoadCompleteForDeltaTable() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
-                "incident", "demographics");
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        doReturn(mockedDataSet).when(mockedDeltaTable).toDF();
-        // TODO - review this
-        assertNull(underTest.get(info));
+    public void shouldGetDeltaTableWhenExists() {
+        givenDeltaTableExists();
+        underTest.get(tableId);
+        verify(mockDeltaTable).toDF();
     }
 
     @Test
     public void shouldReturnDeltaTableWhenExists() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        val result = underTest.getTable(tablePath);
-        assertNotNull(result);
+        givenDeltaTableExists();
+        assertEquals(mockDeltaTable, underTest.getTable(tablePath));
     }
 
     @Test
     public void shouldReturnNullWhenNotExists() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(false);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
-        val actualResult = underTest.getTable(tablePath);
-        assertNull(actualResult);
+        assertNull(underTest.getTable(tablePath));
     }
 
     @Test
     public void shouldUpdateendTableUpdates() {
-        val info = new TableIdentifier(this.folder.toFile().getAbsolutePath(), "domain",
-                "incident", "demographics");
-
-        when(DeltaTable.isDeltaTable(spark, info.toPath())).thenReturn(true);
-        when(DeltaTable.forPath(spark, info.toPath())).thenReturn(mockedDeltaTable);
-
-        doNothing().when(mockedDeltaTable).generate("symlink_format_manifest");
-
-        underTest.endTableUpdates(info);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        givenDeltaTableExists();
+        underTest.endTableUpdates(tableId);
+        verifyManifestGeneratedWithExpectedModeString();
     }
 
     @Test
     public void shouldUpdateManifest() {
-        doNothing().when(mockedDeltaTable).generate("test");
-        underTest.updateManifest(mockedDeltaTable);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        underTest.updateManifest(mockDeltaTable);
+        verifyManifestGeneratedWithExpectedModeString();
     }
 
     @Test
     public void shouldUpdateDeltaManifestForTable() {
-        val tablePath = this.folder.toFile().getAbsolutePath() + "/source";
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockedDeltaTable);
+        givenDeltaTableExists();
         underTest.updateDeltaManifestForTable(tablePath);
-        // TODO - is there anything we can assert on?
-        assertTrue(true);
+        verifyManifestGeneratedWithExpectedModeString();
+    }
+
+    private void givenDeltaTableExists() {
+        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
+        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockDeltaTable);
+    }
+
+    private void verifyManifestGeneratedWithExpectedModeString() {
+        verify(mockDeltaTable).generate("symlink_format_manifest");
     }
 }
