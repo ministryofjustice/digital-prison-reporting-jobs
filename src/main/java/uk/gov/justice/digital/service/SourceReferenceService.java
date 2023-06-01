@@ -108,13 +108,28 @@ public class SourceReferenceService {
         @Getter
         private final String service;
         private final String name;
-        private final List<Map<String, String>> fields;
+        private final List<Map<String, Object>> fields;
+
+        private boolean isPrimaryKey(Map<String, Object> attributes) {
+            return attributes.containsKey("key") &&
+                    Optional.ofNullable(attributes.get("key"))
+                            .flatMap(this::castToString)
+                            .filter(v -> v.equals("primary"))
+                            .isPresent();
+        }
+
+        private Optional<String> castToString(Object o) {
+            return Optional.ofNullable(o)
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast);
+        }
 
         public Optional<String> findPrimaryKey() {
             return fields.stream()
-                    .filter(f -> f.containsKey("key") && f.get("key").equals("primary"))
+                    .filter(this::isPrimaryKey)
                     .map(f -> f.get("name"))
-                    .findFirst();
+                    .findFirst()
+                    .flatMap(this::castToString);
         }
 
         // If the table name has a version suffix e.g. SOME_TABLE_NAME_16 this must be removed from the value used in

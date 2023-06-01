@@ -23,6 +23,7 @@ public class SourceReferenceServiceTest {
 
     private static final String RESOURCE_PATH = "/contracts";
     private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACT = "agency-internal-locations-contract.avsc";
+    private static final String OFFENDERS_CONTRACT = "offenders.avsc";
 
     private static final AvroToSparkSchemaConverter converter = new AvroToSparkSchemaConverter();
 
@@ -64,11 +65,11 @@ public class SourceReferenceServiceTest {
         val schemaId = UUID.randomUUID().toString();
         val schemaResponse = new GlueSchemaResponse(
                 schemaId,
-                getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT)
+                getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT)
         );
-        when(client.getSchema("oms_owner.agency_internal_locations")).thenReturn(Optional.of(schemaResponse));
+        when(client.getSchema("oms_owner.offenders")).thenReturn(Optional.of(schemaResponse));
 
-        val result = underTest.getSourceReference("oms_owner", "agency_internal_locations");
+        val result = underTest.getSourceReference("oms_owner", "offenders");
 
         assertTrue(result.isPresent());
 
@@ -76,8 +77,8 @@ public class SourceReferenceServiceTest {
 
         assertEquals(schemaId, sourceReference.getKey());
         assertEquals("nomis", sourceReference.getSource());
-        assertEquals("AGENCY_INTERNAL_LOCATIONS", sourceReference.getTable());
-        assertEquals("INTERNAL_LOCATION_ID", sourceReference.getPrimaryKey());
+        assertEquals("OFFENDERS", sourceReference.getTable());
+        assertEquals("OFFENDER_ID", sourceReference.getPrimaryKey());
         // See AvroToSparkSchemaConverter for more detailed testing of the conversion.
         assertNotNull(sourceReference.getSchema());
     }
