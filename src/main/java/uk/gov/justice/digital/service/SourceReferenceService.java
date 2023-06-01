@@ -51,7 +51,10 @@ public class SourceReferenceService {
 
         val sourceReference = schemaClient.getSchema(key).map(this::createFromAvroSchema);
 
-        if (sourceReference.isPresent()) return sourceReference;
+        if (sourceReference.isPresent()) {
+            logger.info("Found contract schema for {} in registry", key);
+            return sourceReference;
+        }
         else {
             logger.warn("No SourceReference found in registry for {} - falling back to hardcoded resources", key);
             return Optional.ofNullable(sources.get(generateKey(source, table)));
