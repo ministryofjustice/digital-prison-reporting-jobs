@@ -5,13 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;
 import lombok.val;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.GlueSchemaClient;
+import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
@@ -42,7 +43,7 @@ public class SourceReferenceService {
         sources.put("oms_owner.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
         sources.put("oms_owner.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "nomis", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
         sources.put("oms_owner.agency_locations", new SourceReference("SYSTEM.AGENCY_LOCATIONS", "nomis", "agency_locations", "AGY_LOC_ID", getSchemaFromResource("/schemas/oms_owner.agency_locations.schema.json")));
-//        sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
+        sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
     }
 
     public Optional<SourceReference> getSourceReference(String source, String table) {
@@ -74,16 +75,16 @@ public class SourceReferenceService {
         return String.join(".", source, table).toLowerCase();
     }
 
-    private SourceReference createFromAvroSchema(String avroSchema) {
-        val parsedAvro = parseAvroString(avroSchema);
+    private SourceReference createFromAvroSchema(GlueSchemaResponse response) {
+        val parsedAvro = parseAvroString(response.getAvro());
 
         return new SourceReference(
-                parsedAvro.getKey(),
+                response.getId(),
                 parsedAvro.getService(),
-                parsedAvro.getName(),
+                parsedAvro.getNameWithoutVersionSuffix(),
                 parsedAvro.findPrimaryKey()
-                        .orElseThrow(() -> new IllegalStateException("No primary key found in schema: " + avroSchema)),
-                converter.convert(avroSchema)
+                        .orElseThrow(() -> new IllegalStateException("No primary key found in schema: " + response)),
+                converter.convert(response.getAvro())
         );
 
     }
@@ -95,27 +96,28 @@ public class SourceReferenceService {
         catch (Exception e) {
             throw new RuntimeException("Caught exception when parsing avro schema", e);
         }
-
     }
 
-    @Data
     @Builder
     @Jacksonized
     // Private class that declares only the fields we are interested in when constructing a SourceReference.
     private static class AvroSchema {
+        @Getter
         private final String service;
         private final String name;
         private final List<Map<String, String>> fields;
-
-        public String getKey() {
-            return String.join(".", service, name).toLowerCase();
-        }
 
         public Optional<String> findPrimaryKey() {
             return fields.stream()
                     .filter(f -> f.containsKey("key") && f.get("key").equals("primary"))
                     .map(f -> f.get("name"))
                     .findFirst();
+        }
+
+        // If the table name has a version suffix e.g. SOME_TABLE_NAME_16 this must be removed from the value used in
+        // the source reference instance. See SourceReferenceServiceTest for more context.
+        public String getNameWithoutVersionSuffix() {
+            return name.replaceFirst("_\\d+", "");
         }
     }
 
