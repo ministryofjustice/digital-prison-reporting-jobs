@@ -11,6 +11,7 @@ import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -77,7 +78,7 @@ public class SourceReferenceServiceTest {
 
         assertEquals(schemaId, sourceReference.getKey());
         assertEquals("nomis", sourceReference.getSource());
-        assertEquals("OFFENDERS", sourceReference.getTable());
+        assertEquals("offenders", sourceReference.getTable());
         assertEquals("OFFENDER_ID", sourceReference.getPrimaryKey());
         // See AvroToSparkSchemaConverter for more detailed testing of the conversion.
         assertNotNull(sourceReference.getSchema());
@@ -103,7 +104,7 @@ public class SourceReferenceServiceTest {
 
         val sourceReference = result.get();
 
-        assertEquals(tableName, sourceReference.getTable(), "Version suffix should be removed from table name");
+        assertEquals(tableName.toLowerCase(Locale.ENGLISH), sourceReference.getTable(), "Version suffix should be removed from table name");
     }
 
     @Test

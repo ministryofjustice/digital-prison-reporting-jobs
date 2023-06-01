@@ -135,7 +135,8 @@ public class SourceReferenceService {
         // If the table name has a version suffix e.g. SOME_TABLE_NAME_16 this must be removed from the value used in
         // the source reference instance. See SourceReferenceServiceTest for more context.
         public String getNameWithoutVersionSuffix() {
-            return name.replaceFirst("_\\d+", "");
+            return name.replaceFirst("_\\d+", "")
+                    .toLowerCase(Locale.ENGLISH);
         }
     }
 
