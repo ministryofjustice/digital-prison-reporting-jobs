@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.glue.GlueSchemaClient;
+import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
@@ -61,7 +62,7 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldReturnReferenceFromClientWhereItExists() {
         val schemaId = UUID.randomUUID().toString();
-        val schemaResponse = new GlueSchemaClient.GlueSchemaResponse(
+        val schemaResponse = new GlueSchemaResponse(
                 schemaId,
                 getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT)
         );
@@ -88,7 +89,7 @@ public class SourceReferenceServiceTest {
     public void shouldStripVersionSuffixFromNameAttribute() {
         val schemaId = UUID.randomUUID().toString();
         val tableName = "AGENCY_INTERNAL_LOCATIONS";
-        val schemaResponse = new GlueSchemaClient.GlueSchemaResponse(
+        val schemaResponse = new GlueSchemaResponse(
                 schemaId,
                 getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT)
                         .replace(tableName, tableName + "_17")
@@ -102,6 +103,14 @@ public class SourceReferenceServiceTest {
         val sourceReference = result.get();
 
         assertEquals(tableName, sourceReference.getTable(), "Version suffix should be removed from table name");
+    }
+
+    @Test
+    public void shouldThrowExceptionIfSchemaCannotBeParsed() {
+        when(client.getSchema("some.schema"))
+                .thenReturn(Optional.of(new GlueSchemaResponse(UUID.randomUUID().toString(), "This is not valid JSON")));
+
+        assertThrows(RuntimeException.class, () -> underTest.getSourceReference("some", "schema"));
     }
 
 }
