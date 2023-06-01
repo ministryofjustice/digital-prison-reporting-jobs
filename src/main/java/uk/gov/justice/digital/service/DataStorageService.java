@@ -140,7 +140,7 @@ public class DataStorageService {
         if (DeltaTable.isDeltaTable(spark, tablePath))
             return DeltaTable.forPath(spark, tablePath);
         else {
-            logger.error("No table found for path: {}", tablePath);
+            logger.warn("No table found for path: {}", tablePath);
             return null;
         }
     }
