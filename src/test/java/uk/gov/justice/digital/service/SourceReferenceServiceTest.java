@@ -23,7 +23,7 @@ import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 public class SourceReferenceServiceTest {
 
     private static final String RESOURCE_PATH = "/contracts";
-    private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACT = "agency-internal-locations-contract.avsc";
+    private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACT = "agency-internal-locations.avsc";
     private static final String OFFENDERS_CONTRACT = "offenders.avsc";
 
     private static final AvroToSparkSchemaConverter converter = new AvroToSparkSchemaConverter();

@@ -1,15 +1,16 @@
 package uk.gov.justice.digital.schema;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
-import lombok.val;
 import org.apache.avro.Schema;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,11 +20,15 @@ public class DomainContractValidationTest {
 
     private static final String RESOURCE_PATH = "/contracts";
 
-    private static final String REFERENCE_CONTRACT = "reference-contract.avsc";
-    private static final String AGENCY_LOCATIONS_CONTRACT = "agency-locations.avsc";
-    private static final String OFFENDERS_CONTRACT = "offenders.avsc";
-    private static final String OFFENDER_BOOKINGS_CONTRACT = "offender-bookings.avsc";
     private static final String DOMAIN_CONTRACT_SCHEMA = "domain-contract-schema.json";
+
+    private static final List<String> contracts = Arrays.asList(
+            "agency-internal-locations.avsc",
+            "agency-locations.avsc",
+            "offenders.avsc",
+            "offender-bookings.avsc",
+            "reference-contract.avsc"
+    );
 
     private static final ObjectMapper jsonParser = new ObjectMapper();
     private static final Schema.Parser avroSchemaParser = new Schema.Parser();
@@ -33,67 +38,32 @@ public class DomainContractValidationTest {
             .getSchema(getResource(RESOURCE_PATH + "/" + DOMAIN_CONTRACT_SCHEMA));
 
     @Test
-    public void referenceContractShouldBeValidAvro() {
-        assertDoesNotThrow(() -> avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + REFERENCE_CONTRACT)));
-    }
-
-    @Test
-    public void referenceContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + REFERENCE_CONTRACT));
-        assertEquals(Collections.emptySet(), validator.validate(contract));
-    }
-
-    @Test
-    public void agencyInternalLocationsContractShouldBeValidAvro() throws JsonProcessingException {
-        assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT))
+    public void allContractsShouldBeValidAvro() {
+        contracts.forEach(contract ->
+            assertDoesNotThrow(
+                    () -> avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + contract)),
+                    "Schema: " + contract + " should parse as Avro without error"
+            )
         );
     }
 
     @Test
-    public void agencyInternalLocationsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT));
-        assertEquals(Collections.emptySet(), validator.validate(contract));
+    public void allContractsShouldValidateAgainstOurContractSchema() {
+        contracts.forEach(contract ->
+            assertEquals(
+                    Collections.emptySet(),
+                    validator.validate(parseJson(contract)),
+                    "Contract: " + contract + " should validate without errors"
+            ));
     }
 
-    @Test
-    public void offendersContractShouldBeValidAvro() {
-        assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT))
-        );
+    private JsonNode parseJson(String contract) {
+        try {
+            return jsonParser.readTree(getResource(RESOURCE_PATH + "/" + contract));
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Caught exception when reading: " + contract, e);
+        }
     }
-
-    @Test
-    public void offendersContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT));
-        assertEquals(Collections.emptySet(), validator.validate(contract));
-    }
-
-    @Test
-    public void setOffenderBookingsContractShouldBeValidAvro() {
-        assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACT))
-        );
-    }
-
-    @Test
-    public void offenderBookingsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + OFFENDER_BOOKINGS_CONTRACT));
-        assertEquals(Collections.emptySet(), validator.validate(contract));
-    }
-
-    @Test
-    public void setAgencyLocationsContractShouldBeValidAvro() {
-        assertDoesNotThrow(() ->
-                avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACT))
-        );
-    }
-
-    @Test
-    public void agencyLocationsContractShouldValidateAgainstContractSchema() throws JsonProcessingException {
-        val contract = jsonParser.readTree(getResource(RESOURCE_PATH + "/" + AGENCY_LOCATIONS_CONTRACT));
-        assertEquals(Collections.emptySet(), validator.validate(contract));
-    }
-
 
 }
