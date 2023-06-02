@@ -21,6 +21,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
@@ -83,7 +84,7 @@ public class DataHubJob implements Runnable {
             val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf());
             val rowRdd = batch.map(d -> {
                 // TODO - temporary logging - removing
-                logger.info("RDD Dump: {}", d);
+                logger.info("RDD Dump: {}", new String(d, StandardCharsets.UTF_8));
                 return RowFactory.create(new String(d, StandardCharsets.UTF_8));
             });
             val dataFrame = converter.convert(rowRdd);
