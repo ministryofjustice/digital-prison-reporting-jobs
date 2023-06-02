@@ -16,6 +16,8 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
 
     private static final String DATA_PATH = "src/test/resources/data/dms_record.json";
     private static final String CONTROL_PATH = "src/test/resources/data/null-data-dms-record.json";
+
+    private static final String UPDATE_PATH = "src/test/resources/data/dms_update.json";
     private static final DMS_3_4_6 underTest = new DMS_3_4_6(new SparkSessionProvider());
 
     @Test
@@ -34,6 +36,7 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         val rdd = getData(DATA_PATH);
 
         val converted = underTest.convert(rdd);
+        converted.show(false);
 
         val columnNames = Arrays.asList(converted.columns());
 
@@ -46,6 +49,7 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertTrue(columnNames.contains(SOURCE));
         assertTrue(columnNames.contains(TABLE));
         assertTrue(columnNames.contains(OPERATION));
+        assertTrue(columnNames.contains(TRANSACTION_ID));
         assertTrue(columnNames.contains(CONVERTER));
 
         assertFalse(converted.isEmpty());
@@ -63,6 +67,7 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertNotNull(row.getAs(SOURCE));
         assertNotNull(row.getAs(TABLE));
         assertNotNull(row.getAs(OPERATION));
+        assertNull(row.getAs(TRANSACTION_ID));
         assertNotNull(row.getAs(CONVERTER));
 
     }
@@ -72,6 +77,7 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         val rdd = getData(CONTROL_PATH);
 
         val converted = underTest.convert(rdd);
+        converted.show(false);
 
         val columnNames = Arrays.asList(converted.columns());
 
@@ -84,6 +90,7 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertTrue(columnNames.contains(SOURCE));
         assertTrue(columnNames.contains(TABLE));
         assertTrue(columnNames.contains(OPERATION));
+        assertTrue(columnNames.contains(TRANSACTION_ID));
         assertTrue(columnNames.contains(CONVERTER));
 
         assertFalse(converted.isEmpty());
@@ -101,6 +108,49 @@ class DMS_3_4_6_ConverterTest extends BaseSparkTest {
         assertNotNull(row.getAs(SOURCE));
         assertNotNull(row.getAs(TABLE));
         assertNotNull(row.getAs(OPERATION));
+        assertNull(row.getAs(TRANSACTION_ID));
+        assertNotNull(row.getAs(CONVERTER));
+
+    }
+
+    @Test
+    void shouldConvertAnUpdateRecordIntoTheCorrectColumns() {
+        val rdd = getData(UPDATE_PATH);
+
+        val converted = underTest.convert(rdd);
+
+        converted.show(false);
+
+        val columnNames = Arrays.asList(converted.columns());
+
+        assertTrue(columnNames.contains(RAW));
+        assertTrue(columnNames.contains(DATA));
+        assertTrue(columnNames.contains(METADATA));
+        assertTrue(columnNames.contains(TIMESTAMP));
+        assertTrue(columnNames.contains(KEY));
+        assertTrue(columnNames.contains(DATA_TYPE));
+        assertTrue(columnNames.contains(SOURCE));
+        assertTrue(columnNames.contains(TABLE));
+        assertTrue(columnNames.contains(OPERATION));
+        assertTrue(columnNames.contains(TRANSACTION_ID));
+        assertTrue(columnNames.contains(CONVERTER));
+
+        assertFalse(converted.isEmpty());
+
+        val row = converted.first();
+
+        assertNotNull(row);
+
+        assertNotNull(row.getAs(RAW));
+        assertNotNull(row.getAs(DATA));
+        assertNotNull(row.getAs(METADATA));
+        assertNotNull(row.getAs(TIMESTAMP));
+        assertNotNull(row.getAs(KEY));
+        assertNotNull(row.getAs(DATA_TYPE));
+        assertNotNull(row.getAs(SOURCE));
+        assertNotNull(row.getAs(TABLE));
+        assertNotNull(row.getAs(OPERATION));
+        assertNotNull(row.getAs(TRANSACTION_ID));
         assertNotNull(row.getAs(CONVERTER));
 
     }
