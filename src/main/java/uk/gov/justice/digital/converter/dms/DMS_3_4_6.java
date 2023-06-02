@@ -57,6 +57,8 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
         public static final String OPERATION = "_operation";
         public static final String SOURCE = "_source";
         public static final String TABLE = "_table";
+        public static final String TRANSACTION_ID = "_txnid";
+
         public static final String CONVERTER = "_converter";
     }
 
@@ -90,6 +92,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
             .add(SOURCE, StringType, NOT_NULL)
             .add(TABLE, StringType, NOT_NULL)
             .add(OPERATION, StringType, NOT_NULL)
+            .add(TRANSACTION_ID, StringType, IS_NULLABLE)
             .add(CONVERTER, StringType, NOT_NULL);
 
 
@@ -108,6 +111,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
                 .add("partition-key-value", StringType)
                 .add("schema-name", StringType)
                 .add("table-name", StringType)
+                .add("transaction-id", StringType, IS_NULLABLE)
             );
 
     // Allow parse errors to fail silently when parsing the raw JSON string to allow control records to be filtered.
@@ -133,11 +137,27 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
                 col(DATA),
                 to_json(col(METADATA)).as(METADATA),
                 col("timestamp").as(TIMESTAMP),
-                col("partition-key-value").as(KEY),
+                    // when there is a partition-key-value we should use it
+                    (when(col("partition-key-value").isNotNull(), col("partition-key-value"))
+                    // when not and there is an operation == insert, update, delete
+                            .when(col("partition-key-value").isNull().and(expr("operation == 'insert'")),
+                                    concat(col("schema-name"), lit("."), col("table-name"), lit("."), col("transaction-id")))
+
+                            .when(col("partition-key-value").isNull().and(expr("operation == 'update'")),
+                                    concat(col("schema-name"), lit("."), col("table-name"), lit("."), col("transaction-id")))
+
+                            .when(col("partition-key-value").isNull().and(expr("operation == 'delete'")),
+                                    concat(col("schema-name"), lit("."), col("table-name"), lit("."), col("transaction-id")))
+                    // when it is something else and there is a transaction-id, use that
+                            .when(col("transaction-id").isNotNull(), col("transaction-id"))
+                    // otherwise we MD5 the raw as this SHOULD be unique
+                            .otherwise(md5(col(RAW)))
+                    ).as(KEY),
                 col("record-type").as(DATA_TYPE),
                 lower(col("schema-name")).as(SOURCE),
                 lower(col("table-name")).as(TABLE),
                 lower(col("operation")).as(OPERATION),
+                col("transaction-id").as(TRANSACTION_ID),
                 lit(CONVERTER_VERSION).as(CONVERTER)
             );
         // Strictly apply the parsed data schema which will fail if any values are null.
