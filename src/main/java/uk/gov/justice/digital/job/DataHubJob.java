@@ -81,7 +81,11 @@ public class DataHubJob implements Runnable {
             val startTime = System.currentTimeMillis();
 
             val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf());
-            val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
+            val rowRdd = batch.map(d -> {
+                // TODO - temporary logging - removing
+                logger.info("RDD Dump: {}", d);
+                return RowFactory.create(new String(d, StandardCharsets.UTF_8));
+            });
             val dataFrame = converter.convert(rowRdd);
 
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
