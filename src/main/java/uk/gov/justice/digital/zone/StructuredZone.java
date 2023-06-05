@@ -37,12 +37,16 @@ public class StructuredZone extends Zone {
     private final String structuredPath;
     private final String violationsPath;
     private final DataStorageService storage;
+    private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public StructuredZone(JobArguments jobArguments, DataStorageService storage) {
+    public StructuredZone(JobArguments jobArguments,
+                          DataStorageService storage,
+                          SourceReferenceService sourceReferenceService) {
         this.structuredPath = jobArguments.getStructuredS3Path();
         this.violationsPath = jobArguments.getViolationsS3Path();
         this.storage = storage;
+        this.sourceReferenceService = sourceReferenceService;
     }
 
     @Override
@@ -57,7 +61,7 @@ public class StructuredZone extends Zone {
         String sourceName = table.getAs(SOURCE);
         String tableName = table.getAs(TABLE);
 
-        val sourceReference = SourceReferenceService.getSourceReference(sourceName, tableName);
+        val sourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
 
         logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
 
@@ -73,9 +77,9 @@ public class StructuredZone extends Zone {
         return structuredDataFrame;
     }
 
-    protected Dataset<Row> handleSchemaFound(SparkSession spark,
-                                             Dataset<Row> dataFrame,
-                                             SourceReference sourceReference) throws DataStorageException {
+    private Dataset<Row> handleSchemaFound(SparkSession spark,
+                                           Dataset<Row> dataFrame,
+                                           SourceReference sourceReference) throws DataStorageException {
         val tablePath = createValidatedPath(
                 structuredPath,
                 sourceReference.getSource(),
@@ -108,10 +112,10 @@ public class StructuredZone extends Zone {
     }
 
     private Dataset<Row> validateJsonData(SparkSession spark,
-                                            Dataset<Row> dataFrame,
-                                            StructType schema,
-                                            String source,
-                                            String table) {
+                                          Dataset<Row> dataFrame,
+                                          StructType schema,
+                                          String source,
+                                          String table) {
 
         logger.info("Validating data against schema: {}/{}", source, table);
 
@@ -124,9 +128,9 @@ public class StructuredZone extends Zone {
     }
 
     private Dataset<Row> handleValidRecords(SparkSession spark,
-                                              Dataset<Row> dataFrame,
-                                              String destinationPath,
-                                              String primaryKey) throws DataStorageException {
+                                            Dataset<Row> dataFrame,
+                                            String destinationPath,
+                                            String primaryKey) throws DataStorageException {
         val validRecords = dataFrame
                 .select(col(PARSED_DATA), col(VALID))
                 .filter(col(VALID).equalTo(true))
@@ -164,10 +168,10 @@ public class StructuredZone extends Zone {
         }
     }
 
-    protected Dataset<Row> handleNoSchemaFound(SparkSession spark,
-                                               Dataset<Row> dataFrame,
-                                               String source,
-                                               String table) throws DataStorageException {
+    private Dataset<Row> handleNoSchemaFound(SparkSession spark,
+                                             Dataset<Row> dataFrame,
+                                             String source,
+                                             String table) throws DataStorageException {
 
         logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
                 source,

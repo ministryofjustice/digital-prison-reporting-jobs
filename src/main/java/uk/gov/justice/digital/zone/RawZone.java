@@ -8,14 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation;
-import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
 import java.util.Optional;
 
 import static org.apache.spark.sql.functions.*;
@@ -30,11 +28,15 @@ public class RawZone extends Zone {
 
     private final String rawS3Path;
     private final DataStorageService storage;
+    private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public RawZone(JobArguments jobArguments, DataStorageService storage) {
+    public RawZone(JobArguments jobArguments,
+                   DataStorageService storage,
+                   SourceReferenceService sourceReferenceService) {
         this.rawS3Path = jobArguments.getRawS3Path();
         this.storage = storage;
+        this.sourceReferenceService = sourceReferenceService;
     }
 
     @Override
@@ -48,17 +50,18 @@ public class RawZone extends Zone {
 
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
-        Optional<Operation> rowOperation = Operation.getOperation(table.getAs(OPERATION));
+        String rowOperation = table.getAs(OPERATION);
 
-        if(rowOperation.isPresent()) {
+        Optional<Operation> validatedOperation = Operation.getOperation(rowOperation);
 
-            val tablePath = SourceReferenceService.getSourceReference(rowSource, rowTable)
-                    .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable(), rowOperation.get().getName()))
+        if (validatedOperation.isPresent()) {
+            val tablePath = sourceReferenceService.getSourceReference(rowSource, rowTable)
+                    .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable(), validatedOperation.get().getName()))
                     // Revert to source and table from row where no match exists in the schema reference service.
-                    .orElse(createValidatedPath(rawS3Path, rowSource, rowTable, rowOperation.get().getName()));
-
+                    .orElse(createValidatedPath(rawS3Path, rowSource, rowTable, validatedOperation.get().getName()));
 
             logger.info("AppendDistinct {} records to deltalake table: {}", dataFrame.count(), tablePath);
+
             // this is the format that raw takes
             val dataFrameToWrite = dataFrame.select(
                     concat(col(KEY), lit(":"), col(TIMESTAMP), lit(":"), col(OPERATION)).as(PRIMARY_KEY_NAME),
@@ -67,7 +70,11 @@ public class RawZone extends Zone {
             storage.appendDistinct(tablePath, dataFrameToWrite, PRIMARY_KEY_NAME);
 
             logger.info("Append completed successfully");
+
             storage.updateDeltaManifestForTable(spark, tablePath);
+        }
+        else {
+            logger.warn("Unsupported operation: {} Skipping batch", rowOperation);
         }
 
         logger.info("Processed batch with {} records in {}ms",

@@ -1,12 +1,10 @@
 package uk.gov.justice.digital.client.glue;
 
 import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.model.EntityNotFoundException;
-import com.amazonaws.services.glue.model.GetSchemaVersionRequest;
-import com.amazonaws.services.glue.model.SchemaId;
-import com.amazonaws.services.glue.model.SchemaVersionNumber;
+import com.amazonaws.services.glue.model.*;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import lombok.Data;
 import lombok.val;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +26,14 @@ public class GlueSchemaClient {
         this.contractRegistryName = jobArguments.getContractRegistryName();
     }
 
-    public Optional<String> getSchema(String schemaName) {
+    public Optional<GlueSchemaResponse> getSchema(String schemaName) {
         try {
-            val result = glueClient.getSchemaVersion(createRequestForSchemaName(schemaName));
-            val schemaData = result.getSchemaDefinition();
-            return Optional.of(schemaData);
+            val request = createRequestForSchemaName(schemaName);
+            val result = glueClient.getSchemaVersion(request);
+            return Optional.of(new GlueSchemaResponse(
+                    result.getSchemaVersionId(),
+                    result.getSchemaDefinition()
+            ));
         }
         catch (EntityNotFoundException e) {
             logger.error("Failed to retrieve schema" + e);
@@ -45,12 +46,18 @@ public class GlueSchemaClient {
                 .withRegistryName(contractRegistryName)
                 .withSchemaName(schemaName);
 
-        val latestSchemaVersion = new SchemaVersionNumber()
-                .withLatestVersion(true);
+        // Always request the latest version of the schema.
+        val latestSchemaVersion = new SchemaVersionNumber().withLatestVersion(true);
 
         return new GetSchemaVersionRequest()
                 .withSchemaId(schemaId)
                 .withSchemaVersionNumber(latestSchemaVersion);
+    }
+
+    @Data
+    public static class GlueSchemaResponse {
+        private final String id;
+        private final String avro;
     }
 
 }

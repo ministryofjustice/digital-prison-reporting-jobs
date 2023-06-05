@@ -4,12 +4,10 @@ package uk.gov.justice.digital.zone;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
@@ -19,8 +17,11 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.zone.Fixtures.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,48 +39,59 @@ class StructuredZoneTest extends BaseSparkTest {
     @Mock
     private DataStorageService mockDataStorage;
 
-    private MockedStatic<SourceReferenceService> mockSourceReferenceService;
+    @Mock
+    private SourceReferenceService mockSourceReferenceService;
 
     private StructuredZone underTest;
 
     @BeforeEach
     public void setUp() {
-        mockSourceReferenceService = mockStatic(SourceReferenceService.class);
-        mockSourceReferenceService.when(() -> SourceReferenceService.generateKey(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
-        mockSourceReferenceService.when(() -> SourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenCallRealMethod();
         when(mockJobArguments.getViolationsS3Path()).thenReturn(VIOLATIONS_PATH);
         when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_PATH);
-        underTest = new StructuredZone(mockJobArguments, mockDataStorage);
-    }
 
-    @AfterEach
-    public void tearDown() {
-        mockSourceReferenceService.close();
+        underTest = new StructuredZone(
+                mockJobArguments,
+                mockDataStorage,
+                mockSourceReferenceService
+        );
     }
 
     @Test
     public void shouldHandleValidRecords() throws DataStorageException {
+        givenTheSchemaExists();
+        givenTheSourceReferenceIsValid();
         givenTheDatasetSupportsTheProcessFlow();
         assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
     public void shouldHandleInvalidRecords() throws DataStorageException {
+        givenTheSchemaExists();
+        givenTheSourceReferenceIsValid();
         givenTheDatasetSupportsTheProcessFlow();
         assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
-    public void shouldHandleSchemaFound() throws DataStorageException {
-        givenTheDatasetSupportsTheProcessFlow();
-        givenTheSourceReferenceIsValid();
-        assertNotNull(underTest.handleSchemaFound(spark, mockDataSet, mockSourceReference));
+    public void shouldHandleNoSchemaFound() throws DataStorageException {
+        givenTheSchemaDoesNotExist();
+        givenTheDatasetSupportsTheNoSchemaFoundFlow();
+        assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
     }
 
-    @Test
-    public void shouldHandleNoSchemaFound() throws DataStorageException {
-        givenTheDatasetSupportsTheNoSchemaFoundFlow();
-        assertNotNull(underTest.handleNoSchemaFound(spark, mockDataSet, TABLE_SOURCE, TABLE_NAME));
+    private void givenTheSchemaExists() {
+        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
+                .thenReturn(Optional.of(mockSourceReference));
+    }
+
+    private void givenTheSchemaDoesNotExist() {
+        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenReturn(Optional.empty());
+    }
+
+    private void givenTheSourceReferenceIsValid() {
+        when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
+        when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
+        when(mockSourceReference.getSchema()).thenReturn(ROW_SCHEMA);
     }
 
     private void givenTheDatasetSupportsTheProcessFlow() {
@@ -99,9 +111,4 @@ class StructuredZoneTest extends BaseSparkTest {
         when(mockDataSet.count()).thenReturn(10L);
     }
 
-    private void givenTheSourceReferenceIsValid() {
-        when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
-        when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
-        when(mockSourceReference.getSchema()).thenReturn(ROW_SCHEMA);
-    }
 }

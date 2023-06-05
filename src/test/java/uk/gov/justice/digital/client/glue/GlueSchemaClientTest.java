@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
 import uk.gov.justice.digital.config.JobArguments;
 
 import java.util.Optional;
@@ -23,6 +24,7 @@ public class GlueSchemaClientTest {
 
     private static final String SCHEMA_NAME = "somesource.sometable";
     private static final String FAKE_SCHEMA_DEFINITION = "This is a fake schema definition";
+    private static final String FIXED_UUID = "35AC2858-B6B4-462A-8F5E-A13D6E9E0FF2";
 
     @Mock
     private GlueClientProvider mockClientProvider;
@@ -51,7 +53,7 @@ public class GlueSchemaClientTest {
 
         val result = underTest.getSchema(SCHEMA_NAME);
 
-        assertEquals(Optional.of(FAKE_SCHEMA_DEFINITION), result);
+        assertEquals(Optional.of(new GlueSchemaResponse(FIXED_UUID, FAKE_SCHEMA_DEFINITION)), result);
     }
 
     @Test
@@ -79,6 +81,7 @@ public class GlueSchemaClientTest {
     }
 
     private void givenClientReturnsAValidResponse() {
+        when(mockResponse.getSchemaVersionId()).thenReturn(FIXED_UUID);
         when(mockResponse.getSchemaDefinition()).thenReturn(FAKE_SCHEMA_DEFINITION);
         when(mockClient.getSchemaVersion(any())).thenReturn(mockResponse);
     }

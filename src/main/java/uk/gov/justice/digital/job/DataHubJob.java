@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.converter.Converter;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.zone.CuratedZone;
@@ -25,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.Load;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 /**
@@ -85,20 +85,17 @@ public class DataHubJob implements Runnable {
             val dataFrame = converter.convert(rowRdd);
 
             getTablesWithLoadRecords(dataFrame).forEach(table -> {
-                Dataset<Row> rawDataFrame = null;
                 try {
-
-                    Dataset<Row> startDataFrame = extractDataFrameForSourceTable(dataFrame, table);
-
-                    rawDataFrame = rawZone.process(spark, startDataFrame, table);
-                    Dataset<Row> loadOnlySorted = rawDataFrame
-                            .filter(col(OPERATION).equalTo("load"))
+                    val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, table);
+                    val rawDataFrame = rawZone.process(spark, dataFrameForTable, table);
+                    val sortedLoadEvents = rawDataFrame
+                            .filter(col(OPERATION).equalTo(Load.getName()))
                             .orderBy(col(TIMESTAMP));
-                    Dataset<Row> structuredDataFrame = null;
-                    structuredDataFrame = structuredZone.process(spark, loadOnlySorted, table);
+                    val structuredDataFrame = structuredZone.process(spark, sortedLoadEvents, table);
                     curatedZone.process(spark, structuredDataFrame, table);
-                } catch (DataStorageException e) {
-                    logger.error("Datahub job failed" + e);
+                } catch (Exception e) {
+                    logger.error("Caught unexpected exception", e);
+                    throw new RuntimeException("Caught unexpected exception", e);
                 }
             });
 
@@ -123,7 +120,7 @@ public class DataHubJob implements Runnable {
 
     private List<Row> getTablesWithLoadRecords(Dataset<Row> dataFrame) {
         return dataFrame
-                .filter(col(OPERATION).equalTo("load"))
+                .filter(col(OPERATION).equalTo(Load.getName()))
                 .select(TABLE, SOURCE, OPERATION)
                 .distinct()
                 .collectAsList();

@@ -11,6 +11,7 @@ import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
+import java.util.Optional;
 
 @Singleton
 public class DataStorageService {
@@ -21,20 +22,21 @@ public class DataStorageService {
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     public boolean exists(SparkSession spark, TableIdentifier tableId) {
-        val tablePath = tableId.toPath();
-        logger.info("Delta table path {}", tablePath);
-        return DeltaTable.isDeltaTable(spark, tablePath);
+        val exists = DeltaTable.isDeltaTable(spark, tableId.toPath());
+        logger.info("Delta table path {} {}", tableId.toPath(), (exists) ? "exists" : "does not exist");
+        return exists;
     }
 
-    public boolean hasRecords(SparkSession spark, TableIdentifier info) throws DataStorageException {
-        logger.info("Checking details for Delta table..." + info.getSchema() + "." + info.getTable());
-        if (exists(spark, info)) {
-            Dataset<Row> df = get(spark, info);
-            return !df.isEmpty();
-        } else {
-            logger.info("Delta table has no records");
-            return false;
-        }
+
+    public boolean hasRecords(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
+        val hasRecords = exists(spark, tableId) &&
+                Optional.ofNullable(get(spark, tableId))
+                        .map(df -> !df.isEmpty())
+                        .orElse(false);
+
+        logger.info("Delta table {} {}", tableId.getSchema(), (hasRecords) ? "contains data" : "is empty");
+
+        return hasRecords;
     }
 
     public void append(String tablePath, Dataset<Row> df) throws DataStorageException {
@@ -111,24 +113,21 @@ public class DataStorageService {
     }
 
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
-        logger.info("Deleting Delta table..." + tableId.getSchema() + "." + tableId.getTable());
-        val deltaTable = getTable(spark, tableId.toPath());
-        if (deltaTable != null) {
-            deltaTable.delete();
-        } else {
-            logger.error("Delta table delete failed");
-            throw new DataStorageException("Delta table delete failed");
-        }
+        logger.info("Deleting Delta table {}.{}", tableId.getSchema(), tableId.getTable());
+
+        val deltaTable = Optional.ofNullable(getTable(spark, tableId.toPath()))
+                .orElseThrow(() -> new DataStorageException("Failed to delete table. Table does not exist"));
+
+        deltaTable.delete();
     }
 
     public void vacuum(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
-        val deltaTable = getTable(spark, tableId.toPath());
-        if (deltaTable != null) {
-            deltaTable.vacuum();
-        } else {
-            logger.error("Delta table vaccum failed");
-            throw new DataStorageException("Delta table vaccum failed");
-        }
+        logger.info("Vacuuming Delta table {}.{}", tableId.getSchema(), tableId.getTable());
+
+        val deltaTable = Optional.ofNullable(getTable(spark, tableId.toPath()))
+                .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"));
+
+        deltaTable.vacuum();
     }
 
     public Dataset<Row> get(SparkSession spark, TableIdentifier tableId) {
@@ -150,8 +149,7 @@ public class DataStorageService {
     }
 
     public void endTableUpdates(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
-        DeltaTable deltaTable = getTable(spark, tableId.toPath());
-        updateManifest(deltaTable);
+        updateDeltaManifestForTable(spark, tableId.toPath());
     }
 
     protected void updateManifest(DeltaTable dt) {
