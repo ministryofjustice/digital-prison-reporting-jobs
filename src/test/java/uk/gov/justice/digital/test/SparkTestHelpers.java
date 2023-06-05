@@ -52,7 +52,7 @@ public class SparkTestHelpers {
     }
 
     public void persistDataset(TableIdentifier location, Dataset<Row> df) throws DataStorageException {
-        new DataStorageService(new SparkSessionProvider()).replace(location.toPath(), df);
+        new DataStorageService().replace(location.toPath(), df);
     }
 
     public Dataset<Row> createIncidentDomainDataframe() {

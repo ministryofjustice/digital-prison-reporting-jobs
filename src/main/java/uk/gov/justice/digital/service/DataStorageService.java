@@ -1,8 +1,6 @@
 package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -11,8 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.provider.SparkSessionProvider;
 
+import javax.inject.Singleton;
 import java.util.Optional;
 
 @Singleton
@@ -23,41 +21,37 @@ public class DataStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
-    private final SparkSession spark;
-
-    @Inject
-    public DataStorageService(SparkSessionProvider sparkSessionProvider) {
-        this.spark = sparkSessionProvider.getConfiguredSparkSession();
-    }
-
-    public boolean exists(TableIdentifier tableId) {
+    public boolean exists(SparkSession spark, TableIdentifier tableId) {
         val exists = DeltaTable.isDeltaTable(spark, tableId.toPath());
         logger.info("Delta table path {} {}", tableId.toPath(), (exists) ? "exists" : "does not exist");
         return exists;
     }
 
-    public boolean hasRecords(TableIdentifier tableId) throws DataStorageException {
-        val hasRecords = exists(tableId) &&
-            Optional.ofNullable(get(tableId))
-                .map(df -> !df.isEmpty())
-                .orElse(false);
+    public boolean hasRecords(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
+        val hasRecords = exists(spark, tableId) &&
+                Optional.ofNullable(get(spark, tableId))
+                        .map(df -> !df.isEmpty())
+                        .orElse(false);
 
         logger.info("Delta table {} {}", tableId.getSchema(), (hasRecords) ? "contains data" : "is empty");
 
         return hasRecords;
     }
 
-    public void append(String tablePath, Dataset<Row> df) {
-        df.write()
-                .format("delta")
-                .mode("append")
-                .option("path", tablePath)
-                .save();
+    public void append(String tablePath, Dataset<Row> df) throws DataStorageException {
+        logger.info("Appending schema and data to " + tablePath);
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .mode("append")
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void appendDistinct(String tablePath, Dataset<Row> df, String primaryKey) {
+    public void appendDistinct(String tablePath, Dataset<Row> df, String primaryKey) throws DataStorageException {
         if(!df.isEmpty()) {
-            final DeltaTable dt = getTable(tablePath);
+            final DeltaTable dt = getTable(df.sparkSession(), tablePath);
             if(dt != null) {
                 final String spk = SOURCE + "." + primaryKey;
                 final String tpk = TARGET + "." + primaryKey;
@@ -71,78 +65,86 @@ public class DataStorageService {
         }
     }
 
-    public void create(String tablePath, Dataset<Row> df) {
+    public void create(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.info("Inserting schema and data to " + tablePath);
-        df.write()
-                .format("delta")
-                .option("path", tablePath)
-                .save();
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void replace(String tablePath, Dataset<Row> df) {
+    public void replace(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.info("Overwriting schema and data to " + tablePath);
-        df.write()
-                .format("delta")
-                .mode("overwrite")
-                .option("overwriteSchema", true)
-                .option("path", tablePath)
-                .save();
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .mode("overwrite")
+                    .option("overwriteSchema", true)
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void resync(String tablePath, Dataset<Row> df) {
+    public void resync(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.info("Syncing data to " + tablePath);
-        df.write()
-                .format("delta")
-                .mode("overwrite")
-                .option("path", tablePath)
-                .save();
+        if (tablePath != null && df != null)
+            df.write()
+                    .format("delta")
+                    .mode("overwrite")
+                    .option("path", tablePath)
+                    .save();
+        else throw new DataStorageException("Path is not set or dataframe is null");
     }
 
-    public void delete(TableIdentifier tableId) throws DataStorageException {
+    public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
         logger.info("Deleting Delta table {}.{}", tableId.getSchema(), tableId.getTable());
 
-        val deltaTable = Optional.ofNullable(getTable(tableId.toPath()))
+        val deltaTable = Optional.ofNullable(getTable(spark, tableId.toPath()))
                 .orElseThrow(() -> new DataStorageException("Failed to delete table. Table does not exist"));
 
         deltaTable.delete();
     }
 
-    public void vacuum(TableIdentifier tableId) throws DataStorageException {
-        val deltaTable = Optional.ofNullable(getTable(tableId.toPath()))
+    public void vacuum(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
+        logger.info("Vacuuming Delta table {}.{}", tableId.getSchema(), tableId.getTable());
+
+        val deltaTable = Optional.ofNullable(getTable(spark, tableId.toPath()))
                 .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"));
 
         deltaTable.vacuum();
     }
 
-    public Dataset<Row> get(TableIdentifier tableId) {
-        return get(tableId.toPath());
+    public Dataset<Row> get(SparkSession spark, TableIdentifier tableId) {
+        return get(spark, tableId.toPath());
     }
 
-    public void endTableUpdates(TableIdentifier tableId) {
-        updateDeltaManifestForTable(tableId.toPath());
-    }
-
-    public void updateDeltaManifestForTable(String tablePath) {
-        val deltaTable = getTable(tablePath);
-        updateManifest(deltaTable);
-    }
-
-    private void updateManifest(DeltaTable dt) {
-        dt.generate("symlink_format_manifest");
-    }
-
-    private Dataset<Row> get(String tablePath) {
-        DeltaTable deltaTable = getTable(tablePath);
+    public Dataset<Row> get(SparkSession spark, String tablePath) {
+        DeltaTable deltaTable = getTable(spark, tablePath);
         return deltaTable == null ? null : deltaTable.toDF();
     }
 
-    private DeltaTable getTable(String tablePath) {
+    protected DeltaTable getTable(SparkSession spark, String tablePath) {
         if (DeltaTable.isDeltaTable(spark, tablePath))
             return DeltaTable.forPath(spark, tablePath);
         else {
-            logger.warn("No table found for path: {}", tablePath);
-            return null;
+            logger.warn("Cannot update manifest for table: {} - Not a delta table", tablePath);
         }
+        return null;
+    }
+
+    public void endTableUpdates(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
+        updateDeltaManifestForTable(spark, tableId.toPath());
+    }
+
+    protected void updateManifest(DeltaTable dt) {
+        dt.generate("symlink_format_manifest");
+    }
+
+    public void updateDeltaManifestForTable(SparkSession spark, String tablePath) {
+        DeltaTable deltaTable = getTable(spark, tablePath);
+        updateManifest(deltaTable);
     }
 
 }

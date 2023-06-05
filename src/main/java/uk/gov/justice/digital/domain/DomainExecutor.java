@@ -61,8 +61,8 @@ public class DomainExecutor {
         String tablePath = tableId.toPath();
         logger.info("Domain insert to disk started");
         try {
-            if(storage.exists(tableId)) {
-                if(storage.hasRecords(tableId)) {
+            if(storage.exists(spark, tableId)) {
+                if(storage.hasRecords(spark, tableId)) {
                     // this is trying to overwrite so throw an exception
                     throw new DomainExecutorException("Delta table " + tableId.getTable() + " already exists and has records. Try replace");
                 } else {
@@ -86,7 +86,7 @@ public class DomainExecutor {
         logger.info("DomainExecutor:: updateTable");
         String tablePath = tableId.toPath();
         try {
-            if (storage.exists(tableId)) {
+            if (storage.exists(spark, tableId)) {
                 storage.replace(tablePath, dataFrame);
                 schema.replace(tableId, tablePath, dataFrame);
                 logger.info("Updating delta table completed");
@@ -101,7 +101,7 @@ public class DomainExecutor {
     protected void syncTable(TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
-        if (storage.exists(tableId)) {
+        if (storage.exists(spark, tableId)) {
             storage.resync(tableId.toPath(), dataFrame);
             logger.info("Syncing delta table completed..." + tableId.getTable());
         } else {
@@ -112,9 +112,9 @@ public class DomainExecutor {
     protected void deleteTable(TableIdentifier tableId) throws DomainExecutorException {
         logger.info("DomainOperations:: deleteSchemaAndTableData");
         try {
-            if (storage.exists(tableId)) {
-                storage.delete(tableId);
-                storage.endTableUpdates(tableId);
+            if (storage.exists(spark, tableId)) {
+                storage.delete(spark, tableId);
+                storage.endTableUpdates(spark, tableId);
             } else {
                 logger.warn("Delete table " + tableId.getSchema() + "." + tableId.getTable() + " not executed as table doesn't exist");
             }
@@ -140,14 +140,13 @@ public class DomainExecutor {
             logger.error("Invalid operation type " + domainOperation);
             throw new DomainExecutorException("Invalid operation type " + domainOperation);
         }
-        storage.endTableUpdates(tableId);
+        storage.endTableUpdates(spark, tableId);
     }
 
-    protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
+    private void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
         storage.append(target.toPath(), dataFrame);
-        storage.endTableUpdates(target);
+        storage.endTableUpdates(spark, target);
     }
-
 
     public Dataset<Row> getAllSourcesForTable(String sourcePath,
                                               String source,
@@ -156,6 +155,7 @@ public class DomainExecutor {
             try {
                 TableTuple full = new TableTuple(source);
                 Dataset<Row> dataFrame = storage.get(
+                        spark,
                         new TableIdentifier(sourcePath, hiveDatabaseName, full.getSchema(), full.getTable())
                 );
                 if (dataFrame != null) {

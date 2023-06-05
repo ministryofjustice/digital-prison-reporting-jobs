@@ -67,7 +67,7 @@ public class CuratedZone extends Zone {
             logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), curatedTablePath);
             storage.appendDistinct(curatedTablePath, dataFrame, sourceReference.getPrimaryKey());
             logger.info("Append completed successfully");
-            storage.updateDeltaManifestForTable(curatedTablePath);
+            storage.updateDeltaManifestForTable(spark, curatedTablePath);
 
             logger.info("Processed batch with {} records in {}ms",
                     count,

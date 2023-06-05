@@ -16,17 +16,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class DataStorageServiceTest extends BaseSparkTest {
 
-    private static final DataStorageService underTest = new DataStorageService(new SparkSessionProvider());
+    private static final DataStorageService underTest = new DataStorageService();
 
     private MockedStatic<DeltaTable> mockDeltaTableStatic;
 
@@ -66,13 +66,13 @@ class DataStorageServiceTest extends BaseSparkTest {
     @Test
     public void shouldReturnTrueWhenStorageExists() {
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        assertTrue(underTest.exists(tableId));
+        assertTrue(underTest.exists(spark, tableId));
     }
 
     @Test
     public void shouldReturnFalseWhenStorageDoesNotExist() {
         when(DeltaTable.isDeltaTable(spark, tableId.toPath())).thenReturn(false);
-        assertFalse(underTest.exists(tableId));
+        assertFalse(underTest.exists(spark, tableId));
     }
 
     @Test
@@ -83,8 +83,8 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         when(mockDeltaTable.toDF()).thenReturn(df);
 
-        assertTrue(underTest.exists(tableId));
-        assertTrue(underTest.hasRecords(tableId));
+        assertTrue(underTest.exists(spark, tableId));
+        assertTrue(underTest.hasRecords(spark, tableId));
     }
 
     @Test
@@ -95,18 +95,18 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         when(mockDeltaTable.toDF()).thenReturn(df);
 
-        assertTrue(underTest.exists(tableId));
-        assertFalse(underTest.hasRecords(tableId));
+        assertTrue(underTest.exists(spark, tableId));
+        assertFalse(underTest.hasRecords(spark, tableId));
     }
 
     @Test
     public void shouldReturnFalseForHasRecordsWhenStorageDoesNotExist() throws DataStorageException {
-        assertFalse(underTest.exists(tableId));
-        assertFalse(underTest.hasRecords(tableId));
+        assertFalse(underTest.exists(spark, tableId));
+        assertFalse(underTest.hasRecords(spark, tableId));
     }
 
     @Test
-    public void shouldAppendCompleteForDeltaTable() {
+    public void shouldAppendCompleteForDeltaTable() throws DataStorageException {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -120,7 +120,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldCreateCompleteForDeltaTable() {
+    public void shouldCreateCompleteForDeltaTable() throws DataStorageException {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -132,7 +132,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReplaceCompleteForDeltaTable() {
+    public void shouldReplaceCompleteForDeltaTable() throws DataStorageException {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -148,7 +148,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReloadCompleteForDeltaTable() {
+    public void shouldReloadCompleteForDeltaTable() throws DataStorageException {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -164,35 +164,35 @@ class DataStorageServiceTest extends BaseSparkTest {
     @Test
     public void shouldDeleteCompleteForDeltaTable() throws DataStorageException {
         givenDeltaTableExists();
-        underTest.delete(tableId);
+        underTest.delete(spark, tableId);
         verify(mockDeltaTable).delete();
     }
 
     @Test
     public void shouldVacuumCompleteForDeltaTable() throws DataStorageException {
         givenDeltaTableExists();
-        underTest.vacuum(tableId);
+        underTest.vacuum(spark, tableId);
         verify(mockDeltaTable).vacuum();
     }
 
     @Test
     public void shouldGetDeltaTableWhenExists() {
         givenDeltaTableExists();
-        underTest.get(tableId);
+        underTest.get(spark, tableId);
         verify(mockDeltaTable).toDF();
     }
 
     @Test
-    public void shouldUpdateendTableUpdates() {
+    public void shouldGenerateManifestWhenEndTableUpdatesCalled() throws DataStorageException {
         givenDeltaTableExists();
-        underTest.endTableUpdates(tableId);
+        underTest.endTableUpdates(spark, tableId);
         verifyManifestGeneratedWithExpectedModeString();
     }
 
     @Test
     public void shouldUpdateDeltaManifestForTable() {
         givenDeltaTableExists();
-        underTest.updateDeltaManifestForTable(tablePath);
+        underTest.updateDeltaManifestForTable(spark, tablePath);
         verifyManifestGeneratedWithExpectedModeString();
     }
 
