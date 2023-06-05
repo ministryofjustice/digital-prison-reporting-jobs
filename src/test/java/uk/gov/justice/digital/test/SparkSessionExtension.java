@@ -1,29 +1,20 @@
 package uk.gov.justice.digital.test;
 
 import org.apache.spark.sql.SparkSession;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-public class SparkSessionExtension implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
-
-    private static final SparkSession sparkSession = getOrCreateSession();
+public class SparkSessionExtension implements AfterAllCallback {
 
     @Override
-    public void beforeAll(ExtensionContext context) {
-        // The underlying getOrCreate call is synchronized so multiple calls will only ever create a single session.
-        getOrCreateSession();
+    public void afterAll(ExtensionContext context) throws Exception {
+        getSession().stop();
     }
 
-    @Override
-    public void close() {
-        sparkSession.stop();
-    }
-
+    // Internally the getOrCreate() method is synchronized so successive calls are thread safe and will only return the
+    // same session instance. We also only create the session when it's explicitly requested by a test, so running a
+    // single non-spark test will not be delayed by unnecessary spark startup.
     public static SparkSession getSession() {
-        return sparkSession;
-    }
-
-    private static SparkSession getOrCreateSession() {
         return SparkSession.builder()
                 .appName("test")
                 .config("spark.master", "local")
@@ -45,4 +36,5 @@ public class SparkSessionExtension implements BeforeAllCallback, ExtensionContex
                 .enableHiveSupport()
                 .getOrCreate();
     }
+
 }
