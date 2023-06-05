@@ -8,6 +8,8 @@ import com.amazonaws.services.glue.model.SchemaVersionNumber;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 
 import java.util.Optional;
@@ -17,6 +19,7 @@ public class GlueSchemaClient {
 
     private final AWSGlue glueClient;
     private final String contractRegistryName;
+    private static final Logger logger = LoggerFactory.getLogger(GlueSchemaClient.class);
 
     @Inject
     public GlueSchemaClient(GlueClientProvider glueClientProvider,
@@ -32,6 +35,7 @@ public class GlueSchemaClient {
             return Optional.of(schemaData);
         }
         catch (EntityNotFoundException e) {
+            logger.error("Failed to retrieve schema" + e);
             return Optional.empty();
         }
     }

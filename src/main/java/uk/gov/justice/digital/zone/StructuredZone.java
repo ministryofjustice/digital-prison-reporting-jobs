@@ -184,7 +184,6 @@ public class StructuredZone extends Zone {
                 missingSchemaRecords,
                 createValidatedPath(violationsPath, source, table)
         );
-
         return createEmptyDataFrame(dataFrame);
     }
 

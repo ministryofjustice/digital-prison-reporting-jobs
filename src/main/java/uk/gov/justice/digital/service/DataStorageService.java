@@ -32,6 +32,7 @@ public class DataStorageService {
             Dataset<Row> df = get(spark, info);
             return !df.isEmpty();
         } else {
+            logger.info("Delta table has no records");
             return false;
         }
     }
@@ -44,7 +45,10 @@ public class DataStorageService {
                     .mode("append")
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
     }
 
     public void appendDistinct(String tablePath, Dataset<Row> df, String primaryKey) throws DataStorageException {
@@ -70,7 +74,10 @@ public class DataStorageService {
                     .format("delta")
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
     }
 
     public void replace(String tablePath, Dataset<Row> df) throws DataStorageException {
@@ -82,7 +89,10 @@ public class DataStorageService {
                     .option("overwriteSchema", true)
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
     }
 
     public void resync(String tablePath, Dataset<Row> df) throws DataStorageException {
@@ -93,7 +103,11 @@ public class DataStorageService {
                     .mode("overwrite")
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
+
     }
 
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
@@ -101,14 +115,20 @@ public class DataStorageService {
         val deltaTable = getTable(spark, tableId.toPath());
         if (deltaTable != null) {
             deltaTable.delete();
-        } else throw new DataStorageException("Delta table delete failed");
+        } else {
+            logger.error("Delta table delete failed");
+            throw new DataStorageException("Delta table delete failed");
+        }
     }
 
     public void vacuum(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
         val deltaTable = getTable(spark, tableId.toPath());
         if (deltaTable != null) {
             deltaTable.vacuum();
-        } else throw new DataStorageException("Delta table vaccum failed");
+        } else {
+            logger.error("Delta table vaccum failed");
+            throw new DataStorageException("Delta table vaccum failed");
+        }
     }
 
     public Dataset<Row> get(SparkSession spark, TableIdentifier tableId) {

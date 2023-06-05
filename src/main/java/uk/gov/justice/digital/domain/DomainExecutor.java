@@ -77,6 +77,7 @@ public class DomainExecutor {
             logger.info("Creating delta table completed...");
 
         } catch (DomainSchemaException | DataStorageException dse) {
+            logger.error("Delta table already exists and contain records" + dse);
             throw new DomainExecutorException(dse);
         }
     }
@@ -91,9 +92,11 @@ public class DomainExecutor {
                 schema.replace(tableId, tablePath, dataFrame);
                 logger.info("Updating delta table completed...");
             } else {
+                logger.error("Delta table " + tablePath + " doesn't exist");
                 throw new DomainExecutorException("Delta table " + tablePath + " doesn't exist");
             }
         } catch (DomainSchemaException | DataStorageException dse) {
+            logger.error("Delta table update failed" + dse);
             throw new DomainExecutorException(dse);
         }
     }
@@ -105,6 +108,7 @@ public class DomainExecutor {
             storage.resync(tableId.toPath(), dataFrame);
             logger.info("Syncing delta table completed..." + tableId.getTable());
         } else {
+            logger.error("Delta table " + tableId.getTable() + "doesn't exist");
             throw new DomainExecutorException("Delta table " + tableId.getTable() + "doesn't exist");
         }
     }
@@ -121,6 +125,7 @@ public class DomainExecutor {
 
             schema.drop(tableId);
         } catch (DomainSchemaException | DataStorageException dse) {
+            logger.error("Delta table delete failed" + dse);
             throw new DomainExecutorException(dse);
         }
     }
@@ -339,13 +344,13 @@ public class DomainExecutor {
                         operation
                 );
             } catch (DataStorageException e) {
+                logger.error("Saving domain data failed" + e);
                 throw new DomainExecutorException(e.getMessage(), e);
             }
 
         }
         else {
             val message = "Unsupported domain operation: '" + operation + "'";
-            logger.error(message);
             throw new DomainExecutorException(message);
         }
     }
