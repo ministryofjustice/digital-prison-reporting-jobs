@@ -25,11 +25,15 @@ public class CuratedZone extends Zone {
 
     private final String curatedPath;
     private final DataStorageService storage;
+    private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public CuratedZone(JobArguments jobArguments, DataStorageService storage) {
+    public CuratedZone(JobArguments jobArguments,
+                       DataStorageService storage,
+                       SourceReferenceService sourceReferenceService) {
         this.curatedPath = jobArguments.getCuratedS3Path();
         this.storage = storage;
+        this.sourceReferenceService = sourceReferenceService;
     }
 
     @Override
@@ -45,7 +49,7 @@ public class CuratedZone extends Zone {
             String sourceName = table.getAs(SOURCE);
             String tableName = table.getAs(TABLE);
 
-            val sourceReference = SourceReferenceService
+            val sourceReference = sourceReferenceService
                     .getSourceReference(sourceName, tableName)
                     // This can only happen if the schema disappears after the structured zone has processed the data, so we
                     // should never see this in practise. However, if it does happen throwing here will make it clear what

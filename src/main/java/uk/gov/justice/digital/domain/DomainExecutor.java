@@ -89,12 +89,12 @@ public class DomainExecutor {
             if (storage.exists(spark, tableId)) {
                 storage.replace(tablePath, dataFrame);
                 schema.replace(tableId, tablePath, dataFrame);
-                logger.info("Updating delta table completed...");
+                logger.info("Updating delta table completed");
             } else {
                 throw new DomainExecutorException("Delta table " + tablePath + " doesn't exist");
             }
-        } catch (DomainSchemaException | DataStorageException dse) {
-            throw new DomainExecutorException(dse);
+        } catch (Exception e) {
+            throw new DomainExecutorException(e);
         }
     }
 
@@ -143,11 +143,10 @@ public class DomainExecutor {
         storage.endTableUpdates(spark, tableId);
     }
 
-    protected void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
+    private void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
         storage.append(target.toPath(), dataFrame);
         storage.endTableUpdates(spark, target);
     }
-
 
     public Dataset<Row> getAllSourcesForTable(String sourcePath,
                                               String source,
