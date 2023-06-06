@@ -25,7 +25,6 @@ workflows:
           notify_jira: false ## Notify Jira
           notify_slack: false ## Notify Slack
           deploy_to_test: true
-          deploy_to_preprod: true
           branch: << pipeline.git.branch >><< pipeline.git.tag >>
           channel: dpr_cicd_alerts
           filters:
