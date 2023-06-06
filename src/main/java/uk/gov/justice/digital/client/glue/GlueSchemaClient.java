@@ -17,7 +17,6 @@ public class GlueSchemaClient {
 
     private final AWSGlue glueClient;
     private final String contractRegistryName;
-    private static final Logger logger = LoggerFactory.getLogger(GlueSchemaClient.class);
 
     @Inject
     public GlueSchemaClient(GlueClientProvider glueClientProvider,
@@ -36,7 +35,6 @@ public class GlueSchemaClient {
             ));
         }
         catch (EntityNotFoundException e) {
-            logger.error("Failed to retrieve schema" + e);
             return Optional.empty();
         }
     }

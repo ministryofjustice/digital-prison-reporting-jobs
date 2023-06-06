@@ -23,7 +23,6 @@ public class ResourcePath {
                     .normalize()
                     .toASCIIString();
         } catch (URISyntaxException e) {
-            logger.error("Failed to validate path : " + rawPath);
             throw new IllegalArgumentException("Failed to validate path: " + rawPath, e);
         }
     }

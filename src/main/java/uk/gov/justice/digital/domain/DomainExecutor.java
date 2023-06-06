@@ -77,7 +77,7 @@ public class DomainExecutor {
             logger.info("Creating delta table completed...");
 
         } catch (DomainSchemaException | DataStorageException dse) {
-            logger.error("Delta table already exists and contain records" + dse);
+            logger.error("Delta table already exists and contain records", dse);
             throw new DomainExecutorException(dse);
         }
     }
@@ -96,7 +96,7 @@ public class DomainExecutor {
                 throw new DomainExecutorException("Delta table " + tablePath + " doesn't exist");
             }
         } catch (Exception e) {
-            logger.error("Delta table update failed" + e);
+            logger.error("Delta table update failed", e);
             throw new DomainExecutorException(e);
         }
     }
@@ -125,7 +125,7 @@ public class DomainExecutor {
 
             schema.drop(tableId);
         } catch (DomainSchemaException | DataStorageException dse) {
-            logger.error("Delta table delete failed" + dse);
+            logger.error("Delta table delete failed", dse);
             throw new DomainExecutorException(dse);
         }
     }
@@ -343,7 +343,7 @@ public class DomainExecutor {
                         operation
                 );
             } catch (DataStorageException e) {
-                logger.error("Saving domain data failed" + e);
+                logger.error("Saving domain data failed", e);
                 throw new DomainExecutorException(e.getMessage(), e);
             }
 

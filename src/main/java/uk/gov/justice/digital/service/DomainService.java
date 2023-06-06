@@ -78,7 +78,7 @@ public class DomainService {
             logger.info("Retrieved domain definition for domain: '{}' table: '{}'", domainName, tableName);
             return domainDefinition;
         } catch (DatabaseClientException e) {
-            logger.error("DynamoDB request failed: " + e);
+            logger.error("DynamoDB request failed: ", e);
             throw new DomainServiceException("DynamoDB request failed: ", e);
         }
     }
