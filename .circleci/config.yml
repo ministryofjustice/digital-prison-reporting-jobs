@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@dev:534c77c29fd7502ba3cc13900269984fd1792ffc
+  reporting: ministryofjustice/hmpps-reporting@dev:11ca67af0cf6aa3ac7552878146358dd3a08adf9
   
 workflows:
   checkout-build-publish:
@@ -24,6 +24,7 @@ workflows:
           deploy_script: true ## Deploy Placeholder Script for GlueJobs, defaults to False         
           notify_jira: false ## Notify Jira
           notify_slack: false ## Notify Slack
+          deploy_to_test: true
           deploy_to_preprod: true
           branch: << pipeline.git.branch >><< pipeline.git.tag >>
           channel: dpr_cicd_alerts
