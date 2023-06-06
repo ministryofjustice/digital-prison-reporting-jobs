@@ -5,7 +5,8 @@ import com.amazonaws.services.dynamodbv2.model.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
-import uk.gov.justice.digital.domain.model.DomainDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
 import java.util.ArrayList;
@@ -38,32 +39,6 @@ public abstract class DynamoDBClient {
         this.indexName = indexName;
         this.sortKeyName = sortKeyName;
         this.dataField = dataField;
-    }
-
-
-    protected Map<String, AttributeValue> getItem(final String key) {
-        GetItemResult response = client.getItem(this.tableName, Collections.singletonMap(primaryKey, new AttributeValue().withS(key)));
-        if (response != null) {
-            return response.getItem();
-        }
-        return Collections.<String, AttributeValue>emptyMap();
-    }
-
-    protected AttributeValue getItemValue(final String key, final String attribute) {
-        GetItemResult response = client.getItem(this.tableName, Collections.singletonMap(primaryKey, new AttributeValue().withS(key)));
-        if (response != null) {
-            return response.getItem().get(attribute);
-        }
-        return null;
-    }
-
-    protected boolean hasItem(final String key) {
-        Map<String,AttributeValue> result = getItem(key);
-        return result == null ? false : !result.isEmpty();
-    }
-
-    protected void putItem(Map<String, AttributeValue> values) {
-        client.putItem(this.tableName, values);
     }
 
     protected QueryResult makeRequestForAttribute(String attributeName, String attributeValue) throws DatabaseClientException {

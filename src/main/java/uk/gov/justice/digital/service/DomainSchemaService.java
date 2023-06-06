@@ -60,6 +60,7 @@ public class DomainSchemaService {
                 throw new DomainSchemaException("Glue catalog table '" + tableName + "' already exists");
             }
         } else {
+            logger.error("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
             throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
         }
     }
@@ -72,9 +73,11 @@ public class DomainSchemaService {
                 updateTable(info.getDatabase(), tableName, path, dataFrame);
                 logger.info("Replacing Hive Schema completed " + tableName);
             } else {
+                logger.error("Glue catalog table '" + info.getTable() + "' doesn't exist");
                 throw new DomainSchemaException("Glue catalog table '" + info.getTable() + "' doesn't exist");
             }
         } else {
+            logger.error("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
             throw new DomainSchemaException("Glue catalog database '" + info.getDatabase() + "' doesn't exist");
         }
     }
@@ -90,6 +93,7 @@ public class DomainSchemaService {
                 logger.warn("Couldn't remove Hive Schema " + tableName + " as it doesn't exist");
             }
         } else {
+            logger.error("Glue catalog " + info.getDatabase() + " doesn't exist");
             throw new DomainSchemaException("Glue catalog " + info.getDatabase() + " doesn't exist");
         }
     }
@@ -128,7 +132,8 @@ public class DomainSchemaService {
     public void createTable(final String databaseName, final String tableName, final String path,
                             final Dataset<Row> dataframe) {
         if(!validateTableName(tableName)) {
-            throw new RuntimeException("Tablename " + tableName + " is not supported. Use [a-zA-Z_0-9]");
+            logger.error("Table name " + tableName + " is not supported. Use [a-zA-Z_0-9]");
+            throw new RuntimeException("Table name " + tableName + " is not supported. Use [a-zA-Z_0-9]");
         }
         // Create a CreateTableRequest
         CreateTableRequest createTableRequest = new CreateTableRequest()

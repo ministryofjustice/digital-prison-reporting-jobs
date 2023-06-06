@@ -6,6 +6,8 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.Data;
 import lombok.val;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 
 import java.util.Optional;

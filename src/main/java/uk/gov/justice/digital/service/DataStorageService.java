@@ -27,6 +27,7 @@ public class DataStorageService {
         return exists;
     }
 
+
     public boolean hasRecords(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
         val hasRecords = exists(spark, tableId) &&
                 Optional.ofNullable(get(spark, tableId))
@@ -46,7 +47,10 @@ public class DataStorageService {
                     .mode("append")
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
     }
 
     public void appendDistinct(String tablePath, Dataset<Row> df, String primaryKey) throws DataStorageException {
@@ -72,7 +76,10 @@ public class DataStorageService {
                     .format("delta")
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
     }
 
     public void replace(String tablePath, Dataset<Row> df) throws DataStorageException {
@@ -84,7 +91,10 @@ public class DataStorageService {
                     .option("overwriteSchema", true)
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
     }
 
     public void resync(String tablePath, Dataset<Row> df) throws DataStorageException {
@@ -95,7 +105,11 @@ public class DataStorageService {
                     .mode("overwrite")
                     .option("path", tablePath)
                     .save();
-        else throw new DataStorageException("Path is not set or dataframe is null");
+        else {
+            logger.error("Path is not set or dataframe is null");
+            throw new DataStorageException("Path is not set or dataframe is null");
+        }
+
     }
 
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {

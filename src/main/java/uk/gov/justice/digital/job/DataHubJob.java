@@ -113,6 +113,7 @@ public class DataHubJob implements Runnable {
             kinesisReader.setBatchProcessor(this::batchProcessor);
             kinesisReader.startAndAwaitTermination();
         } catch (InterruptedException e) {
+            logger.error("Kinesis job interrupted");
             throw new RuntimeException(e);
         }
     }

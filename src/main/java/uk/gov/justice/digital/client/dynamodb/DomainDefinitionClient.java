@@ -1,22 +1,14 @@
 package uk.gov.justice.digital.client.dynamodb;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
-
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Singleton
 public class DomainDefinitionClient extends DynamoDBClient {
