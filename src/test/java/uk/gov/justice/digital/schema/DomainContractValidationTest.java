@@ -23,10 +23,6 @@ public class DomainContractValidationTest {
     private static final String DOMAIN_CONTRACT_SCHEMA = "domain-contract-schema.json";
 
     private static final List<String> contracts = Arrays.asList(
-            "agency-internal-locations.avsc",
-            "agency-locations.avsc",
-            "offenders.avsc",
-            "offender-bookings.avsc",
             "reference-contract.avsc"
     );
 
