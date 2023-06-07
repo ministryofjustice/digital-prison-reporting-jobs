@@ -11,6 +11,8 @@ import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.*;
@@ -62,6 +64,8 @@ public class JsonValidator implements Serializable {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static final Logger logger = LoggerFactory.getLogger(JsonValidator.class);
+
     public static UserDefinedFunction createAndRegister(
         StructType schema,
         SparkSession sparkSession,
@@ -103,8 +107,19 @@ public class JsonValidator implements Serializable {
         // Check that
         //  o the original and parsed data match using a simple equality check
         //  o any fields declared not-nullable have a value
-        return originalDataWithReformattedDates.equals(parsedData) &&
-                allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
+        val result = originalData.equals(objectMapper.readTree(parsedJson)) &&
+            allNotNullFieldsHaveValues(schema, originalData);
+
+        logger.info("JSON validation result - json valid: {}", result);
+
+        if (!result) {
+            logger.error("JSON validation failed. Parsed and Raw JSON differs. Parsed: '{}', Raw: '{}'",
+                    parsedJson,
+                    originalJson
+            );
+        }
+
+        return result;
     }
 
     private boolean allNotNullFieldsHaveValues(StructType schema, JsonNode json) {
@@ -119,7 +134,10 @@ public class JsonValidator implements Serializable {
                     .orElse(true);          // If no field found then it's null by default.
 
             // We fail immediately if the field is null since it's declared as not-nullable.
-            if (jsonFieldIsNull) return false;
+            if (jsonFieldIsNull) {
+                logger.error("JSON validation failed. Not null field {} is null", structField);
+                return false;
+            }
         }
         return true;
     }
