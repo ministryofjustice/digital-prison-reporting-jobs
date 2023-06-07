@@ -1,0 +1,69 @@
+{
+  "type": "record",
+  "namespace": "prisons",
+  "service": "nomis",
+  "version": "1.0.0",
+  "name": "AGENCY_INTERNAL_LOCATIONS",
+  "description": "THIS IS A DUMMY CONTRACT FOR UNIT TESTING PURPOSES ONLY",
+  "contacts": {
+    "author": "karthik.nagaraj@digital.justice.gov.uk",
+    "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
+    "slack": "#ask_dpr"
+  },
+  "database": {
+    "type": "oracle",
+    "version": "12",
+    "name": "NAME OF ORACLE DATABASE"
+  },
+  "fields": [
+    {
+      "name": "INTERNAL_LOCATION_ID",
+      "type": "long",
+      "nullable": false,
+      "description": "The unique identifier of the Internal Location. PK",
+      "glossary-index": "internal-location:id",
+      "key": "primary"
+    },
+    {
+      "name": "INTERNAL_LOCATION_CODE",
+      "type": "string",
+      "nullable": true,
+      "description": "The short code for an internal location."
+    },
+    {
+      "name": "AUDIT_TIMESTAMP",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_USER_ID",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_MODULE_NAME",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_CLIENT_USER_ID",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_CLIENT_IP_ADDRESS",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_CLIENT_WORKSTATION_NAME",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "AUDIT_ADDITIONAL_INFO",
+      "type": "string",
+      "nullable": true
+    }
+  ]
+}

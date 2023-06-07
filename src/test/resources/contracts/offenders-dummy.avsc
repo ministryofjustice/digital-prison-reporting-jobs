@@ -1,0 +1,73 @@
+{
+  "type" : "record",
+  "namespace" : "prisons",
+  "service": "nomis",
+  "version": "1.0.0",
+  "name" : "OFFENDERS",
+  "description": "THIS IS A DUMMY CONTRACT",
+  "contacts" : {
+    "author": "karthik.nagaraj@digital.justice.gov.uk",
+    "team": "https://dsdmoj.atlassian.net/wiki/spaces/DPR/overview?homepageId=4015489077",
+    "slack": "#ask_dpr"
+  },
+  "database": {
+    "type": "oracle",
+    "version": "12",
+    "name": "ORACLE DATABASE"
+  },
+  "fields" : [
+    {
+      "name": "OFFENDER_ID",
+      "type": "long",
+      "nullable": false,
+      "description": "The unique identifier number for the offenders. PK",
+      "glossary-index": "offender:id",
+      "key": "primary"
+    },
+    {
+      "name": "AUDIT_TIMESTAMP",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "nullable": true,
+      "description": "offender audit timestamp"
+    },
+    {
+      "name": "AUDIT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit user id"
+    },
+    {
+      "name": "AUDIT_MODULE_NAME",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit module name"
+    },
+    {
+      "name": "AUDIT_CLIENT_USER_ID",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit client user id"
+    },
+    {
+      "name": "AUDIT_CLIENT_IP_ADDRESS",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit client ip address"
+    },
+    {
+      "name": "AUDIT_CLIENT_WORKSTATION_NAME",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit client workstation name"
+    },
+    {
+      "name": "AUDIT_ADDITIONAL_INFO",
+      "type": "string",
+      "nullable": true,
+      "description": "offender audit additional info"
+    }
+  ]
+}
