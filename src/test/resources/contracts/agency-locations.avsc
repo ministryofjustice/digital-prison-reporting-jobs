@@ -18,7 +18,7 @@
   "fields": [
     {
       "name": "AGY_LOC_ID",
-      "type": "long",
+      "type": "string",
       "nullable": false,
       "description": "The location residing within an agency. PK",
       "glossary-index": "location:id",
