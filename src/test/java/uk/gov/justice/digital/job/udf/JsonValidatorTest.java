@@ -12,8 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.AbstractMap.SimpleEntry;
-import static org.apache.spark.sql.types.DataTypes.IntegerType;
-import static org.apache.spark.sql.types.DataTypes.StringType;
+import static org.apache.spark.sql.types.DataTypes.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +22,7 @@ class JsonValidatorTest {
         public static final String MANDATORY = "mandatory";
         public static final String OPTIONAL = "optional";
         public static final String NUMERIC = "numeric";
+        public static final String DATE = "date";
     }
 
     private static final StructType schema =
@@ -31,19 +31,23 @@ class JsonValidatorTest {
                     .add(Fields.OPTIONAL, StringType, true)
                     .add(Fields.NUMERIC, IntegerType, true);
 
+    private static final StructType schemaWithDate =
+            new StructType()
+                    .add(Fields.DATE, DateType, false);
+
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final JsonValidator underTest = new JsonValidator();
 
     @Test
     public void shouldPassValidJsonWithOnlyMandatoryFieldSet() throws JsonProcessingException {
-        val json = createJsonForMapValues(Collections.singletonList(entry(Fields.MANDATORY, "somevalue")));
+        val json = createJsonFromEntries(Collections.singletonList(entry(Fields.MANDATORY, "somevalue")));
         assertTrue(underTest.validate(json, json, schema));
     }
 
     @Test
     public void shouldPassValidJsonWithAllFieldsSet() throws JsonProcessingException {
-        val json = createJsonForMapValues(Arrays.asList(
+        val json = createJsonFromEntries(Arrays.asList(
                 entry(Fields.MANDATORY, "somevalue"),
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
@@ -60,7 +64,7 @@ class JsonValidatorTest {
 
     @Test
     public void shouldFailJsonWithMissingMandatoryValue() throws JsonProcessingException {
-        val json = createJsonForMapValues(Arrays.asList(
+        val json = createJsonFromEntries(Arrays.asList(
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
         ));
@@ -74,14 +78,14 @@ class JsonValidatorTest {
      */
     @Test
     public void shouldFailWhenParsedJsonDoesNotMatchOriginalJson() throws JsonProcessingException {
-        val json = createJsonForMapValues(Arrays.asList(
+        val json = createJsonFromEntries(Arrays.asList(
                 entry(Fields.MANDATORY, "somevalue"),
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, "this is not a number")
         ));
 
         // Here we replicate the invalid type handling by leaving the NUMERIC field unset.
-        val fakeParsedJson = createJsonForMapValues(Arrays.asList(
+        val fakeParsedJson = createJsonFromEntries(Arrays.asList(
                 entry(Fields.MANDATORY, "somevalue"),
                 entry(Fields.OPTIONAL, "anotherValue")
         ));
@@ -91,7 +95,7 @@ class JsonValidatorTest {
 
     @Test
     public void shouldPassWhenThereIsNoContent() throws JsonProcessingException {
-        val json = createJsonForMapValues(Arrays.asList(
+        val json = createJsonFromEntries(Arrays.asList(
                 entry(Fields.MANDATORY, "somevalue"),
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, "this is not a number")
@@ -101,15 +105,56 @@ class JsonValidatorTest {
         assertTrue(underTest.validate(json, null, schema));
     }
 
+    @Test
+    public void shouldPassWhenDateTimeToDateConversionHandlesZeroTimePart() throws JsonProcessingException {
+        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01T00:00:00.000Z")));
+        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
+
+        assertTrue(
+                underTest.validate(rawJson, parsedJson, schemaWithDate),
+                "Validator should pass when raw string contains a zeroed time part. " +
+                        "Raw dates are sent as an ISO datetime but our schema declares a type of date so spark " +
+                        "discards the time part."
+        );
+    }
+
+    @Test
+    public void shouldFailWhenDateTimeToDateConversionHandlesTimePartWithValues() throws JsonProcessingException {
+        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01T12:34:56.789Z")));
+        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
+
+        assertFalse(
+                underTest.validate(rawJson, parsedJson, schemaWithDate),
+                "Validator should fail when raw string contains a time part with non zero values. " +
+                        "Raw dates are sent as an ISO datetime but our schema declares a type of date so spark " +
+                        "discards the time part. If the time part contains non-zero values the assumption is that " +
+                        "we should probably declare a datetime in our avro schema."
+        );
+
+    }
+
+    @Test
+    public void shouldPassWhenRawDateContainsNoTimePart() throws JsonProcessingException {
+        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
+        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
+
+        assertTrue(
+                underTest.validate(rawJson, parsedJson, schemaWithDate),
+                "Validator should pass when raw string contains a zeroed time part. " +
+                        "Raw dates are sent as an ISO datetime but our schema declares a type of date so spark " +
+                        "discards the time part."
+        );
+    }
+
     private static SimpleEntry<String, Object> entry(String key, Object value) {
         return new SimpleEntry<>(key, value);
     }
 
-    private static String createJsonForMapValues(List<SimpleEntry<String, Object>> entries) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(
-                entries.stream()
-                        .collect(Collectors.toMap(SimpleEntry::getKey, SimpleEntry::getValue))
-        );
+    private static String createJsonFromEntries(List<SimpleEntry<String, Object>> entries) throws JsonProcessingException {
+            return objectMapper.writeValueAsString(
+                    entries.stream()
+                            .collect(Collectors.toMap(SimpleEntry::getKey, SimpleEntry::getValue))
+            );
     }
 
 }
