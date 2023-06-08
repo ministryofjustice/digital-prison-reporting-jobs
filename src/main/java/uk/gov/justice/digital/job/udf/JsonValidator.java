@@ -21,37 +21,37 @@ import static org.apache.spark.sql.functions.udf;
 /**
  * Simple JSON validator that is intended to be invoked *after* from_json is used to parse a field containing a JSON
  * string.
- *
+ * <p>
  * By design, from_json will forcibly enable nullable on all fields declared in the schema. This resolves potential
  * downstream issues with parquet but makes it harder for us to validate JSON principally because from_json
  *   o silently allows fields declared notNull to be null
  *   o silently converts fields with incompatible values to null
- *
+ * <p>
  * For this reason this validator *must* be used *after* first parsing a JSON string with from_json.
- *
+ * <p>
  * This validator performs the following checks
  *   o original and parsed json *must* be equal - if there is a difference this indicates a bad value in the source data
  *     e.g. a String value when a Numeric value was expected
  *   o all fields declared notNull *must* have a value
  *   o handling of dates represented in the incoming raw data as an ISO 8601 datetime string with the time values all
  *     set to zero
- *
+ * <p>
  * and can be used as follows within Spark SQL
- *
+ * <p>
  * StructType schema = .... // Some schema defining the format of the JSON being processed
- *
+ * <p>
  * UserDefinedFunction jsonValidator = JsonValidator.createAndRegister(
  *      schema,
  *      someDataFrame.sparkSession(),
  *      sourceName,
  *      tableName
  * );
- *
+ * <p>
  * // dataframe with a single string column 'rawJson' containing JSON to parse and validate against a schema
  * someDataFrame
  *  .withColumn("parsedJson", from_json(col("rawJson"), schema))
  *  .withColumn("valid", jsonValidator.apply(col("rawData"), to_json("parsedJson")))
- *
+ * <p>
  * The dataframe can then be filtered on the value of the boolean valid column where
  *  o true -> the JSON has passed validation
  *  o false -> the JSON has not passed validation
@@ -94,16 +94,16 @@ public class JsonValidator implements Serializable {
         TypeReference<Map<String,Object>> mapTypeReference = new TypeReference<Map<String,Object>>() {};
 
         val originalData = objectMapper.readValue(originalJson, mapTypeReference);
-        val parsedData = objectMapper.readTree(parsedJson);
+        val parsedData = objectMapper.readValue(parsedJson, mapTypeReference);
 
-        val originalJsonWithFormattedDates = objectMapper.writeValueAsString(reformatDateFields(originalData, schema));
-        val originalDataWithFormattedDates = objectMapper.readTree(originalJsonWithFormattedDates);
+        // Reformat dates where appropriate so that the equality check passes for those cases where we can discard the
+        // time part of any dates represented as datetimes in the raw data.
+        val originalDataWithReformattedDates = reformatDateFields(originalData, schema);
 
-        // Check that the original and parsed json trees match. If there are discrepancies then the initial parse by
-        // from_json must have encountered an invalid field and set it to null (e.g. got string when int expected - this
-        // will be set to null in the DataFrame. Also allow through any dates represented as datetimes with a zeroed
-        // time part and ensure that all fields declared not-null have a value.
-        return originalDataWithFormattedDates.equals(parsedData) &&
+        // Check that
+        //  o the original and parsed data match using a simple equality check
+        //  o any fields declared not-nullable have a value
+        return originalDataWithReformattedDates.equals(parsedData) &&
                 allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
     }
 
@@ -118,14 +118,13 @@ public class JsonValidator implements Serializable {
                     .map(JsonNode::isNull)  // Field present in JSON but with no value
                     .orElse(true);          // If no field found then it's null by default.
 
-            // We fail immediately if the field is null since it should have a value because it's declared as not-null.
+            // We fail immediately if the field is null since it's declared as not-nullable.
             if (jsonFieldIsNull) return false;
         }
         return true;
     }
 
     private Map<String, Object> reformatDateFields(Map<String, Object> data, StructType schema) {
-
         val dateFields = Arrays.stream(schema.fields())
                 .filter(f -> f.dataType() == DataTypes.DateType)
                 .map(StructField::name)
@@ -169,9 +168,10 @@ public class JsonValidator implements Serializable {
 
     // We assume the time is unset if the sum of all the numbers in the time string is zero. Anything greater than
     // zero implies that at least one of the values is set in the time string in which case, this will fail validation.
+    // If there are no numbers in the string we return false to trigger a validation failure.
     private boolean timeIsUnset(String time) {
         val numbersOnly = time.replaceAll("[^0-9]", "");
-        return Integer.parseInt(numbersOnly) > 0;
+        return numbersOnly.length() > 0 && Integer.parseInt(numbersOnly) > 0;
     }
 
 }

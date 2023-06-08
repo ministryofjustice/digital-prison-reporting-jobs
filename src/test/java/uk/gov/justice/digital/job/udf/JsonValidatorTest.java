@@ -146,6 +146,18 @@ class JsonValidatorTest {
         );
     }
 
+    @Test
+    public void shouldFailWithoutThrowingExceptionsForAnInvalidValue() throws JsonProcessingException {
+        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "fooTbar")));
+        // Parsing the invalid string as a Date would yield a null result which we represent as an empty string here.
+        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "")));
+
+        assertFalse(
+                underTest.validate(rawJson, parsedJson, schemaWithDate),
+                "Validator should fail when raw string contains an invalid value."
+        );
+    }
+
     private static SimpleEntry<String, Object> entry(String key, Object value) {
         return new SimpleEntry<>(key, value);
     }
