@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import lombok.val;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.api.java.UDF2;
@@ -13,6 +14,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sparkproject.guava.collect.MapDifference;
 
 import java.io.Serializable;
 import java.util.*;
@@ -107,15 +109,15 @@ public class JsonValidator implements Serializable {
         // Check that
         //  o the original and parsed data match using a simple equality check
         //  o any fields declared not-nullable have a value
-        val result = originalData.equals(objectMapper.readTree(parsedJson)) &&
-            allNotNullFieldsHaveValues(schema, originalData);
+        val result = originalDataWithReformattedDates.equals(parsedData) &&
+                allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
 
         logger.info("JSON validation result - json valid: {}", result);
 
         if (!result) {
-            logger.error("JSON validation failed. Parsed and Raw JSON differs. Parsed: '{}', Raw: '{}'",
-                    parsedJson,
-                    originalJson
+            val difference = Maps.difference(originalDataWithReformattedDates, parsedData);
+            logger.error("JSON validation failed. Parsed and Raw JSON have the following differences: {}",
+                    difference.entriesDiffering()
             );
         }
 
