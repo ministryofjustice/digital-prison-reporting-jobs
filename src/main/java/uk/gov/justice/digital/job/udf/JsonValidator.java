@@ -14,7 +14,6 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sparkproject.guava.collect.MapDifference;
 
 import java.io.Serializable;
 import java.util.*;
@@ -157,15 +156,23 @@ public class JsonValidator implements Serializable {
                 .map(StructField::name)
                 .collect(Collectors.toSet());
 
-        return data.entrySet().stream()
-                .map(entry -> updateDateValue(dateFields, entry))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        // Collectors.toMap makes use of Hashmap.merge which expects the value to be not-null, which causes an NPE if
+        // we have raw data with a null value. The non-streams based approach below works since we're putting values
+        // directly instead.
+        val updatedData = new HashMap<String, Object>();
+
+        data.entrySet().forEach(entry -> {
+            val updatedEntry = updateDateValue(dateFields, entry);
+            updatedData.put(updatedEntry.getKey(), updatedEntry.getValue());
+        });
+
+        return updatedData;
     }
 
     private Map.Entry<String, Object> updateDateValue(Set<String> dateFields, Map.Entry<String, Object> entry) {
         // Only attempt to reformat those fields that have the Date type in our schema.
         return (dateFields.contains(entry.getKey()))
-            ? Optional.of(entry.getValue())
+            ? Optional.ofNullable(entry.getValue())
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
                     .map(this::parseAndValidateDate)

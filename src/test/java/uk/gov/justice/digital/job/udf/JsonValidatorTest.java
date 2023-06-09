@@ -149,8 +149,19 @@ class JsonValidatorTest {
     @Test
     public void shouldFailWithoutThrowingExceptionsForAnInvalidValue() throws JsonProcessingException {
         val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "fooTbar")));
-        // Parsing the invalid string as a Date would yield a null result which we represent as an empty string here.
-        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "")));
+        // Parsing the invalid string as a Date would yield a null in Spark as per the JSON below.
+        val parsedJson = "{\"date\":null}";
+
+        assertFalse(
+                underTest.validate(rawJson, parsedJson, schemaWithDate),
+                "Validator should fail when raw string contains an invalid value."
+        );
+    }
+
+    @Test
+    public void shouldHandleADateFieldThatIsNull() throws JsonProcessingException {
+        val rawJson = "{\"date\":null}";
+        val parsedJson = "{\"date\":null}";
 
         assertFalse(
                 underTest.validate(rawJson, parsedJson, schemaWithDate),
