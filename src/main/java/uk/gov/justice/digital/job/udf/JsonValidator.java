@@ -115,7 +115,14 @@ public class JsonValidator implements Serializable {
         logger.info("JSON validation result - json valid: {}", result);
 
         if (!result) {
-            val difference = Maps.difference(originalDataWithReformattedDates, parsedData);
+            val original = (originalDataWithReformattedDates == null)
+                    ? Collections.<String, Object>emptyMap()
+                    : originalDataWithReformattedDates;
+            val parsed = (parsedData == null)
+                    ? Collections.<String, Object>emptyMap()
+                    : parsedData;
+
+            val difference = Maps.difference(original, parsed);
             logger.error("JSON validation failed. Parsed and Raw JSON have the following differences: {}",
                     difference.entriesDiffering()
             );
