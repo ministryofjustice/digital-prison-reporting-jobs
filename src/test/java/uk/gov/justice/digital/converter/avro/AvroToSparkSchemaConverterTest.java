@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AvroToSparkSchemaConverterTest {
 
@@ -76,6 +76,28 @@ class AvroToSparkSchemaConverterTest {
                 .add("aField", DataTypes.StringType, false);
 
         assertEquals(sparkEnumSchema, underTest.convert(avroEnumSchema.toString()));
+    }
+
+    @Test
+    public void shouldPreserveFieldNullabilityAttributes() {
+        val avro = SchemaBuilder.record("test")
+                .fields()
+                    .name("anOptionalField")
+                    .prop("nullable", true)
+                    .type("string")
+                    .noDefault()
+                    .name("aRequiredField")
+                    .prop("nullable", false)
+                    .type("string")
+                    .noDefault()
+                .endRecord()
+                .toString();
+
+        val sparkSchema = new StructType()
+                .add("anOptionalField", DataTypes.StringType, true)
+                .add("aRequiredField", DataTypes.StringType, false);
+
+        assertEquals(sparkSchema, underTest.convert(avro));
     }
 
     private String avroSchemaWithSimpleType(String type) {
