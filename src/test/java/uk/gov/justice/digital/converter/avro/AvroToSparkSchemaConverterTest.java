@@ -100,6 +100,7 @@ class AvroToSparkSchemaConverterTest {
         assertEquals(sparkSchema, underTest.convert(avro));
     }
 
+
     private String avroSchemaWithSimpleType(String type) {
         return SchemaBuilder.record("test")
                 .fields()

@@ -16,6 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -103,20 +105,26 @@ public class JsonValidator implements Serializable {
 
         // Reformat dates where appropriate so that the equality check passes for those cases where we can discard the
         // time part of any dates represented as datetimes in the raw data.
-        val originalDataWithReformattedDates = reformatDateFields(originalData, schema);
+        // Also reduce precision of timestamps to milliseconds to avoid comparision failures.
+        val originalDataWithReformattedTemporalFields =
+                reformatTimestampFields(
+                        reformatDateFields(originalData, schema),
+                        schema
+                );
+
 
         // Check that
         //  o the original and parsed data match using a simple equality check
         //  o any fields declared not-nullable have a value
-        val result = originalDataWithReformattedDates.equals(parsedData) &&
+        val result = originalDataWithReformattedTemporalFields.equals(parsedData) &&
                 allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
 
         logger.info("JSON validation result - json valid: {}", result);
 
         if (!result) {
-            val original = (originalDataWithReformattedDates == null)
+            val original = (originalDataWithReformattedTemporalFields.isEmpty())
                     ? Collections.<String, Object>emptyMap()
-                    : originalDataWithReformattedDates;
+                    : originalDataWithReformattedTemporalFields;
             val parsed = (parsedData == null)
                     ? Collections.<String, Object>emptyMap()
                     : parsedData;
@@ -148,6 +156,44 @@ public class JsonValidator implements Serializable {
             }
         }
         return true;
+    }
+
+    private Map<String, Object> reformatTimestampFields(Map<String, Object> data, StructType schema) {
+        val timeStampFields = Arrays.stream(schema.fields())
+                .filter(f -> f.dataType() == DataTypes.TimestampType)
+                .map(StructField::name)
+                .collect(Collectors.toSet());
+
+        val updatedData = new HashMap<String, Object>();
+
+        data.entrySet().forEach(entry -> {
+            val updatedEntry = updateTimestampValue(timeStampFields, entry);
+            updatedData.put(updatedEntry.getKey(), updatedEntry.getValue());
+        });
+
+        return updatedData;
+    }
+
+    private Map.Entry<String, Object> updateTimestampValue(Set<String> fields, Map.Entry<String, Object> entry) {
+        return (fields.contains(entry.getKey()))
+            ? Optional.ofNullable(entry.getValue())
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .flatMap(this::parseTimestamp)
+                .map(d -> createEntry(entry, d))
+                .orElse(entry)
+                : entry;
+
+    }
+
+    private Optional<String> parseTimestamp(String ts) {
+        try {
+            val parsed = Instant.parse(ts).truncatedTo(ChronoUnit.MILLIS);
+            return Optional.of(parsed.toString());
+        }
+        catch (Exception e) {
+            return Optional.empty();
+        }
     }
 
     private Map<String, Object> reformatDateFields(Map<String, Object> data, StructType schema) {

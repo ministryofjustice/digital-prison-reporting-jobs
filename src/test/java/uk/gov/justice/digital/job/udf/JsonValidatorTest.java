@@ -6,6 +6,7 @@ import lombok.val;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +24,7 @@ class JsonValidatorTest {
         public static final String OPTIONAL = "optional";
         public static final String NUMERIC = "numeric";
         public static final String DATE = "date";
+        public static final String TIMESTAMP = "timestamp";
     }
 
     private static final StructType schema =
@@ -34,6 +36,10 @@ class JsonValidatorTest {
     private static final StructType schemaWithDate =
             new StructType()
                     .add(Fields.DATE, DateType, false);
+
+    private static final StructType schemaWithTimestamp =
+            new StructType()
+                    .add(Fields.TIMESTAMP, TimestampType, false);
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -106,6 +112,17 @@ class JsonValidatorTest {
     }
 
     @Test
+    public void shouldPassWhenRawDateTimeIsComparedToFromJsonDateTime() throws JsonProcessingException {
+        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.TIMESTAMP, "2012-01-01T01:23:45.678901Z")));
+        // When spark converts the parsed data back to JSON we only see the millisecond part. See notes in JsonValidator.
+        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.TIMESTAMP, "2012-01-01T01:23:45.678Z")));
+        assertTrue(
+                underTest.validate(rawJson, parsedJson, schemaWithTimestamp),
+                "Validator should ignore precision beyond the first three digits representing milliseconds."
+        );
+    }
+
+    @Test
     public void shouldPassWhenDateTimeToDateConversionHandlesZeroTimePart() throws JsonProcessingException {
         val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01T00:00:00.000Z")));
         val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
@@ -167,6 +184,13 @@ class JsonValidatorTest {
                 underTest.validate(rawJson, parsedJson, schemaWithDate),
                 "Validator should fail when raw string contains an invalid value."
         );
+    }
+
+    @Test
+    public void shouldAccountForReducedPrecisonOfSparkDateTime() {
+//        2009-08-02T04:48:27.792046000Z, 2009-08-02T04:48:27.792Z
+        val datetime = ZonedDateTime.parse("2009-08-02T04:48:27.792046000Z");
+        System.out.println("Got datetime: " + datetime);
     }
 
     private static SimpleEntry<String, Object> entry(String key, Object value) {
