@@ -151,6 +151,14 @@ class JsonValidatorTest {
     }
 
     @Test
+    public void shouldPassTimestampsThatContainNoFractionalSeconds() throws JsonProcessingException {
+        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.TIMESTAMP, "2006-01-13T08:59:09Z")));
+        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.TIMESTAMP, "2006-01-13T08:59:09.000Z")));
+
+        assertTrue(underTest.validate(rawJson, parsedJson, schemaWithTimestamp));
+    }
+
+    @Test
     public void shouldPassWhenRawDateContainsNoTimePart() throws JsonProcessingException {
         val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
         val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
@@ -164,13 +172,25 @@ class JsonValidatorTest {
     }
 
     @Test
-    public void shouldFailWithoutThrowingExceptionsForAnInvalidValue() throws JsonProcessingException {
+    public void shouldFailGracefullyGivenAnInvalidDateValue() throws JsonProcessingException {
         val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "fooTbar")));
         // Parsing the invalid string as a Date would yield a null in Spark as per the JSON below.
         val parsedJson = "{\"date\":null}";
 
         assertFalse(
                 underTest.validate(rawJson, parsedJson, schemaWithDate),
+                "Validator should fail when raw string contains an invalid value."
+        );
+    }
+
+    @Test
+    public void shouldFailGracefullyGivenAnInvalidTimestampValue() throws JsonProcessingException {
+        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.TIMESTAMP, "fooTbar")));
+        // Parsing the invalid string as a Timestamp would yield a null in Spark as per the JSON below.
+        val parsedJson = "{\"timestamp\":null}";
+
+        assertFalse(
+                underTest.validate(rawJson, parsedJson, schemaWithTimestamp),
                 "Validator should fail when raw string contains an invalid value."
         );
     }

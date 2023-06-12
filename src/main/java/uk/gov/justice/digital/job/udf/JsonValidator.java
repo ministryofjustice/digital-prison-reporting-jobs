@@ -16,7 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -66,6 +67,9 @@ public class JsonValidator implements Serializable {
     private static final long serialVersionUID = 3626262733334508950L;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Ensure we render raw timestamps in the same format as Spark when comparing data during validation.
+    private static final DateTimeFormatter timestampFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSS][XXX]");
 
     private static final Logger logger = LoggerFactory.getLogger(JsonValidator.class);
 
@@ -187,8 +191,8 @@ public class JsonValidator implements Serializable {
 
     private Optional<String> parseTimestamp(String ts) {
         try {
-            val parsed = Instant.parse(ts).truncatedTo(ChronoUnit.MILLIS);
-            return Optional.of(parsed.toString());
+            val parsed = ZonedDateTime.parse(ts).truncatedTo(ChronoUnit.MILLIS);
+            return Optional.of(timestampFormatter.format(parsed));
         }
         catch (Exception e) {
             return Optional.empty();
