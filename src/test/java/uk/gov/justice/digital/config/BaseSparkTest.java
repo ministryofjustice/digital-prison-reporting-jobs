@@ -24,6 +24,7 @@ public class BaseSparkTest {
 				.config("spark.databricks.delta.optimizeWrite.enabled", true)
 				.config("spark.databricks.delta.autoCompact.enabled", true)
 				.config("spark.ui.enabled", false)
+				.config("spark.sql.session.timeZone", "UTC")
 				// Use an in-memory derby database to allow parallel spark tests to access their own derby database
 				// rather than attempting to access one on disk which may already be in use causing failures.
 				.config("javax.jdo.option.ConnectionURL", "jdbc:derby:memory:db;create=true")

@@ -15,7 +15,8 @@ public class SparkSessionProvider {
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.autoCompact.enabled", "true")
-                .set("spark.sql.legacy.charVarcharAsString", "true");
+                .set("spark.sql.legacy.charVarcharAsString", "true")
+                .set("spark.sql.session.timeZone", "UTC");
 
         SparkSession session = SparkSession.builder()
                                 .config(sparkConf)

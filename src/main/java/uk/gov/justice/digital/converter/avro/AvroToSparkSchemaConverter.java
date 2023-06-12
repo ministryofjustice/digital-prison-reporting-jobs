@@ -71,15 +71,7 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
                 .orElse(false);
 
         return isNullable
-            ? new Schema.Field(
-                    avroField.name(),
-                    Schema.createUnion(
-                        Schema.create(avroField.schema().getType()),
-                        Schema.create(Schema.Type.NULL)
-                    ),
-                    avroField.doc(),
-                    (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
-            )
+            ? createNullableAvroField(avroField)
             : new Schema.Field(avroField.name(), avroField.schema());
     }
 
@@ -93,6 +85,18 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
         return Optional.of(sparkDataType)
                 .filter(StructType.class::isInstance)
                 .map(StructType.class::cast);
+    }
+
+    private Schema.Field createNullableAvroField(Schema.Field avroField) {
+        return new Schema.Field(
+            avroField.name(),
+            Schema.createUnion(
+                    avroField.schema(),
+                    Schema.create(Schema.Type.NULL)
+            ),
+            avroField.doc(),
+            (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
+        );
     }
 
 }

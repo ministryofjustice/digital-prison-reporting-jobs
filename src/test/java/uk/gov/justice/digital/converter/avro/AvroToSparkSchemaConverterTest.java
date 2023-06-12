@@ -53,7 +53,7 @@ class AvroToSparkSchemaConverterTest {
         ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         typeMappings.forEach((avroType, sparkType) -> {
-            val avroSchema = avroSchemaWithLogicalType(avroType);
+            val avroSchema = avroSchemaWithLogicalType(avroType, false);
             val expectedSchema = sparkSchemaWithType(sparkType);
             val result = underTest.convert(avroSchema);
             assertEquals(expectedSchema, result, String.format("Failed to convert avro: %s to spark: %s", avroType, sparkType));
@@ -100,6 +100,16 @@ class AvroToSparkSchemaConverterTest {
         assertEquals(sparkSchema, underTest.convert(avro));
     }
 
+    @Test
+    public void shouldPreserveFieldNullabilityAttributesForLogicalTypes() {
+        val nullable = true;
+        val avroSchema = avroSchemaWithLogicalType("date", nullable);
+        val sparkSchema = new StructType()
+                .add("aField", DataTypes.DateType, nullable);
+
+        assertEquals(sparkSchema, underTest.convert(avroSchema));
+    }
+
 
     private String avroSchemaWithSimpleType(String type) {
         return SchemaBuilder.record("test")
@@ -111,10 +121,11 @@ class AvroToSparkSchemaConverterTest {
                 .toString();
     }
 
-    private String avroSchemaWithLogicalType(String logicalType) {
+    private String avroSchemaWithLogicalType(String logicalType, boolean isNullable) {
         return SchemaBuilder.record("test")
                 .fields()
                     .name("aField")
+                    .prop("nullable", isNullable)
                     .type(logicalTypeSchema(logicalType))
                     .noDefault()
                 .endRecord()

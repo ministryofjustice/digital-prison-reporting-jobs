@@ -122,17 +122,16 @@ public class JsonValidator implements Serializable {
         logger.info("JSON validation result - json valid: {}", result);
 
         if (!result) {
-            val original = (originalDataWithReformattedTemporalFields.isEmpty())
-                    ? Collections.<String, Object>emptyMap()
-                    : originalDataWithReformattedTemporalFields;
-            val parsed = (parsedData == null)
-                    ? Collections.<String, Object>emptyMap()
-                    : parsedData;
+            val difference = Maps.difference(originalDataWithReformattedTemporalFields, parsedData);
+            if (difference.entriesDiffering().isEmpty()) {
+                logger.error("JSON validation failed. At least one not-null field has no value");
 
-            val difference = Maps.difference(original, parsed);
-            logger.error("JSON validation failed. Parsed and Raw JSON have the following differences: {}",
-                    difference.entriesDiffering()
-            );
+            }
+            else {
+                logger.error("JSON validation failed. Parsed and Raw JSON have the following differences: {}",
+                        difference.entriesDiffering()
+                );
+            }
         }
 
         return result;
@@ -231,25 +230,26 @@ public class JsonValidator implements Serializable {
         return new AbstractMap.SimpleEntry<>(entry.getKey(), d);
     }
 
-    private String parseAndValidateDate(String date) {
+    private String parseAndValidateDate(String rawDate) {
         // The raw date value may be represented as an ISO date time with a zeroed time part eg. 2012-01-01T00:00:00Z
         // Split the string on T so we get the date before the T, and the time after the T.
         // If we get two values we assume we're parsing a date and time, otherwise treat the value as a date.
-        val dateParts = Arrays.asList(date.split("T"));
+        val dateParts = Arrays.asList(rawDate.split("T"));
         if (dateParts.size() == 2) {
             val dateString = dateParts.get(0);
             val timeString = dateParts.get(1);
-            return (timeIsUnset(timeString))
-                ? date
+            val result = (timeIsSet(timeString))
+                ? rawDate
                 : dateString;
+            return result;
         }
-        else return date;
+        else return rawDate;
     }
 
     // We assume the time is unset if the sum of all the numbers in the time string is zero. Anything greater than
     // zero implies that at least one of the values is set in the time string in which case, this will fail validation.
     // If there are no numbers in the string we return false to trigger a validation failure.
-    private boolean timeIsUnset(String time) {
+    private boolean timeIsSet(String time) {
         val numbersOnly = time.replaceAll("[^0-9]", "");
         return numbersOnly.length() > 0 && Integer.parseInt(numbersOnly) > 0;
     }
