@@ -17,17 +17,16 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.job.filter.NomisDataFilter;
 
 import java.io.Serializable;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.apache.spark.sql.functions.udf;
 
 /**
- * Simple JSON validator that is intended to be invoked *after* from_json is used to parse a field containing a JSON
- * string.
+ * JSON validator that is intended to be invoked *after* from_json is used to parse a field containing a JSON string.
+ * <p>>
+ * Data is filtered prior to validation to ensure that the raw data matches the expected spark representation so that
+ * validation passes.
  * <p>
  * By design, from_json will forcibly enable nullable on all fields declared in the schema. This resolves potential
  * downstream issues with parquet but makes it harder for us to validate JSON principally because from_json
@@ -69,9 +68,6 @@ public class JsonValidator implements Serializable {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Ensure we render raw timestamps in the same format as Spark when comparing data during validation.
-    private static final DateTimeFormatter timestampFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSS][XXX]");
-
     private static final Logger logger = LoggerFactory.getLogger(JsonValidator.class);
 
     public static UserDefinedFunction createAndRegister(
@@ -110,25 +106,12 @@ public class JsonValidator implements Serializable {
 
         val nomisFilter = new NomisDataFilter(schema);
 
-        // Apply filters
+        // Apply data filtesr. See NomisDataFilter.
         val filteredData = nomisFilter.apply(originalData);
-
-        // Reformat dates where appropriate so that the equality check passes for those cases where we can discard the
-        // time part of any dates represented as datetimes in the raw data.
-        // Also reduce precision of timestamps to milliseconds to avoid comparision failures.
-//        val originalDataWithReformattedTemporalFields =
-//                reformatTimestampFields(
-//                        reformatDateFields(originalData, schema),
-//                        schema
-//                );
-
 
         // Check that
         //  o the original and parsed data match using a simple equality check
         //  o any fields declared not-nullable have a value
-//        val result = originalDataWithReformattedTemporalFields.equals(parsedData) &&
-//                allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
-
         val result = filteredData.equals(parsedData) &&
                 allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
 
@@ -168,96 +151,6 @@ public class JsonValidator implements Serializable {
             }
         }
         return true;
-    }
-
-    private Map<String, Object> reformatTimestampFields(Map<String, Object> data, StructType schema) {
-        val timeStampFields = Arrays.stream(schema.fields())
-                .filter(f -> f.dataType() == DataTypes.TimestampType)
-                .map(StructField::name)
-                .collect(Collectors.toSet());
-
-        val updatedData = new HashMap<String, Object>();
-
-        data.entrySet().forEach(entry -> {
-            val updatedEntry = updateTimestampValue(timeStampFields, entry);
-            updatedData.put(updatedEntry.getKey(), updatedEntry.getValue());
-        });
-
-        return updatedData;
-    }
-
-    private Map.Entry<String, Object> updateTimestampValue(Set<String> fields, Map.Entry<String, Object> entry) {
-        return (fields.contains(entry.getKey()))
-            ? Optional.ofNullable(entry.getValue())
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .flatMap(this::parseTimestamp)
-                .map(d -> createEntry(entry, d))
-                .orElse(entry)
-                : entry;
-
-    }
-
-    private Optional<String> parseTimestamp(String ts) {
-        try {
-            val parsed = ZonedDateTime.parse(ts).truncatedTo(ChronoUnit.MILLIS);
-            return Optional.of(timestampFormatter.format(parsed));
-        }
-        catch (Exception e) {
-            return Optional.empty();
-        }
-    }
-
-    private Map<String, Object> reformatDateFields(Map<String, Object> data, StructType schema) {
-        val dateFields = Arrays.stream(schema.fields())
-                .filter(f -> f.dataType() == DataTypes.DateType)
-                .map(StructField::name)
-                .collect(Collectors.toSet());
-
-        // Collectors.toMap makes use of Hashmap.merge which expects the value to be not-null, which causes an NPE if
-        // we have raw data with a null value. The non-streams based approach below works since we're putting values
-        // directly instead.
-        val updatedData = new HashMap<String, Object>();
-
-        data.entrySet().forEach(entry -> {
-            val updatedEntry = updateDateValue(dateFields, entry);
-            updatedData.put(updatedEntry.getKey(), updatedEntry.getValue());
-        });
-
-        return updatedData;
-    }
-
-    private Map.Entry<String, Object> updateDateValue(Set<String> dateFields, Map.Entry<String, Object> entry) {
-        // Only attempt to reformat those fields that have the Date type in our schema.
-        return (dateFields.contains(entry.getKey()))
-            ? Optional.ofNullable(entry.getValue())
-                    .filter(String.class::isInstance)
-                    .map(String.class::cast)
-                    .map(rawDate -> parseAndValidateDate(entry.getKey(), rawDate))
-                    .map(d -> createEntry(entry, d))
-                    .orElse(entry)
-            : entry;
-    }
-
-    private Map.Entry<String, Object> createEntry(Map.Entry<String, Object> entry, String d) {
-        return new AbstractMap.SimpleEntry<>(entry.getKey(), d);
-    }
-
-    private String parseAndValidateDate(String fieldName, String rawDate) {
-        // The raw date value may be represented as an ISO date time with a zeroed time part eg. 2012-01-01T00:00:00Z
-        // Split the string on T so we get the date before the T, and the time after the T.
-        // If we get two values we assume we're parsing a date and time, otherwise treat the value as a date.
-        val dateParts = Arrays.asList(rawDate.split("T"));
-        if (dateParts.size() == 2) {
-            val dateString = dateParts.get(0);
-            val timeString = dateParts.get(1);
-            if (timeString != null && (timeString.replaceAll("[^1-9]", "").compareTo("0") > 0))
-                logger.warn("Discarding populated timestamp {} when converting {} to a date", timeString, fieldName);
-            // If the time part contains values other than zero log a warning since we could be losing data here by
-            // discarding the time part during the conversion to date.
-            return dateString;
-        }
-        else return rawDate;
     }
 
 }
