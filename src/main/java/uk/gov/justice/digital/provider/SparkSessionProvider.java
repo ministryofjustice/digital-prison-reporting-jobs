@@ -5,10 +5,16 @@ import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 
+import java.time.ZoneOffset;
+import java.util.TimeZone;
+
 @Singleton
 public class SparkSessionProvider {
 
     public SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
+        // We set the overall default timezone to UTC before then configuring the spark session to also use UTC.
+        TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.UTC));
+
         sparkConf
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")

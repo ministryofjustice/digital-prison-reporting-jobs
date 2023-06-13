@@ -224,7 +224,7 @@ public class JsonValidator implements Serializable {
             ? Optional.ofNullable(entry.getValue())
                     .filter(String.class::isInstance)
                     .map(String.class::cast)
-                    .map(this::parseAndValidateDate)
+                    .map(rawDate -> parseAndValidateDate(entry.getKey(), rawDate))
                     .map(d -> createEntry(entry, d))
                     .orElse(entry)
             : entry;
@@ -234,7 +234,7 @@ public class JsonValidator implements Serializable {
         return new AbstractMap.SimpleEntry<>(entry.getKey(), d);
     }
 
-    private String parseAndValidateDate(String rawDate) {
+    private String parseAndValidateDate(String fieldName, String rawDate) {
         // The raw date value may be represented as an ISO date time with a zeroed time part eg. 2012-01-01T00:00:00Z
         // Split the string on T so we get the date before the T, and the time after the T.
         // If we get two values we assume we're parsing a date and time, otherwise treat the value as a date.
@@ -242,20 +242,13 @@ public class JsonValidator implements Serializable {
         if (dateParts.size() == 2) {
             val dateString = dateParts.get(0);
             val timeString = dateParts.get(1);
-            val result = (timeIsSet(timeString))
-                ? rawDate
-                : dateString;
-            return result;
+            if (timeString != null && (timeString.replaceAll("[^0-9]", "").compareTo("0") > 0))
+                logger.warn("Discarding populated timestamp {} when converting {} to a date", timeString, fieldName);
+            // If the time part contains values other than zero log a warning since we could be losing data here by
+            // discarding the time part during the conversion to date.
+            return dateString;
         }
         else return rawDate;
-    }
-
-    // We assume the time is unset if the sum of all the numbers in the time string is zero. Anything greater than
-    // zero implies that at least one of the values is set in the time string in which case, this will fail validation.
-    // If there are no numbers in the string we return false to trigger a validation failure.
-    private boolean timeIsSet(String time) {
-        val numbersOnly = time.replaceAll("[^0-9]", "");
-        return numbersOnly.length() > 0 && Integer.parseInt(numbersOnly) > 0;
     }
 
 }

@@ -136,16 +136,15 @@ class JsonValidatorTest {
     }
 
     @Test
-    public void shouldFailWhenDateTimeToDateConversionHandlesTimePartWithValues() throws JsonProcessingException {
+    public void shouldPassWhenDateTimeToDateConversionHandlesTimePartWithValues() throws JsonProcessingException {
         val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01T12:34:56.789Z")));
         val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
 
-        assertFalse(
+        assertTrue(
                 underTest.validate(rawJson, parsedJson, schemaWithDate),
-                "Validator should fail when raw string contains a time part with non zero values. " +
+                "Validator should pass when raw string contains a time part with values. " +
                         "Raw dates are sent as an ISO datetime but our schema declares a type of date so spark " +
-                        "discards the time part. If the time part contains non-zero values the assumption is that " +
-                        "we should probably declare a datetime in our avro schema."
+                        "discards the time part."
         );
 
     }
