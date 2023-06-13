@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// Filter that converts Timestamp data in a field declared as a DateType into a date.
 public class TimestampToDateFieldFilter implements FieldFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(TimestampToDateFieldFilter.class);
