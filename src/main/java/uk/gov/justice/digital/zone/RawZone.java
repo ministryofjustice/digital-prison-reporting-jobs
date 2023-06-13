@@ -44,13 +44,17 @@ public class RawZone extends Zone {
 
         final long count = dataFrame.count(); // this is expensive. Requires a shuffle.
 
-        logger.info("Processing batch with {} records",count);
-
         val startTime = System.currentTimeMillis();
 
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
         String rowOperation = table.getAs(OPERATION);
+
+        logger.info("Processing batch with {} records for source: {} table: {}",
+                count,
+                rowSource,
+                rowTable
+        );
 
         Optional<Operation> validatedOperation = Operation.getOperation(rowOperation);
 
@@ -74,7 +78,11 @@ public class RawZone extends Zone {
             storage.updateDeltaManifestForTable(spark, tablePath);
         }
         else {
-            logger.warn("Unsupported operation: {} Skipping batch", rowOperation);
+            logger.warn("Unsupported operation: {} Skipping batch for source: {} table: {}",
+                    rowOperation,
+                    rowSource,
+                    rowTable
+            );
         }
 
         logger.info("Processed batch with {} records in {}ms",

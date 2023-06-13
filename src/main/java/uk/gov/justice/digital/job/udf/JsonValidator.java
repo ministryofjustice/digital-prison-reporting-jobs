@@ -242,7 +242,7 @@ public class JsonValidator implements Serializable {
         if (dateParts.size() == 2) {
             val dateString = dateParts.get(0);
             val timeString = dateParts.get(1);
-            if (timeString != null && (timeString.replaceAll("[^0-9]", "").compareTo("0") > 0))
+            if (timeString != null && (timeString.replaceAll("[^1-9]", "").compareTo("0") > 0))
                 logger.warn("Discarding populated timestamp {} when converting {} to a date", timeString, fieldName);
             // If the time part contains values other than zero log a warning since we could be losing data here by
             // discarding the time part during the conversion to date.
