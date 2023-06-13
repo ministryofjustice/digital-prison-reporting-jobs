@@ -14,6 +14,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.job.filter.NomisDataFilter;
 
 import java.io.Serializable;
 import java.time.ZonedDateTime;
@@ -107,26 +108,34 @@ public class JsonValidator implements Serializable {
         val originalData = objectMapper.readValue(originalJson, mapTypeReference);
         val parsedData = objectMapper.readValue(parsedJson, mapTypeReference);
 
+        val nomisFilter = new NomisDataFilter(schema);
+
+        // Apply filters
+        val filteredData = nomisFilter.apply(originalData);
+
         // Reformat dates where appropriate so that the equality check passes for those cases where we can discard the
         // time part of any dates represented as datetimes in the raw data.
         // Also reduce precision of timestamps to milliseconds to avoid comparision failures.
-        val originalDataWithReformattedTemporalFields =
-                reformatTimestampFields(
-                        reformatDateFields(originalData, schema),
-                        schema
-                );
+//        val originalDataWithReformattedTemporalFields =
+//                reformatTimestampFields(
+//                        reformatDateFields(originalData, schema),
+//                        schema
+//                );
 
 
         // Check that
         //  o the original and parsed data match using a simple equality check
         //  o any fields declared not-nullable have a value
-        val result = originalDataWithReformattedTemporalFields.equals(parsedData) &&
+//        val result = originalDataWithReformattedTemporalFields.equals(parsedData) &&
+//                allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
+
+        val result = filteredData.equals(parsedData) &&
                 allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
 
         logger.info("JSON validation result - json valid: {}", result);
 
         if (!result) {
-            val difference = Maps.difference(originalDataWithReformattedTemporalFields, parsedData);
+            val difference = Maps.difference(filteredData, parsedData);
             if (difference.entriesDiffering().isEmpty()) {
                 logger.error("JSON validation failed. At least one not-null field has no value");
 
