@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class AvroToSparkSchemaConverterTest {
+class AvroToSparkSchemaConverterIntegrationTest {
 
     private static final AvroToSparkSchemaConverter underTest = new AvroToSparkSchemaConverter();
 

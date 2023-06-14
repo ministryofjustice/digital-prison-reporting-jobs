@@ -12,12 +12,12 @@ import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-class DMS_3_4_6_ConverterTest extends BaseSparkTest {
+class DMS_3_4_6_ConverterIntegrationTest extends BaseSparkTest {
 
-    private static final String DATA_PATH = "src/test/resources/data/dms_record.json";
-    private static final String CONTROL_PATH = "src/test/resources/data/null-data-dms-record.json";
+    private static final String DATA_PATH = "src/integrationTest/resources/data/dms_record.json";
+    private static final String CONTROL_PATH = "src/integrationTest/resources/data/null-data-dms-record.json";
 
-    private static final String UPDATE_PATH = "src/test/resources/data/dms_update.json";
+    private static final String UPDATE_PATH = "src/integrationTest/resources/data/dms_update.json";
     private static final DMS_3_4_6 underTest = new DMS_3_4_6(new SparkSessionProvider());
 
     @Test

@@ -9,16 +9,14 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.exception.DomainSchemaException;
-import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainSchemaService;
+import uk.gov.justice.digital.test.ResourceLoader;
 import uk.gov.justice.digital.test.SparkTestHelpers;
 
 import java.io.IOException;
@@ -29,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class DomainExecutorTest extends BaseSparkTest {
+class DomainExecutorIntegrationTest extends BaseSparkTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -43,7 +41,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
     private static final String SAMPLE_EVENTS_PATH =
             Objects.requireNonNull(
-                    DomainExecutorTest.class.getResource("/sample/events")
+                    DomainExecutorIntegrationTest.class.getResource("/sample/events")
             ).getPath();
 
     @Mock

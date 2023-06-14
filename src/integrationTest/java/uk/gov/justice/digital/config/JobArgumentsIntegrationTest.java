@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class JobArgumentsTest {
+class JobArgumentsIntegrationTest {
 
     private static final Map<String, String> testArguments = Stream.of(new String[][] {
             { JobArguments.AWS_KINESIS_ENDPOINT_URL, "https://kinesis.example.com" },
@@ -65,7 +65,7 @@ class JobArgumentsTest {
     }
 
     @Test
-    public void showThrowAnExceptionWhenAMissingArgumentIsRequested() {
+    public void shouldThrowAnExceptionWhenAMissingArgumentIsRequested() {
         assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
     }
 
