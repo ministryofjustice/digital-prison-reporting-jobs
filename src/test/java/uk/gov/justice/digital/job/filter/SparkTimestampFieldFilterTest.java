@@ -22,13 +22,9 @@ class SparkTimestampFieldFilterTest {
     private static final SparkTimestampFieldFilter underTest = new SparkTimestampFieldFilter(schemaWithTimestamp);
 
     @Test
-    public void isEligibleShouldReturnTrueForTimestampField() {
-        assertTrue(underTest.isEligible(TIMESTAMP));
-    }
-
-    @Test
-    public void isEligibleShouldReturnFalseForAnyOtherField() {
-        assertFalse(underTest.isEligible(OTHER));
+    public void shouldOnlyModifyApplicableFields() {
+        val result = underTest.apply(new MapEntry<>(OTHER, "2006-01-01T12:34:56.789Z"));
+        assertEquals("2006-01-01T12:34:56.789Z", result.getValue());
     }
 
     @Test

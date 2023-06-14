@@ -22,6 +22,7 @@ public class NomisDataFilter {
     }
 
     public Map<String, Object> apply(Map<String, Object> rawData) {
+        // Since values may be null, streams cannot be used here since the map collector assumes all values are not null.
         val filteredMap = new HashMap<String, Object>();
 
         rawData.entrySet()
@@ -33,9 +34,10 @@ public class NomisDataFilter {
         return filteredMap;
     }
 
+    // Combine the filters into a single function (using Function::andThen) that is then used to process an entry.
     private Function<Entry<String, Object>, Entry<String, Object>> combineFieldFilters(List<FieldFilter> filters) {
         return filters.stream()
-                .map(filter -> (Function<Entry<String, Object>, Entry<String, Object>>) filter::applyIfEligible)
+                .map(filter -> (Function<Entry<String, Object>, Entry<String, Object>>) filter::apply)
                 .reduce(Function.identity(), Function::andThen);
     }
 }

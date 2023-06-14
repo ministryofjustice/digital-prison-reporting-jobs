@@ -22,13 +22,9 @@ class TimestampToDateFieldFilterTest {
     private static final TimestampToDateFieldFilter underTest = new TimestampToDateFieldFilter(schemaWithDate);
 
     @Test
-    public void isEligibleShouldReturnTrueForTimestampField() {
-        assertTrue(underTest.isEligible(DATE));
-    }
-
-    @Test
-    public void isEligibleShouldReturnFalseForAnyOtherField() {
-        assertFalse(underTest.isEligible(OTHER));
+    public void shouldOnlyModifyApplicableFields() {
+        val result = underTest.apply(new MapEntry<>(OTHER, "2006-01-01T12:34:56.789Z"));
+        assertEquals("2006-01-01T12:34:56.789Z", result.getValue());
     }
 
     @Test
