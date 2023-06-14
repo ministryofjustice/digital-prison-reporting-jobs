@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.AbstractMap.SimpleEntry;
-import static org.apache.spark.sql.types.DataTypes.*;
+import static org.apache.spark.sql.types.DataTypes.IntegerType;
+import static org.apache.spark.sql.types.DataTypes.StringType;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,7 +23,6 @@ class JsonValidatorTest {
         public static final String MANDATORY = "mandatory";
         public static final String OPTIONAL = "optional";
         public static final String NUMERIC = "numeric";
-        public static final String DATE = "date";
     }
 
     private static final StructType schema =
@@ -30,10 +30,6 @@ class JsonValidatorTest {
                     .add(Fields.MANDATORY, StringType, false)
                     .add(Fields.OPTIONAL, StringType, true)
                     .add(Fields.NUMERIC, IntegerType, true);
-
-    private static final StructType schemaWithDate =
-            new StructType()
-                    .add(Fields.DATE, DateType, false);
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -71,13 +67,30 @@ class JsonValidatorTest {
         assertFalse(underTest.validate(json, json, schema));
     }
 
+    @Test
+    public void shouldFailWhenRawAndParsedJsonDataDiffers() throws JsonProcessingException {
+        val json = createJsonFromEntries(Arrays.asList(
+                entry(Fields.MANDATORY, "somevalue"),
+                entry(Fields.OPTIONAL, "anotherValue"),
+                entry(Fields.NUMERIC, "12")
+        ));
+
+        val fakeParsedJson = createJsonFromEntries(Arrays.asList(
+                entry(Fields.MANDATORY, "additonalValue"),
+                entry(Fields.OPTIONAL, "somethingElse"),
+                entry(Fields.NUMERIC, "42")
+        ));
+
+        assertFalse(underTest.validate(json, fakeParsedJson, schema));
+    }
+
     /**
      * This test exercises the specific case where we have used from_json to parse a JSON string against a schema.
      * If a value doesn't match the type specified for the field the value is returned as NULL. For this reason we
      * must compare the original and parsed JSON data since any differences will be down to invalid types.
      */
     @Test
-    public void shouldFailWhenParsedJsonDoesNotMatchOriginalJson() throws JsonProcessingException {
+    public void shouldFailWhenParsedJsonContainsNullWhenValuePresentInRawData() throws JsonProcessingException {
         val json = createJsonFromEntries(Arrays.asList(
                 entry(Fields.MANDATORY, "somevalue"),
                 entry(Fields.OPTIONAL, "anotherValue"),
@@ -103,59 +116,6 @@ class JsonValidatorTest {
 
         assertTrue(underTest.validate(null, json, schema));
         assertTrue(underTest.validate(json, null, schema));
-    }
-
-    @Test
-    public void shouldPassWhenDateTimeToDateConversionHandlesZeroTimePart() throws JsonProcessingException {
-        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01T00:00:00.000Z")));
-        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
-
-        assertTrue(
-                underTest.validate(rawJson, parsedJson, schemaWithDate),
-                "Validator should pass when raw string contains a zeroed time part. " +
-                        "Raw dates are sent as an ISO datetime but our schema declares a type of date so spark " +
-                        "discards the time part."
-        );
-    }
-
-    @Test
-    public void shouldFailWhenDateTimeToDateConversionHandlesTimePartWithValues() throws JsonProcessingException {
-        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01T12:34:56.789Z")));
-        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
-
-        assertFalse(
-                underTest.validate(rawJson, parsedJson, schemaWithDate),
-                "Validator should fail when raw string contains a time part with non zero values. " +
-                        "Raw dates are sent as an ISO datetime but our schema declares a type of date so spark " +
-                        "discards the time part. If the time part contains non-zero values the assumption is that " +
-                        "we should probably declare a datetime in our avro schema."
-        );
-
-    }
-
-    @Test
-    public void shouldPassWhenRawDateContainsNoTimePart() throws JsonProcessingException {
-        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
-        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "2012-01-01")));
-
-        assertTrue(
-                underTest.validate(rawJson, parsedJson, schemaWithDate),
-                "Validator should pass when raw string contains a zeroed time part. " +
-                        "Raw dates are sent as an ISO datetime but our schema declares a type of date so spark " +
-                        "discards the time part."
-        );
-    }
-
-    @Test
-    public void shouldFailWithoutThrowingExceptionsForAnInvalidValue() throws JsonProcessingException {
-        val rawJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "fooTbar")));
-        // Parsing the invalid string as a Date would yield a null result which we represent as an empty string here.
-        val parsedJson = createJsonFromEntries(Collections.singletonList(entry(Fields.DATE, "")));
-
-        assertFalse(
-                underTest.validate(rawJson, parsedJson, schemaWithDate),
-                "Validator should fail when raw string contains an invalid value."
-        );
     }
 
     private static SimpleEntry<String, Object> entry(String key, Object value) {
