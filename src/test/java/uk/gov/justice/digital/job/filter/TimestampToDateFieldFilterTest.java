@@ -4,6 +4,7 @@ import lombok.val;
 import org.apache.avro.util.MapEntry;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.job.filter.field.TimestampToDateFieldFilter;
 
 import static org.apache.spark.sql.types.DataTypes.DateType;
 import static org.apache.spark.sql.types.DataTypes.StringType;

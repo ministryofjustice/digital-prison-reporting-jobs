@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.job.filter;
+package uk.gov.justice.digital.job.filter.field;
 
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;

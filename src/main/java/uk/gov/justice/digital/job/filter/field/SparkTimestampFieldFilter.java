@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.job.filter;
+package uk.gov.justice.digital.job.filter.field;
 
 import lombok.val;
 import org.apache.spark.sql.types.DataTypes;

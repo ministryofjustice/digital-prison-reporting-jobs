@@ -2,6 +2,9 @@ package uk.gov.justice.digital.job.filter;
 
 import lombok.val;
 import org.apache.spark.sql.types.StructType;
+import uk.gov.justice.digital.job.filter.field.FieldFilter;
+import uk.gov.justice.digital.job.filter.field.SparkTimestampFieldFilter;
+import uk.gov.justice.digital.job.filter.field.TimestampToDateFieldFilter;
 
 import java.util.Arrays;
 import java.util.HashMap;
