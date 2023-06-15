@@ -5,7 +5,6 @@ import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.functions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -28,7 +27,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.zone.Fixtures.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,9 +45,9 @@ class RawZoneTest extends BaseSparkTest {
     private SourceReferenceService mockSourceReferenceService;
 
     @Test
-    public void processLoadShouldCreateRawLoadRecordsSortedByTimestamp() throws DataStorageException {
-        val testDataFrame = createTestRecords();
-        val expectedDataFrame = createExpectedLoadRecords();
+    public void processShouldCreateAndAppendDistinctRawRecords() throws DataStorageException {
+        val testRecords = createTestRecords();
+        val expectedRecords = createExpectedRecords();
 
         val rawPath = createValidatedPath(RAW_PATH, TABLE_SOURCE, TABLE_NAME);
 
@@ -58,7 +56,7 @@ class RawZoneTest extends BaseSparkTest {
 
         doNothing()
                 .when(mockDataStorageService)
-                .appendDistinct(eq(rawPath), refEq(expectedDataFrame), eq(RawZone.PRIMARY_KEY_NAME));
+                .appendDistinct(eq(rawPath), refEq(expectedRecords), eq(RawZone.PRIMARY_KEY_NAME));
 
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
@@ -70,71 +68,8 @@ class RawZoneTest extends BaseSparkTest {
         );
 
         assertIterableEquals(
-                expectedDataFrame.collectAsList(),
-                underTest.processLoad(spark, testDataFrame, dataMigrationEventRow).collectAsList()
-        );
-    }
-
-    @Test
-    public void processCDCShouldCreateCDCRecordsSortedByTimestamp() throws DataStorageException {
-        val testDataFrame = createTestRecords();
-        val expectedDataFrame = createExpectedCDCRecords();
-
-        val rawPath = createValidatedPath(RAW_PATH, TABLE_SOURCE, TABLE_NAME);
-
-        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
-                .thenReturn(Optional.of(mockSourceReference));
-
-        doNothing()
-                .when(mockDataStorageService)
-                .appendDistinct(eq(rawPath), refEq(expectedDataFrame), eq(RawZone.PRIMARY_KEY_NAME));
-
-        when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
-        when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
-
-        val underTest = new RawZone(
-                jobArguments,
-                mockDataStorageService,
-                mockSourceReferenceService
-        );
-
-        assertIterableEquals(
-                expectedDataFrame.collectAsList(),
-                underTest.processCDC(spark, testDataFrame, dataMigrationEventRow).collectAsList()
-        );
-    }
-
-    @Test
-    public void processLoadShouldSkipProcessingGivenInvalidOperation() throws DataStorageException {
-        val testDataFrame = createTestRecords().withColumn(OPERATION, functions.lit("invalidOperation"));
-        val underTest = new RawZone(
-                jobArguments,
-                mockDataStorageService,
-                mockSourceReferenceService
-        );
-
-        assertTrue(
-                underTest
-                        .processLoad(spark, testDataFrame, dataMigrationEventRowWithInvalidOperation)
-                        .collectAsList()
-                        .isEmpty()
-        );
-    }
-
-    @Test
-    public void processCDCShouldSkipProcessingGivenInvalidOperation() throws DataStorageException {
-        val testDataFrame = createTestRecords().withColumn(OPERATION, functions.lit("invalidOperation"));
-        val underTest = new RawZone(
-                jobArguments,
-                mockDataStorageService,
-                mockSourceReferenceService
-        );
-
-        assertTrue(
-                underTest
-                        .processCDC(spark, testDataFrame, dataMigrationEventRowWithInvalidOperation)
-                        .collectAsList()
-                        .isEmpty()
+                expectedRecords.collectAsList(),
+                underTest.process(spark, testRecords, dataMigrationEventRow).collectAsList()
         );
     }
 
@@ -151,8 +86,21 @@ class RawZoneTest extends BaseSparkTest {
         return spark.createDataFrame(rawData, RECORD_SCHEMA);
     }
 
-    private Dataset<Row> createExpectedLoadRecords() {
+    private Dataset<Row> createExpectedRecords() {
         val expectedRawData = new ArrayList<Row>();
+
+        expectedRawData.add(
+                RowFactory.create(
+                        "load-record-key1:3:" + Load.getName(),
+                        "3",
+                        "load-record-key1",
+                        TABLE_SOURCE,
+                        TABLE_NAME,
+                        Load.getName(),
+                        ROW_CONVERTER,
+                        RAW_DATA
+                )
+        );
 
         expectedRawData.add(
                 RowFactory.create(
@@ -178,24 +126,6 @@ class RawZoneTest extends BaseSparkTest {
                         RAW_DATA
                 )
         );
-        expectedRawData.add(
-                RowFactory.create(
-                        "load-record-key1:3:" + Load.getName(),
-                        "3",
-                        "load-record-key1",
-                        TABLE_SOURCE,
-                        TABLE_NAME,
-                        Load.getName(),
-                        ROW_CONVERTER,
-                        RAW_DATA
-                )
-        );
-
-        return spark.createDataFrame(expectedRawData, EXPECTED_RAW_SCHEMA);
-    }
-
-    private Dataset<Row> createExpectedCDCRecords() {
-        val expectedRawData = new ArrayList<Row>();
 
         expectedRawData.add(
                 RowFactory.create(
@@ -209,6 +139,7 @@ class RawZoneTest extends BaseSparkTest {
                         RAW_DATA
                 )
         );
+
         expectedRawData.add(
                 RowFactory.create(
                         "insert-record-key2:4:" + Insert.getName(),
@@ -221,18 +152,7 @@ class RawZoneTest extends BaseSparkTest {
                         RAW_DATA
                 )
         );
-        expectedRawData.add(
-                RowFactory.create(
-                        "delete-record-key1:5:" + Delete.getName(),
-                        "5",
-                        "delete-record-key1",
-                        TABLE_SOURCE,
-                        TABLE_NAME,
-                        Delete.getName(),
-                        ROW_CONVERTER,
-                        RAW_DATA
-                )
-        );
+
         expectedRawData.add(
                 RowFactory.create(
                         "update-record-key1:6:" + Update.getName(),
@@ -246,6 +166,20 @@ class RawZoneTest extends BaseSparkTest {
                 )
         );
 
+        expectedRawData.add(
+                RowFactory.create(
+                        "delete-record-key1:5:" + Delete.getName(),
+                        "5",
+                        "delete-record-key1",
+                        TABLE_SOURCE,
+                        TABLE_NAME,
+                        Delete.getName(),
+                        ROW_CONVERTER,
+                        RAW_DATA
+                )
+        );
+
         return spark.createDataFrame(expectedRawData, EXPECTED_RAW_SCHEMA);
     }
+
 }

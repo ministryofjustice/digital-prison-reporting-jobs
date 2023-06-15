@@ -24,7 +24,7 @@ import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 @Singleton
-public class StructuredZone extends Zone {
+public class StructuredZone extends FilteredZone {
 
     public static final String ERROR = "error";
     public static final String PARSED_DATA = "parsedData";

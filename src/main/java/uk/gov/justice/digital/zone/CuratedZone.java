@@ -19,7 +19,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SO
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 
 @Singleton
-public class CuratedZone extends Zone {
+public class CuratedZone extends FilteredZone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZone.class);
 
