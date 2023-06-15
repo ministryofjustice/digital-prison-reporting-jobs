@@ -7,22 +7,17 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.cdcOperations;
 
 @Singleton
 public class RawZone extends Zone {
@@ -33,11 +28,6 @@ public class RawZone extends Zone {
     private final String rawS3Path;
     private final DataStorageService storage;
     private final SourceReferenceService sourceReferenceService;
-
-    private final Set<String> cdcOperationsSet = Arrays
-            .stream(cdcOperations)
-            .map(DMS_3_4_6.Operation::getName)
-            .collect(Collectors.toSet());
 
     @Inject
     public RawZone(JobArguments jobArguments,
@@ -76,7 +66,7 @@ public class RawZone extends Zone {
         String rowSource = row.getAs(SOURCE);
         String rowTable = row.getAs(TABLE);
 
-        logger.info("Processing raw batch with {} records for source: {} table: {}",
+        logger.info("Processing batch with {} records for source: {} table: {}",
                 count,
                 rowSource,
                 rowTable
@@ -84,15 +74,15 @@ public class RawZone extends Zone {
 
         val tablePath = getTablePath(rowSource, rowTable);
 
-        logger.info("Applying raw batch with {} records to deltalake table: {}", count, tablePath);
+        logger.info("Applying batch with {} records to deltalake table: {}", count, tablePath);
         val rawDataFrame = createRawDataFrame(records);
         storage.appendDistinct(tablePath, rawDataFrame, PRIMARY_KEY_NAME);
 
-        logger.info("Raw batch applied successfully");
+        logger.info("Append completed successfully");
 
         storage.updateDeltaManifestForTable(spark, tablePath);
 
-        logger.info("Processed raw batch with {} records in {}ms",
+        logger.info("Processed batch with {} records in {}ms",
                 count,
                 System.currentTimeMillis() - startTime
         );
