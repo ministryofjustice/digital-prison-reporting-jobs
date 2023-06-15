@@ -61,7 +61,7 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         givenTheDatasetSupportsTheProcessFlow();
-        assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
+        assertNotNull(underTest.processLoad(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
@@ -69,14 +69,14 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         givenTheDatasetSupportsTheProcessFlow();
-        assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
+        assertNotNull(underTest.processLoad(spark, mockDataSet, dataMigrationEventRow));
     }
 
     @Test
     public void shouldHandleNoSchemaFound() throws DataStorageException {
         givenTheSchemaDoesNotExist();
         givenTheDatasetSupportsTheNoSchemaFoundFlow();
-        assertNotNull(underTest.process(spark, mockDataSet, dataMigrationEventRow));
+        assertNotNull(underTest.processLoad(spark, mockDataSet, dataMigrationEventRow));
     }
 
     private void givenTheSchemaExists() {

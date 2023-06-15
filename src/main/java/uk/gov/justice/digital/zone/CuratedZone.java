@@ -37,7 +37,7 @@ public class CuratedZone extends Zone {
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
+    public Dataset<Row> processLoad(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
         val count = dataFrame.count();
 
@@ -76,5 +76,11 @@ public class CuratedZone extends Zone {
 
             return dataFrame;
         } else return createEmptyDataFrame(dataFrame);
+    }
+
+    @Override
+    public Dataset<Row> processCDC(SparkSession spark, Dataset<Row> dataFrame, Row row) throws DataStorageException {
+        // TODO: DPR-314 - Apply CDC to Curated Zone
+        return null;
     }
 }

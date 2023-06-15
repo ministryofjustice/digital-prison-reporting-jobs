@@ -50,7 +50,7 @@ public class StructuredZone extends Zone {
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
+    public Dataset<Row> processLoad(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
         val rowCount = dataFrame.count();
 
@@ -75,6 +75,12 @@ public class StructuredZone extends Zone {
         );
 
         return structuredDataFrame;
+    }
+
+    @Override
+    public Dataset<Row> processCDC(SparkSession spark, Dataset<Row> dataFrame, Row row) throws DataStorageException {
+        // TODO: DPR-311 - Apply CDC Events to Structured Zone
+        return null;
     }
 
     private Dataset<Row> handleSchemaFound(SparkSession spark,
@@ -205,6 +211,7 @@ public class StructuredZone extends Zone {
                                                      String tablePath,
                                                      String primaryKey) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
+        // TODO: DPR-309 - use operation to determine how to write to delta table
         storage.appendDistinct(tablePath, dataFrame, primaryKey);
         logger.info("Append completed successfully");
         storage.updateDeltaManifestForTable(spark, tablePath);

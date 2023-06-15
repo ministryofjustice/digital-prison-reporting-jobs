@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.Load;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 /**
@@ -39,6 +38,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 public class DataHubJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
+
 
     private final KinesisReader kinesisReader;
     private final RawZone rawZone;
@@ -84,15 +84,18 @@ public class DataHubJob implements Runnable {
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             val dataFrame = converter.convert(rowRdd);
 
-            getTablesWithLoadRecords(dataFrame).forEach(table -> {
+            getTablesInBatch(dataFrame).forEach(table -> {
                 try {
                     val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, table);
-                    val rawDataFrame = rawZone.process(spark, dataFrameForTable, table);
-                    val sortedLoadEvents = rawDataFrame
-                            .filter(col(OPERATION).equalTo(Load.getName()))
-                            .orderBy(col(TIMESTAMP));
-                    val structuredDataFrame = structuredZone.process(spark, sortedLoadEvents, table);
-                    curatedZone.process(spark, structuredDataFrame, table);
+                    dataFrameForTable.persist();
+
+                    val rawLoadDataFrame = rawZone.processLoad(spark, dataFrameForTable, table);
+                    val structuredDataFrame = structuredZone.processLoad(spark, rawLoadDataFrame, table);
+                    curatedZone.processLoad(spark, structuredDataFrame, table);
+
+                    val rawCDCDataFrame = rawZone.processCDC(spark, dataFrameForTable, table);
+                    val structuredIncrementalDataFrame = structuredZone.processCDC(spark, rawCDCDataFrame, table);
+                    curatedZone.processCDC(spark, structuredIncrementalDataFrame, table);
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);
@@ -118,9 +121,8 @@ public class DataHubJob implements Runnable {
         }
     }
 
-    private List<Row> getTablesWithLoadRecords(Dataset<Row> dataFrame) {
+    private List<Row> getTablesInBatch(Dataset<Row> dataFrame) {
         return dataFrame
-                .filter(col(OPERATION).equalTo(Load.getName()))
                 .select(TABLE, SOURCE, OPERATION)
                 .distinct()
                 .collectAsList();
