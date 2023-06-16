@@ -44,10 +44,6 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
                     DomainExecutorIntegrationTest.class.getResource("/sample/events")
             ).getPath();
 
-    @Mock
-    private Dataset<Row> mockedDataSet;
-
-    private final DataStorageService testStorage = mock(DataStorageService.class);
 
 
 
