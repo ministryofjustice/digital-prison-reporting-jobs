@@ -63,12 +63,14 @@ run the tests.
 
 ```
     ./gradlew clean test
+    ./gradlew clean check
 ```
 
 ### Integration Tests
 
 ```
-    TBD
+    ./gradlew clean integrationTest
+    ./gradlew clean check
 ```
 
 ### Acceptance Tests

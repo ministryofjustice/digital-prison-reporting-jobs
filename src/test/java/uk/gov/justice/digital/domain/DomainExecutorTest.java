@@ -76,20 +76,9 @@ class DomainExecutorTest extends BaseSparkTest {
         }
     }
 
-    @Test
-    public void shouldTestApplyDomain() throws Exception {
-        val domainDefinition = getDomain("/sample/domain/incident_domain.json");
-        val testSchemaService = mock(DomainSchemaService.class);
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
-
-        for (val table : domainDefinition.getTables()) {
-            val dataframe = executor.apply(table, getOffenderRefs());
-            assertEquals(dataframe.schema(), helpers.createIncidentDomainDataframe().schema());
-        }
-    }
 
     @Test
-    public void shouldApplyTransform() throws Exception {
+    public void shouldTestApplyTransform() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -101,7 +90,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldApplyViolationsIfEmpty() throws Exception {
+    public void shouldTestApplyViolationsIfEmpty() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -114,7 +103,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldApplyViolationsIfNonEmpty() throws Exception {
+    public void shouldTestApplyViolationsIfNonEmpty() throws Exception {
         val domainDefinition = getDomain("/sample/domain/domain-violations-check.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, targetPath(), storage, testSchemaService);
@@ -130,7 +119,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
 
     @Test
-    public void shouldApplyMappings() throws Exception {
+    public void shouldTestApplyMappings() throws Exception {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
@@ -144,28 +133,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldSaveTable() throws Exception {
-        val testSchemaService = mock(DomainSchemaService.class);
-        val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
-
-        val domainDefinition = getDomain("/sample/domain/incident_domain.json");
-
-        for (val table : domainDefinition.getTables()) {
-            val df = executor.apply(table, getOffenderRefs());
-            val targetInfo = new TableIdentifier(
-                    domainTargetPath(),
-                    hiveDatabaseName,
-                    domainDefinition.getName(),
-                    table.getName()
-            );
-            executor.saveTable(targetInfo, df, "insert");
-        }
-
-        verify(testSchemaService, atLeastOnce()).create(any(), any(), any());
-    }
-
-    @Test
-    public void shouldOverwriteWhenTableExists()
+    public void shouldTestOverwriteWhenTableExists()
             throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
@@ -177,7 +145,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldCreateSchemaAndTable() throws DomainExecutorException, DomainSchemaException {
+    public void shouldTestCreateSchemaAndTable() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(false).when(testStorage).exists(spark, tbl);
@@ -188,7 +156,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldInsertTableIfTableDoesNotExists() throws DomainExecutorException, DomainSchemaException {
+    public void shouldTestInsertTableIfTableDoesNotExists() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(false).when(testStorage).exists(spark, tbl);
@@ -200,7 +168,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldUpdateTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
+    public void shouldTestUpdateTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(true).when(testStorage).exists(spark, tbl);
@@ -212,7 +180,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldSyncTableIfTableExists() throws DomainExecutorException, DataStorageException {
+    public void shouldTestSyncTableIfTableExists() throws DomainExecutorException, DataStorageException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(true).when(testStorage).exists(spark, tbl);
@@ -224,7 +192,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDeleteTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
+    public void shouldTestDeleteTableIfTableExists() throws DomainExecutorException, DomainSchemaException {
         TableIdentifier tbl = new TableIdentifier("s3://somepath", "test",
                 "incident", "demographics" );
         doReturn(true).when(testStorage).exists(spark, tbl);
@@ -237,7 +205,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
 
     @Test
-    public void shouldDeleteTable() throws Exception {
+    public void shouldTestDeleteTable() throws Exception {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
@@ -271,97 +239,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRunWithFullUpdateIfTableIsInDomain() throws Exception {
-        val domain = getDomain("/sample/domain/sample-domain-execution.json");
-        val testSchemaService = mock(DomainSchemaService.class);
-        val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
-
-        // save a source
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
-                helpers.getOffenders(tmp)
-        );
-
-        val domainTableName = "prisoner";
-        // Insert first
-        executor.doFullDomainRefresh(domain, domainTableName, "insert");
-        // then update
-        executor.doFullDomainRefresh(domain, domainTableName, "update");
-        verify(testSchemaService, times(1)).create(any(), any(), any());
-        verify(testSchemaService, times(1)).replace(any(), any(), any());
-
-        // there should be a target table
-        val info = new TableIdentifier(targetPath(), hiveDatabaseName, domain.getName(), domainTableName);
-        assertTrue(storage.exists(spark, info));
-
-        // it should have all the offenders in it
-        assertTrue(areEqual(helpers.getOffenders(tmp), storage.get(spark, info)));
-    }
-
-    @Test
-    public void shouldRunWithFullUpdateIfMultipleTablesAreInDomain() throws Exception {
-        val domain1 = getDomain("/sample/domain/sample-domain-execution-insert.json");
-        val domain2 = getDomain("/sample/domain/sample-domain-execution-join.json");
-
-        // save a source
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offenders"),
-                helpers.getOffenders(tmp)
-        );
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "nomis", "offender_bookings"),
-                helpers.getOffenderBookings(tmp)
-        );
-
-        // do Full Materialize of source to target
-        val domainTableName = "prisoner";
-        val testSchemaService = mock(DomainSchemaService.class);
-        val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
-
-        executor.doFullDomainRefresh(domain1, domainTableName, "insert");
-
-        verify(testSchemaService, times(1)).create(any(), any(), any());
-
-        // there should be a target table
-        val info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
-        assertTrue(storage.exists(spark, info));
-        // it should have all the joined records in it
-        assertEquals(1, storage.get(spark, info).count());
-
-        // now the reverse
-        executor.doFullDomainRefresh(domain2, domainTableName, "update");
-        verify(testSchemaService, times(1)).replace(any(), any(), any());
-
-        // there should be a target table
-        assertTrue(storage.exists(spark, info));
-        // it should have all the joined records in it
-        assertEquals(1, storage.get(spark, info).count());
-    }
-
-    @Test
-    public void shouldRunWithNoChangesIfTableIsNotInDomain() throws Exception {
-
-        val domain = getDomain("/sample/domain/sample-domain-execution-bad-source-table.json");
-        val testSchemaService = mock(DomainSchemaService.class);
-        val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
-
-        helpers.persistDataset(
-                new TableIdentifier(sourcePath(), hiveDatabaseName, "source", "table"),
-                helpers.getOffenders(tmp)
-        );
-
-        assertThrows(
-                DomainExecutorException.class,
-                () -> executor.doFullDomainRefresh(domain, "prisoner", "insert")
-        );
-
-        // there shouldn't be a target table
-        TableIdentifier info = new TableIdentifier(targetPath(), hiveDatabaseName, "example", "prisoner");
-        assertFalse(storage.exists(spark, info));
-    }
-
-    @Test
-    public void shouldThrowExceptionIfNoSqlDefinedOnTransform() {
+    public void shouldTestThrowExceptionIfNoSqlDefinedOnTransform() {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
@@ -377,7 +255,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldNotExecuteTransformIfSqlIsBad() throws Exception {
+    public void shouldTestNotExecuteTransformIfSqlIsBad() throws Exception {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
@@ -391,39 +269,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDeriveNewColumnIfFunctionProvided() throws Exception {
-        val testSchemaService = mock(DomainSchemaService.class);
-        val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
-
-        val inputs = helpers.getOffenders(tmp);
-
-        val transformSource = "source.table";
-
-        val transform = new TableDefinition.TransformDefinition();
-        transform.setViewText(
-                "select source.table.*, months_between(current_date(), to_date(source.table.BIRTH_DATE)) / 12 as AGE_NOW " +
-                        "from source.table"
-        );
-        transform.setSources(Collections.singletonList(transformSource));
-
-        val result1 = executor.applyTransform(Collections.singletonMap(transformSource, inputs), transform);
-
-        assertEquals(inputs.count(), result1.count());
-        assertFalse(areEqual(inputs, result1));
-
-        transform.setViewText(
-                "select a.*, months_between(current_date(), to_date(a.BIRTH_DATE)) / 12 as AGE_NOW " +
-                        "from source.table a"
-        );
-
-        val result2 = executor.applyTransform(Collections.singletonMap(transformSource, inputs), transform);
-
-        assertEquals(inputs.count(), result2.count());
-        assertFalse(areEqual(inputs, result2));
-    }
-
-    @Test
-    public void shouldNotWriteViolationsIfThereAreNone() throws DataStorageException {
+    public void shouldTestNotWriteViolationsIfThereAreNone() throws DataStorageException {
         val sourcePath = this.tmp.toFile().getAbsolutePath() + "/source";
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath, targetPath(), storage, testSchemaService);
@@ -446,7 +292,7 @@ class DomainExecutorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteViolationsIfThereAreSome() throws DataStorageException {
+    public void shouldTestWriteViolationsIfThereAreSome() throws DataStorageException {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 

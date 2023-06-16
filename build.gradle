@@ -1,11 +1,12 @@
 plugins {
     id 'java'
     id 'jacoco'
-    id 'io.micronaut.minimal.library'  version '3.7.5'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'io.freefair.lombok' version '6.5.1'
     id 'org.sonarqube'  version '3.5.0.2730'
-    id 'org.owasp.dependencycheck'  version '8.2.1'    
+    id 'org.owasp.dependencycheck'  version '8.2.1'
+    id 'org.gradle.java-test-fixtures'
+    id 'io.micronaut.minimal.library'  version '3.7.5'
 }
 
 group 'uk.gov.justice'
@@ -15,6 +16,11 @@ version "${version != 'unspecified' ? version : '0.0.1-SNAPSHOT'}"
 java {
     targetCompatibility = "1.8"
 }
+
+jacoco {
+    toolVersion = "0.8.8" // Adjust the version if needed
+}
+
 
 repositories {
     mavenCentral()
@@ -84,13 +90,49 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
-test {
-    useJUnitPlatform()
-    finalizedBy jacocoTestReport
+sourceSets {
+    integrationTest {
+        java.srcDir 'src/it/java'
+        resources.srcDir 'src/it/resources'
+        compileClasspath += sourceSets.main.output + sourceSets.test.output
+        runtimeClasspath += sourceSets.main.output + sourceSets.test.output
+    }
 }
+
+configurations {
+    integrationTestImplementation.extendsFrom implementation, testImplementation
+}
+
+// Exclude duplicate file from processing
+processResources {
+    exclude 'data/dms_update.json'
+}
+
+// Configure dependencies for integration tests
+dependencies {
+    // Example dependency for integration tests
+    integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+    integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+}
+
+// Configure the integrationTest task
+tasks.register('integrationTest', Test) {
+    description = 'Runs integration tests.'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+    mustRunAfter test
+}
+
+// Configure the check task to depend on integrationTest
+check.dependsOn integrationTest
 
 jacocoTestReport {
     dependsOn test
+    dependsOn integrationTest
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
 
 shadowJar {
@@ -107,7 +149,11 @@ tasks.withType(JavaCompile).configureEach {
     ]
 }
 
+
 test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+    jacoco.includeNoLocationClasses = true
     testLogging {
         events "passed", "skipped", "failed"
     }
