@@ -18,7 +18,7 @@ public class DomainContractValidationIntegrationTest {
 
     private static final String RESOURCE_PATH = "/contracts";
 
-    private static final String DOMAIN_CONTRACT_SCHEMA = "domain-contract-schema.json";
+    private static final String DOMAIN_CONTRACT_SCHEMA = "source-contract-schema.json";
 
     private static final List<String> contracts = Arrays.asList(
             "reference-contract.avsc"
