@@ -36,6 +36,7 @@ public class Fixtures {
             ROW_SCHEMA
     );
 
+
     public static final StructType EXPECTED_RAW_SCHEMA = new StructType()
             .add(PRIMARY_KEY_NAME, DataTypes.StringType, false)
             .add(TIMESTAMP, DataTypes.StringType, false)
