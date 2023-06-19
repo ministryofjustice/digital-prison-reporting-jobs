@@ -136,7 +136,7 @@ public class StructuredZone extends FilteredZone {
     private Dataset<Row> handleValidRecords(SparkSession spark,
                                             Dataset<Row> dataFrame,
                                             String destinationPath,
-                                            String primaryKey) throws DataStorageException {
+                                            SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         val validRecords = dataFrame
                 .select(col(PARSED_DATA), col(VALID))
                 .filter(col(VALID).equalTo(true))
@@ -209,7 +209,7 @@ public class StructuredZone extends FilteredZone {
     private void appendDataAndUpdateManifestForTable(SparkSession spark,
                                                      Dataset<Row> dataFrame,
                                                      String tablePath,
-                                                     String primaryKey) throws DataStorageException {
+                                                     SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
         // TODO: DPR-309 - use operation to determine how to write to delta table
         storage.appendDistinct(tablePath, dataFrame, primaryKey);

@@ -7,6 +7,7 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -55,7 +56,7 @@ public class RawZone extends UnfilteredZone {
 
         logger.info("Applying batch with {} records to deltalake table: {}", count, tablePath);
         val rawDataFrame = createRawDataFrame(records);
-        storage.appendDistinct(tablePath, rawDataFrame, PRIMARY_KEY_NAME);
+        storage.appendDistinct(tablePath, rawDataFrame, new SourceReference.PrimaryKey(PRIMARY_KEY_NAME));
 
         logger.info("Append completed successfully");
 

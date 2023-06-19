@@ -7,6 +7,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
@@ -53,14 +54,13 @@ public class DataStorageService {
         }
     }
 
-    public void appendDistinct(String tablePath, Dataset<Row> df, String primaryKey) throws DataStorageException {
+    public void appendDistinct(String tablePath, Dataset<Row> df, SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         if(!df.isEmpty()) {
             final DeltaTable dt = getTable(df.sparkSession(), tablePath);
             if(dt != null) {
-                final String spk = SOURCE + "." + primaryKey;
-                final String tpk = TARGET + "." + primaryKey;
+                final String condition = primaryKey.getSparkCondition(SOURCE, TARGET);
                 dt.as(SOURCE)
-                        .merge(df.as(TARGET), spk + "=" + tpk )
+                        .merge(df.as(TARGET), condition )
                         .whenNotMatched().insertAll()
                         .execute();
             } else {
@@ -68,6 +68,8 @@ public class DataStorageService {
             }
         }
     }
+
+
 
     public void create(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.info("Inserting schema and data to " + tablePath);
