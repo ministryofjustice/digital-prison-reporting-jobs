@@ -11,6 +11,7 @@ import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class SourceReferenceServiceTest {
     private static final String RESOURCE_PATH = "/contracts";
     private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACT = "agency-internal-locations-dummy.avsc";
     private static final String OFFENDERS_CONTRACT = "offenders-dummy.avsc";
+    private static final String COMPOSITE_KEY_CONTRACT = "composite-key.avsc";
 
     private static final AvroToSparkSchemaConverter converter = new AvroToSparkSchemaConverter();
 
@@ -76,10 +78,12 @@ public class SourceReferenceServiceTest {
 
         val sourceReference = result.get();
 
+        val pk = new SourceReference.PrimaryKey("OFFENDER_ID");
+
         assertEquals(schemaId, sourceReference.getKey());
         assertEquals("nomis", sourceReference.getSource());
         assertEquals("offenders", sourceReference.getTable());
-        assertEquals("OFFENDER_ID", sourceReference.getPrimaryKey());
+        assertEquals(pk, sourceReference.getPrimaryKey());
         // See AvroToSparkSchemaConverter for more detailed testing of the conversion.
         assertNotNull(sourceReference.getSchema());
     }
@@ -115,4 +119,29 @@ public class SourceReferenceServiceTest {
         assertThrows(RuntimeException.class, () -> underTest.getSourceReference("some", "schema"));
     }
 
+    @Test
+    public void shouldGetASourceReferenceWithACompositeSchema() {
+        val schemaId = UUID.randomUUID().toString();
+        val tableName = "COMPOSITE";
+        val schemaResponse = new GlueSchemaResponse(
+                schemaId,
+                getResource(RESOURCE_PATH + "/" + COMPOSITE_KEY_CONTRACT)
+        );
+
+        when(client.getSchema("oms_owner.composite")).thenReturn(Optional.of(schemaResponse));
+
+        val result = underTest.getSourceReference("oms_owner", "composite");
+
+
+    }
+
+    @Test
+    public void shouldConcatenatePrimaryKeysIntoASqlCondition() {
+        SourceReference.PrimaryKey pk = new SourceReference.PrimaryKey(Arrays.asList("key1"));
+        assertEquals("((source.key1 = target.key1))", pk.getSparkCondition("source", "target"));
+
+        pk = new SourceReference.PrimaryKey(Arrays.asList("key1", "key2"));
+        assertEquals("((source.key1 = target.key1) and (source.key2 = target.key2))", pk.getSparkCondition("source", "target"));
+
+    }
 }
