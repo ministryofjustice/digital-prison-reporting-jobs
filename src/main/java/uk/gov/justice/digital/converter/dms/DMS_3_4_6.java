@@ -13,7 +13,6 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.apache.spark.sql.functions.*;
 import static org.apache.spark.sql.types.DataTypes.StringType;
@@ -78,12 +77,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
             return Arrays.stream(values()).filter(it -> it.name().equalsIgnoreCase(operation)).findAny();
         }
 
-        private static final DMS_3_4_6.Operation[] cdcOperations = { Insert, Update, Delete };
-
-        public static final Set<String> cdcOperationsSet = Arrays
-                .stream(cdcOperations)
-                .map(DMS_3_4_6.Operation::getName)
-                .collect(Collectors.toSet());
+        public static final Object[] cdcOperations = { Insert.getName(), Update.getName(), Delete.getName() };
     }
 
     // This schema defines the common output format to be created from the incoming data.

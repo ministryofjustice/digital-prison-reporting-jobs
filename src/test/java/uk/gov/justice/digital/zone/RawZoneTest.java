@@ -74,15 +74,15 @@ class RawZoneTest extends BaseSparkTest {
 
     private Dataset<Row> createTestRecords() {
         val rawData = new ArrayList<Row>();
-        rawData.add(RowFactory.create("3", "load-record-key1", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("1", "load-record-key2", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("2", "load-record-key3", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("0", "insert-record-key1", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("4", "insert-record-key2", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("6", "update-record-key1", TABLE_SOURCE, TABLE_NAME, Update.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("5", "delete-record-key1", TABLE_SOURCE, TABLE_NAME, Delete.getName(), ROW_CONVERTER, RAW_DATA));
+        rawData.add(RowFactory.create("3", "load-record-key1", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("1", "load-record-key2", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("2", "load-record-key3", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("0", "insert-record-key1", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("4", "insert-record-key2", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("6", "update-record-key1", TABLE_SOURCE, TABLE_NAME, Update.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("5", "delete-record-key1", TABLE_SOURCE, TABLE_NAME, Delete.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
 
-        return spark.createDataFrame(rawData, RECORD_SCHEMA);
+        return spark.createDataFrame(rawData, ROW_SCHEMA);
     }
 
     private Dataset<Row> createExpectedRecords() {
@@ -97,7 +97,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Load.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -110,7 +110,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Load.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
         expectedRawData.add(
@@ -122,7 +122,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Load.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -135,7 +135,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Insert.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -148,7 +148,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Insert.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -161,7 +161,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Update.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -174,7 +174,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Delete.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 

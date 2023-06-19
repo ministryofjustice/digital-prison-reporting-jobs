@@ -8,6 +8,7 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.udf.JsonValidator;
@@ -16,11 +17,11 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 @Singleton
@@ -51,8 +52,27 @@ public class StructuredZone extends FilteredZone {
 
     @Override
     public Dataset<Row> processLoad(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
+        return process(spark, dataFrame, table, false);
+    }
 
-        val rowCount = dataFrame.count();
+    @Override
+    public Dataset<Row> processCDC(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
+        return process(spark, dataFrame, table, true);
+    }
+
+    private Dataset<Row> process(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            Row table,
+            Boolean isCDC) throws DataStorageException {
+
+        val filteredRecords = isCDC
+                ? dataFrame.filter(col(OPERATION).isin(cdcOperations))
+                : dataFrame.filter(col(OPERATION).equalTo(Load.getName()));
+
+        val sortedRecords = filteredRecords.orderBy(col(TIMESTAMP));
+
+        val rowCount = sortedRecords.count();
 
         logger.info("Processing batch with {} records", rowCount);
 
@@ -66,8 +86,8 @@ public class StructuredZone extends FilteredZone {
         logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
 
         val structuredDataFrame = sourceReference.isPresent()
-                ? handleSchemaFound(spark, dataFrame, sourceReference.get())
-                : handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
+                ? handleSchemaFound(spark, sortedRecords, sourceReference.get(), isCDC)
+                : handleNoSchemaFound(spark, sortedRecords, sourceName, tableName);
 
         logger.info("Processed batch with {} rows in {}ms",
                 rowCount,
@@ -77,15 +97,10 @@ public class StructuredZone extends FilteredZone {
         return structuredDataFrame;
     }
 
-    @Override
-    public Dataset<Row> processCDC(SparkSession spark, Dataset<Row> dataFrame, Row row) throws DataStorageException {
-        // TODO: DPR-311 - Apply CDC Events to Structured Zone
-        return null;
-    }
-
     private Dataset<Row> handleSchemaFound(SparkSession spark,
                                            Dataset<Row> dataFrame,
-                                           SourceReference sourceReference) throws DataStorageException {
+                                           SourceReference sourceReference,
+                                           Boolean isCDC) throws DataStorageException {
         val tablePath = createValidatedPath(
                 structuredPath,
                 sourceReference.getSource(),
@@ -114,7 +129,7 @@ public class StructuredZone extends FilteredZone {
                 validationFailedViolationPath
         );
 
-        return handleValidRecords(spark, validatedDataFrame, tablePath, sourceReference.getPrimaryKey());
+        return handleValidRecords(spark, validatedDataFrame, tablePath, sourceReference.getPrimaryKey(), isCDC);
     }
 
     private Dataset<Row> validateJsonData(SparkSession spark,
@@ -128,7 +143,7 @@ public class StructuredZone extends FilteredZone {
         val jsonValidator = JsonValidator.createAndRegister(schema, spark, source, table);
 
         return dataFrame
-                .select(col(DATA), col(METADATA))
+                .select(col(DATA), col(METADATA), col(OPERATION))
                 .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
                 .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
     }
@@ -138,15 +153,18 @@ public class StructuredZone extends FilteredZone {
                                             String destinationPath,
                                             SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         val validRecords = dataFrame
-                .select(col(PARSED_DATA), col(VALID))
                 .filter(col(VALID).equalTo(true))
-                .select(PARSED_DATA + ".*");
+                .select(PARSED_DATA + ".*", OPERATION);
 
         val validRecordsCount = validRecords.count();
 
         if (validRecordsCount > 0) {
             logger.info("Writing {} valid records", validRecordsCount);
-            appendDataAndUpdateManifestForTable(spark, validRecords, destinationPath, primaryKey);
+            if (isCDC) {
+                applyIncrementalRecordsAndUpdateManifest(spark, destinationPath, primaryKey, validRecords);
+            } else {
+                appendDataAndUpdateManifestForTable(spark, validRecords, destinationPath, primaryKey);
+            }
             return validRecords;
         } else return createEmptyDataFrame(dataFrame);
     }
@@ -215,5 +233,46 @@ public class StructuredZone extends FilteredZone {
         storage.appendDistinct(tablePath, dataFrame, primaryKey);
         logger.info("Append completed successfully");
         storage.updateDeltaManifestForTable(spark, tablePath);
+    }
+
+    private void applyIncrementalRecordsAndUpdateManifest(
+            SparkSession spark,
+            String destinationPath,
+            String primaryKey,
+            Dataset<Row> validRecords) {
+
+        logger.info("Applying {} CDC records to deltalake table: {}", validRecords.count(), destinationPath);
+
+        validRecords.collectAsList().forEach(row -> {
+                Optional<DMS_3_4_6.Operation> optionalOperation = getOperation(row.getAs(OPERATION));
+                if (optionalOperation.isPresent()) {
+                    val list = new ArrayList<Row>();
+                    list.add(row);
+                    val dataFrame = spark.createDataFrame(list, row.schema());
+
+                    val operation = optionalOperation.get();
+                    try {
+                        switch (operation) {
+                            case Insert:
+                                storage.appendDistinct(destinationPath, dataFrame, primaryKey);
+                                break;
+                            case Update:
+                                storage.update(destinationPath, dataFrame, primaryKey);
+                                break;
+                            case Delete:
+                                storage.deleteRecords(destinationPath, dataFrame, primaryKey);
+                                break;
+                            default:
+                                break;
+                        }
+                    } catch (DataStorageException ex) {
+                        logger.warn("Failed to {}: \n{}\nto{}", operation.getName(), row.json(), destinationPath);
+                    }
+                }
+            }
+        );
+
+        logger.info("CDC records successfully applied");
+        storage.updateDeltaManifestForTable(spark, destinationPath);
     }
 }
