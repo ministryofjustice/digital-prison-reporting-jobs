@@ -108,9 +108,7 @@ processResources {
     exclude 'data/dms_update.json'
 }
 
-// Configure dependencies for integration tests
 dependencies {
-    // Example dependency for integration tests
     integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
@@ -118,9 +116,18 @@ dependencies {
 // Configure the integrationTest task
 tasks.register('integrationTest', Test) {
     description = 'Runs integration tests.'
+    group = 'verification'
+
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    mustRunAfter test
+    shouldRunAfter test
+
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 }
 
 // Configure the check task to depend on integrationTest
