@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.zone;
 
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -14,7 +13,6 @@ import uk.gov.justice.digital.client.glue.GlueSchemaClient;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
-import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -22,19 +20,13 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.test.SparkTestHelpers;
 
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.zone.Fixtures.*;
-import static uk.gov.justice.digital.zone.Fixtures.TABLE_NAME;
 
 
-public class StructuredZoneIntegrationTest extends BaseSparkTest {
+public class StructuredZoneIntegrationTest extends BaseSparkTest implements Fixtures {
     private SparkTestHelpers helpers = new SparkTestHelpers(spark);
     private final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
 
@@ -87,10 +79,11 @@ public class StructuredZoneIntegrationTest extends BaseSparkTest {
 
         assertTrue(hasNullColumns(offenders));
 
-        Dataset<Row> result = underTest.processLoad(
+        Dataset<Row> result = underTest.process(
                 spark,
                 offenders,
-                new GenericRowWithSchema(new Object[] { "oms_owner", "offenders", "load" }, Fixtures.ROW_SCHEMA)
+                new GenericRowWithSchema(new Object[] { "oms_owner", "offenders", "load" }, Fixtures.ROW_SCHEMA),
+                false
         );
 
         assertTrue(hasNullColumns(result));

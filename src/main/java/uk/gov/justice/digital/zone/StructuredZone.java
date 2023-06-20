@@ -23,6 +23,7 @@ import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
 
 @Singleton
 public class StructuredZone extends FilteredZone {
@@ -51,16 +52,7 @@ public class StructuredZone extends FilteredZone {
     }
 
     @Override
-    public Dataset<Row> processLoad(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
-        return process(spark, dataFrame, table, false);
-    }
-
-    @Override
-    public Dataset<Row> processCDC(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
-        return process(spark, dataFrame, table, true);
-    }
-
-    private Dataset<Row> process(
+    public Dataset<Row> process(
             SparkSession spark,
             Dataset<Row> dataFrame,
             Row table,
@@ -151,7 +143,8 @@ public class StructuredZone extends FilteredZone {
     private Dataset<Row> handleValidRecords(SparkSession spark,
                                             Dataset<Row> dataFrame,
                                             String destinationPath,
-                                            SourceReference.PrimaryKey primaryKey) throws DataStorageException {
+                                            SourceReference.PrimaryKey primaryKey,
+                                            Boolean isCDC) throws DataStorageException {
         val validRecords = dataFrame
                 .filter(col(VALID).equalTo(true))
                 .select(PARSED_DATA + ".*", OPERATION);
@@ -219,7 +212,7 @@ public class StructuredZone extends FilteredZone {
                                                      Dataset<Row> dataFrame,
                                                      String tablePath) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
-        storage.append(tablePath, dataFrame);
+        storage.append(tablePath, dataFrame.drop(OPERATION));
         logger.info("Append completed successfully");
         storage.updateDeltaManifestForTable(spark, tablePath);
     }
@@ -229,8 +222,7 @@ public class StructuredZone extends FilteredZone {
                                                      String tablePath,
                                                      SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
-        // TODO: DPR-309 - use operation to determine how to write to delta table
-        storage.appendDistinct(tablePath, dataFrame, primaryKey);
+        storage.appendDistinct(tablePath, dataFrame.drop(OPERATION), primaryKey);
         logger.info("Append completed successfully");
         storage.updateDeltaManifestForTable(spark, tablePath);
     }
@@ -238,7 +230,7 @@ public class StructuredZone extends FilteredZone {
     private void applyIncrementalRecordsAndUpdateManifest(
             SparkSession spark,
             String destinationPath,
-            String primaryKey,
+            SourceReference.PrimaryKey primaryKey,
             Dataset<Row> validRecords) {
 
         logger.info("Applying {} CDC records to deltalake table: {}", validRecords.count(), destinationPath);
@@ -246,27 +238,32 @@ public class StructuredZone extends FilteredZone {
         validRecords.collectAsList().forEach(row -> {
                 Optional<DMS_3_4_6.Operation> optionalOperation = getOperation(row.getAs(OPERATION));
                 if (optionalOperation.isPresent()) {
-                    val list = new ArrayList<Row>();
-                    list.add(row);
-                    val dataFrame = spark.createDataFrame(list, row.schema());
-
+                    val list = new ArrayList<>(Collections.singletonList(row));
+                    val dataFrame = spark.createDataFrame(list, row.schema()).drop(OPERATION);
                     val operation = optionalOperation.get();
+
                     try {
                         switch (operation) {
                             case Insert:
                                 storage.appendDistinct(destinationPath, dataFrame, primaryKey);
                                 break;
                             case Update:
-                                storage.update(destinationPath, dataFrame, primaryKey);
+                                storage.updateRecords(destinationPath, dataFrame, primaryKey);
                                 break;
                             case Delete:
-                                storage.deleteRecords(destinationPath, dataFrame, primaryKey);
+                                storage.deleteRecords(destinationPath, dataFrame, PRIMARY_KEY_NAME);
                                 break;
                             default:
+                                logger.warn(
+                                        "Operation {} is not allowed for incremental processing: \n{}\nto {}",
+                                        operation.getName(),
+                                        row.json(),
+                                        destinationPath
+                                );
                                 break;
                         }
                     } catch (DataStorageException ex) {
-                        logger.warn("Failed to {}: \n{}\nto{}", operation.getName(), row.json(), destinationPath);
+                        logger.warn("Failed to {}: \n{}\nto {}", operation.getName(), row.json(), destinationPath);
                     }
                 }
             }

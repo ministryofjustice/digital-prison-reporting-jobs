@@ -26,10 +26,9 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
-import static uk.gov.justice.digital.zone.Fixtures.*;
 
 @ExtendWith(MockitoExtension.class)
-class RawZoneTest extends BaseSparkTest {
+class RawZoneTest extends BaseSparkTest implements Fixtures {
 
     private static final JobArguments jobArguments =
             new JobArguments(Collections.singletonMap(JobArguments.RAW_S3_PATH, RAW_PATH));

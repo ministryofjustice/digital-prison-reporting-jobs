@@ -70,14 +70,16 @@ public class DataStorageService {
         }
     }
 
-    public void update(String tablePath, Dataset<Row> dataFrame, String primaryKey) throws DataStorageException {
+    public void updateRecords(
+            String tablePath,
+            Dataset<Row> dataFrame,
+            SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         val dt = getTable(dataFrame.sparkSession(), tablePath);
 
         if (dt != null) {
-            val spk = SOURCE + "." + primaryKey;
-            val tpk = TARGET + "." + primaryKey;
+            final String condition = primaryKey.getSparkCondition(SOURCE, TARGET);
             dt.as(SOURCE)
-                    .merge(dataFrame.as(TARGET), spk + "=" + tpk)
+                    .merge(dataFrame.as(TARGET), condition)
                     .whenMatched()
                     .updateAll()
                     .execute();
@@ -88,11 +90,14 @@ public class DataStorageService {
         }
     }
 
-    public void deleteRecords(String tablePath, Dataset<Row> dataFrame, String primaryKey) throws DataStorageException {
+    public void deleteRecords(
+            String tablePath,
+            Dataset<Row> dataFrame,
+            String primaryKeyFieldName) throws DataStorageException {
         val dt = getTable(dataFrame.sparkSession(), tablePath);
 
         if (dt != null) {
-            dt.delete(functions.col(primaryKey).eqNullSafe(dataFrame.col(primaryKey)));
+            dt.delete(functions.col(primaryKeyFieldName).eqNullSafe(dataFrame.col(primaryKeyFieldName)));
         } else {
             val errorMessage = "Failed to access Delta table for delete";
             logger.error(errorMessage);
