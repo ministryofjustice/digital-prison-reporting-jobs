@@ -27,8 +27,10 @@ public class SparkTimestampFieldFilter extends FieldFilter {
     @Override
     public Entry<String, Object> applyFilterToEntry(Entry<String, Object> entry) {
         try {
-            val parsed = ZonedDateTime.parse(entry.getValue().toString()).truncatedTo(ChronoUnit.MILLIS);
-            entry.setValue(timestampFormatter.format(parsed));
+            if (entry.getValue() != null) {
+                val parsed = ZonedDateTime.parse(entry.getValue().toString()).truncatedTo(ChronoUnit.MILLIS);
+                entry.setValue(timestampFormatter.format(parsed));
+            }
             return entry;
         }
         catch (Exception e) {
