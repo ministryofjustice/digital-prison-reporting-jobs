@@ -91,11 +91,11 @@ public class DataHubJob implements Runnable {
 
                     rawZone.process(spark, dataFrameForTable, table);
 
-                    val structuredLoadDataFrame = structuredZone.processLoad(spark, dataFrameForTable, table);
-                    curatedZone.processLoad(spark, structuredLoadDataFrame, table);
+                    val structuredLoadDataFrame = structuredZone.process(spark, dataFrameForTable, table, false);
+                    curatedZone.process(spark, structuredLoadDataFrame, table, false);
 
-                    val structuredCDCDataFrame = structuredZone.processCDC(spark, dataFrameForTable, table);
-                    curatedZone.processCDC(spark, structuredCDCDataFrame, table);
+                    val structuredIncrementalDataFrame = structuredZone.process(spark, dataFrameForTable, table, true);
+                    curatedZone.process(spark, structuredIncrementalDataFrame, table, true);
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);

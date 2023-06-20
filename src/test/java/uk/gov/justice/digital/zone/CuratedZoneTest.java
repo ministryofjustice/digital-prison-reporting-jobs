@@ -21,10 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.config.JobArguments.CURATED_S3_PATH;
-import static uk.gov.justice.digital.zone.Fixtures.*;
 
 @ExtendWith(MockitoExtension.class)
-class CuratedZoneTest {
+class CuratedZoneTest implements Fixtures {
 
     private static final JobArguments jobArguments =
             new JobArguments(Collections.singletonMap(CURATED_S3_PATH, CURATED_PATH));
@@ -60,6 +59,6 @@ class CuratedZoneTest {
 
         val underTest = new CuratedZone(jobArguments, mockDataStorageService, mockSourceReferenceService);
 
-        assertNotNull(underTest.processLoad(mockSparkSession, mockedDataSet, dataMigrationEventRow));
+        assertNotNull(underTest.process(mockSparkSession, mockedDataSet, dataMigrationEventRow, false));
     }
 }

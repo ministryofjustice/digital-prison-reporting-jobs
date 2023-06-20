@@ -2,6 +2,7 @@ package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
 import lombok.val;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -69,7 +70,40 @@ public class DataStorageService {
         }
     }
 
+    public void updateRecords(
+            String tablePath,
+            Dataset<Row> dataFrame,
+            SourceReference.PrimaryKey primaryKey) throws DataStorageException {
+        val dt = getTable(dataFrame.sparkSession(), tablePath);
 
+        if (dt != null) {
+            final String condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+            dt.as(SOURCE)
+                    .merge(dataFrame.as(TARGET), condition)
+                    .whenMatched()
+                    .updateAll()
+                    .execute();
+        } else {
+            val errorMessage = "Failed to access Delta table for update";
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage);
+        }
+    }
+
+    public void deleteRecords(
+            String tablePath,
+            Dataset<Row> dataFrame,
+            String primaryKeyFieldName) throws DataStorageException {
+        val dt = getTable(dataFrame.sparkSession(), tablePath);
+
+        if (dt != null) {
+            dt.delete(functions.col(primaryKeyFieldName).eqNullSafe(dataFrame.col(primaryKeyFieldName)));
+        } else {
+            val errorMessage = "Failed to access Delta table for delete";
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage);
+        }
+    }
 
     public void create(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.info("Inserting schema and data to " + tablePath);
