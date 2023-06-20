@@ -87,15 +87,15 @@ public class DataHubJob implements Runnable {
             getTablesInBatch(dataFrame).forEach(table -> {
                 try {
                     val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, table);
+                    dataFrameForTable.persist();
 
-                    val rawDataFrame = rawZone.process(spark, dataFrameForTable, table);
-                    rawDataFrame.persist();
+                    rawZone.process(spark, dataFrameForTable, table);
 
-                    val structuredDataFrame = structuredZone.processLoad(spark, rawDataFrame, table);
-                    curatedZone.processLoad(spark, structuredDataFrame, table);
+                    val structuredLoadDataFrame = structuredZone.process(spark, dataFrameForTable, table, false);
+                    curatedZone.process(spark, structuredLoadDataFrame, table, false);
 
-                    val structuredIncrementalDataFrame = structuredZone.processCDC(spark, rawDataFrame, table);
-                    curatedZone.processCDC(spark, structuredIncrementalDataFrame, table);
+                    val structuredIncrementalDataFrame = structuredZone.process(spark, dataFrameForTable, table, true);
+                    curatedZone.process(spark, structuredIncrementalDataFrame, table, true);
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);

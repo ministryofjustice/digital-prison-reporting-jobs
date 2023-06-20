@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Digital Prison Reporting Domain Contract Schema",
+  "title": "Digital Prison Reporting Source Contract Schema",
   "type": "object",
   "required": [
     "type",

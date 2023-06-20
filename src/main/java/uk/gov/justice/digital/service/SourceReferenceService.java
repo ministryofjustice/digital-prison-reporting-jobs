@@ -18,6 +18,7 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Singleton
 public class SourceReferenceService {
@@ -40,10 +41,10 @@ public class SourceReferenceService {
     private static final Map<String, SourceReference> sources = new HashMap<>();
 
     static {
-        sources.put("oms_owner.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", "OFFENDER_ID", getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
-        sources.put("oms_owner.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "nomis", "offender_bookings", "OFFENDER_BOOK_ID", getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
-        sources.put("oms_owner.agency_locations", new SourceReference("SYSTEM.AGENCY_LOCATIONS", "nomis", "agency_locations", "AGY_LOC_ID", getSchemaFromResource("/schemas/oms_owner.agency_locations.schema.json")));
-        sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", "INTERNAL_LOCATION_ID", getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
+        sources.put("oms_owner.offenders", new SourceReference("SYSTEM.OFFENDERS", "nomis", "offenders", new SourceReference.PrimaryKey("OFFENDER_ID"), getSchemaFromResource("/schemas/oms_owner.offenders.schema.json")));
+        sources.put("oms_owner.offender_bookings", new SourceReference("SYSTEM.OFFENDER_BOOKINGS", "nomis", "offender_bookings", new SourceReference.PrimaryKey("OFFENDER_BOOK_ID"), getSchemaFromResource("/schemas/oms_owner.offender_bookings.schema.json")));
+        sources.put("oms_owner.agency_locations", new SourceReference("SYSTEM.AGENCY_LOCATIONS", "nomis", "agency_locations", new SourceReference.PrimaryKey("AGY_LOC_ID"), getSchemaFromResource("/schemas/oms_owner.agency_locations.schema.json")));
+        sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", new SourceReference.PrimaryKey("INTERNAL_LOCATION_ID"), getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
     }
 
     public Optional<SourceReference> getSourceReference(String source, String table) {
@@ -124,12 +125,18 @@ public class SourceReferenceService {
                     .map(String.class::cast);
         }
 
-        public Optional<String> findPrimaryKey() {
+        public Optional<SourceReference.PrimaryKey> findPrimaryKey() {
             return fields.stream()
                     .filter(this::isPrimaryKey)
                     .map(f -> f.get("name"))
-                    .findFirst()
-                    .flatMap(this::castToString);
+                    .collect(Collectors.collectingAndThen(Collectors.toList(), this::createPrimaryKey));
+        }
+
+        private Optional<SourceReference.PrimaryKey> createPrimaryKey(List<Object> list) {
+            if(list != null && !list.isEmpty()) {
+                return Optional.of(new SourceReference.PrimaryKey(list));
+            }
+            return Optional.empty();
         }
 
         // If the table name has a version suffix e.g. SOME_TABLE_NAME_16 this must be removed from the value used in
@@ -139,5 +146,6 @@ public class SourceReferenceService {
                     .toLowerCase(Locale.ENGLISH);
         }
     }
+
 
 }

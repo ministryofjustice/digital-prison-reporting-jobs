@@ -21,16 +21,14 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.refEq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
-import static uk.gov.justice.digital.zone.Fixtures.*;
 
 @ExtendWith(MockitoExtension.class)
-class RawZoneTest extends BaseSparkTest {
+class RawZoneTest extends BaseSparkTest implements Fixtures {
 
     private static final JobArguments jobArguments =
             new JobArguments(Collections.singletonMap(JobArguments.RAW_S3_PATH, RAW_PATH));
@@ -56,7 +54,7 @@ class RawZoneTest extends BaseSparkTest {
 
         doNothing()
                 .when(mockDataStorageService)
-                .appendDistinct(eq(rawPath), refEq(expectedRecords), eq(RawZone.PRIMARY_KEY_NAME));
+                .appendDistinct(eq(rawPath), refEq(expectedRecords), any());
 
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
@@ -75,15 +73,15 @@ class RawZoneTest extends BaseSparkTest {
 
     private Dataset<Row> createTestRecords() {
         val rawData = new ArrayList<Row>();
-        rawData.add(RowFactory.create("3", "load-record-key1", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("1", "load-record-key2", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("2", "load-record-key3", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("0", "insert-record-key1", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("4", "insert-record-key2", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("6", "update-record-key1", TABLE_SOURCE, TABLE_NAME, Update.getName(), ROW_CONVERTER, RAW_DATA));
-        rawData.add(RowFactory.create("5", "delete-record-key1", TABLE_SOURCE, TABLE_NAME, Delete.getName(), ROW_CONVERTER, RAW_DATA));
+        rawData.add(RowFactory.create("3", "load-record-key1", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("1", "load-record-key2", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("2", "load-record-key3", TABLE_SOURCE, TABLE_NAME, Load.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("0", "insert-record-key1", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("4", "insert-record-key2", TABLE_SOURCE, TABLE_NAME, Insert.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("6", "update-record-key1", TABLE_SOURCE, TABLE_NAME, Update.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
+        rawData.add(RowFactory.create("5", "delete-record-key1", TABLE_SOURCE, TABLE_NAME, Delete.getName(), ROW_CONVERTER, JSON_DATA, "{}", "{}"));
 
-        return spark.createDataFrame(rawData, RECORD_SCHEMA);
+        return spark.createDataFrame(rawData, ROW_SCHEMA);
     }
 
     private Dataset<Row> createExpectedRecords() {
@@ -98,7 +96,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Load.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -111,7 +109,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Load.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
         expectedRawData.add(
@@ -123,7 +121,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Load.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -136,7 +134,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Insert.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -149,7 +147,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Insert.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -162,7 +160,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Update.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 
@@ -175,7 +173,7 @@ class RawZoneTest extends BaseSparkTest {
                         TABLE_NAME,
                         Delete.getName(),
                         ROW_CONVERTER,
-                        RAW_DATA
+                        JSON_DATA
                 )
         );
 

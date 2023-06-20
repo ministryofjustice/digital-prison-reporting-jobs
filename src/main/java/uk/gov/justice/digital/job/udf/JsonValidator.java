@@ -119,15 +119,9 @@ public class JsonValidator implements Serializable {
 
         if (!result) {
             val difference = Maps.difference(filteredData, parsedData);
-            if (difference.entriesDiffering().isEmpty()) {
-                logger.error("JSON validation failed. At least one not-null field has no value");
-
-            }
-            else {
-                logger.error("JSON validation failed. Parsed and Raw JSON have the following differences: {}",
-                        difference.entriesDiffering()
-                );
-            }
+            logger.error("JSON validation failed. Parsed and Raw JSON have the following differences: {}",
+                    difference
+            );
         }
 
         return result;
