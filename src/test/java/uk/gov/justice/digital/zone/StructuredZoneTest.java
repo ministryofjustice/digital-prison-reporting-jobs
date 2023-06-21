@@ -27,10 +27,12 @@ import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.KEY;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.zone.Fixtures.*;
 import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
+import static uk.gov.justice.digital.zone.StructuredZoneFixtures.*;
 
 @ExtendWith(MockitoExtension.class)
-class StructuredZoneTest extends BaseSparkTest implements StructuredZoneFixture {
+class StructuredZoneTest extends BaseSparkTest {
 
     @Mock
     private JobArguments mockJobArguments;

@@ -108,9 +108,7 @@ processResources {
     exclude 'data/dms_update.json'
 }
 
-// Configure dependencies for integration tests
 dependencies {
-    // Example dependency for integration tests
     integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
@@ -127,6 +125,11 @@ tasks.register('integrationTest', Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 
     binaryResultsDirectory = file("$buildDir/integration-test-results/binary/integrationTest")
+
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 
     reports {
         html.outputLocation = file("$buildDir/reports/integration-test")
