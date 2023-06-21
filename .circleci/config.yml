@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.21
+  reporting: ministryofjustice/hmpps-reporting@1.0.23
 
 workflows:
   checkout-build-publish:
@@ -25,7 +25,6 @@ workflows:
           notify_slack: true
           channel: dpr_cicd_alerts
           command: jar shadowJar # Skip tests when building jar, they've already run
-          branch: << pipeline.git.branch >><< pipeline.git.tag >>
           filters:
             branches:
               only: /.*/
