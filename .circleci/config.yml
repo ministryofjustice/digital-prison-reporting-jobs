@@ -13,7 +13,8 @@ workflows:
             - hmpps-reporting-orb
           filters:
             branches:
-              only: main           
+              only: main
+          cache_key: "v4"
       - reporting/gradle_build_publish:
           tag: "8.0"
           app: digital-prison-reporting-jobs
