@@ -11,9 +11,6 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          filters:
-            branches:
-              only: main
           cache_key: "v4"
       - reporting/gradle_build_publish:
           tag: "8.0"
