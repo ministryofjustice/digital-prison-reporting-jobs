@@ -21,6 +21,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -214,6 +215,20 @@ class StructuredZoneTest extends BaseSparkTest {
         }
     }
 
+    @Test
+    public void shouldKeepNullColumnsInData() throws DataStorageException {
+        givenTheSchemaExists();
+        givenTheSourceReferenceIsValid();
+        doNothing().when(mockDataStorage).appendDistinct(any(), any(), any());
+
+        val structuredLoadRecords = underTest.process(spark, testDataSet, dataMigrationEventRow, false);
+        val structuredIncrementalRecords = underTest.process(spark, testDataSet, dataMigrationEventRow, true);
+
+        assertTrue(hasNullColumns(structuredLoadRecords));
+
+        assertTrue(hasNullColumns(structuredIncrementalRecords));
+    }
+
     private void givenTheSchemaExists() {
         when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
                 .thenReturn(Optional.of(mockSourceReference));
@@ -300,6 +315,14 @@ class StructuredZoneTest extends BaseSparkTest {
                 .stream()
                 .flatMap(x -> x.collectAsList().stream())
                 .collect(Collectors.toList());
+    }
+
+    private boolean hasNullColumns(Dataset<Row> df) {
+        for(String c: df.columns()) {
+            if(df.filter(col(c).isNull()).count() > 0)
+                return true;
+        }
+        return false;
     }
 
 }

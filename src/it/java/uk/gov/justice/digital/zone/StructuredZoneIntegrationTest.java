@@ -67,6 +67,7 @@ public class StructuredZoneIntegrationTest extends BaseSparkTest  {
         Dataset<Row> offenders = helpers.getOffenders(tmp);
         offenders.show(false);
 
+        // test is failing at this step because there are no null columns in the offenders dataset
         assertTrue(hasNullColumns(offenders));
 
         Dataset<Row> result = underTest.process(
