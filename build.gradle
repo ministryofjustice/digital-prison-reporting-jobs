@@ -115,19 +115,28 @@ dependencies {
 
 // Configure the integrationTest task
 tasks.register('integrationTest', Test) {
-    description = 'Runs integration tests.'
-    group = 'verification'
+    useJUnitPlatform()
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = 'Runs the integration tests.'
+
+    maxHeapSize = '1024m'
 
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
-    shouldRunAfter test
 
-    useJUnitPlatform()
+    binaryResultsDirectory = file("$buildDir/integration-test-results/binary/integrationTest")
 
     testLogging {
         events "passed", "skipped", "failed"
     }
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+
+    reports {
+        html.outputLocation = file("$buildDir/reports/integration-test")
+        junitXml.outputLocation = file("$buildDir/integration-test-results")
+    }
+
+    mustRunAfter tasks.test
 }
 
 // Configure the check task to depend on integrationTest

@@ -5,8 +5,9 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import java.util.Arrays;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+
+import java.util.Arrays;
 
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.*;
