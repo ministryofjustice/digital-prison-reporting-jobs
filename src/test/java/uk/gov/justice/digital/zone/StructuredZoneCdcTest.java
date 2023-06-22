@@ -21,9 +21,9 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.KEY;
@@ -33,7 +33,7 @@ import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
 import static uk.gov.justice.digital.zone.StructuredZoneFixtures.*;
 
 @ExtendWith(MockitoExtension.class)
-class StructuredZoneTest extends BaseSparkTest {
+class StructuredZoneCdcTest extends BaseSparkTest {
 
     @Mock
     private JobArguments mockJobArguments;
@@ -52,7 +52,7 @@ class StructuredZoneTest extends BaseSparkTest {
 
     private StructuredZone underTest;
 
-    private final Dataset<Row> testDataSet = createTestDataset();
+    private final Dataset<Row> testDataSet = createTestDataset(spark);
 
 
     @BeforeEach
@@ -61,33 +61,11 @@ class StructuredZoneTest extends BaseSparkTest {
         when(mockJobArguments.getViolationsS3Path()).thenReturn(VIOLATIONS_PATH);
         when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_PATH);
 
-        underTest = new StructuredZone(
+        underTest = new StructuredZoneCDC(
                 mockJobArguments,
                 mockDataStorage,
                 mockSourceReferenceService
         );
-    }
-
-    @Test
-    public void shouldHandleValidLoadRecords() throws DataStorageException {
-        val expectedRecords = createExpectedLoadDataset();
-        val structuredPath = createValidatedPath(STRUCTURED_PATH, TABLE_SOURCE, TABLE_NAME);
-
-        givenTheSchemaExists();
-        givenTheSourceReferenceIsValid();
-        doNothing()
-                .when(mockDataStorage)
-                .appendDistinct(eq(structuredPath), dataframeCaptor.capture(), any());
-
-        assertIterableEquals(
-                expectedRecords.collectAsList(),
-                underTest.process(spark, testDataSet, dataMigrationEventRow, false).collectAsList()
-        );
-
-        assertIterableEquals(
-                expectedRecords.drop(OPERATION).collectAsList(),
-                dataframeCaptor.getValue().collectAsList()
-            );
     }
 
     @Test
@@ -103,7 +81,7 @@ class StructuredZoneTest extends BaseSparkTest {
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
-                underTest.process(spark, testDataSet, dataMigrationEventRow, true).collectAsList()
+                underTest.process(spark, testDataSet, dataMigrationEventRow).collectAsList()
         );
 
         assertIterableEquals(
@@ -121,7 +99,7 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow, true).collect();
+        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -138,7 +116,7 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow, true).collect();
+        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -155,7 +133,7 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(PRIMARY_KEY_NAME));
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow, true).collect();
+        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -169,7 +147,7 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doThrow(new DataStorageException("insert failed")).when(mockDataStorage).appendDistinct(any(), any(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow, true).collect();
+        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
         assertTrue(getAllCapturedRecords().isEmpty());
     }
@@ -180,7 +158,7 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doThrow(new DataStorageException("update failed")).when(mockDataStorage).updateRecords(any(), any(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow, true).collect();
+        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
         assertTrue(getAllCapturedRecords().isEmpty());
     }
@@ -191,28 +169,24 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(any(), any(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow, true).collect();
+        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
         assertTrue(getAllCapturedRecords().isEmpty());
     }
 
     @Test
     public void shouldHandleInvalidRecords() throws DataStorageException {
-        for (Boolean isCDC: Arrays.asList(true, false)) {
-            givenTheSchemaExists();
-            givenTheSourceReferenceIsValid();
+        givenTheSchemaExists();
+        givenTheSourceReferenceIsValid();
 
-            assertNotNull(underTest.process(spark, testDataSet, dataMigrationEventRow, isCDC));
-        }
+        assertNotNull(underTest.process(spark, testDataSet, dataMigrationEventRow));
     }
 
     @Test
     public void shouldHandleNoSchemaFound() throws DataStorageException {
-        for (Boolean isCDC: Arrays.asList(true, false)) {
-            givenTheSchemaDoesNotExist();
+        givenTheSchemaDoesNotExist();
 
-            assertTrue(underTest.process(spark, testDataSet, dataMigrationEventRow, isCDC).isEmpty());
-        }
+        assertTrue(underTest.process(spark, testDataSet, dataMigrationEventRow).isEmpty());
     }
 
     @Test
@@ -221,10 +195,7 @@ class StructuredZoneTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).appendDistinct(any(), any(), any());
 
-        val structuredLoadRecords = underTest.process(spark, testDataSet, dataMigrationEventRow, false);
-        val structuredIncrementalRecords = underTest.process(spark, testDataSet, dataMigrationEventRow, true);
-
-        assertTrue(hasNullColumns(structuredLoadRecords));
+        val structuredIncrementalRecords = underTest.process(spark, testDataSet, dataMigrationEventRow);
 
         assertTrue(hasNullColumns(structuredIncrementalRecords));
     }
@@ -243,32 +214,6 @@ class StructuredZoneTest extends BaseSparkTest {
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
         when(mockSourceReference.getSchema()).thenReturn(JSON_DATA_SCHEMA);
         when(mockSourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(KEY));
-    }
-
-    private Dataset<Row> createTestDataset() {
-        val rawData = new ArrayList<>(Arrays.asList(
-                record1Load,
-                record2Load,
-                record3Load,
-                record4Insert,
-                record5Insert,
-                record6Insert,
-                record7Update,
-                record6Deletion,
-                record5Update
-        ));
-
-        return spark.createDataFrame(rawData, ROW_SCHEMA);
-    }
-
-    private Dataset<Row> createExpectedLoadDataset() {
-        val expectedLoadData = new ArrayList<>(Arrays.asList(
-                structuredRecord2Load,
-                structuredRecord3Load,
-                structuredRecord1Load
-        ));
-
-        return spark.createDataFrame(expectedLoadData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);
     }
 
     private Dataset<Row> createExpectedIncrementalDataset() {
@@ -315,14 +260,6 @@ class StructuredZoneTest extends BaseSparkTest {
                 .stream()
                 .flatMap(x -> x.collectAsList().stream())
                 .collect(Collectors.toList());
-    }
-
-    private boolean hasNullColumns(Dataset<Row> df) {
-        for(String c: df.columns()) {
-            if(df.filter(col(c).isNull()).count() > 0)
-                return true;
-        }
-        return false;
     }
 
 }

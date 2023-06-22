@@ -55,7 +55,7 @@ public class StructuredZoneIntegrationTest extends BaseSparkTest  {
 
         SourceReferenceService sourceReferenceService = new SourceReferenceService(glueSchemaClient, converter);
 
-        underTest = new StructuredZone(
+        underTest = new StructuredZoneLoad(
                 mockJobArguments,
                 mockDataStorage,
                 sourceReferenceService
@@ -73,8 +73,7 @@ public class StructuredZoneIntegrationTest extends BaseSparkTest  {
         Dataset<Row> result = underTest.process(
                 spark,
                 offenders,
-                new GenericRowWithSchema(new Object[] { "oms_owner", "offenders", "load" }, Fixtures.ROW_SCHEMA),
-                false
+                new GenericRowWithSchema(new Object[] { "oms_owner", "offenders", "load" }, Fixtures.ROW_SCHEMA)
         );
 
         assertTrue(hasNullColumns(result));

@@ -60,6 +60,6 @@ class CuratedZoneTest {
 
         val underTest = new CuratedZone(jobArguments, mockDataStorageService, mockSourceReferenceService);
 
-        assertNotNull(underTest.process(mockSparkSession, mockedDataSet, dataMigrationEventRow, false));
+        assertNotNull(underTest.process(mockSparkSession, mockedDataSet, dataMigrationEventRow));
     }
 }

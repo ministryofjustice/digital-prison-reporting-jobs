@@ -5,8 +5,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.exception.DataStorageException;
 
-public abstract class UnfilteredZone {
+public interface Zone {
 
-    public abstract Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row row) throws DataStorageException;
+    Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row row) throws DataStorageException;
 
 }

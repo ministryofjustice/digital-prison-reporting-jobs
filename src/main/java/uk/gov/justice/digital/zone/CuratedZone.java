@@ -19,7 +19,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SO
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 
 @Singleton
-public class CuratedZone extends FilteredZone {
+public class CuratedZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZone.class);
 
@@ -37,7 +37,7 @@ public class CuratedZone extends FilteredZone {
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table, Boolean isCDC) throws DataStorageException {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
         val count = dataFrame.count();
 
@@ -75,6 +75,6 @@ public class CuratedZone extends FilteredZone {
             );
 
             return dataFrame;
-        } else return createEmptyDataFrame(dataFrame);
+        } else return spark.emptyDataFrame();
     }
 }
