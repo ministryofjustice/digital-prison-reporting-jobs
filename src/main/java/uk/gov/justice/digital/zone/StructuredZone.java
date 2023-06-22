@@ -112,7 +112,7 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
 
         writeInvalidRecords(spark, storage, createValidatedPath(violationsPath, source, table), missingSchemaRecords);
 
-        return spark.emptyDataFrame();
+        return createEmptyDataFrame(dataFrame);
     }
 
     private void handleInvalidRecords(
@@ -155,7 +155,7 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
             return validRecords;
         } else {
             logger.info("No valid records found");
-            return spark.emptyDataFrame();
+            return createEmptyDataFrame(validRecords);
         }
     }
 
@@ -186,6 +186,13 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
         storage.append(tablePath, invalidRecords.drop(OPERATION));
         logger.info("Append completed successfully");
         storage.updateDeltaManifestForTable(spark, tablePath);
+    }
+
+    private Dataset<Row> createEmptyDataFrame(Dataset<Row> dataFrame) {
+        return dataFrame.sparkSession().createDataFrame(
+                dataFrame.sparkSession().emptyDataFrame().javaRDD(),
+                dataFrame.schema()
+        );
     }
 
 }
