@@ -18,7 +18,7 @@ import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.Load;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 
-public class StructuredZoneLoad extends StructuredZone implements DeltaWriter {
+public class StructuredZoneLoad extends StructuredZone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZone.class);
 
@@ -38,7 +38,7 @@ public class StructuredZoneLoad extends StructuredZone implements DeltaWriter {
     }
 
     @Override
-    public void writeValidRecords(
+    protected void writeValidRecords(
             SparkSession spark,
             DataStorageService storage,
             String tablePath,
@@ -52,7 +52,7 @@ public class StructuredZoneLoad extends StructuredZone implements DeltaWriter {
     }
 
     @Override
-    public void writeInvalidRecords(
+    protected void writeInvalidRecords(
             SparkSession spark,
             DataStorageService storage,
             String tablePath,

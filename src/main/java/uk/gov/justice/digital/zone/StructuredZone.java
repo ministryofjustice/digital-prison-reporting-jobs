@@ -24,7 +24,7 @@ import static org.apache.spark.sql.functions.to_json;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public abstract class StructuredZone extends Zone implements DeltaWriter {
+public abstract class StructuredZone extends DeltaWriter implements Zone {
 
     public static final String ERROR = "error";
     public static final String PARSED_DATA = "parsedData";
@@ -112,7 +112,7 @@ public abstract class StructuredZone extends Zone implements DeltaWriter {
 
         writeInvalidRecords(spark, storage, createValidatedPath(violationsPath, source, table), missingSchemaRecords);
 
-        return createEmptyDataFrame(dataFrame);
+        return spark.emptyDataFrame();
     }
 
     private void handleInvalidRecords(
@@ -155,7 +155,7 @@ public abstract class StructuredZone extends Zone implements DeltaWriter {
             return validRecords;
         } else {
             logger.info("No valid records found");
-            return createEmptyDataFrame(dataFrame);
+            return spark.emptyDataFrame();
         }
     }
 
@@ -176,7 +176,7 @@ public abstract class StructuredZone extends Zone implements DeltaWriter {
     }
 
     @Override
-    public void writeInvalidRecords(
+    protected void writeInvalidRecords(
             SparkSession spark,
             DataStorageService storage,
             String tablePath,

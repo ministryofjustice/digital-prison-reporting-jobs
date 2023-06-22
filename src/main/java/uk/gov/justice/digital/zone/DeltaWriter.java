@@ -7,9 +7,9 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 
-public interface DeltaWriter {
+public abstract class DeltaWriter {
 
-    void writeValidRecords(
+    protected abstract void writeValidRecords(
             SparkSession spark,
             DataStorageService storage,
             String destinationPath,
@@ -17,7 +17,7 @@ public interface DeltaWriter {
             Dataset<Row> validRecords
     ) throws DataStorageException;
 
-    void writeInvalidRecords(
+    protected abstract void writeInvalidRecords(
             SparkSession spark,
             DataStorageService storage,
             String destinationPath,

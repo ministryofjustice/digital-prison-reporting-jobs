@@ -19,7 +19,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SO
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 
 @Singleton
-public class CuratedZone extends Zone {
+public class CuratedZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZone.class);
 
@@ -75,6 +75,6 @@ public class CuratedZone extends Zone {
             );
 
             return dataFrame;
-        } else return createEmptyDataFrame(dataFrame);
+        } else return spark.emptyDataFrame();
     }
 }

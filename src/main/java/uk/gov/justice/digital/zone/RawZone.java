@@ -20,7 +20,7 @@ import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 @Singleton
-public class RawZone extends Zone {
+public class RawZone implements Zone {
 
     public static final String PRIMARY_KEY_NAME = "id";
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
