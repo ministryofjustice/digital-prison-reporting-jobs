@@ -8,7 +8,6 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.udf.JsonValidator;
@@ -16,17 +15,16 @@ import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.util.*;
+
+import java.util.Collections;
+import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.to_json;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
-import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
 
-@Singleton
-public class StructuredZone extends FilteredZone {
+public abstract class StructuredZone extends Zone implements DeltaWriter {
 
     public static final String ERROR = "error";
     public static final String PARSED_DATA = "parsedData";
@@ -42,28 +40,20 @@ public class StructuredZone extends FilteredZone {
     private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public StructuredZone(JobArguments jobArguments,
-                          DataStorageService storage,
-                          SourceReferenceService sourceReferenceService) {
+    public StructuredZone(
+            JobArguments jobArguments,
+            DataStorageService storage,
+            SourceReferenceService sourceReferenceService
+    ) {
+        this.storage = storage;
         this.structuredPath = jobArguments.getStructuredS3Path();
         this.violationsPath = jobArguments.getViolationsS3Path();
-        this.storage = storage;
         this.sourceReferenceService = sourceReferenceService;
     }
 
-    @Override
-    public Dataset<Row> process(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            Row table,
-            Boolean isCDC) throws DataStorageException {
-
-        val filteredRecords = isCDC
-                ? dataFrame.filter(col(OPERATION).isin(cdcOperations))
-                : dataFrame.filter(col(OPERATION).equalTo(Load.getName()));
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> filteredRecords, Row table) throws DataStorageException {
 
         val sortedRecords = filteredRecords.orderBy(col(TIMESTAMP));
-
         val rowCount = sortedRecords.count();
 
         logger.info("Processing batch with {} records", rowCount);
@@ -78,96 +68,60 @@ public class StructuredZone extends FilteredZone {
         logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
 
         val structuredDataFrame = sourceReference.isPresent()
-                ? handleSchemaFound(spark, sortedRecords, sourceReference.get(), isCDC)
+                ? handleSchemaFound(spark, sortedRecords, sourceReference.get())
                 : handleNoSchemaFound(spark, sortedRecords, sourceName, tableName);
 
-        logger.info("Processed batch with {} rows in {}ms",
-                rowCount,
-                System.currentTimeMillis() - startTime
-        );
+        logger.info("Processed batch with {} rows in {}ms", rowCount, System.currentTimeMillis() - startTime);
 
         return structuredDataFrame;
     }
 
-    private Dataset<Row> handleSchemaFound(SparkSession spark,
-                                           Dataset<Row> dataFrame,
-                                           SourceReference sourceReference,
-                                           Boolean isCDC) throws DataStorageException {
-        val tablePath = createValidatedPath(
-                structuredPath,
-                sourceReference.getSource(),
-                sourceReference.getTable()
-        );
+    private Dataset<Row> handleSchemaFound(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            SourceReference sourceReference
+    ) throws DataStorageException {
+        val source = sourceReference.getSource();
+        val table = sourceReference.getTable();
 
-        val validationFailedViolationPath = createValidatedPath(
-                violationsPath,
-                sourceReference.getSource(),
-                sourceReference.getTable()
-        );
+        val tablePath = createValidatedPath(structuredPath, source, table);
+        val validationFailedViolationPath = createValidatedPath(violationsPath, source, table);
 
-        val validatedDataFrame = validateJsonData(
-                spark,
-                dataFrame,
-                sourceReference.getSchema(),
-                sourceReference.getSource(),
-                sourceReference.getTable()
-        );
+        val validatedDataFrame = validateJsonData(spark, dataFrame, sourceReference.getSchema(), source, table);
 
-        handleInvalidRecords(
-                spark,
-                validatedDataFrame,
-                sourceReference.getSource(),
-                sourceReference.getTable(),
-                validationFailedViolationPath
-        );
+        handleInvalidRecords(spark, validatedDataFrame, source, table, validationFailedViolationPath);
 
-        return handleValidRecords(spark, validatedDataFrame, tablePath, sourceReference.getPrimaryKey(), isCDC);
+        return handleValidRecords(spark, validatedDataFrame, tablePath, sourceReference.getPrimaryKey());
     }
 
-    private Dataset<Row> validateJsonData(SparkSession spark,
-                                          Dataset<Row> dataFrame,
-                                          StructType schema,
-                                          String source,
-                                          String table) {
+    private Dataset<Row> handleNoSchemaFound(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table
+    ) throws DataStorageException {
+        logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
+                source,
+                table,
+                dataFrame.count()
+        );
 
-        logger.info("Validating data against schema: {}/{}", source, table);
+        val missingSchemaRecords = dataFrame
+                .select(col(DATA), col(METADATA))
+                .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
 
-        val jsonValidator = JsonValidator.createAndRegister(schema, spark, source, table);
+        writeInvalidRecords(spark, storage, createValidatedPath(violationsPath, source, table), missingSchemaRecords);
 
-        return dataFrame
-                .select(col(DATA), col(METADATA), col(OPERATION))
-                .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
-                .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
+        return createEmptyDataFrame(dataFrame);
     }
 
-    private Dataset<Row> handleValidRecords(SparkSession spark,
-                                            Dataset<Row> dataFrame,
-                                            String destinationPath,
-                                            SourceReference.PrimaryKey primaryKey,
-                                            Boolean isCDC) throws DataStorageException {
-        val validRecords = dataFrame
-                .filter(col(VALID).equalTo(true))
-                .select(PARSED_DATA + ".*", OPERATION);
-
-        val validRecordsCount = validRecords.count();
-
-        if (validRecordsCount > 0) {
-            logger.info("Writing {} valid records", validRecordsCount);
-            if (isCDC) {
-                applyIncrementalRecordsAndUpdateManifest(spark, destinationPath, primaryKey, validRecords);
-            } else {
-                appendDataAndUpdateManifestForTable(spark, validRecords, destinationPath, primaryKey);
-            }
-            return validRecords;
-        } else return createEmptyDataFrame(dataFrame);
-    }
-
-    private void handleInvalidRecords(SparkSession spark,
-                                      Dataset<Row> dataFrame,
-                                      String source,
-                                      String table,
-                                      String destinationPath) throws DataStorageException {
-
+    private void handleInvalidRecords(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table,
+            String destinationPath
+    ) throws DataStorageException {
         val errorString = String.format("Record does not match schema %s/%s", source, table);
 
         // Write invalid records where schema validation failed
@@ -181,95 +135,57 @@ public class StructuredZone extends FilteredZone {
 
         if (invalidRecordsCount > 0) {
             logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecordsCount);
-            appendDataAndUpdateManifestForTable(spark, invalidRecords, destinationPath);
+            writeInvalidRecords(spark, storage, destinationPath, invalidRecords);
         }
     }
 
-    private Dataset<Row> handleNoSchemaFound(SparkSession spark,
-                                             Dataset<Row> dataFrame,
-                                             String source,
-                                             String table) throws DataStorageException {
-
-        logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
-                source,
-                table,
-                dataFrame.count()
-        );
-
-        val missingSchemaRecords = dataFrame
-                .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
-
-        appendDataAndUpdateManifestForTable(
-                spark,
-                missingSchemaRecords,
-                createValidatedPath(violationsPath, source, table)
-        );
-        return createEmptyDataFrame(dataFrame);
-    }
-
-    private void appendDataAndUpdateManifestForTable(SparkSession spark,
-                                                     Dataset<Row> dataFrame,
-                                                     String tablePath) throws DataStorageException {
-        logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
-        storage.append(tablePath, dataFrame.drop(OPERATION));
-        logger.info("Append completed successfully");
-        storage.updateDeltaManifestForTable(spark, tablePath);
-    }
-
-    private void appendDataAndUpdateManifestForTable(SparkSession spark,
-                                                     Dataset<Row> dataFrame,
-                                                     String tablePath,
-                                                     SourceReference.PrimaryKey primaryKey) throws DataStorageException {
-        logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), tablePath);
-        storage.appendDistinct(tablePath, dataFrame.drop(OPERATION), primaryKey);
-        logger.info("Append completed successfully");
-        storage.updateDeltaManifestForTable(spark, tablePath);
-    }
-
-    private void applyIncrementalRecordsAndUpdateManifest(
+    private Dataset<Row> handleValidRecords(
             SparkSession spark,
+            Dataset<Row> dataFrame,
             String destinationPath,
-            SourceReference.PrimaryKey primaryKey,
-            Dataset<Row> validRecords) {
+            SourceReference.PrimaryKey primaryKey
+    ) throws DataStorageException {
+        val validRecords = dataFrame.filter(col(VALID).equalTo(true)).select(PARSED_DATA + ".*", OPERATION);
+        val validRecordsCount = validRecords.count();
 
-        logger.info("Applying {} CDC records to deltalake table: {}", validRecords.count(), destinationPath);
+        if (validRecordsCount > 0) {
+            logger.info("Writing {} valid records", validRecordsCount);
+            writeValidRecords(spark, storage, destinationPath, primaryKey, validRecords);
 
-        validRecords.collectAsList().forEach(row -> {
-                Optional<DMS_3_4_6.Operation> optionalOperation = getOperation(row.getAs(OPERATION));
-                if (optionalOperation.isPresent()) {
-                    val list = new ArrayList<>(Collections.singletonList(row));
-                    val dataFrame = spark.createDataFrame(list, row.schema()).drop(OPERATION);
-                    val operation = optionalOperation.get();
-
-                    try {
-                        switch (operation) {
-                            case Insert:
-                                storage.appendDistinct(destinationPath, dataFrame, primaryKey);
-                                break;
-                            case Update:
-                                storage.updateRecords(destinationPath, dataFrame, primaryKey);
-                                break;
-                            case Delete:
-                                storage.deleteRecords(destinationPath, dataFrame, PRIMARY_KEY_NAME);
-                                break;
-                            default:
-                                logger.warn(
-                                        "Operation {} is not allowed for incremental processing: \n{}\nto {}",
-                                        operation.getName(),
-                                        row.json(),
-                                        destinationPath
-                                );
-                                break;
-                        }
-                    } catch (DataStorageException ex) {
-                        logger.warn("Failed to {}: \n{}\nto {}", operation.getName(), row.json(), destinationPath);
-                    }
-                }
-            }
-        );
-
-        logger.info("CDC records successfully applied");
-        storage.updateDeltaManifestForTable(spark, destinationPath);
+            return validRecords;
+        } else {
+            logger.info("No valid records found");
+            return createEmptyDataFrame(dataFrame);
+        }
     }
+
+    private Dataset<Row> validateJsonData(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            StructType schema,
+            String source,
+            String table
+    ) {
+        logger.info("Validating data against schema: {}/{}", source, table);
+        val jsonValidator = JsonValidator.createAndRegister(schema, spark, source, table);
+
+        return dataFrame
+                .select(col(DATA), col(METADATA), col(OPERATION))
+                .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
+                .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
+    }
+
+    @Override
+    public void writeInvalidRecords(
+            SparkSession spark,
+            DataStorageService storage,
+            String tablePath,
+            Dataset<Row> invalidRecords
+    ) throws DataStorageException {
+        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), tablePath);
+        storage.append(tablePath, invalidRecords.drop(OPERATION));
+        logger.info("Append completed successfully");
+        storage.updateDeltaManifestForTable(spark, tablePath);
+    }
+
 }

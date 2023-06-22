@@ -1,8 +1,15 @@
 package uk.gov.justice.digital.zone;
 
+import lombok.val;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
 import static uk.gov.justice.digital.zone.Fixtures.*;
 
@@ -130,6 +137,30 @@ public class StructuredZoneFixtures {
             .create(RECORD_KEY_6, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Delete.getName());
     public static final Row structuredRecord5Update = RowFactory
             .create(RECORD_KEY_5, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Update.getName());
+
+    public static boolean hasNullColumns(Dataset<Row> df) {
+        for (String c : df.columns()) {
+            if (df.filter(col(c).isNull()).count() > 0)
+                return true;
+        }
+        return false;
+    }
+
+    public static Dataset<Row> createTestDataset(SparkSession spark) {
+        val rawData = new ArrayList<>(Arrays.asList(
+                record1Load,
+                record2Load,
+                record3Load,
+                record4Insert,
+                record5Insert,
+                record6Insert,
+                record7Update,
+                record6Deletion,
+                record5Update
+        ));
+
+        return spark.createDataFrame(rawData, ROW_SCHEMA);
+    }
 
     // Private constructor to prevent instantiation.
     private StructuredZoneFixtures() {}
