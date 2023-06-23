@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone.fixtures;
+package uk.gov.justice.digital.test;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

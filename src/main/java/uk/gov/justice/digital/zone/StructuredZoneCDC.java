@@ -73,7 +73,7 @@ public class StructuredZoneCDC extends StructuredZone {
                 try {
                     writeRow(spark, storage, tablePath, primaryKey, operation, row);
                 } catch (DataStorageException ex) {
-                    logger.warn("Failed to {}: \n{}\nto {}", operation.getName(), row.json(), tablePath);
+                    logger.warn("Failed to {}: {} to {}", operation.getName(), row.json(), tablePath);
                 }
             } else {
                 logger.error("Operation invalid for {}", row.json());
@@ -104,7 +104,7 @@ public class StructuredZoneCDC extends StructuredZone {
                 break;
             default:
                 logger.warn(
-                        "Operation {} is not allowed for incremental processing: \n{}\nto {}",
+                        "Operation {} is not allowed for incremental processing: {} to {}",
                         operation.getName(),
                         row.json(),
                         tablePath

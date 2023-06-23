@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone.fixtures;
+package uk.gov.justice.digital.test;
 
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -10,9 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
-import static uk.gov.justice.digital.zone.fixtures.Fixtures.*;
+import static uk.gov.justice.digital.test.Fixtures.*;
 
 public class ZoneFixtures {
     // input records

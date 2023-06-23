@@ -23,8 +23,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.zone.fixtures.Fixtures.*;
-import static uk.gov.justice.digital.zone.fixtures.ZoneFixtures.*;
+import static uk.gov.justice.digital.test.Fixtures.*;
+import static uk.gov.justice.digital.test.ZoneFixtures.*;
 
 @ExtendWith(MockitoExtension.class)
 class RawZoneTest extends BaseSparkTest {
