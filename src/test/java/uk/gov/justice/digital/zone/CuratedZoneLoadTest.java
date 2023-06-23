@@ -67,7 +67,7 @@ class CuratedZoneLoadTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteStructuredRecordsToDeltaTable() throws DataStorageException {
+    public void shouldWriteStructuredLoadRecordsToDeltaTable() throws DataStorageException {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing()

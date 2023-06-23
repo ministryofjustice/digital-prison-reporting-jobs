@@ -68,7 +68,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldHandleValidIncrementalRecords() throws DataStorageException {
+    public void shouldWriteStructuredIncrementalRecordsToDeltaTable() throws DataStorageException {
         val expectedRecords = createStructuredIncrementalDataset(spark);
 
         givenTheSchemaExists();
