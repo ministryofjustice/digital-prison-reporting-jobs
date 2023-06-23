@@ -7,7 +7,7 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 
-public abstract class DeltaWriter {
+public abstract class ZoneWriter {
 
     protected abstract void writeValidRecords(
             SparkSession spark,

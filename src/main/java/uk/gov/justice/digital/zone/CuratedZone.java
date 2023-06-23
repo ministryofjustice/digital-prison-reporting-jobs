@@ -16,7 +16,7 @@ import javax.inject.Inject;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public abstract class CuratedZone extends DeltaWriter implements Zone {
+public abstract class CuratedZone extends ZoneWriter implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZone.class);
 

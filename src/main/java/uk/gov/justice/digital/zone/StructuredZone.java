@@ -24,7 +24,7 @@ import static org.apache.spark.sql.functions.to_json;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public abstract class StructuredZone extends DeltaWriter implements Zone {
+public abstract class StructuredZone extends ZoneWriter implements Zone {
 
     public static final String ERROR = "error";
     public static final String PARSED_DATA = "parsedData";
