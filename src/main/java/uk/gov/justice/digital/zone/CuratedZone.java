@@ -12,14 +12,11 @@ import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-@Singleton
-public class CuratedZone implements Zone {
+public abstract class CuratedZone extends DeltaWriter implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZone.class);
 
@@ -28,9 +25,11 @@ public class CuratedZone implements Zone {
     private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public CuratedZone(JobArguments jobArguments,
-                       DataStorageService storage,
-                       SourceReferenceService sourceReferenceService) {
+    public CuratedZone(
+            JobArguments jobArguments,
+            DataStorageService storage,
+            SourceReferenceService sourceReferenceService
+    ) {
         this.curatedPath = jobArguments.getCuratedS3Path();
         this.storage = storage;
         this.sourceReferenceService = sourceReferenceService;
@@ -43,38 +42,40 @@ public class CuratedZone implements Zone {
 
         logger.info("Processing batch with {} records", count);
 
-        if (count > 0) {
-            val startTime = System.currentTimeMillis();
+        val startTime = System.currentTimeMillis();
 
-            String sourceName = table.getAs(SOURCE);
-            String tableName = table.getAs(TABLE);
+        String sourceName = table.getAs(SOURCE);
+        String tableName = table.getAs(TABLE);
 
-            val sourceReference = sourceReferenceService
-                    .getSourceReference(sourceName, tableName)
-                    // This can only happen if the schema disappears after the structured zone has processed the data, so we
-                    // should never see this in practise. However, if it does happen throwing here will make it clear what
-                    // has happened.
-                    .orElseThrow(() -> new IllegalStateException(
-                            "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
-                    ));
+        val sourceReference = sourceReferenceService
+                .getSourceReference(sourceName, tableName)
+                // This can only happen if the schema disappears after the structured zone has processed the data, so we
+                // should never see this in practise. However, if it does happen throwing here will make it clear what
+                // has happened.
+                .orElseThrow(() -> new IllegalStateException(
+                        "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
+                ));
 
-            val curatedTablePath = createValidatedPath(
-                    curatedPath,
-                    sourceReference.getSource(),
-                    sourceReference.getTable()
-            );
+        val curatedTablePath = createValidatedPath(
+                curatedPath,
+                sourceReference.getSource(),
+                sourceReference.getTable()
+        );
 
-            logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), curatedTablePath);
-            storage.appendDistinct(curatedTablePath, dataFrame, sourceReference.getPrimaryKey());
-            logger.info("Append completed successfully");
-            storage.updateDeltaManifestForTable(spark, curatedTablePath);
+        writeValidRecords(spark, storage, curatedTablePath, sourceReference.getPrimaryKey(), dataFrame);
 
-            logger.info("Processed batch with {} records in {}ms",
-                    count,
-                    System.currentTimeMillis() - startTime
-            );
+        logger.info("Processed batch with {} records in {}ms",
+                count,
+                System.currentTimeMillis() - startTime
+        );
 
-            return dataFrame;
-        } else return spark.emptyDataFrame();
+        return dataFrame;
     }
+
+    protected void writeInvalidRecords(
+            SparkSession spark,
+            DataStorageService storage,
+            String destinationPath,
+            Dataset<Row> invalidRecords
+    ) {}
 }

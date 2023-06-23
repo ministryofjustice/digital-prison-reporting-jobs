@@ -17,14 +17,15 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.test.SparkTestHelpers;
+import uk.gov.justice.digital.zone.fixtures.Fixtures;
 
 import java.nio.file.Path;
 
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.zone.Fixtures.STRUCTURED_PATH;
-import static uk.gov.justice.digital.zone.Fixtures.VIOLATIONS_PATH;
+import static uk.gov.justice.digital.zone.fixtures.Fixtures.STRUCTURED_PATH;
+import static uk.gov.justice.digital.zone.fixtures.Fixtures.VIOLATIONS_PATH;
 
 @ExtendWith(MockitoExtension.class)
 public class StructuredZoneIntegrationTest extends BaseSparkTest  {

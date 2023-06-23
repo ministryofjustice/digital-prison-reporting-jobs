@@ -1,12 +1,18 @@
-package uk.gov.justice.digital.zone;
+package uk.gov.justice.digital.zone.fixtures;
 
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+import org.mockito.ArgumentCaptor;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
 
@@ -110,6 +116,22 @@ public class Fixtures {
             .add(OPERATION, DataTypes.StringType, false)
             .add(CONVERTER, DataTypes.StringType, false)
             .add(RAW, DataTypes.StringType, false);
+
+    public static List<Row> getAllCapturedRecords(ArgumentCaptor<Dataset<Row>> dataframeCaptor) {
+        return dataframeCaptor
+                .getAllValues()
+                .stream()
+                .flatMap(x -> x.collectAsList().stream())
+                .collect(Collectors.toList());
+    }
+
+    public static boolean hasNullColumns(Dataset<Row> df) {
+        for (String c : df.columns()) {
+            if (df.filter(col(c).isNull()).count() > 0)
+                return true;
+        }
+        return false;
+    }
 
     // Private constructor to prevent instantiation.
     private Fixtures() { }

@@ -18,9 +18,10 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
-import java.util.*;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -32,7 +33,7 @@ import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
 import static uk.gov.justice.digital.zone.fixtures.ZoneFixtures.*;
 
 @ExtendWith(MockitoExtension.class)
-class StructuredZoneCdcTest extends BaseSparkTest {
+class CuratedZoneCdcTest extends BaseSparkTest {
 
     @Mock
     private JobArguments mockJobArguments;
@@ -49,20 +50,17 @@ class StructuredZoneCdcTest extends BaseSparkTest {
     @Captor
     ArgumentCaptor<Dataset<Row>> dataframeCaptor;
 
-    private StructuredZone underTest;
+    String curatedPath = createValidatedPath(CURATED_PATH, TABLE_SOURCE, TABLE_NAME);
 
-    private final Dataset<Row> testDataSet = createTestDataset(spark);
-
-    String structuredPath = createValidatedPath(STRUCTURED_PATH, TABLE_SOURCE, TABLE_NAME);
+    private CuratedZone underTest;
 
 
     @BeforeEach
     public void setUp() {
         reset(mockDataStorage);
-        when(mockJobArguments.getViolationsS3Path()).thenReturn(VIOLATIONS_PATH);
-        when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_PATH);
+        when(mockJobArguments.getCuratedS3Path()).thenReturn(CURATED_PATH);
 
-        underTest = new StructuredZoneCDC(
+        underTest = new CuratedZoneCDC(
                 mockJobArguments,
                 mockDataStorage,
                 mockSourceReferenceService
@@ -75,13 +73,13 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(PRIMARY_KEY_NAME));
+        doNothing().when(mockDataStorage).appendDistinct(eq(curatedPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).updateRecords(eq(curatedPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).deleteRecords(eq(curatedPath), dataframeCaptor.capture(), eq(PRIMARY_KEY_NAME));
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
-                underTest.process(spark, testDataSet, dataMigrationEventRow).collectAsList()
+                underTest.process(spark, expectedRecords, dataMigrationEventRow).collectAsList()
         );
 
         assertIterableEquals(
@@ -96,9 +94,9 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).appendDistinct(eq(curatedPath), dataframeCaptor.capture(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
+        underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -112,9 +110,9 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).updateRecords(eq(curatedPath), dataframeCaptor.capture(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
+        underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -128,9 +126,9 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(PRIMARY_KEY_NAME));
+        doNothing().when(mockDataStorage).deleteRecords(eq(curatedPath), dataframeCaptor.capture(), eq(PRIMARY_KEY_NAME));
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
+        underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -140,61 +138,41 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
     @Test
     public void shouldContinueWhenInsertFails() throws DataStorageException {
+        val records = createStructuredInsertDataset(spark);
+
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doThrow(new DataStorageException("insert failed")).when(mockDataStorage).appendDistinct(any(), any(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
+        underTest.process(spark, records, dataMigrationEventRow).collect();
 
         assertTrue(getAllCapturedRecords(dataframeCaptor).isEmpty());
     }
 
     @Test
     public void shouldContinueWhenUpdateFails() throws DataStorageException {
+        val records = createStructuredUpdateDataset(spark);
+
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doThrow(new DataStorageException("update failed")).when(mockDataStorage).updateRecords(any(), any(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
+        underTest.process(spark, records, dataMigrationEventRow).collect();
 
         assertTrue(getAllCapturedRecords(dataframeCaptor).isEmpty());
     }
 
     @Test
     public void shouldContinueWhenDeletionFails() throws DataStorageException {
+        val records = createStructuredDeleteDataset(spark);
+
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(any(), any(), any());
 
-        underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
+        underTest.process(spark, records, dataMigrationEventRow).collect();
 
         assertTrue(getAllCapturedRecords(dataframeCaptor).isEmpty());
-    }
-
-    @Test
-    public void shouldHandleInvalidRecords() throws DataStorageException {
-        givenTheSchemaExists();
-        givenTheSourceReferenceIsValid();
-
-        assertNotNull(underTest.process(spark, testDataSet, dataMigrationEventRow));
-    }
-
-    @Test
-    public void shouldHandleNoSchemaFound() throws DataStorageException {
-        givenTheSchemaDoesNotExist();
-
-        assertTrue(underTest.process(spark, testDataSet, dataMigrationEventRow).isEmpty());
-    }
-
-    @Test
-    public void shouldKeepNullColumnsInData() throws DataStorageException {
-        givenTheSchemaExists();
-        givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).appendDistinct(any(), any(), any());
-
-        val structuredIncrementalRecords = underTest.process(spark, testDataSet, dataMigrationEventRow);
-
-        assertTrue(hasNullColumns(structuredIncrementalRecords));
     }
 
     private void givenTheSchemaExists() {
@@ -202,14 +180,9 @@ class StructuredZoneCdcTest extends BaseSparkTest {
                 .thenReturn(Optional.of(mockSourceReference));
     }
 
-    private void givenTheSchemaDoesNotExist() {
-        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenReturn(Optional.empty());
-    }
-
     private void givenTheSourceReferenceIsValid() {
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
-        when(mockSourceReference.getSchema()).thenReturn(JSON_DATA_SCHEMA);
         when(mockSourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(KEY));
     }
 

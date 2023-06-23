@@ -13,10 +13,7 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.zone.CuratedZone;
-import uk.gov.justice.digital.zone.RawZone;
-import uk.gov.justice.digital.zone.StructuredZoneCDC;
-import uk.gov.justice.digital.zone.StructuredZoneLoad;
+import uk.gov.justice.digital.zone.*;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -45,7 +42,8 @@ public class DataHubJob implements Runnable {
     private final RawZone rawZone;
     private final StructuredZoneLoad structuredZoneLoad;
     private final StructuredZoneCDC structuredZoneCDC;
-    private final CuratedZone curatedZone;
+    private final CuratedZoneLoad curatedZoneLoad;
+    private final CuratedZoneCDC curatedZoneCDC;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
     private final SparkSessionProvider sparkSessionProvider;
 
@@ -55,7 +53,8 @@ public class DataHubJob implements Runnable {
         RawZone rawZone,
         StructuredZoneLoad structuredZoneLoad,
         StructuredZoneCDC structuredZoneCDC,
-        CuratedZone curatedZone,
+        CuratedZoneLoad curatedZoneLoad,
+        CuratedZoneCDC curatedZoneCDC,
         @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
         SparkSessionProvider sparkSessionProvider
     ) {
@@ -63,7 +62,8 @@ public class DataHubJob implements Runnable {
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
-        this.curatedZone = curatedZone;
+        this.curatedZoneLoad = curatedZoneLoad;
+        this.curatedZoneCDC = curatedZoneCDC;
         this.converter = converter;
         this.sparkSessionProvider = sparkSessionProvider;
     }
@@ -96,10 +96,10 @@ public class DataHubJob implements Runnable {
                     rawZone.process(spark, dataFrameForTable, table);
 
                     val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, table);
-                    curatedZone.process(spark, structuredLoadDataFrame, table);
+                    curatedZoneLoad.process(spark, structuredLoadDataFrame, table);
 
                     val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, table);
-                    curatedZone.process(spark, structuredIncrementalDataFrame, table);
+                    curatedZoneCDC.process(spark, structuredIncrementalDataFrame, table);
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);
