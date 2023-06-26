@@ -20,11 +20,9 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.KEY;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.test.Fixtures.*;
 import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredLoadDataset;
@@ -49,7 +47,9 @@ class CuratedZoneLoadTest extends BaseSparkTest {
 
     private final Dataset<Row> testDataSet = createStructuredLoadDataset(spark);
 
-    String curatedPath = createValidatedPath(CURATED_PATH, TABLE_SOURCE, TABLE_NAME);
+    private final String curatedPath = createValidatedPath(CURATED_PATH, TABLE_SOURCE, TABLE_NAME);
+
+    private final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_FIELD);
 
     private CuratedZone underTest;
 
@@ -72,7 +72,7 @@ class CuratedZoneLoadTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
         doNothing()
                 .when(mockDataStorage)
-                .appendDistinct(eq(curatedPath), dataframeCaptor.capture(), any());
+                .appendDistinct(eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
         assertIterableEquals(
                 testDataSet.collectAsList(),
@@ -93,7 +93,7 @@ class CuratedZoneLoadTest extends BaseSparkTest {
     private void givenTheSourceReferenceIsValid() {
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
-        when(mockSourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(KEY));
+        when(mockSourceReference.getPrimaryKey()).thenReturn(primaryKey);
     }
 
 }

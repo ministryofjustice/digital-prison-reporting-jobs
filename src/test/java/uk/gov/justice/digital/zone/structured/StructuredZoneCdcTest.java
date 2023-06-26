@@ -25,11 +25,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.KEY;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.test.Fixtures.*;
 import static uk.gov.justice.digital.test.ZoneFixtures.*;
-import static uk.gov.justice.digital.zone.raw.RawZone.PRIMARY_KEY_NAME;
 
 @ExtendWith(MockitoExtension.class)
 class StructuredZoneCdcTest extends BaseSparkTest {
@@ -53,8 +51,9 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
     private final Dataset<Row> testDataSet = createTestDataset(spark);
 
-    String structuredPath = createValidatedPath(STRUCTURED_PATH, TABLE_SOURCE, TABLE_NAME);
+    private final String structuredPath = createValidatedPath(STRUCTURED_PATH, TABLE_SOURCE, TABLE_NAME);
 
+    private final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_FIELD);
 
     @BeforeEach
     public void setUp() {
@@ -75,9 +74,9 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(PRIMARY_KEY_NAME));
+        doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
@@ -96,7 +95,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
@@ -112,7 +111,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
@@ -128,7 +127,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(PRIMARY_KEY_NAME));
+        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
@@ -164,7 +163,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
     public void shouldContinueWhenDeletionFails() throws DataStorageException {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(any(), any(), any());
+        doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(any(), any(), eq(primaryKey));
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
@@ -210,7 +209,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
         when(mockSourceReference.getSchema()).thenReturn(JSON_DATA_SCHEMA);
-        when(mockSourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(KEY));
+        when(mockSourceReference.getPrimaryKey()).thenReturn(primaryKey);
     }
 
 }

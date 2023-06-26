@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.KEY;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.test.Fixtures.*;
 import static uk.gov.justice.digital.test.ZoneFixtures.*;
@@ -50,6 +49,8 @@ class StructuredZoneLoadTest extends BaseSparkTest {
     private StructuredZone underTest;
 
     private final Dataset<Row> testDataSet = createTestDataset(spark);
+
+    private final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_FIELD);
 
 
     @BeforeEach
@@ -126,7 +127,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
         when(mockSourceReference.getSchema()).thenReturn(JSON_DATA_SCHEMA);
-        when(mockSourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(KEY));
+        when(mockSourceReference.getPrimaryKey()).thenReturn(primaryKey);
     }
 
 }

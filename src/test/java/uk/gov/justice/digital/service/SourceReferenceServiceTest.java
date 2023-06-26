@@ -138,10 +138,10 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldConcatenatePrimaryKeysIntoASqlCondition() {
         SourceReference.PrimaryKey pk = new SourceReference.PrimaryKey(Arrays.asList("key1"));
-        assertEquals("((source.key1 = target.key1))", pk.getSparkCondition("source", "target"));
+        assertEquals("source.key1 = target.key1", pk.getSparkCondition("source", "target"));
 
         pk = new SourceReference.PrimaryKey(Arrays.asList("key1", "key2"));
-        assertEquals("((source.key1 = target.key1) and (source.key2 = target.key2))", pk.getSparkCondition("source", "target"));
+        assertEquals("source.key1 = target.key1 and source.key2 = target.key2", pk.getSparkCondition("source", "target"));
 
     }
 }

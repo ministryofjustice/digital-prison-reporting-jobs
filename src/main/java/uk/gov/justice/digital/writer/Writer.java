@@ -18,7 +18,6 @@ import java.util.function.Consumer;
 
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.getOperation;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.zone.raw.RawZone.PRIMARY_KEY_NAME;
 
 public abstract class Writer {
 
@@ -108,7 +107,7 @@ public abstract class Writer {
                 storage.updateRecords(destinationPath, dataFrame, primaryKey);
                 break;
             case Delete:
-                storage.deleteRecords(destinationPath, dataFrame, PRIMARY_KEY_NAME);
+                storage.deleteRecords(destinationPath, dataFrame, primaryKey);
                 break;
             default:
                 logger.warn(
