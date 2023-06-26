@@ -13,7 +13,9 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.zone.*;
+import uk.gov.justice.digital.zone.curated.*;
+import uk.gov.justice.digital.zone.raw.RawZone;
+import uk.gov.justice.digital.zone.structured.*;
 
 import javax.inject.Inject;
 import javax.inject.Named;

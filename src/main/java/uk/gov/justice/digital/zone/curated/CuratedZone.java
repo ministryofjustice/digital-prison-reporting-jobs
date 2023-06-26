@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone;
+package uk.gov.justice.digital.zone.curated;
 
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -8,30 +8,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.writer.Writer;
+import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
 
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public abstract class CuratedZone extends ZoneWriter implements Zone {
+public abstract class CuratedZone implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZone.class);
 
     private final String curatedPath;
-    private final DataStorageService storage;
     private final SourceReferenceService sourceReferenceService;
+    private final Writer writer;
 
     @Inject
     public CuratedZone(
             JobArguments jobArguments,
-            DataStorageService storage,
-            SourceReferenceService sourceReferenceService
+            SourceReferenceService sourceReferenceService,
+            Writer writer
     ) {
         this.curatedPath = jobArguments.getCuratedS3Path();
-        this.storage = storage;
+        this.writer = writer;
         this.sourceReferenceService = sourceReferenceService;
     }
 
@@ -62,7 +63,7 @@ public abstract class CuratedZone extends ZoneWriter implements Zone {
                 sourceReference.getTable()
         );
 
-        writeValidRecords(spark, storage, curatedTablePath, sourceReference.getPrimaryKey(), dataFrame);
+        writer.writeValidRecords(spark, curatedTablePath, sourceReference.getPrimaryKey(), dataFrame);
 
         logger.info("Processed batch with {} records in {}ms",
                 count,
@@ -72,10 +73,4 @@ public abstract class CuratedZone extends ZoneWriter implements Zone {
         return dataFrame;
     }
 
-    protected void writeInvalidRecords(
-            SparkSession spark,
-            DataStorageService storage,
-            String destinationPath,
-            Dataset<Row> invalidRecords
-    ) {}
 }

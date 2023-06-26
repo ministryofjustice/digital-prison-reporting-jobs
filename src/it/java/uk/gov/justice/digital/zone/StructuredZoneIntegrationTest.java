@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.zone;
 
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
@@ -18,6 +19,9 @@ import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.test.SparkTestHelpers;
 import uk.gov.justice.digital.test.Fixtures;
+import uk.gov.justice.digital.writer.structured.StructuredZoneLoadWriter;
+import uk.gov.justice.digital.zone.structured.StructuredZone;
+import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.nio.file.Path;
 
@@ -54,7 +58,8 @@ public class StructuredZoneIntegrationTest extends BaseSparkTest  {
         when(mockJobArguments.getViolationsS3Path()).thenReturn(VIOLATIONS_PATH);
         when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_PATH);
 
-        SourceReferenceService sourceReferenceService = new SourceReferenceService(glueSchemaClient, converter);
+        val sourceReferenceService = new SourceReferenceService(glueSchemaClient, converter);
+        val writer = new StructuredZoneLoadWriter(mockDataStorage);
 
         underTest = new StructuredZoneLoad(
                 mockJobArguments,

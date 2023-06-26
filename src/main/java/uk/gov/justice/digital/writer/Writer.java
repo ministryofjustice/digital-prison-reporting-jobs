@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone;
+package uk.gov.justice.digital.writer;
 
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -7,15 +7,10 @@ import org.apache.spark.sql.SparkSession;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,47 +18,60 @@ import java.util.function.Consumer;
 
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.getOperation;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
+import static uk.gov.justice.digital.zone.raw.RawZone.PRIMARY_KEY_NAME;
 
-@Singleton
-public class CuratedZoneCDC extends CuratedZone {
+public abstract class Writer {
 
-    private static final Logger logger = LoggerFactory.getLogger(CuratedZoneCDC.class);
+    private static final Logger logger = LoggerFactory.getLogger(Writer.class);
 
-    @Inject
-    public CuratedZoneCDC(
-            JobArguments jobArguments,
-            DataStorageService storage,
-            SourceReferenceService sourceReferenceService
-    ) {
-        super(jobArguments, storage, sourceReferenceService);
-    }
+    public abstract void writeValidRecords(
+            SparkSession spark,
+            String destinationPath,
+            SourceReference.PrimaryKey primaryKey,
+            Dataset<Row> validRecords
+    ) throws DataStorageException;
 
-    @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
-        return super.process(spark, dataFrame, table);
-    }
+    public abstract void writeInvalidRecords(
+            SparkSession spark,
+            String destinationPath,
+            Dataset<Row> invalidRecords
+    ) throws DataStorageException;
 
-    @Override
-    protected void writeValidRecords(
+    // static common methods
+    protected static void appendDistinctRecords(
             SparkSession spark,
             DataStorageService storage,
-            String tablePath,
+            String destinationPath,
+            SourceReference.PrimaryKey primaryKey,
+            Dataset<Row> validRecords
+    ) throws DataStorageException {
+        logger.info("Appending {} records to deltalake table: {}", validRecords.count(), destinationPath);
+        storage.appendDistinct(destinationPath, validRecords.drop(OPERATION), primaryKey);
+
+        logger.info("Append completed successfully");
+        storage.updateDeltaManifestForTable(spark, destinationPath);
+    }
+
+
+    protected static void writeCdcRecords(
+            SparkSession spark,
+            DataStorageService storage,
+            String destinationPath,
             SourceReference.PrimaryKey primaryKey,
             Dataset<Row> validRecords
     ) {
-        logger.info("Applying {} CDC records to deltalake table: {}", validRecords.count(), tablePath);
-        validRecords.collectAsList().forEach(processRow(spark, storage, tablePath, primaryKey));
+        logger.info("Applying {} CDC records to deltalake table: {}", validRecords.count(), destinationPath);
+        validRecords.collectAsList().forEach(processRow(spark, storage, destinationPath, primaryKey));
 
         logger.info("CDC records successfully applied");
-        storage.updateDeltaManifestForTable(spark, tablePath);
+        storage.updateDeltaManifestForTable(spark, destinationPath);
     }
 
     @NotNull
-    private Consumer<Row> processRow(
+    protected static Consumer<Row> processRow(
             SparkSession spark,
             DataStorageService storage,
-            String tablePath,
+            String destinationPath,
             SourceReference.PrimaryKey primaryKey
     ) {
         return row -> {
@@ -71,9 +79,9 @@ public class CuratedZoneCDC extends CuratedZone {
             if (optionalOperation.isPresent()) {
                 val operation = optionalOperation.get();
                 try {
-                    writeRow(spark, storage, tablePath, primaryKey, operation, row);
+                    writeRow(spark, storage, destinationPath, primaryKey, operation, row);
                 } catch (DataStorageException ex) {
-                    logger.warn("Failed to {}: {} to {}", operation.getName(), row.json(), tablePath);
+                    logger.warn("Failed to {}: {} to {}", operation.getName(), row.json(), destinationPath);
                 }
             } else {
                 logger.error("Operation invalid for {}", row.json());
@@ -81,10 +89,10 @@ public class CuratedZoneCDC extends CuratedZone {
         };
     }
 
-    private void writeRow(
+    private static void writeRow(
             SparkSession spark,
             DataStorageService storage,
-            String tablePath,
+            String destinationPath,
             SourceReference.PrimaryKey primaryKey,
             DMS_3_4_6.Operation operation,
             Row row
@@ -94,20 +102,20 @@ public class CuratedZoneCDC extends CuratedZone {
 
         switch (operation) {
             case Insert:
-                storage.appendDistinct(tablePath, dataFrame, primaryKey);
+                storage.appendDistinct(destinationPath, dataFrame, primaryKey);
                 break;
             case Update:
-                storage.updateRecords(tablePath, dataFrame, primaryKey);
+                storage.updateRecords(destinationPath, dataFrame, primaryKey);
                 break;
             case Delete:
-                storage.deleteRecords(tablePath, dataFrame, PRIMARY_KEY_NAME);
+                storage.deleteRecords(destinationPath, dataFrame, PRIMARY_KEY_NAME);
                 break;
             default:
                 logger.warn(
                         "Operation {} is not allowed for incremental processing: {} to {}",
                         operation.getName(),
                         row.json(),
-                        tablePath
+                        destinationPath
                 );
                 break;
         }

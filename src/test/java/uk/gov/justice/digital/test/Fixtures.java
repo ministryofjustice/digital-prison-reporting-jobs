@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
-import static uk.gov.justice.digital.zone.RawZone.PRIMARY_KEY_NAME;
+import static uk.gov.justice.digital.zone.raw.RawZone.PRIMARY_KEY_NAME;
 
 public class Fixtures {
 
