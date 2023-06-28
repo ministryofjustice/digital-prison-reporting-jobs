@@ -183,9 +183,9 @@ public class DataStorageService {
         if (DeltaTable.isDeltaTable(spark, tablePath))
             return DeltaTable.forPath(spark, tablePath);
         else {
-            logger.warn("Cannot update manifest for table: {} - Not a delta table", tablePath);
+            logger.warn("No valid table found for path: {} - Not a delta table", tablePath);
+            return null;
         }
-        return null;
     }
 
     public void endTableUpdates(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
@@ -197,8 +197,12 @@ public class DataStorageService {
     }
 
     public void updateDeltaManifestForTable(SparkSession spark, String tablePath) {
-        DeltaTable deltaTable = getTable(spark, tablePath);
-        updateManifest(deltaTable);
+        logger.info("Updating manifest for table: {}", tablePath);
+
+        val  deltaTable = getTable(spark, tablePath);
+
+        if (deltaTable != null) updateManifest(deltaTable);
+        else logger.warn("Unable to update manifest for table: {} Not a delta table", tablePath);
     }
 
 }
