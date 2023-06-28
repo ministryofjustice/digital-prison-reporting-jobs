@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone;
+package uk.gov.justice.digital.zone.structured;
 
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -11,20 +11,19 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.udf.JsonValidator;
-import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.writer.Writer;
+import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
-
 import java.util.Collections;
 import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
-import static org.apache.spark.sql.functions.to_json;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public abstract class StructuredZone extends DeltaWriter implements Zone {
+public abstract class StructuredZone implements Zone {
 
     public static final String ERROR = "error";
     public static final String PARSED_DATA = "parsedData";
@@ -36,16 +35,16 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
 
     private final String structuredPath;
     private final String violationsPath;
-    private final DataStorageService storage;
     private final SourceReferenceService sourceReferenceService;
+    private final Writer writer;
 
     @Inject
     public StructuredZone(
             JobArguments jobArguments,
-            DataStorageService storage,
-            SourceReferenceService sourceReferenceService
+            SourceReferenceService sourceReferenceService,
+            Writer writer
     ) {
-        this.storage = storage;
+        this.writer = writer;
         this.structuredPath = jobArguments.getStructuredS3Path();
         this.violationsPath = jobArguments.getViolationsS3Path();
         this.sourceReferenceService = sourceReferenceService;
@@ -110,7 +109,7 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
                 .select(col(DATA), col(METADATA))
                 .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
 
-        writeInvalidRecords(spark, storage, createValidatedPath(violationsPath, source, table), missingSchemaRecords);
+        writer.writeInvalidRecords(spark, createValidatedPath(violationsPath, source, table), missingSchemaRecords);
 
         return createEmptyDataFrame(dataFrame);
     }
@@ -135,7 +134,7 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
 
         if (invalidRecordsCount > 0) {
             logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecordsCount);
-            writeInvalidRecords(spark, storage, destinationPath, invalidRecords);
+            writer.writeInvalidRecords(spark, destinationPath, invalidRecords);
         }
     }
 
@@ -150,7 +149,7 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
 
         if (validRecordsCount > 0) {
             logger.info("Writing {} valid records", validRecordsCount);
-            writeValidRecords(spark, storage, destinationPath, primaryKey, validRecords);
+            writer.writeValidRecords(spark, destinationPath, primaryKey, validRecords);
 
             return validRecords;
         } else {
@@ -173,19 +172,6 @@ public abstract class StructuredZone extends DeltaWriter implements Zone {
                 .select(col(DATA), col(METADATA), col(OPERATION))
                 .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
                 .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
-    }
-
-    @Override
-    protected void writeInvalidRecords(
-            SparkSession spark,
-            DataStorageService storage,
-            String tablePath,
-            Dataset<Row> invalidRecords
-    ) throws DataStorageException {
-        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), tablePath);
-        storage.append(tablePath, invalidRecords.drop(OPERATION));
-        logger.info("Append completed successfully");
-        storage.updateDeltaManifestForTable(spark, tablePath);
     }
 
     private Dataset<Row> createEmptyDataFrame(Dataset<Row> dataFrame) {

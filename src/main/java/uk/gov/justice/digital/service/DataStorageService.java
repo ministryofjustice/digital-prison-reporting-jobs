@@ -2,7 +2,6 @@ package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
 import lombok.val;
-import org.apache.spark.sql.functions;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -93,11 +92,16 @@ public class DataStorageService {
     public void deleteRecords(
             String tablePath,
             Dataset<Row> dataFrame,
-            String primaryKeyFieldName) throws DataStorageException {
+            SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         val dt = getTable(dataFrame.sparkSession(), tablePath);
 
         if (dt != null) {
-            dt.delete(functions.col(primaryKeyFieldName).eqNullSafe(dataFrame.col(primaryKeyFieldName)));
+            final String condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+            dt.as(SOURCE)
+                    .merge(dataFrame.as(TARGET), condition)
+                    .whenMatched()
+                    .delete()
+                    .execute();
         } else {
             val errorMessage = "Failed to access Delta table for delete";
             logger.error(errorMessage);

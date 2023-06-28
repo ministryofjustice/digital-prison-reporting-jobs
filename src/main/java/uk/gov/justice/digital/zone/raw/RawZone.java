@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone;
+package uk.gov.justice.digital.zone.raw;
 
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -11,6 +11,7 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;

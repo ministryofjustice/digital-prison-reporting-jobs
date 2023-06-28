@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone;
+package uk.gov.justice.digital.zone.structured;
 
 
 import lombok.val;
@@ -24,10 +24,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.KEY;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.zone.Fixtures.*;
-import static uk.gov.justice.digital.zone.StructuredZoneFixtures.*;
+import static uk.gov.justice.digital.test.Fixtures.*;
+import static uk.gov.justice.digital.test.ZoneFixtures.*;
 
 @ExtendWith(MockitoExtension.class)
 class StructuredZoneLoadTest extends BaseSparkTest {
@@ -51,6 +50,8 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
     private final Dataset<Row> testDataSet = createTestDataset(spark);
 
+    private final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_FIELD);
+
 
     @BeforeEach
     public void setUp() {
@@ -67,7 +68,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
     @Test
     public void shouldHandleValidRecords() throws DataStorageException {
-        val expectedRecords = createExpectedLoadDataset();
+        val expectedRecords = createStructuredLoadDataset(spark);
         val structuredPath = createValidatedPath(STRUCTURED_PATH, TABLE_SOURCE, TABLE_NAME);
 
         givenTheSchemaExists();
@@ -126,17 +127,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
         when(mockSourceReference.getSource()).thenReturn(TABLE_SOURCE);
         when(mockSourceReference.getTable()).thenReturn(TABLE_NAME);
         when(mockSourceReference.getSchema()).thenReturn(JSON_DATA_SCHEMA);
-        when(mockSourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(KEY));
-    }
-
-    private Dataset<Row> createExpectedLoadDataset() {
-        val expectedLoadData = new ArrayList<>(Arrays.asList(
-                structuredRecord2Load,
-                structuredRecord3Load,
-                structuredRecord1Load
-        ));
-
-        return spark.createDataFrame(expectedLoadData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);
+        when(mockSourceReference.getPrimaryKey()).thenReturn(primaryKey);
     }
 
 }

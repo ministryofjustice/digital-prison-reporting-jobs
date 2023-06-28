@@ -30,8 +30,8 @@ public class SourceReference {
 
         public String getSparkCondition(final String source, final String target) {
             return keys.stream()
-                    .map(s -> "(" + source + "." + s + " = " + target + "." + s + ")")
-                    .collect(Collectors.joining(" and ", "(", ")"));
+                    .map(s -> source + "." + s + " = " + target + "." + s)
+                    .collect(Collectors.joining(" and "));
         }
 
         @Override
