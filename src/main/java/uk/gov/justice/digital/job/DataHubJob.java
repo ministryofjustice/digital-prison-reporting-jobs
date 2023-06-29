@@ -80,35 +80,35 @@ public class DataHubJob implements Runnable {
             logger.info("Batch: {} - Skipping empty batch", batch.id());
         }
         else {
+            val startTime = System.currentTimeMillis();
+
             val batchCount = batch.count();
 
             logger.info("Batch: {} - Processing {} records", batch.id(), batchCount);
 
-            val startTime = System.currentTimeMillis();
-
-            val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf());
-            val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
-            val dataFrame = converter.convert(rowRdd);
-
-            getTablesInBatch(dataFrame).forEach(table -> {
-                try {
-                    val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, table);
-                    dataFrameForTable.persist();
-
-                    rawZone.process(spark, dataFrameForTable, table);
-
-                    val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, table);
-                    curatedZoneLoad.process(spark, structuredLoadDataFrame, table);
-
-                    val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, table);
-                    curatedZoneCDC.process(spark, structuredIncrementalDataFrame, table);
-
-                    dataFrameForTable.unpersist();
-                } catch (Exception e) {
-                    logger.error("Caught unexpected exception", e);
-                    throw new RuntimeException("Caught unexpected exception", e);
-                }
-            });
+//            val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf());
+//            val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
+//            val dataFrame = converter.convert(rowRdd);
+//
+//            getTablesInBatch(dataFrame).forEach(table -> {
+//                try {
+//                    val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, table);
+//                    dataFrameForTable.persist();
+//
+//                    rawZone.process(spark, dataFrameForTable, table);
+//
+//                    val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, table);
+//                    curatedZoneLoad.process(spark, structuredLoadDataFrame, table);
+//
+//                    val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, table);
+//                    curatedZoneCDC.process(spark, structuredIncrementalDataFrame, table);
+//
+//                    dataFrameForTable.unpersist();
+//                } catch (Exception e) {
+//                    logger.error("Caught unexpected exception", e);
+//                    throw new RuntimeException("Caught unexpected exception", e);
+//                }
+//            });
 
             logger.info("Batch: {} - Processed {} records - processed batch in {}ms",
                     batch.id(),
