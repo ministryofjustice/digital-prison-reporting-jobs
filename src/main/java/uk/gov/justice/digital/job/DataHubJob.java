@@ -102,6 +102,8 @@ public class DataHubJob implements Runnable {
 
                     val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, table);
                     curatedZoneCDC.process(spark, structuredIncrementalDataFrame, table);
+
+                    dataFrameForTable.unpersist();
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);
