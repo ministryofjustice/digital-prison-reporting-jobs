@@ -47,7 +47,7 @@ public abstract class Writer {
         logger.info("Appending {} records to deltalake table: {}", validRecords.count(), destinationPath);
         storage.appendDistinct(destinationPath, validRecords.drop(OPERATION), primaryKey);
 
-        logger.info("Append completed successfully");
+        logger.info("Append completed successfully to table: {}", destinationPath);
         storage.updateDeltaManifestForTable(spark, destinationPath);
     }
 
@@ -62,7 +62,7 @@ public abstract class Writer {
         logger.info("Applying {} CDC records to deltalake table: {}", validRecords.count(), destinationPath);
         validRecords.collectAsList().forEach(processRow(spark, storage, destinationPath, primaryKey));
 
-        logger.info("CDC records successfully applied");
+        logger.info("CDC records successfully applied to table: {}", destinationPath);
         storage.updateDeltaManifestForTable(spark, destinationPath);
     }
 
