@@ -48,29 +48,33 @@ public abstract class CuratedZone implements Zone {
         String sourceName = table.getAs(SOURCE);
         String tableName = table.getAs(TABLE);
 
-        val sourceReference = sourceReferenceService
-                .getSourceReference(sourceName, tableName)
-                // This can only happen if the schema disappears after the structured zone has processed the data, so we
-                // should never see this in practise. However, if it does happen throwing here will make it clear what
-                // has happened.
-                .orElseThrow(() -> new IllegalStateException(
-                        "Unable to locate source reference data for source: " + sourceName + " table: " + tableName
-                ));
+        val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
 
-        val curatedTablePath = createValidatedPath(
-                curatedPath,
-                sourceReference.getSource(),
-                sourceReference.getTable()
-        );
+        if (optionalSourceReference.isPresent()) {
+            val sourceReference = optionalSourceReference.get();
 
-        writer.writeValidRecords(spark, curatedTablePath, sourceReference.getPrimaryKey(), dataFrame);
+            val curatedTablePath = createValidatedPath(
+                    curatedPath,
+                    sourceReference.getSource(),
+                    sourceReference.getTable()
+            );
 
-        logger.info("Processed batch with {} records in {}ms",
-                count,
-                System.currentTimeMillis() - startTime
-        );
+            writer.writeValidRecords(spark, curatedTablePath, sourceReference.getPrimaryKey(), dataFrame);
 
-        return dataFrame;
+            logger.info("Processed batch with {} records in {}ms",
+                    count,
+                    System.currentTimeMillis() - startTime
+            );
+
+            return dataFrame;
+        } else {
+            // This can only happen if the schema disappears after the structured zone has processed the data, so we
+            // should never see this in practise. However, if it does happen throwing here will make it clear what
+            // has happened.
+            // We're logging and skipping for now but will review as part of TODO: DPR-588
+            logger.warn("Unable to locate source reference data for source: {} table: {}", sourceName, tableName);
+            return spark.emptyDataFrame();
+        }
     }
 
 }

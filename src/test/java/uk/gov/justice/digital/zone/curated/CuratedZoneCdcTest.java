@@ -175,9 +175,22 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         assertTrue(getAllCapturedRecords(dataframeCaptor).isEmpty());
     }
 
+    @Test
+    public void shouldHandleNoSchemaFound() throws DataStorageException {
+        val testDataSet = createStructuredIncrementalDataset(spark);
+
+        givenTheSchemaDoesNotExist();
+
+        assertTrue(underTest.process(spark, testDataSet, dataMigrationEventRow).isEmpty());
+    }
+
     private void givenTheSchemaExists() {
         when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
                 .thenReturn(Optional.of(mockSourceReference));
+    }
+
+    private void givenTheSchemaDoesNotExist() {
+        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenReturn(Optional.empty());
     }
 
     private void givenTheSourceReferenceIsValid() {
