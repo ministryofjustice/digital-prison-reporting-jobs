@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.zone.curated;
 
 
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,11 +21,13 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.test.Fixtures.*;
+import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredIncrementalDataset;
 import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredLoadDataset;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,9 +88,22 @@ class CuratedZoneLoadTest extends BaseSparkTest {
         );
     }
 
+    @Test
+    public void shouldHandleNoSchemaFound() throws DataStorageException {
+        val testDataSet = createStructuredIncrementalDataset(spark);
+
+        givenTheSchemaDoesNotExist();
+
+        assertTrue(underTest.process(spark, testDataSet, dataMigrationEventRow).isEmpty());
+    }
+
     private void givenTheSchemaExists() {
         when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
                 .thenReturn(Optional.of(mockSourceReference));
+    }
+
+    private void givenTheSchemaDoesNotExist() {
+        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenReturn(Optional.empty());
     }
 
     private void givenTheSourceReferenceIsValid() {
