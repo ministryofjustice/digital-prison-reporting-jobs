@@ -123,9 +123,13 @@ public class DataHubJob implements Runnable {
         try {
             kinesisReader.setBatchProcessor(this::batchProcessor);
             kinesisReader.startAndAwaitTermination();
-        } catch (InterruptedException e) {
-            logger.error("Kinesis job interrupted");
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                logger.error("Kinesis job interrupted", e);
+            } else {
+                logger.error("Exception occurred during streaming job", e);
+                System.exit(1);
+            }
         }
     }
 

@@ -39,6 +39,7 @@ public class DomainRefreshJob implements Runnable {
             domainService.run();
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
+            System.exit(1);
         }
 
     }
