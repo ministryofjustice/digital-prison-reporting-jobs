@@ -130,10 +130,8 @@ public abstract class StructuredZone implements Zone {
                 .withColumn(ERROR, lit(errorString))
                 .drop(col(VALID));
 
-        val invalidRecordsCount = invalidRecords.count();
-
-        if (invalidRecordsCount > 0) {
-            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecordsCount);
+        if (!invalidRecords.isEmpty()) {
+            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecords.count());
             writer.writeInvalidRecords(spark, destinationPath, invalidRecords);
         }
     }
@@ -145,10 +143,9 @@ public abstract class StructuredZone implements Zone {
             SourceReference.PrimaryKey primaryKey
     ) throws DataStorageException {
         val validRecords = dataFrame.filter(col(VALID).equalTo(true)).select(PARSED_DATA + ".*", OPERATION);
-        val validRecordsCount = validRecords.count();
 
-        if (validRecordsCount > 0) {
-            logger.info("Writing {} valid records", validRecordsCount);
+        if (!validRecords.isEmpty()) {
+            logger.info("Writing {} valid records", validRecords.count());
             writer.writeValidRecords(spark, destinationPath, primaryKey, validRecords);
 
             return validRecords;

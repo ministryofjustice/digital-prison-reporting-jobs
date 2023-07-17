@@ -33,7 +33,7 @@ public class SparkSessionProvider {
                                 .enableHiveSupport()
                                 .getOrCreate();
 
-        session.sparkContext().setLogLevel(LogLevel.INFO.name());
+        session.sparkContext().setLogLevel(LogLevel.WARN.name());
 
         return session;
     }
