@@ -31,7 +31,7 @@ ext {
     jacksonVersion = '2.14.2'
     junitVersion = '5.8.1'
     log4jVersion = '2.20.0'
-    micronautVersion = '3.8.7'
+    micronautVersion = '4.0.0'
     mockitoVersion = '4.11.0'
     sparkVersion = '3.3.0'
     hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.3' downgraded for Glue 4.0
