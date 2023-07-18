@@ -74,16 +74,18 @@ public abstract class Writer {
             SourceReference.PrimaryKey primaryKey
     ) {
         return row -> {
-            val optionalOperation = getOperation(row.getAs(OPERATION));
+            String unvalidatedOperation = row.getAs(OPERATION);
+            val optionalOperation = getOperation(unvalidatedOperation);
+
             if (optionalOperation.isPresent()) {
                 val operation = optionalOperation.get();
                 try {
                     writeRow(spark, storage, destinationPath, primaryKey, operation, row);
                 } catch (DataStorageException ex) {
-                    logger.warn("Failed to {}: {} to {}", operation.getName(), row.json(), destinationPath);
+                    logger.error("Failed to {}", String.format("%s: %s to %s", operation.getName(), row.json(), destinationPath), ex);
                 }
             } else {
-                logger.error("Operation invalid for {}", row.json());
+                logger.error("Operation {} is invalid for {} to {}", unvalidatedOperation, row.json(), destinationPath);
             }
         };
     }
@@ -110,7 +112,7 @@ public abstract class Writer {
                 storage.deleteRecords(destinationPath, dataFrame, primaryKey);
                 break;
             default:
-                logger.warn(
+                logger.error(
                         "Operation {} is not allowed for incremental processing: {} to {}",
                         operation.getName(),
                         row.json(),

@@ -49,17 +49,18 @@ public class DataStorageService {
                     .option("path", tablePath)
                     .save();
         else {
-            logger.error("Path is not set or dataframe is null");
-            throw new DataStorageException("Path is not set or dataframe is null");
+            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage);
         }
     }
 
     public void appendDistinct(String tablePath, Dataset<Row> df, SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         if(!df.isEmpty()) {
-            final DeltaTable dt = getTable(df.sparkSession(), tablePath);
-            if(dt != null) {
-                final String condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-                dt.as(SOURCE)
+            val dt = getTable(df.sparkSession(), tablePath);
+            if(dt.isPresent()) {
+                val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+                dt.get().as(SOURCE)
                         .merge(df.as(TARGET), condition )
                         .whenNotMatched().insertAll()
                         .execute();
@@ -75,9 +76,9 @@ public class DataStorageService {
             SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         val dt = getTable(dataFrame.sparkSession(), tablePath);
 
-        if (dt != null) {
-            final String condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-            dt.as(SOURCE)
+        if (dt.isPresent()) {
+            val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+            dt.get().as(SOURCE)
                     .merge(dataFrame.as(TARGET), condition)
                     .whenMatched()
                     .updateAll()
@@ -95,9 +96,9 @@ public class DataStorageService {
             SourceReference.PrimaryKey primaryKey) throws DataStorageException {
         val dt = getTable(dataFrame.sparkSession(), tablePath);
 
-        if (dt != null) {
-            final String condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-            dt.as(SOURCE)
+        if (dt.isPresent()) {
+            val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+            dt.get().as(SOURCE)
                     .merge(dataFrame.as(TARGET), condition)
                     .whenMatched()
                     .delete()
@@ -117,8 +118,9 @@ public class DataStorageService {
                     .option("path", tablePath)
                     .save();
         else {
-            logger.error("Path is not set or dataframe is null");
-            throw new DataStorageException("Path is not set or dataframe is null");
+            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage);
         }
     }
 
@@ -132,8 +134,9 @@ public class DataStorageService {
                     .option("path", tablePath)
                     .save();
         else {
-            logger.error("Path is not set or dataframe is null");
-            throw new DataStorageException("Path is not set or dataframe is null");
+            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage);
         }
     }
 
@@ -146,8 +149,9 @@ public class DataStorageService {
                     .option("path", tablePath)
                     .save();
         else {
-            logger.error("Path is not set or dataframe is null");
-            throw new DataStorageException("Path is not set or dataframe is null");
+            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage);
         }
 
     }
@@ -155,19 +159,17 @@ public class DataStorageService {
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
         logger.info("Deleting Delta table {}.{}", tableId.getSchema(), tableId.getTable());
 
-        val deltaTable = Optional.ofNullable(getTable(spark, tableId.toPath()))
-                .orElseThrow(() -> new DataStorageException("Failed to delete table. Table does not exist"));
-
-        deltaTable.delete();
+        getTable(spark, tableId.toPath())
+                .orElseThrow(() -> new DataStorageException("Failed to delete table. Table does not exist"))
+                .delete();
     }
 
     public void vacuum(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
         logger.info("Vacuuming Delta table {}.{}", tableId.getSchema(), tableId.getTable());
 
-        val deltaTable = Optional.ofNullable(getTable(spark, tableId.toPath()))
-                .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"));
-
-        deltaTable.vacuum();
+        getTable(spark, tableId.toPath())
+                .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"))
+                .vacuum();
     }
 
     public Dataset<Row> get(SparkSession spark, TableIdentifier tableId) {
@@ -175,16 +177,15 @@ public class DataStorageService {
     }
 
     public Dataset<Row> get(SparkSession spark, String tablePath) {
-        DeltaTable deltaTable = getTable(spark, tablePath);
-        return deltaTable == null ? null : deltaTable.toDF();
+        return getTable(spark, tablePath).map(DeltaTable::toDF).orElse(spark.emptyDataFrame());
     }
 
-    protected DeltaTable getTable(SparkSession spark, String tablePath) {
+    protected Optional<DeltaTable> getTable(SparkSession spark, String tablePath) {
         if (DeltaTable.isDeltaTable(spark, tablePath))
-            return DeltaTable.forPath(spark, tablePath);
+            return Optional.of(DeltaTable.forPath(spark, tablePath));
         else {
             logger.warn("No valid table found for path: {} - Not a delta table", tablePath);
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -201,7 +202,7 @@ public class DataStorageService {
 
         val  deltaTable = getTable(spark, tablePath);
 
-        if (deltaTable != null) updateManifest(deltaTable);
+        if (deltaTable.isPresent()) updateManifest(deltaTable.get());
         else logger.warn("Unable to update manifest for table: {} Not a delta table", tablePath);
     }
 

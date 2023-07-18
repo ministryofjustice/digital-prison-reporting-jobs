@@ -71,7 +71,6 @@ public abstract class CuratedZone implements Zone {
             // This can only happen if the schema disappears after the structured zone has processed the data, so we
             // should never see this in practise. However, if it does happen throwing here will make it clear what
             // has happened.
-            // We're logging and skipping for now but will review as part of TODO: DPR-588
             logger.warn("Unable to locate source reference data for source: {} table: {}", sourceName, tableName);
             return spark.emptyDataFrame();
         }
