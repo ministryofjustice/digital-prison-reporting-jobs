@@ -59,16 +59,12 @@ public class DomainService {
             String domainName,
             String domainTableName,
             String domainOperation
-    ) {
+    ) throws DomainExecutorException {
         val prefix = "processing of domain: '" + domainName + "' operation: " + domainOperation + " ";
 
-        try {
-            logger.info(prefix + "started");
-            executor.doFullDomainRefresh(domain, domainTableName, domainOperation);
-            logger.info(prefix + "completed");
-        } catch (Exception e) {
-            logger.error(prefix + "failed", e);
-        }
+        logger.info(prefix + "started");
+        executor.doFullDomainRefresh(domain, domainTableName, domainOperation);
+        logger.info(prefix + "completed");
     }
 
     private DomainDefinition getDomainDefinition(String domainName,
