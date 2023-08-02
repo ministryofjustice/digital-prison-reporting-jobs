@@ -60,6 +60,7 @@ workflows:
       - reporting/gradle_promote_live:
           app: digital-prison-reporting-jobs
           sync_args: "--exclude '*' --include '*-all*jar'"
+          deploy_script: true
           release_ready: true
           notify_slack: true
           filters:
