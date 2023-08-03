@@ -13,6 +13,7 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.zone.curated.*;
 import uk.gov.justice.digital.zone.raw.RawZone;
 import uk.gov.justice.digital.zone.structured.*;
@@ -46,6 +47,7 @@ public class DataHubJob implements Runnable {
     private final StructuredZoneCDC structuredZoneCDC;
     private final CuratedZoneLoad curatedZoneLoad;
     private final CuratedZoneCDC curatedZoneCDC;
+    private final DomainService domainService;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
     private final SparkSessionProvider sparkSessionProvider;
 
@@ -57,6 +59,7 @@ public class DataHubJob implements Runnable {
         StructuredZoneCDC structuredZoneCDC,
         CuratedZoneLoad curatedZoneLoad,
         CuratedZoneCDC curatedZoneCDC,
+        DomainService domainService,
         @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
         SparkSessionProvider sparkSessionProvider
     ) {
@@ -66,6 +69,7 @@ public class DataHubJob implements Runnable {
         this.structuredZoneCDC = structuredZoneCDC;
         this.curatedZoneLoad = curatedZoneLoad;
         this.curatedZoneCDC = curatedZoneCDC;
+        this.domainService = domainService;
         this.converter = converter;
         this.sparkSessionProvider = sparkSessionProvider;
     }
@@ -101,7 +105,9 @@ public class DataHubJob implements Runnable {
                     curatedZoneLoad.process(spark, structuredLoadDataFrame, table);
 
                     val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, table);
-                    curatedZoneCDC.process(spark, structuredIncrementalDataFrame, table);
+                    val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, table);
+
+                    domainService.processIncrementally(spark, curatedCdcDataFrame, table);
 
                     dataFrameForTable.unpersist();
                 } catch (Exception e) {
