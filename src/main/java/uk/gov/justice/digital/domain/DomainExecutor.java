@@ -10,6 +10,7 @@ import org.apache.spark.sql.execution.ExplainMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
@@ -18,7 +19,6 @@ import uk.gov.justice.digital.domain.model.TableTuple;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.exception.DomainSchemaException;
-import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainSchemaService;
 
@@ -36,26 +36,25 @@ public class DomainExecutor {
     private final String sourceRootPath;
     private final String targetRootPath;
     private final DataStorageService storage;
-    private final SparkSession spark;
     private final String hiveDatabaseName;
     private final DomainSchemaService schema;
 
     @Inject
-    public DomainExecutor(JobArguments jobParameters,
-                          DataStorageService storage,
-                          DomainSchemaService schema,
-                          SparkSessionProvider sparkSessionProvider
+    public DomainExecutor(
+            JobArguments jobParameters,
+            DataStorageService storage,
+            DomainSchemaService schema
     ) {
-
+        logger.info("Initializing DomainExecutor");
         this.sourceRootPath = jobParameters.getCuratedS3Path();
         this.targetRootPath = jobParameters.getDomainTargetPath();
         this.storage = storage;
         this.hiveDatabaseName = jobParameters.getDomainCatalogDatabaseName();
         this.schema = schema;
-        this.spark = sparkSessionProvider.getConfiguredSparkSession();
+        logger.info("DomainExecutor initialization complete");
     }
 
-    protected void insertTable(TableIdentifier tableId, Dataset<Row> dataFrame)
+    protected void insertTable(SparkSession spark, TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: insertTable");
         String tablePath = tableId.toPath();
@@ -82,7 +81,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void updateTable(TableIdentifier tableId, Dataset<Row> dataFrame)
+    protected void updateTable(SparkSession spark, TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException {
         logger.info("DomainExecutor:: updateTable");
         String tablePath = tableId.toPath();
@@ -101,7 +100,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void syncTable(TableIdentifier tableId, Dataset<Row> dataFrame)
+    protected void syncTable(SparkSession spark, TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
         if (storage.exists(spark, tableId)) {
@@ -113,7 +112,7 @@ public class DomainExecutor {
         }
     }
 
-    protected void deleteTable(TableIdentifier tableId) throws DomainExecutorException {
+    protected void deleteTable(SparkSession spark, TableIdentifier tableId) throws DomainExecutorException {
         logger.info("DomainOperations:: deleteSchemaAndTableData");
         try {
             if (storage.exists(spark, tableId)) {
@@ -130,16 +129,16 @@ public class DomainExecutor {
         }
     }
 
-    protected void saveTable(TableIdentifier tableId, Dataset<Row> dataFrame,
+    protected void saveTable(SparkSession spark, TableIdentifier tableId, Dataset<Row> dataFrame,
                              String domainOperation)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainOperations::saveTable");
         if (domainOperation.equalsIgnoreCase("insert")) {
-            insertTable(tableId, dataFrame);
+            insertTable(spark, tableId, dataFrame);
         } else if (domainOperation.equalsIgnoreCase("update")) {
-            updateTable(tableId, dataFrame);
+            updateTable(spark, tableId, dataFrame);
         } else if (domainOperation.equalsIgnoreCase("sync")) {
-            syncTable(tableId, dataFrame);
+            syncTable(spark, tableId, dataFrame);
         } else {
             // Handle invalid operation type
             logger.error("Invalid operation type " + domainOperation);
@@ -148,14 +147,17 @@ public class DomainExecutor {
         storage.endTableUpdates(spark, tableId);
     }
 
-    private void saveViolations(TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
+    private void saveViolations(SparkSession spark, TableIdentifier target, Dataset<Row> dataFrame) throws DataStorageException {
         storage.append(target.toPath(), dataFrame);
         storage.endTableUpdates(spark, target);
     }
 
-    public Dataset<Row> getAllSourcesForTable(String sourcePath,
-                                              String source,
-                                              TableTuple exclude) {
+    public Dataset<Row> getAllSourcesForTable(
+            SparkSession spark,
+            String sourcePath,
+            String source,
+            TableTuple exclude
+    ) {
         if (exclude == null || !exclude.asString().equalsIgnoreCase(source)) {
             try {
                 TableTuple full = new TableTuple(source);
@@ -181,7 +183,7 @@ public class DomainExecutor {
     }
 
 
-    protected Dataset<Row> applyViolations(Dataset<Row> dataFrame, List<ViolationDefinition> violations)
+    public Dataset<Row> applyViolations(SparkSession spark, Dataset<Row> dataFrame, List<ViolationDefinition> violations)
             throws DataStorageException {
         var sourceDataframe = dataFrame;
         for (val violation : violations) {
@@ -197,14 +199,14 @@ public class DomainExecutor {
                         violation.getLocation(),
                         violation.getName()
                 );
-                saveViolations(info, violationsDataframe);
+                saveViolations(spark, info, violationsDataframe);
                 sourceDataframe = sourceDataframe.except(violationsDataframe);
             }
         }
         return sourceDataframe;
     }
 
-    protected Dataset<Row> applyTransform(Map<String, Dataset<Row>> dfs, TransformDefinition transform)
+    public Dataset<Row> applyTransform(SparkSession spark, Map<String, Dataset<Row>> dfs, TransformDefinition transform)
             throws DomainExecutorException {
         List<String> sources = new ArrayList<>();
         String view = transform.getViewText().toLowerCase();
@@ -231,7 +233,7 @@ public class DomainExecutor {
             }
             logger.info("Executing view '" + view + "'...");
             // This will validate whether the given SQL is valid
-            return validateSQLAndExecute(view);
+            return validateSQLAndExecute(spark, view);
         } finally {
             if (!view.isEmpty()) {
                 sources.forEach(s -> spark.catalog().dropTempView(s));
@@ -239,7 +241,40 @@ public class DomainExecutor {
         }
     }
 
-    private Dataset<Row> validateSQLAndExecute(String query) {
+    public void saveDomain(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String domainTableName,
+            TableDefinition tableDefinition,
+            DMS_3_4_6.Operation operation
+    ) throws DataStorageException {
+        val primaryKeyName = tableDefinition.getPrimaryKey();
+        logger.info("Writing {} record: {} with primary key {}", operation.getName(), domainTableName, primaryKeyName);
+        TableIdentifier target = new TableIdentifier(
+                targetRootPath,
+                hiveDatabaseName,
+                tableDefinition.getLocation(),
+                tableDefinition.getName()
+        );
+        val primaryKey = new SourceReference.PrimaryKey(primaryKeyName);
+        switch (operation) {
+            case Delete:
+                storage.deleteRecords(target.toPath(), dataFrame, primaryKey);
+                break;
+            case Insert:
+                storage.append(target.toPath(), dataFrame);
+                storage.endTableUpdates(spark, target);
+                break;
+            case Update:
+                storage.updateRecords(target.toPath(), dataFrame, primaryKey);
+                storage.endTableUpdates(spark, target);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private Dataset<Row> validateSQLAndExecute(SparkSession spark, String query) {
         Dataset<Row> dataframe = null;
         if (!query.isEmpty()) {
             try {
@@ -262,7 +297,7 @@ public class DomainExecutor {
         return dataFrame;
     }
 
-    public Dataset<Row> apply(TableDefinition table, Map<String, Dataset<Row>> sourceTableMap)
+    public Dataset<Row> apply(SparkSession spark, TableDefinition table, Map<String, Dataset<Row>> sourceTableMap)
             throws DomainExecutorException {
         try {
             logger.info("Apply Method for " + table.getName() + "...");
@@ -274,7 +309,7 @@ public class DomainExecutor {
             } else if (table.getTransform() != null && table.getTransform().getSources() != null
                     && !table.getTransform().getSources().isEmpty()) {
                 for (String source : table.getTransform().getSources()) {
-                    Dataset<Row> sourceDataFrame = getAllSourcesForTable(sourceRootPath, source, null);
+                    Dataset<Row> sourceDataFrame = getAllSourcesForTable(spark, sourceRootPath, source, null);
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
                     } else {
@@ -290,11 +325,11 @@ public class DomainExecutor {
 
 
             logger.info("'" + table.getName() + "' has " + refs.size() + " references to tables...");
-            Dataset<Row> transformedDataFrame = applyTransform(refs, table.getTransform());
+            Dataset<Row> transformedDataFrame = applyTransform(spark, refs, table.getTransform());
 
             logger.info("Apply Violations for " + table.getName() + "...");
             // Process Violations - we now have a subset
-            Dataset<Row> postViolationsDataFrame = applyViolations(transformedDataFrame, table.getViolations());
+            Dataset<Row> postViolationsDataFrame = applyViolations(spark, transformedDataFrame, table.getViolations());
 
             logger.info("Apply Mappings for " + table.getName() + "...");
             // Mappings
@@ -308,15 +343,18 @@ public class DomainExecutor {
         }
     }
 
-    public void doDomainDelete(String domainName, String domainTableName) throws DomainExecutorException {
+    public void doDomainDelete(SparkSession spark, String domainName, String domainTableName) throws DomainExecutorException {
         val tableId = new TableIdentifier(targetRootPath, hiveDatabaseName, domainName, domainTableName);
         logger.info("Executing delete for {}", tableId);
-        deleteTable(tableId);
+        deleteTable(spark, tableId);
     }
 
-    public void doFullDomainRefresh(DomainDefinition domainDefinition,
-                                    String domainTableName,
-                                    String operation) throws DomainExecutorException {
+    public void doFullDomainRefresh(
+            SparkSession spark,
+            DomainDefinition domainDefinition,
+            String domainTableName,
+            String operation
+    ) throws DomainExecutorException {
 
         if (fullRefreshOperations.contains(operation.toLowerCase())) {
             val table = domainDefinition.getTables().stream()
@@ -329,10 +367,11 @@ public class DomainExecutor {
 
 
             // no source table and df they are required only for unit testing
-            val dfTarget = apply(table, null);
+            val dfTarget = apply(spark, table, null);
 
             try {
                 saveTable(
+                        spark,
                         new TableIdentifier(
                                 targetRootPath,
                                 hiveDatabaseName,

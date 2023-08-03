@@ -121,13 +121,13 @@ public abstract class StructuredZone implements Zone {
             String table,
             String destinationPath
     ) throws DataStorageException {
-        val errorString = String.format("Record does not match schema %s/%s", source, table);
+        val errorPrefix = String.format("Record does not match schema %s/%s: ", source, table);
 
         // Write invalid records where schema validation failed
         val invalidRecords = dataFrame
-                .select(col(DATA), col(METADATA), col(VALID))
+                .select(col(DATA), col(METADATA), col(VALID), col(ERROR))
                 .filter(col(VALID).equalTo(false))
-                .withColumn(ERROR, lit(errorString))
+                .withColumn(ERROR, concat(lit(errorPrefix), lit(col(ERROR))))
                 .drop(col(VALID));
 
         if (!invalidRecords.isEmpty()) {
@@ -168,7 +168,8 @@ public abstract class StructuredZone implements Zone {
         return dataFrame
                 .select(col(DATA), col(METADATA), col(OPERATION))
                 .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
-                .withColumn(VALID, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)));
+                .withColumn(ERROR, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)))
+                .withColumn(VALID, col(ERROR).equalTo(lit("")));
     }
 
     private Dataset<Row> createEmptyDataFrame(Dataset<Row> dataFrame) {

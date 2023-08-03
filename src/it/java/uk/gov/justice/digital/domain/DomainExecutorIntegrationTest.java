@@ -6,14 +6,12 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mock;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DomainExecutorException;
-import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainSchemaService;
 import uk.gov.justice.digital.test.ResourceLoader;
@@ -32,7 +30,6 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
-    private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
     private static final DataStorageService storage = new DataStorageService();
     private static final String hiveDatabaseName = "test_db";
 
@@ -54,7 +51,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
         for (val table : domainDefinition.getTables()) {
-            val dataframe = executor.apply(table, getOffenderRefs());
+            val dataframe = executor.apply(spark, table, getOffenderRefs());
             assertEquals(dataframe.schema(), helpers.createIncidentDomainDataframe().schema());
         }
     }
@@ -68,14 +65,14 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
         val domainDefinition = getDomain("/sample/domain/incident_domain.json");
 
         for (val table : domainDefinition.getTables()) {
-            val df = executor.apply(table, getOffenderRefs());
+            val df = executor.apply(spark, table, getOffenderRefs());
             val targetInfo = new TableIdentifier(
                     domainTargetPath(),
                     hiveDatabaseName,
                     domainDefinition.getName(),
                     table.getName()
             );
-            executor.saveTable(targetInfo, df, "insert");
+            executor.saveTable(spark, targetInfo, df, "insert");
         }
 
         verify(testSchemaService, atLeastOnce()).create(any(), any(), any());
@@ -96,9 +93,9 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
 
         val domainTableName = "prisoner";
         // Insert first
-        executor.doFullDomainRefresh(domain, domainTableName, "insert");
+        executor.doFullDomainRefresh(spark, domain, domainTableName, "insert");
         // then update
-        executor.doFullDomainRefresh(domain, domainTableName, "update");
+        executor.doFullDomainRefresh(spark, domain, domainTableName, "update");
         verify(testSchemaService, times(1)).create(any(), any(), any());
         verify(testSchemaService, times(1)).replace(any(), any(), any());
 
@@ -130,7 +127,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath(), targetPath(), storage, testSchemaService);
 
-        executor.doFullDomainRefresh(domain1, domainTableName, "insert");
+        executor.doFullDomainRefresh(spark, domain1, domainTableName, "insert");
 
         verify(testSchemaService, times(1)).create(any(), any(), any());
 
@@ -141,7 +138,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
         assertEquals(1, storage.get(spark, info).count());
 
         // now the reverse
-        executor.doFullDomainRefresh(domain2, domainTableName, "update");
+        executor.doFullDomainRefresh(spark, domain2, domainTableName, "update");
         verify(testSchemaService, times(1)).replace(any(), any(), any());
 
         // there should be a target table
@@ -164,7 +161,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
 
         assertThrows(
                 DomainExecutorException.class,
-                () -> executor.doFullDomainRefresh(domain, "prisoner", "insert")
+                () -> executor.doFullDomainRefresh(spark, domain, "prisoner", "insert")
         );
 
         // there shouldn't be a target table
@@ -188,7 +185,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
         );
         transform.setSources(Collections.singletonList(transformSource));
 
-        val result1 = executor.applyTransform(Collections.singletonMap(transformSource, inputs), transform);
+        val result1 = executor.applyTransform(spark, Collections.singletonMap(transformSource, inputs), transform);
 
         assertEquals(inputs.count(), result1.count());
         assertFalse(areEqual(inputs, result1));
@@ -198,7 +195,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
                         "from source.table a"
         );
 
-        val result2 = executor.applyTransform(Collections.singletonMap(transformSource, inputs), transform);
+        val result2 = executor.applyTransform(spark, Collections.singletonMap(transformSource, inputs), transform);
 
         assertEquals(inputs.count(), result2.count());
         assertFalse(areEqual(inputs, result2));
@@ -220,7 +217,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
         when(mockJobParameters.getCuratedS3Path()).thenReturn(source);
         when(mockJobParameters.getDomainTargetPath()).thenReturn(target);
         when(mockJobParameters.getDomainCatalogDatabaseName()).thenReturn(hiveDatabaseName);
-        return new DomainExecutor(mockJobParameters, storage, schemaService, sparkSessionProvider);
+        return new DomainExecutor(mockJobParameters, storage, schemaService);
     }
 
     private String domainTargetPath() {

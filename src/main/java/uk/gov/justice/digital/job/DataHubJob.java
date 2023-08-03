@@ -13,9 +13,12 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.zone.curated.*;
+import uk.gov.justice.digital.service.DomainService;
+import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
+import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.raw.RawZone;
-import uk.gov.justice.digital.zone.structured.*;
+import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
+import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -46,6 +49,7 @@ public class DataHubJob implements Runnable {
     private final StructuredZoneCDC structuredZoneCDC;
     private final CuratedZoneLoad curatedZoneLoad;
     private final CuratedZoneCDC curatedZoneCDC;
+    private final DomainService domainService;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
     private final SparkSessionProvider sparkSessionProvider;
 
@@ -57,17 +61,21 @@ public class DataHubJob implements Runnable {
         StructuredZoneCDC structuredZoneCDC,
         CuratedZoneLoad curatedZoneLoad,
         CuratedZoneCDC curatedZoneCDC,
+        DomainService domainService,
         @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
         SparkSessionProvider sparkSessionProvider
     ) {
+        logger.info("Initializing DataHubJob");
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
         this.curatedZoneLoad = curatedZoneLoad;
         this.curatedZoneCDC = curatedZoneCDC;
+        this.domainService = domainService;
         this.converter = converter;
         this.sparkSessionProvider = sparkSessionProvider;
+        logger.info("DataHubJob initialization complete");
     }
 
     public static void main(String[] args) {
@@ -90,18 +98,21 @@ public class DataHubJob implements Runnable {
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             val dataFrame = converter.convert(rowRdd);
 
-            getTablesInBatch(dataFrame).forEach(table -> {
+            getTablesInBatch(dataFrame).forEach(tableInfo -> {
                 try {
-                    val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, table);
+                    val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
                     dataFrameForTable.persist();
 
-                    rawZone.process(spark, dataFrameForTable, table);
+                    rawZone.process(spark, dataFrameForTable, tableInfo);
 
-                    val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, table);
-                    curatedZoneLoad.process(spark, structuredLoadDataFrame, table);
+                    val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
+                    curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
 
-                    val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, table);
-                    curatedZoneCDC.process(spark, structuredIncrementalDataFrame, table);
+                    val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
+                    val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
+
+                    if (!curatedCdcDataFrame.isEmpty()) domainService
+                            .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
 
                     dataFrameForTable.unpersist();
                 } catch (Exception e) {
