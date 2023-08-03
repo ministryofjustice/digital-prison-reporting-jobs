@@ -2,16 +2,20 @@ package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
 import lombok.val;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
+import java.util.HashMap;
 import java.util.Optional;
 
 @Singleton
@@ -204,6 +208,39 @@ public class DataStorageService {
 
         if (deltaTable.isPresent()) updateManifest(deltaTable.get());
         else logger.warn("Unable to update manifest for table: {} Not a delta table", tablePath);
+    }
+
+    public void writeToRedshift(
+            Dataset<Row> dataFrame,
+            HashMap<String, String> redshiftOptions,
+            String domainTableName,
+            String primaryKeyName,
+            String primaryKeyValue,
+            DMS_3_4_6.Operation operation
+    ) {
+        val domainRecord = dataFrame.write()
+                .format("io.github.spark_redshift_community.spark.redshift")
+                .options(redshiftOptions)
+                .option("dbtable", domainTableName)
+                .mode(SaveMode.Append);
+
+        switch (operation) {
+            case Delete:
+                if (NumberUtils.isDigits(primaryKeyValue)) {
+                    val deleteQuery = String.format("delete from %s where %s = %s", domainTableName, primaryKeyName, primaryKeyValue);
+                    domainRecord.option("postactions", deleteQuery).save();
+                } else {
+                    val deleteQuery = String.format("delete from %s where %s = '%s'", domainTableName, primaryKeyName, primaryKeyValue);
+                    domainRecord.option("postactions", deleteQuery).save();
+                }
+                break;
+            case Insert:
+            case Update:
+                domainRecord.save();
+                break;
+            default:
+                break;
+        }
     }
 
 }
