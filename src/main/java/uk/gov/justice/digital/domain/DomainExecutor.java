@@ -3,6 +3,8 @@ package uk.gov.justice.digital.domain;
 
 import lombok.val;
 import lombok.var;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -25,6 +27,9 @@ import uk.gov.justice.digital.service.DomainSchemaService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.apache.spark.sql.functions.col;
 
 @Singleton
 public class DomainExecutor {
@@ -181,7 +186,7 @@ public class DomainExecutor {
     }
 
 
-    protected Dataset<Row> applyViolations(Dataset<Row> dataFrame, List<ViolationDefinition> violations)
+    public Dataset<Row> applyViolations(Dataset<Row> dataFrame, List<ViolationDefinition> violations)
             throws DataStorageException {
         var sourceDataframe = dataFrame;
         for (val violation : violations) {
@@ -204,7 +209,7 @@ public class DomainExecutor {
         return sourceDataframe;
     }
 
-    protected Dataset<Row> applyTransform(Map<String, Dataset<Row>> dfs, TransformDefinition transform)
+    public Dataset<Row> applyTransform(Map<String, Dataset<Row>> dfs, TransformDefinition transform)
             throws DomainExecutorException {
         List<String> sources = new ArrayList<>();
         String view = transform.getViewText().toLowerCase();
@@ -351,6 +356,31 @@ public class DomainExecutor {
         else {
             val message = "Unsupported domain operation: '" + operation + "'";
             throw new DomainExecutorException(message);
+        }
+    }
+
+    public List<DomainDefinition> getDomainDefinitions(SparkSession spark, String domainRegistry) {
+//        JsonOptions options = new JsonOptions("{\"dynamodb.input.tableName\": " + "\"" + domainRegistry + "\"}");
+//        JsonOptions formatOptions = new JsonOptions("{}");
+//        DataSource glueContext = new GlueContext(spark.sparkContext())
+//                .getSourceWithFormat("dynamodb", options, "", "json", formatOptions);
+//
+//        return glueContext.getDataFrame()
+//                .select(col("data"))
+//                .collectAsList()
+//                .stream()
+//                .map(row -> parseDomain(row.getString(0)))
+//                .collect(Collectors.toList());
+
+        return new ArrayList<>();
+    }
+
+    private DomainDefinition parseDomain(String domainString) {
+        try {
+            return new ObjectMapper().readValue(domainString, DomainDefinition.class);
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to parse domain string", e);
+            throw new RuntimeException(e);
         }
     }
 
