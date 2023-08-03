@@ -24,6 +24,7 @@ jacoco {
 
 repositories {
     mavenCentral()
+    maven { url "https://aws-glue-etl-artifacts.s3.amazonaws.com/release/" }
 }
 
 ext {
@@ -36,7 +37,8 @@ ext {
     sparkVersion = '3.3.0'
     hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.3' downgraded for Glue 4.0
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
-    glueSdkVersion = '1.12.425'
+    awsSdkVersion = '1.12.425'
+    awsGlueETLVersion = '4.0.0'
 }
 
 dependencies {
@@ -47,7 +49,8 @@ dependencies {
     compileOnly "org.apache.hadoop:hadoop-aws:$hadoopVersion"
     compileOnly "com.amazonaws:amazon-kinesis-client:$awsKinesisVersion" // transitively brings in java-sdk-core
 
-    implementation "com.amazonaws:aws-java-sdk-glue:$glueSdkVersion" // transitively brings in java-sdk-core
+    implementation "com.amazonaws:aws-java-sdk-secretsmanager:$awsSdkVersion"
+    implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion" // transitively brings in java-sdk-core
 
     implementation "org.apache.spark:spark-avro_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
@@ -180,3 +183,4 @@ test {
 assemble {
   dependsOn shadowJar
 }
+
