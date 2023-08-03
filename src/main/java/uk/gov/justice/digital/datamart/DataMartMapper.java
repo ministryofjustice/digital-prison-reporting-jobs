@@ -29,7 +29,7 @@ public class DataMartMapper {
     @Inject
     public DataMartMapper(
             JobArguments jobArguments,
-            SecretsManagerClient secretsManagerClient,
+//            SecretsManagerClient secretsManagerClient,
             DataStorageService storage
     ) throws SecretsManagerClientException {
         this.storage = storage;
