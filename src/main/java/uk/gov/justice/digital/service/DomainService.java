@@ -38,18 +38,18 @@ public class DomainService {
 
     private final DomainDefinitionClient domainClient;
     private final DomainExecutor executor;
-    private final DataMartMapper dataMartMapper;
+//    private final DataMartMapper dataMartMapper;
     private final JobArguments arguments;
 
     @Inject
     public DomainService(JobArguments arguments,
                          DomainDefinitionClient domainClient,
-                         DomainExecutor executor,
-                         DataMartMapper dataMartMapper) {
+                         DomainExecutor executor
+                         ) {
         this.arguments = arguments;
         this.domainClient = domainClient;
         this.executor = executor;
-        this.dataMartMapper = dataMartMapper;
+//        this.dataMartMapper = dataMartMapper;
     }
 
     public void run() throws DomainServiceException, DomainExecutorException {
@@ -81,13 +81,13 @@ public class DomainService {
 
                                                 executor.applyViolations(transformedDataFrame, tableDefinition.getViolations());
 
-                                                dataMartMapper.mapToRedshift(
-                                                        transformedDataFrame,
-                                                        domainDefinition.getName(),
-                                                        tableDefinition,
-                                                        row.getAs(tableDefinition.getPrimaryKey()),
-                                                        operation
-                                                );
+//                                                dataMartMapper.mapToRedshift(
+//                                                        transformedDataFrame,
+//                                                        domainDefinition.getName(),
+//                                                        tableDefinition,
+//                                                        row.getAs(tableDefinition.getPrimaryKey()),
+//                                                        operation
+//                                                );
                                             } catch (DomainExecutorException | DataStorageException e) {
                                                 logger.error("Failed to process domain for record", e);
                                             }

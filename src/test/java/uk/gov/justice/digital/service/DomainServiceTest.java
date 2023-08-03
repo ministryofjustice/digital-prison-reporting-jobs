@@ -52,7 +52,7 @@ public class DomainServiceTest extends BaseSparkTest {
 
     @BeforeEach
     public void setup() {
-        underTest = new DomainService(mockJobArguments, mockDomainDefinitionClient, mockDomainExecutor, mockDomainWriter);
+        underTest = new DomainService(mockJobArguments, mockDomainDefinitionClient, mockDomainExecutor);
     }
 
     @Test
