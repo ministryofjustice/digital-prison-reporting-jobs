@@ -3,6 +3,7 @@ package uk.gov.justice.digital.job.udf;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
+import org.apache.logging.log4j.core.util.Assert;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
@@ -38,7 +39,7 @@ class JsonValidatorTest {
     @Test
     public void shouldPassValidJsonWithOnlyMandatoryFieldSet() throws JsonProcessingException {
         val json = createJsonFromEntries(Collections.singletonList(entry(Fields.MANDATORY, "somevalue")));
-        assertTrue(underTest.validate(json, json, schema));
+        Assert.isEmpty(underTest.validate(json, json, schema));
     }
 
     @Test
@@ -48,14 +49,14 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
         ));
-        assertTrue(underTest.validate(json, json, schema));
+        Assert.isEmpty(underTest.validate(json, json, schema));
     }
 
     @Test
     public void shouldPassValidJsonIrrespectiveOfFieldOrdering() throws JsonProcessingException {
         val json = "{\"mandatory\":\"foo\",\"numeric\":1}";
         val jsonWithReverseFieldOrder = "{\"numeric\":1,\"mandatory\":\"foo\"}";
-        assertTrue(underTest.validate(json, jsonWithReverseFieldOrder, schema));
+        Assert.isEmpty(underTest.validate(json, jsonWithReverseFieldOrder, schema));
     }
 
     @Test
@@ -64,7 +65,7 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
         ));
-        assertFalse(underTest.validate(json, json, schema));
+        Assert.isNonEmpty(underTest.validate(json, json, schema));
     }
 
     @Test
@@ -81,7 +82,7 @@ class JsonValidatorTest {
                 entry(Fields.NUMERIC, "42")
         ));
 
-        assertFalse(underTest.validate(json, fakeParsedJson, schema));
+        Assert.isNonEmpty(underTest.validate(json, fakeParsedJson, schema));
     }
 
     /**
@@ -103,7 +104,7 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue")
         ));
 
-        assertFalse(underTest.validate(json, fakeParsedJson, schema));
+        Assert.isNonEmpty(underTest.validate(json, fakeParsedJson, schema));
     }
 
     @Test
@@ -114,8 +115,8 @@ class JsonValidatorTest {
                 entry(Fields.NUMERIC, "this is not a number")
         ));
 
-        assertTrue(underTest.validate(null, json, schema));
-        assertTrue(underTest.validate(json, null, schema));
+        Assert.isEmpty(underTest.validate(null, json, schema));
+        Assert.isEmpty(underTest.validate(json, null, schema));
     }
 
     private static SimpleEntry<String, Object> entry(String key, Object value) {

@@ -64,7 +64,7 @@ public class DataMartMapper {
         val primaryKey = tableDefinition.getPrimaryKey();
 
         logger.info("Writing domain to {} {}", DATABASE_NAME, dataMartTableName);
-//        storage.writeToRedshift(dataFrame, redshiftOptions, dataMartTableName, primaryKey, primaryKeyValue, operation);
+        storage.writeToRedshift(dataFrame, redshiftOptions, dataMartTableName, primaryKey, primaryKeyValue, operation);
         logger.info("Domain successfully written to {} {}", DATABASE_NAME, dataMartTableName);
     }
 }
