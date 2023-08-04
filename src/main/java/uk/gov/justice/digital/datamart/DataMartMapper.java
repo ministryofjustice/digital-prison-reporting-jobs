@@ -32,6 +32,7 @@ public class DataMartMapper {
             SecretsManagerClient secretsManagerClient,
             DataStorageService storage
     ) throws SecretsManagerClientException {
+        logger.info("Init DataMartMapper");
         this.storage = storage;
 
         try {
@@ -50,6 +51,8 @@ public class DataMartMapper {
             logger.error("Failed to initialize redshift connection", ex);
             throw ex;
         }
+
+        logger.info("DataMartMapper Created");
     }
 
     public void mapToRedshift(

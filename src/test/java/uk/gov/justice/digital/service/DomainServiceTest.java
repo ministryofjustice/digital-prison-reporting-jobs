@@ -44,7 +44,7 @@ public class DomainServiceTest extends BaseSparkTest {
     @Mock private DomainExecutor mockDomainExecutor;
     @Mock private DomainDefinition mockDomainDefinition;
     @Mock
-    private DataMartMapper mockDomainWriter;
+    private DataMartMapper mockDataMartMapper;
     @Captor
     ArgumentCaptor<Dataset<Row>> dataframeCaptor;
 
@@ -52,7 +52,7 @@ public class DomainServiceTest extends BaseSparkTest {
 
     @BeforeEach
     public void setup() {
-        underTest = new DomainService(mockJobArguments, mockDomainDefinitionClient, mockDomainExecutor);
+        underTest = new DomainService(mockJobArguments, mockDomainDefinitionClient, mockDomainExecutor, mockDataMartMapper);
     }
 
     @Test
@@ -107,7 +107,7 @@ public class DomainServiceTest extends BaseSparkTest {
                 );
 
         doNothing()
-                .when(mockDomainWriter)
+                .when(mockDataMartMapper)
                 .mapToRedshift(
                         dataframeCaptor.capture(),
                         eq(domainName),
@@ -136,7 +136,7 @@ public class DomainServiceTest extends BaseSparkTest {
                 .thenReturn(Collections.singletonList(domainDefinition));
 
         verifyNoInteractions(mockDomainExecutor);
-        verifyNoInteractions(mockDomainWriter);
+        verifyNoInteractions(mockDataMartMapper);
 
         underTest.processIncrementally(spark, recordsToInsert, tableRow);
     }
