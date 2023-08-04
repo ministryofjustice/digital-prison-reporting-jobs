@@ -37,7 +37,7 @@ ext {
     sparkVersion = '3.3.0'
     hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.3' downgraded for Glue 4.0
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
-    awsSecretsManagerVersion = '1.12.425'
+    awsSecretsManagerVersion = '1.11.420'
     awsSdkVersion = '1.12.425'
     awsGlueETLVersion = '4.0.0'
 }
