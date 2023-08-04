@@ -38,18 +38,18 @@ public class DomainService {
 
     private final DomainDefinitionClient domainClient;
     private final DomainExecutor executor;
-    private final DataMartMapper dataMartMapper;
+//    private final DataMartMapper dataMartMapper;
     private final JobArguments arguments;
 
     @Inject
     public DomainService(JobArguments arguments,
                          DomainDefinitionClient domainClient,
-                         DomainExecutor executor,
-                         DataMartMapper dataMartMapper) {
+                         DomainExecutor executor
+                         ) {
         this.arguments = arguments;
         this.domainClient = domainClient;
         this.executor = executor;
-        this.dataMartMapper = dataMartMapper;
+//        this.dataMartMapper = dataMartMapper;
     }
 
     public void run() throws DomainServiceException, DomainExecutorException {
@@ -62,41 +62,41 @@ public class DomainService {
 
     public void processIncrementally(SparkSession spark, Dataset<Row> dataFrame, Row table) {
 
-        String rowTable = table.getAs(TABLE);
-        val relevantDomainDefinitions = getRelevantDomainDefinitions(spark, rowTable);
-
-        relevantDomainDefinitions.forEach(domainDefinition ->
-                dataFrame.collectAsList().forEach(row -> {
-                            String unvalidatedOperation = row.getAs(OPERATION);
-                            val optionalOperation = getOperation(unvalidatedOperation);
-
-                            optionalOperation.filter(operation -> operation != Load).ifPresent(operation -> {
-                                val records = spark.createDataFrame(new ArrayList<>(ImmutableList.of(row)), row.schema());
-
-                                domainDefinition.getTables().forEach(tableDefinition -> {
-                                            Map<String, Dataset<Row>> refs = new HashMap<>();
-                                            tableDefinition.getTransform().getSources().forEach(source -> refs.put(source, records));
-                                            try {
-                                                val transformedDataFrame = executor.applyTransform(refs, tableDefinition.getTransform());
-
-                                                executor.applyViolations(transformedDataFrame, tableDefinition.getViolations());
-
-                                                dataMartMapper.mapToRedshift(
-                                                        transformedDataFrame,
-                                                        domainDefinition.getName(),
-                                                        tableDefinition,
-                                                        row.getAs(tableDefinition.getPrimaryKey()),
-                                                        operation
-                                                );
-                                            } catch (DomainExecutorException | DataStorageException e) {
-                                                logger.error("Failed to process domain for record", e);
-                                            }
-                                        }
-                                );
-                            });
-                        }
-                )
-        );
+//        String rowTable = table.getAs(TABLE);
+//        val relevantDomainDefinitions = getRelevantDomainDefinitions(spark, rowTable);
+//
+//        relevantDomainDefinitions.forEach(domainDefinition ->
+//                dataFrame.collectAsList().forEach(row -> {
+//                            String unvalidatedOperation = row.getAs(OPERATION);
+//                            val optionalOperation = getOperation(unvalidatedOperation);
+//
+//                            optionalOperation.filter(operation -> operation != Load).ifPresent(operation -> {
+//                                val records = spark.createDataFrame(new ArrayList<>(ImmutableList.of(row)), row.schema());
+//
+//                                domainDefinition.getTables().forEach(tableDefinition -> {
+//                                            Map<String, Dataset<Row>> refs = new HashMap<>();
+//                                            tableDefinition.getTransform().getSources().forEach(source -> refs.put(source, records));
+//                                            try {
+//                                                val transformedDataFrame = executor.applyTransform(refs, tableDefinition.getTransform());
+//
+//                                                executor.applyViolations(transformedDataFrame, tableDefinition.getViolations());
+//
+//                                                dataMartMapper.mapToRedshift(
+//                                                        transformedDataFrame,
+//                                                        domainDefinition.getName(),
+//                                                        tableDefinition,
+//                                                        row.getAs(tableDefinition.getPrimaryKey()),
+//                                                        operation
+//                                                );
+//                                            } catch (DomainExecutorException | DataStorageException e) {
+//                                                logger.error("Failed to process domain for record", e);
+//                                            }
+//                                        }
+//                                );
+//                            });
+//                        }
+//                )
+//        );
     }
 
     private void runInternal(

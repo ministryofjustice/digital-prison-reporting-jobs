@@ -29,27 +29,27 @@ public class DataMartMapper {
     @Inject
     public DataMartMapper(
             JobArguments jobArguments,
-//            SecretsManagerClient secretsManagerClient,
+            SecretsManagerClient secretsManagerClient,
             DataStorageService storage
     ) throws SecretsManagerClientException {
         this.storage = storage;
 
-//        try {
+        try {
             val secretsName = jobArguments.getRedshiftSecretsName();
-//            val redshiftConfig = secretsManagerClient.getSecret(secretsName, RedshiftConfig.class);
-//            val jdbcURL = String.format(
-//                    "jdbc:redshift://%s/%s?user=%s&password=%s",
-//                    redshiftConfig.getHost(),
-//                    DATABASE_NAME,
-//                    redshiftConfig.getUsername(),
-//                    redshiftConfig.getPassword()
-//            );
-//
-//            redshiftOptions.put("url", jdbcURL);
-//        } catch (SecretsManagerClientException ex) {
-//            logger.error("Failed to initialize redshift connection", ex);
-//            throw ex;
-//        }
+            val redshiftConfig = secretsManagerClient.getSecret(secretsName, RedshiftConfig.class);
+            val jdbcURL = String.format(
+                    "jdbc:redshift://%s/%s?user=%s&password=%s",
+                    redshiftConfig.getHost(),
+                    DATABASE_NAME,
+                    redshiftConfig.getUsername(),
+                    redshiftConfig.getPassword()
+            );
+
+            redshiftOptions.put("url", jdbcURL);
+        } catch (SecretsManagerClientException ex) {
+            logger.error("Failed to initialize redshift connection", ex);
+            throw ex;
+        }
     }
 
     public void mapToRedshift(
