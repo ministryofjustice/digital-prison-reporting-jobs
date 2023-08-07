@@ -43,6 +43,8 @@ public class JobArguments {
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
+    public static final String REDSHIFT_SECRETS_NAME = "dpr.redshift.secrets.name";
+    public static final String DATA_MART_DB_NAME = "dpr.datamart.db.name";
 
     private final Map<String, String> config;
 
@@ -123,6 +125,10 @@ public class JobArguments {
     public String getContractRegistryName() {
         return getArgument(CONTRACT_REGISTRY_NAME);
     }
+
+    public String getRedshiftSecretsName() { return getArgument(REDSHIFT_SECRETS_NAME); }
+
+    public String getDataMartDbName() { return getArgument(DATA_MART_DB_NAME); }
 
     private String getArgument(String argumentName) {
         return Optional

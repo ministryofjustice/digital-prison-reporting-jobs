@@ -3,16 +3,12 @@ package uk.gov.justice.digital.client.dynamodb;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public abstract class DynamoDBClient {
 
@@ -57,14 +53,19 @@ public abstract class DynamoDBClient {
 
     }
 
-    protected <T> List<T> parseResponse(QueryResult response, Class<T> valueType) throws DatabaseClientException {
+    protected ScanResult scanTable() {
+        ScanRequest scanRequest = new ScanRequest().withTableName(tableName);
+        return client.scan(scanRequest);
+    }
+
+    protected  <T> List<T> parseResponseItems(List<java.util.Map<String, AttributeValue>> items, Class<T> valueType) throws DatabaseClientException {
         List<T> results = new ArrayList<>();
-        if (response != null) {
-            for (Map<String, AttributeValue> items : response.getItems()) {
+        if (items != null) {
+            for (Map<String, AttributeValue> item : items) {
                 try {
-                    val data = items.get(dataField).getS();
+                    val data = item.get(dataField).getS();
                     results.add(mapper.readValue(data, valueType));
-                } catch (JsonProcessingException e) {
+                } catch (Exception e) {
                     throw new DatabaseClientException("JSON Processing failed ", e);
                 }
             }

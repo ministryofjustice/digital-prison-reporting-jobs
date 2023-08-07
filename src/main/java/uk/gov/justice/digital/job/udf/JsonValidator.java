@@ -83,21 +83,21 @@ public class JsonValidator implements Serializable {
             .register(
                 String.format("udfValidatorFor%s%s", schemaName, tableName),
                 udf(
-                    (UDF2<String, String, Boolean>) (String originalJson, String parsedJson) ->
+                    (UDF2<String, String, String>) (String originalJson, String parsedJson) ->
                         jsonValidator.validate(originalJson, parsedJson, schema),
-                        DataTypes.BooleanType
+                        DataTypes.StringType
                 )
             );
     }
 
-    public boolean validate(
+    public String validate(
         String originalJson,
         String parsedJson,
         StructType schema
     ) throws JsonProcessingException {
 
         // null content is still valid
-        if(originalJson == null || parsedJson == null) return true;
+        if (originalJson == null || parsedJson == null) return "Json data was parsed as null";
 
         TypeReference<Map<String,Object>> mapTypeReference = new TypeReference<Map<String,Object>>() {};
 
@@ -119,12 +119,11 @@ public class JsonValidator implements Serializable {
 
         if (!result) {
             val difference = Maps.difference(filteredData, parsedData);
-            logger.error("JSON validation failed. Parsed and Raw JSON have the following differences: {}",
-                    difference
-            );
-        }
+            val errorMessage = String.format("JSON validation failed. Parsed and Raw JSON have the following differences: %s", difference);
+            logger.error(errorMessage);
+            return errorMessage;
+        } else return "";
 
-        return result;
     }
 
     private boolean allNotNullFieldsHaveValues(StructType schema, JsonNode json) {
