@@ -5,14 +5,14 @@ import com.amazonaws.services.dynamodbv2.model.*;
 import lombok.val;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -160,6 +160,62 @@ class DomainDefinitionClientTest {
                                         .stream()
                                         .anyMatch(table -> table.getName().endsWith(domainTableName))
                         )
+        );
+    }
+
+    @Test
+    public void shouldSkipDomainsThatCouldNotBeParsed() throws DatabaseClientException {
+        val result = mock(ScanResult.class);
+        val expectedDomainNames = new ArrayList<String>();
+        expectedDomainNames.add("living_unit");
+
+        val domainScanResult = new ArrayList<Map<String, AttributeValue>>();
+        domainScanResult.add(
+                Collections.singletonMap("data", new AttributeValue()
+                        .withS("{\"id\": \"123\", \"name\": \"living_unit\", " +
+                                "\"description\": \"test description\"," +
+                                "\"tables\": [" +
+                                "{\"name\": \"" + domainTableName + "\"}," +
+                                "{\"name\": \"table_1\"}" +
+                                "]}"))
+        );
+        domainScanResult.add(
+                Collections.singletonMap("data", new AttributeValue()
+                        .withS("{ \"invalid_json }"))
+        );
+
+        when(result.getItems()).thenReturn(domainScanResult);
+        when(dynamoDB.scan(any())).thenReturn(result);
+
+        val actualDomainDefinitions = underTest.getDomainDefinitions();
+
+        assertIterableEquals(
+                expectedDomainNames,
+                actualDomainDefinitions.stream().map(DomainDefinition::getName).collect(Collectors.toList())
+        );
+
+        assertTrue(
+                actualDomainDefinitions
+                        .stream()
+                        .allMatch(domain ->
+                                domain.getTables()
+                                        .stream()
+                                        .anyMatch(table -> table.getName().endsWith(domainTableName))
+                        )
+        );
+    }
+
+    @ParameterizedTest()
+    @NullAndEmptySource()
+    public void shouldThrowAnExceptionWhenNoDomainIsFound(List<Map<String, AttributeValue>> domainDefinitions) {
+        val result = mock(ScanResult.class);
+
+        when(result.getItems()).thenReturn(domainDefinitions);
+        when(dynamoDB.scan(any())).thenReturn(result);
+
+        assertThrows(
+                DatabaseClientException.class,
+                () -> underTest.getDomainDefinitions()
         );
     }
 }

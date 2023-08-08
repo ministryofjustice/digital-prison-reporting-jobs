@@ -116,7 +116,7 @@ public class DataHubJob implements Runnable {
 
                     dataFrameForTable.unpersist();
                 } catch (Exception e) {
-                    logger.error("Caught unexpected exception", e);
+                    logger.error("Caught unexpected exception while processing table: " + tableInfo.getAs(TABLE), e);
                     throw new RuntimeException("Caught unexpected exception", e);
                 }
             });

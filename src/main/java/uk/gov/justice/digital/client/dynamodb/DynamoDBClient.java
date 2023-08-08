@@ -6,11 +6,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
 import java.util.*;
 
 public abstract class DynamoDBClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(DynamoDBClient.class);
 
     private final AmazonDynamoDB client;
     private final String tableName;
@@ -60,17 +64,17 @@ public abstract class DynamoDBClient {
 
     protected  <T> List<T> parseResponseItems(List<java.util.Map<String, AttributeValue>> items, Class<T> valueType) throws DatabaseClientException {
         List<T> results = new ArrayList<>();
-        if (items != null) {
+        if (items == null || items.isEmpty()) {
+            throw new DatabaseClientException("Unable to parse the Query Result");
+        } else {
             for (Map<String, AttributeValue> item : items) {
                 try {
                     val data = item.get(dataField).getS();
                     results.add(mapper.readValue(data, valueType));
                 } catch (Exception e) {
-                    throw new DatabaseClientException("JSON Processing failed ", e);
+                    logger.warn("Failed to covert domain {}", item, e);
                 }
             }
-        } else {
-            throw new DatabaseClientException("Unable to parse the Query Result");
         }
         return results;
     }

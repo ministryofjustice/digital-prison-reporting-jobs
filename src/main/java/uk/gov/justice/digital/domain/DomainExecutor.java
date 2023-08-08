@@ -10,7 +10,6 @@ import org.apache.spark.sql.execution.ExplainMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
@@ -100,6 +99,27 @@ public class DomainExecutor {
         }
     }
 
+    protected void upsertTable(SparkSession spark, TableIdentifier tableId, Dataset<Row> dataFrame)
+            throws DomainExecutorException {
+        logger.info("DomainExecutor:: upsertTable");
+        String tablePath = tableId.toPath();
+        try {
+            if (storage.exists(spark, tableId)) {
+                storage.replace(tablePath, dataFrame);
+                schema.replace(tableId, tablePath, dataFrame);
+                logger.info("Updating delta table completed");
+            } else {
+                logger.warn("Delta table " + tablePath + " doesn't exist. Creating it");
+                storage.create(tablePath, dataFrame);
+                schema.create(tableId, tablePath, dataFrame);
+                logger.info("Creating delta table completed...");
+            }
+        } catch (Exception e) {
+            logger.error("Delta table upsert failed", e);
+            throw new DomainExecutorException(e);
+        }
+    }
+
     protected void syncTable(SparkSession spark, TableIdentifier tableId, Dataset<Row> dataFrame)
             throws DomainExecutorException, DataStorageException {
         logger.info("DomainExecutor:: syncTable");
@@ -139,6 +159,8 @@ public class DomainExecutor {
             updateTable(spark, tableId, dataFrame);
         } else if (domainOperation.equalsIgnoreCase("sync")) {
             syncTable(spark, tableId, dataFrame);
+        } else if (domainOperation.equalsIgnoreCase("upsert")) {
+            upsertTable(spark, tableId, dataFrame);
         } else {
             // Handle invalid operation type
             logger.error("Invalid operation type " + domainOperation);
@@ -241,50 +263,16 @@ public class DomainExecutor {
         }
     }
 
-    public void saveDomain(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String domainTableName,
-            TableDefinition tableDefinition,
-            DMS_3_4_7.Operation operation
-    ) throws DataStorageException {
-        val primaryKeyName = tableDefinition.getPrimaryKey();
-        logger.info("Writing {} record: {} with primary key {}", operation.getName(), domainTableName, primaryKeyName);
-        TableIdentifier target = new TableIdentifier(
-                targetRootPath,
-                hiveDatabaseName,
-                tableDefinition.getLocation(),
-                tableDefinition.getName()
-        );
-        val primaryKey = new SourceReference.PrimaryKey(primaryKeyName);
-        switch (operation) {
-            case Delete:
-                storage.deleteRecords(target.toPath(), dataFrame, primaryKey);
-                break;
-            case Insert:
-                storage.append(target.toPath(), dataFrame);
-                storage.endTableUpdates(spark, target);
-                break;
-            case Update:
-                storage.updateRecords(target.toPath(), dataFrame, primaryKey);
-                storage.endTableUpdates(spark, target);
-                break;
-            default:
-                break;
-        }
-    }
-
     private Dataset<Row> validateSQLAndExecute(SparkSession spark, String query) {
-        Dataset<Row> dataframe = null;
         if (!query.isEmpty()) {
             try {
                 spark.sql(query).queryExecution().explainString(ExplainMode.fromString("simple"));
-                dataframe = spark.sqlContext().sql(query).toDF();
+                return spark.sqlContext().sql(query).toDF();
             } catch (Exception e) {
-                logger.error("SQL text is invalid: " + query);
+                logger.warn("SQL text is invalid: " + query, e);
             }
         }
-        return dataframe;
+        return spark.emptyDataFrame();
     }
 
 
@@ -313,14 +301,14 @@ public class DomainExecutor {
                     if (sourceDataFrame != null) {
                         refs.put(source.toLowerCase(), sourceDataFrame);
                     } else {
-                        logger.info("Unable to load source '" + source + "' for Table Definition '" + table.getName() + "'");
+                        logger.error("Unable to load source '" + source + "' for Table Definition '" + table.getName() + "'");
                         throw new DomainExecutorException("Unable to load source '" + source +
                                 "' for Table Definition '" + table.getName() + "'");
                     }
                 }
             } else {
                 // Expecting this condition should never be reached
-                logger.info("TableDefinition is invalid");
+                logger.warn("TableDefinition is invalid");
             }
 
 
@@ -390,6 +378,31 @@ public class DomainExecutor {
         else {
             val message = "Unsupported domain operation: '" + operation + "'";
             throw new DomainExecutorException(message);
+        }
+    }
+
+    public void doIncrementalDomainRefresh(
+            SparkSession spark,
+            DomainDefinition domainDefinition,
+            TableDefinition domainTableDefinition
+    ) throws DomainExecutorException {
+        val targetDataFrame = apply(spark, domainTableDefinition, null);
+
+        try {
+            saveTable(
+                    spark,
+                    new TableIdentifier(
+                            targetRootPath,
+                            hiveDatabaseName,
+                            domainDefinition.getName(),
+                            domainTableDefinition.getName()
+                    ),
+                    targetDataFrame,
+                    "upsert"
+            );
+        } catch (DataStorageException e) {
+            logger.error("Saving domain data failed", e);
+            throw new DomainExecutorException(e.getMessage(), e);
         }
     }
 

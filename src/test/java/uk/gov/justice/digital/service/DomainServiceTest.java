@@ -11,8 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
@@ -26,13 +24,11 @@ import uk.gov.justice.digital.domain.model.TableDefinition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
-import static uk.gov.justice.digital.test.Fixtures.getAllCapturedRecords;
 import static org.apache.spark.sql.functions.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,9 +45,6 @@ public class DomainServiceTest extends BaseSparkTest {
     private DomainExecutor mockDomainExecutor;
     @Mock
     private DomainDefinition mockDomainDefinition;
-
-    @Captor
-    ArgumentCaptor<Dataset<Row>> dataframeCaptor;
 
     private DomainService underTest;
 
@@ -87,43 +80,14 @@ public class DomainServiceTest extends BaseSparkTest {
         val domainDefinition = createDomainDefinition();
         val domainDefinitions = Collections.singletonList(domainDefinition);
 
-        val transformedDataFrame1 = createTransformedDataFrame("1");
-        val transformedDataFrame2 = createTransformedDataFrame("2");
-        val transformedDataFrame3 = createTransformedDataFrame("3");
-
-        val transformedDataFrames = new ArrayList<Dataset<Row>>();
-        transformedDataFrames.add(transformedDataFrame1);
-        transformedDataFrames.add(transformedDataFrame2);
-        transformedDataFrames.add(transformedDataFrame3);
-
-        val expectedCapturedRecords = transformedDataFrames
-                .stream()
-                .flatMap(df -> df.collectAsList().stream())
-                .collect(Collectors.toList());
-
         when(mockDomainDefinitionClient.getDomainDefinitions()).thenReturn(domainDefinitions);
-        when(mockDomainExecutor.applyTransform(eq(spark), any(), any()))
-                .thenReturn(
-                        transformedDataFrame1,
-                        transformedDataFrame2,
-                        transformedDataFrame3
-                );
-
-        doNothing()
-                .when(mockDomainExecutor)
-                .saveDomain(
-                        eq(spark),
-                        dataframeCaptor.capture(),
-                        eq(domainName),
-                        eq(domainDefinition.getTables().get(0)),
-                        eq(operation)
-                );
 
         underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, tableInfo);
 
-        assertIterableEquals(
-                expectedCapturedRecords,
-                getAllCapturedRecords(dataframeCaptor)
+        verify(mockDomainExecutor, times((int) recordsToInsert.count())).doIncrementalDomainRefresh(
+                eq(spark),
+                eq(domainDefinition),
+                eq(domainDefinition.getTables().get(0))
         );
     }
 
@@ -186,17 +150,6 @@ public class DomainServiceTest extends BaseSparkTest {
     private void givenTheClientReturnsADomainDefinition() throws Exception {
         when(mockDomainDefinition.getName()).thenReturn(domainName);
         when(mockDomainDefinitionClient.getDomainDefinition(domainName, domainTableName)).thenReturn(mockDomainDefinition);
-    }
-
-    private Dataset<Row> createTransformedDataFrame(String id) {
-        val tableSchema = new StructType()
-                .add("id", DataTypes.StringType)
-                .add("description", DataTypes.StringType);
-
-        val records = new ArrayList<Row>();
-        records.add(RowFactory.create(id, "some description 1"));
-
-        return spark.createDataFrame(records, tableSchema);
     }
 
     private Dataset<Row> createInputDataFrame(DMS_3_4_7.Operation operation) {

@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.google.common.collect.ImmutableList;
 import jakarta.inject.Inject;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
@@ -12,8 +11,6 @@ import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
-import uk.gov.justice.digital.domain.model.TableDefinition;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.exception.DomainServiceException;
@@ -69,8 +66,7 @@ public class DomainService {
             logger.warn("No domain definition found for table: " + tableName);
         } else {
             domainDefinitionsForSource.forEach(domainDefinition ->
-                    dataFrame.collectAsList()
-                            .forEach(row -> refreshCDCRecord(spark, domainDefinition, row))
+                    dataFrame.collectAsList().forEach(row -> refreshCDCRecord(spark, domainDefinition, row))
             );
         }
     }
@@ -81,31 +77,22 @@ public class DomainService {
         val optionalOperation = getOperation(unvalidatedOperation);
         val cdcOperations = optionalOperation.filter(operation -> operation != Load); // discard load records
 
-        cdcOperations.ifPresent(operation -> {
-            val singleRecord = spark.createDataFrame(new ArrayList<>(ImmutableList.of(row)), row.schema());
-
+        cdcOperations.ifPresent(operation ->
             domainDefinition.getTables().forEach(tableDefinition -> {
-                        val tableTransform = tableDefinition.getTransform();
-                        val violations = tableDefinition.getViolations();
-                        val sourceToRecordMap = buildSourceToRecordsMap(singleRecord, tableDefinition);
-
                         try {
-                            String tableName = tableDefinition.getName();
-
-                            logger.info("Applying transform for CDC record of table " + tableName);
-                            val transformedDataFrame = executor.applyTransform(spark, sourceToRecordMap, tableTransform);
-
-                            logger.info("Applying violations for CDC record of table " + tableName);
-                            executor.applyViolations(spark, transformedDataFrame, violations);
-
-                            logger.info("Saving transformed CDC record of table " + tableName);
-                            executor.saveDomain(spark, transformedDataFrame, domainName, tableDefinition, operation);
-                        } catch (DomainExecutorException | DataStorageException e) {
-                            logger.warn("Failed to process domain for record", e);
+                            executor.doIncrementalDomainRefresh(spark, domainDefinition, tableDefinition);
+                        } catch (DomainExecutorException e) {
+                            String tableDefinitionName = tableDefinition.getName();
+                            logger.warn(
+                                    "Failed to process domain for record of domain {} and table {}",
+                                    tableDefinitionName,
+                                    domainName,
+                                    e
+                            );
                         }
                     }
-            );
-        });
+            )
+        );
     }
 
     private void runInternal(
@@ -178,14 +165,5 @@ public class DomainService {
                                                 .stream()
                                                 .anyMatch(source -> source.toLowerCase().endsWith("." + sourceName.toLowerCase())))
                 ).collect(Collectors.toList());
-    }
-
-    private Map<String, Dataset<Row>> buildSourceToRecordsMap(Dataset<Row> dataFrame, TableDefinition tableDefinition) {
-        Map<String, Dataset<Row>> sourceToRecordMap = new HashMap<>();
-        tableDefinition
-                .getTransform()
-                .getSources()
-                .forEach(source -> sourceToRecordMap.put(source, dataFrame));
-        return sourceToRecordMap;
     }
 }

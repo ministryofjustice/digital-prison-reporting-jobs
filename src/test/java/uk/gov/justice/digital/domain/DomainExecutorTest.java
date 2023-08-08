@@ -266,7 +266,7 @@ class DomainExecutorTest extends BaseSparkTest {
         transform.setSources(Collections.singletonList("source.table"));
         transform.setViewText("this is bad sql and should fail");
 
-        assertNull(executor.applyTransform(spark, inputs, transform));
+        assertTrue(executor.applyTransform(spark, inputs, transform).isEmpty());
     }
 
     @Test

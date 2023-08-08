@@ -84,9 +84,11 @@ public class DataStorageService {
                     .updateAll()
                     .execute();
         } else {
-            val errorMessage = "Failed to access Delta table for update";
-            logger.error(errorMessage);
-            throw new DataStorageException(errorMessage);
+            logger.warn("Failed to access Delta table for update. Creating instead");
+            dataFrame.write()
+                    .format("delta")
+                    .option("path", tablePath)
+                    .save();
         }
     }
 
@@ -112,13 +114,13 @@ public class DataStorageService {
 
     public void create(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.info("Inserting schema and data to " + tablePath);
-        if (tablePath != null && df != null)
+        if (tablePath != null && df != null && !df.isEmpty())
             df.write()
                     .format("delta")
                     .option("path", tablePath)
                     .save();
         else {
-            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
+            val errorMessage = "Path " + tablePath + " is not set or dataframe is null or empty";
             logger.error(errorMessage);
             throw new DataStorageException(errorMessage);
         }
