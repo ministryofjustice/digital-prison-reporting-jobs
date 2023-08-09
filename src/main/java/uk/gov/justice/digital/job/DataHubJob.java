@@ -27,10 +27,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 
 /**
- * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
+ * Job that reads DMS 3.4.7 load events from a Kinesis stream and processes the data as follows
  * - validates the data to ensure it conforms to the expected input format - DPR-341
  * - writes the raw data to the raw zone in s3
  * - validates the data to ensure it confirms to the appropriate table schema
@@ -62,7 +62,7 @@ public class DataHubJob implements Runnable {
         CuratedZoneLoad curatedZoneLoad,
         CuratedZoneCDC curatedZoneCDC,
         DomainService domainService,
-        @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
+        @Named("converterForDMS_3_4_7") Converter<JavaRDD<Row>, Dataset<Row>> converter,
         SparkSessionProvider sparkSessionProvider
     ) {
         logger.info("Initializing DataHubJob");

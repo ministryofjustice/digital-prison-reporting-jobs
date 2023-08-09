@@ -15,7 +15,7 @@ import uk.gov.justice.digital.zone.Zone;
 import javax.inject.Inject;
 
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 
 public abstract class CuratedZone implements Zone {
 

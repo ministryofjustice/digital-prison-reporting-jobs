@@ -12,7 +12,7 @@ import uk.gov.justice.digital.writer.Writer;
 
 import javax.inject.Inject;
 
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 
 public class StructuredZoneLoadWriter extends Writer {
 

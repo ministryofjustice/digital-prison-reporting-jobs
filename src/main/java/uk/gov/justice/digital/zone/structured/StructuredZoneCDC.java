@@ -14,8 +14,8 @@ import uk.gov.justice.digital.writer.structured.StructuredZoneCdcWriter;
 import javax.inject.Inject;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.cdcOperations;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.cdcOperations;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 
 public class StructuredZoneCDC extends StructuredZone {
 
