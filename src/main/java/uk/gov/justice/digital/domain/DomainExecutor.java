@@ -10,7 +10,7 @@ import org.apache.spark.sql.execution.ExplainMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
@@ -246,7 +246,7 @@ public class DomainExecutor {
             Dataset<Row> dataFrame,
             String domainTableName,
             TableDefinition tableDefinition,
-            DMS_3_4_6.Operation operation
+            DMS_3_4_7.Operation operation
     ) throws DataStorageException {
         val primaryKeyName = tableDefinition.getPrimaryKey();
         logger.info("Writing {} record: {} with primary key {}", operation.getName(), domainTableName, primaryKeyName);
