@@ -23,9 +23,9 @@ import java.util.*;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Load;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.getOperation;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.Load;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.getOperation;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 @Singleton
 public class DomainService {
