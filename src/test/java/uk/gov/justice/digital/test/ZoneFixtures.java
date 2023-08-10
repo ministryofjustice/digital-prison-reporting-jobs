@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.*;
 import static uk.gov.justice.digital.test.Fixtures.*;
 
 public class ZoneFixtures {

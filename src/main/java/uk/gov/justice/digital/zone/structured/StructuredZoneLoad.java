@@ -14,8 +14,8 @@ import uk.gov.justice.digital.writer.structured.StructuredZoneLoadWriter;
 import javax.inject.Inject;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Load;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.Load;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 
 public class StructuredZoneLoad extends StructuredZone {
 
