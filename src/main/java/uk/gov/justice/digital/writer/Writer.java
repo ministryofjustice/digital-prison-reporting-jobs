@@ -106,10 +106,10 @@ public abstract class Writer {
                 storage.appendDistinct(destinationPath, dataFrame, primaryKey);
                 break;
             case Update:
-                storage.updateRecords(destinationPath, dataFrame, primaryKey);
+                storage.updateRecords(spark, destinationPath, dataFrame, primaryKey);
                 break;
             case Delete:
-                storage.deleteRecords(destinationPath, dataFrame, primaryKey);
+                storage.deleteRecords(spark, destinationPath, dataFrame, primaryKey);
                 break;
             default:
                 logger.error(

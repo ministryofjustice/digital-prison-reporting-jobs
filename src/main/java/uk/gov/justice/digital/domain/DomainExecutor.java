@@ -259,14 +259,14 @@ public class DomainExecutor {
         val primaryKey = new SourceReference.PrimaryKey(primaryKeyName);
         switch (operation) {
             case Delete:
-                storage.deleteRecords(target.toPath(), dataFrame, primaryKey);
+                storage.deleteRecords(spark, target.toPath(), dataFrame, primaryKey);
                 break;
             case Insert:
                 storage.append(target.toPath(), dataFrame);
                 storage.endTableUpdates(spark, target);
                 break;
             case Update:
-                storage.updateRecords(target.toPath(), dataFrame, primaryKey);
+                storage.updateRecords(spark, target.toPath(), dataFrame, primaryKey);
                 storage.endTableUpdates(spark, target);
                 break;
             default:

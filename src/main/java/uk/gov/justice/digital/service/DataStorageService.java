@@ -71,12 +71,13 @@ public class DataStorageService {
     }
 
     public void updateRecords(
+            SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
             SourceReference.PrimaryKey primaryKey) throws DataStorageException {
-        val dt = getTable(dataFrame.sparkSession(), tablePath);
+        val dt = getTable(spark, tablePath);
 
-        if (dt.isPresent()) {
+        if (dt.isPresent() && dataFrame != null) {
             val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
             dt.get().as(SOURCE)
                     .merge(dataFrame.as(TARGET), condition)
@@ -91,12 +92,13 @@ public class DataStorageService {
     }
 
     public void deleteRecords(
+            SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
             SourceReference.PrimaryKey primaryKey) throws DataStorageException {
-        val dt = getTable(dataFrame.sparkSession(), tablePath);
+        val dt = getTable(spark, tablePath);
 
-        if (dt.isPresent()) {
+        if (dt.isPresent() && dataFrame != null) {
             val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
             dt.get().as(SOURCE)
                     .merge(dataFrame.as(TARGET), condition)
