@@ -13,7 +13,6 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.exception.DomainServiceException;
@@ -70,12 +69,12 @@ public class DomainService {
         } else {
             domainDefinitionsForSource.forEach(domainDefinition ->
                     dataFrame.collectAsList()
-                            .forEach(row -> refreshCDCRecord(spark, domainDefinition, row))
+                            .forEach(row -> refreshCDCRecord(spark, domainDefinition, row, tableName))
             );
         }
     }
 
-    private void refreshCDCRecord(SparkSession spark, DomainDefinition domainDefinition, Row row) {
+    private void refreshCDCRecord(SparkSession spark, DomainDefinition domainDefinition, Row row, String recordTableName) {
         String unvalidatedOperation = row.getAs(OPERATION);
         val domainName = domainDefinition.getName();
         val optionalOperation = getOperation(unvalidatedOperation);
@@ -87,7 +86,7 @@ public class DomainService {
             domainDefinition.getTables().forEach(tableDefinition -> {
                         val tableTransform = tableDefinition.getTransform();
                         val violations = tableDefinition.getViolations();
-                        val sourceToRecordMap = buildSourceToRecordsMap(singleRecord, tableDefinition);
+                        val sourceToRecordMap = buildSourceToRecordsMap(singleRecord, tableDefinition, recordTableName);
 
                         try {
                             String tableName = tableDefinition.getName();
@@ -100,8 +99,14 @@ public class DomainService {
 
                             logger.info("Saving transformed CDC record of table " + tableName);
                             executor.saveDomain(spark, transformedDataFrame, domainName, tableDefinition, operation);
-                        } catch (DomainExecutorException | DataStorageException e) {
-                            logger.warn("Failed to process domain for record", e);
+                        } catch (Exception e) {
+                            logger.warn(
+                                    "Failed to incrementally {} domain record for table {}_{}",
+                                    operation,
+                                    domainName,
+                                    recordTableName,
+                                    e
+                            );
                         }
                     }
             );
@@ -180,12 +185,20 @@ public class DomainService {
                 ).collect(Collectors.toList());
     }
 
-    private Map<String, Dataset<Row>> buildSourceToRecordsMap(Dataset<Row> dataFrame, TableDefinition tableDefinition) {
+    private Map<String, Dataset<Row>> buildSourceToRecordsMap(
+            Dataset<Row> dataFrame,
+            TableDefinition tableDefinition,
+            String rowTable
+    ) {
         Map<String, Dataset<Row>> sourceToRecordMap = new HashMap<>();
         tableDefinition
                 .getTransform()
                 .getSources()
-                .forEach(source -> sourceToRecordMap.put(source, dataFrame));
+                .forEach(source -> {
+                    if (source.toLowerCase().endsWith(rowTable.toLowerCase())) {
+                        sourceToRecordMap.put(source, dataFrame);
+                    }
+                });
         return sourceToRecordMap;
     }
 }

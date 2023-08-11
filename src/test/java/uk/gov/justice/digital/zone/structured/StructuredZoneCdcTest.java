@@ -75,8 +75,8 @@ class StructuredZoneCdcTest extends BaseSparkTest {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).appendDistinct(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
-        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
-        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
@@ -111,7 +111,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).updateRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
@@ -127,7 +127,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).deleteRecords(eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
@@ -152,7 +152,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
     public void shouldContinueWhenUpdateFails() throws DataStorageException {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("update failed")).when(mockDataStorage).updateRecords(any(), any(), any());
+        doThrow(new DataStorageException("update failed")).when(mockDataStorage).updateRecords(eq(spark), any(), any(), any());
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 
@@ -163,7 +163,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
     public void shouldContinueWhenDeletionFails() throws DataStorageException {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(any(), any(), eq(primaryKey));
+        doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(eq(spark), any(), any(), eq(primaryKey));
 
         underTest.process(spark, testDataSet, dataMigrationEventRow).collect();
 

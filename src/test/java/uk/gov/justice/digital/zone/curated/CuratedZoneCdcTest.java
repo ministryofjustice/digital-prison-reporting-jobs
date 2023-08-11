@@ -74,8 +74,8 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).appendDistinct(eq(curatedPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).updateRecords(eq(curatedPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).deleteRecords(eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
@@ -110,7 +110,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).updateRecords(eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
 
@@ -126,7 +126,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).deleteRecords(eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
 
@@ -155,7 +155,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("update failed")).when(mockDataStorage).updateRecords(any(), any(), any());
+        doThrow(new DataStorageException("update failed")).when(mockDataStorage).updateRecords(eq(spark), any(), any(), any());
 
         underTest.process(spark, records, dataMigrationEventRow).collect();
 
@@ -168,7 +168,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(any(), any(), any());
+        doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(eq(spark), any(), any(), any());
 
         underTest.process(spark, records, dataMigrationEventRow).collect();
 
