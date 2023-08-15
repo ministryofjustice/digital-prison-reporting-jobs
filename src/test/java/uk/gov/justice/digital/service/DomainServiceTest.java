@@ -25,6 +25,7 @@ import uk.gov.justice.digital.domain.model.TableDefinition;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -111,7 +112,7 @@ public class DomainServiceTest extends BaseSparkTest {
 
         doNothing()
                 .when(mockDomainExecutor)
-                .saveDomain(
+                .applyDomain(
                         eq(spark),
                         dataframeCaptor.capture(),
                         eq(domainName),
@@ -176,6 +177,223 @@ public class DomainServiceTest extends BaseSparkTest {
 
         verifyNoInteractions(mockDomainExecutor);
     }
+
+    @Test
+    public void shouldCreateColumnMappingForViewTextWithSingleJoinColumns() throws Exception {
+        val table1 = "table_1";
+        val table2 = "table_2";
+
+        val table1Column1 = table1 + "_column_1";
+        val table2Column1 = table2 + "_column_1";
+
+        val expectedMappings = Collections.singletonMap(table1Column1, table2Column1);
+
+        val viewText = "select " +
+                "nomis." + table1 + ".offender_book_id as id, " +
+                "nomis." + table2 + ".birth_date as birth_date, " +
+                "nomis." + table1 + ".living_unit_id as living_unit_id, " +
+                "nomis." + table2 + ".first_name as first_name, " +
+                "nomis." + table2 + ".last_name as last_name, " +
+                "nomis." + table2 + ".offender_id_display as offender_no " +
+                "from nomis." + table1 + " " +
+                "join nomis." + table2 + " " +
+                "on nomis." + table1 + "." + table1Column1 + " = nomis." + table2 + "." + table2Column1;
+
+        val mappings = underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table2, viewText);
+
+        assertEquals(expectedMappings, mappings);
+    }
+
+    @Test
+    public void shouldCreateColumnMappingForViewTextWithMultipleJoinColumns() throws Exception {
+        val table1 = "table_1";
+        val table2 = "table_2";
+
+        val table1Column1 = table1 + "_column_1";
+        val table2Column1 = table2 + "_column_1";
+
+        val table1Column2 = table1 + "_column_2";
+        val table2Column2 = table2 + "_column_2";
+
+        val expectedMappings = new HashMap<>();
+        expectedMappings.put(table1Column1, table2Column1);
+        expectedMappings.put(table1Column2, table2Column2);
+
+        val viewText = "select " +
+                "nomis." + table1 + ".offender_book_id as id, " +
+                "nomis." + table2 + ".birth_date as birth_date, " +
+                "nomis." + table1 + ".living_unit_id as living_unit_id, " +
+                "nomis." + table2 + ".first_name as first_name, " +
+                "nomis." + table2 + ".last_name as last_name, " +
+                "nomis." + table2 + ".offender_id_display as offender_no " +
+                "from nomis." + table1 + " " +
+                "join nomis." + table2 + " " +
+                "on nomis." + table1 + "." + table1Column1 + " = nomis." + table2 + "." + table2Column1 + " " +
+                "and nomis." + table2 + "." + table2Column2 + " = nomis." + table1 + "." + table1Column2;
+
+        val mappings = underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table2, viewText);
+
+        assertEquals(expectedMappings, mappings);
+    }
+
+    @Test
+    public void shouldCreateColumnMappingForViewTextWithMultipleJoinExpressions() throws Exception {
+        val table1 = "table_1";
+        val table2 = "table_2";
+        val table3 = "table_3";
+        val table4 = "table_4";
+        val table5 = "table_5";
+
+        val table1Column1 = table1 + "_column_1";
+        val table2Column1 = table2 + "_column_1";
+
+        val table1Column2 = table1 + "_column_2";
+        val table2Column2 = table2 + "_column_2";
+
+        val table1Column3 = table1 + "_column_3";
+        val table3Column3 = table3 + "_column_3";
+
+        val table1Column4 = table1 + "_column_4";
+        val table4Column4 = table4 + "_column_4";
+
+        val table1Column5 = table1 + "_column_5";
+        val table5Column5 = table5 + "_column_5";
+
+        val expectedTable2Mappings = new HashMap<>();
+        expectedTable2Mappings.put(table1Column1, table2Column1);
+        expectedTable2Mappings.put(table1Column2, table2Column2);
+
+        val expectedTable3Mappings = Collections.singletonMap(table1Column3, table3Column3);
+        val expectedTable4Mappings = Collections.singletonMap(table1Column4, table4Column4);
+        val expectedTable5Mappings = Collections.singletonMap(table1Column5, table5Column5);
+
+        val viewText = "select " +
+                "nomis." + table1 + ".offender_book_id as id, " +
+                "nomis." + table2 + ".birth_date as birth_date, " +
+                "nomis." + table1 + ".living_unit_id as living_unit_id, " +
+                "nomis." + table2 + ".first_name as first_name, " +
+                "nomis." + table2 + ".last_name as last_name, " +
+                "nomis." + table2 + ".offender_id_display as offender_no " +
+                "from nomis." + table1 + " " +
+                "join nomis." + table2 + " " +
+                "on nomis." + table1 + "." + table1Column1 + " = nomis." + table2 + "." + table2Column1 + " " +
+                "and nomis." + table2 + "." + table2Column2 + " = nomis." + table1 + "." + table1Column2 + " " +
+                "LEFT JOIN nomis." + table3 + " " +
+                "on nomis." + table1 + "." + table1Column3 + " = nomis." + table3 + "." + table3Column3 + " " +
+                "RIGHT  JOIN nomis." + table4 + " " +
+                "on nomis." + table1 + "." + table1Column4 + " = nomis." + table4 + "." + table4Column4 + " " +
+                "full join nomis." + table5 + " " +
+                "on nomis." + table1 + "." + table1Column5 + " = nomis." + table5 + "." + table5Column5;
+
+        assertEquals(
+                expectedTable2Mappings,
+                underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table2, viewText)
+        );
+
+        assertEquals(
+                expectedTable3Mappings,
+                underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table3, viewText)
+        );
+
+        assertEquals(
+                expectedTable4Mappings,
+                underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table4, viewText)
+        );
+
+        assertEquals(
+                expectedTable5Mappings,
+                underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table5, viewText)
+        );
+    }
+
+    @Test
+    public void shouldResolveAliasesWhenBuildingColumnMappings() throws Exception {
+        val table1 = "table_1";
+        val table2 = "table_2";
+        val table3 = "table_3";
+
+        val table1Column1 = table1 + "_column_1";
+        val table2Column1 = table2 + "_column_1";
+        val table3Column1 = table3 + "_column_1";
+
+        val expectedMappings = Collections.singletonMap(table1Column1, table2Column1);
+
+        val viewText = "select " +
+                "nomis." + table1 + ".offender_book_id as id, " +
+                "nomis." + table2 + ".birth_date as birth_date, " +
+                "nomis." + table1 + ".living_unit_id as living_unit_id, " +
+                "nomis." + table2 + ".first_name as first_name, " +
+                "nomis." + table2 + ".last_name as last_name, " +
+                "nomis." + table2 + ".offender_id_display as offender_no " +
+                "from nomis." + table1 + " " +
+                "join nomis." + table2 + " as  table2_alias " +
+                "on nomis." + table1 + "." + table1Column1 + " = table2_alias." + table2Column1 + " " +
+                "left join nomis." + table3 + "  as table3_alias " +
+                "on nomis." + table1 + "." + table1Column1 + " = table3_alias." + table3Column1;
+
+        val mappings = underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table2, viewText);
+
+        assertEquals(expectedMappings, mappings);
+    }
+
+    @Test
+    public void shouldReturnEmptyMapForViewTextWithNoJoinCondition() throws Exception {
+        val table1 = "table_1";
+        val expectedMappings = new HashMap<>();
+
+        val viewText = "select " +
+                "nomis." + table1 + ".offender_book_id as id, " +
+                "nomis." + table1 + ".living_unit_id as living_unit_id, " +
+                "from nomis." + table1;
+
+        val mappings = underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table1, viewText);
+
+        assertEquals(expectedMappings, mappings);
+    }
+
+    @Test
+    public void shouldResolveAliasesAndBuildColumnMappingsForComplexQuery() throws Exception {
+        val table1 = "nomis.offender_external_movements";
+        val table2 = "nomis.movement_reasons";
+        val table3 = "nomis.agency_locations";
+
+        val expectedTable3Mappings = new HashMap<String, String>();
+        expectedTable3Mappings.put("from_agy_loc_id", "agy_loc_id");
+        expectedTable3Mappings.put("to_agy_loc_id", "agy_loc_id");
+
+        val expectedTable2Mappings = new HashMap<String, String>();
+        expectedTable2Mappings.put("movement_type", "movement_type");
+        expectedTable2Mappings.put("movement_reason_code", "movement_reason_code");
+
+        val viewText = "select concat(cast(" + table1 + ".offender_book_id as string), '.', cast(" + table1 + ".movement_seq as string)) as id, " +
+                table1 + ".offender_book_id as prisoner, " +
+                table1 + ".movement_date as date, " +
+                table1 + ".movement_time as time, " +
+                table1 + ".direction_code as direction, " +
+                table1 + ".movement_type as type, " +
+                "origin_location.description as origin, " +
+                "destination_location.description as destination, " +
+                table2 + ".description as reason " +
+                "from " + table1 + " " +
+                "join " + table2 + " " +
+                "on " + table2 + ".movement_type=" + table1 + ".movement_type " +
+                "and " + table2 + ".movement_reason_code=" + table1 + ".movement_reason_code " +
+                "left join " + table3 + " as origin_location " +
+                "on " + table1 + ".from_agy_loc_id = origin_location.agy_loc_id " +
+                "left join " + table3 + " as destination_location " +
+                "on " + table1 + ".to_agy_loc_id = destination_location.agy_loc_id";
+
+        assertEquals(
+                expectedTable2Mappings,
+                underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table2, viewText)
+        );
+
+        assertEquals(
+                expectedTable3Mappings,
+                underTest.buildColumnMapBetweenReferenceAndAdjoiningTables(table1, table3, viewText)
+        );
+    }
+
 
     private void givenJobArgumentsWithOperation(String operation) {
         when(mockJobArguments.getDomainTableName()).thenReturn(domainTableName);

@@ -52,7 +52,7 @@ public class DataStorageService {
     }
 
     public void append(String tablePath, Dataset<Row> df) throws DataStorageException {
-        logger.info("Appending schema and data to " + tablePath);
+        logger.debug("Appending schema and data to " + tablePath);
         if (tablePath != null && df != null)
             df.write()
                     .format("delta")
@@ -90,13 +90,14 @@ public class DataStorageService {
 
         if (dt.isPresent() && dataFrame != null) {
             val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+            logger.debug("Updating records from {} using condition: {}", tablePath, condition);
             dt.get().as(SOURCE)
                     .merge(dataFrame.as(TARGET), condition)
                     .whenMatched()
                     .updateAll()
                     .execute();
         } else {
-            val errorMessage = "Failed to access Delta table for update";
+            val errorMessage = String.format("Failed to update table %s. Delta table isPresent = %s", tablePath, dt.isPresent());
             logger.error(errorMessage);
             throw new DataStorageException(errorMessage);
         }
@@ -111,6 +112,7 @@ public class DataStorageService {
 
         if (dt.isPresent() && dataFrame != null) {
             val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+            logger.debug("Deleting records from {} using condition: {}", tablePath, condition);
             dt.get().as(SOURCE)
                     .merge(dataFrame.as(TARGET), condition)
                     .whenMatched()

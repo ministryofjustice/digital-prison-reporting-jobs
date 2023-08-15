@@ -7,6 +7,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.execution.ExplainMode;
+import org.apache.spark.sql.types.DataTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
@@ -25,6 +26,7 @@ import uk.gov.justice.digital.service.DomainSchemaService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Singleton
 public class DomainExecutor {
@@ -60,8 +62,8 @@ public class DomainExecutor {
         String tablePath = tableId.toPath();
         logger.info("Domain insert to disk started");
         try {
-            if(storage.exists(spark, tableId)) {
-                if(storage.hasRecords(spark, tableId)) {
+            if (storage.exists(spark, tableId)) {
+                if (storage.hasRecords(spark, tableId)) {
                     // this is trying to overwrite so throw an exception
                     throw new DomainExecutorException("Delta table " + tableId.getTable() + " already exists and has records. Try replace");
                 } else {
@@ -241,7 +243,7 @@ public class DomainExecutor {
         }
     }
 
-    public void saveDomain(
+    public void applyDomain(
             SparkSession spark,
             Dataset<Row> dataFrame,
             String domainTableName,
@@ -249,17 +251,18 @@ public class DomainExecutor {
             DMS_3_4_6.Operation operation
     ) throws DataStorageException {
         val primaryKeyName = tableDefinition.getPrimaryKey();
-        logger.info("Writing {} record: {} with primary key {}", operation.getName(), domainTableName, primaryKeyName);
+        logger.debug("Writing {} record: {} with primary key {}", operation.getName(), domainTableName, primaryKeyName);
         TableIdentifier target = new TableIdentifier(
                 targetRootPath,
                 hiveDatabaseName,
-                tableDefinition.getLocation(),
+                tableDefinition.getName(),
                 tableDefinition.getName()
         );
         val primaryKey = new SourceReference.PrimaryKey(primaryKeyName);
         switch (operation) {
             case Delete:
                 storage.deleteRecords(spark, target.toPath(), dataFrame, primaryKey);
+                storage.endTableUpdates(spark, target);
                 break;
             case Insert:
                 storage.append(target.toPath(), dataFrame);
@@ -281,7 +284,7 @@ public class DomainExecutor {
                 spark.sql(query).queryExecution().explainString(ExplainMode.fromString("simple"));
                 dataframe = spark.sqlContext().sql(query).toDF();
             } catch (Exception e) {
-                logger.error("SQL text is invalid: " + query);
+                logger.error("SQL text is invalid: " + query, e);
             }
         }
         return dataframe;
@@ -386,11 +389,64 @@ public class DomainExecutor {
                 throw new DomainExecutorException(e.getMessage(), e);
             }
 
-        }
-        else {
+        } else {
             val message = "Unsupported domain operation: '" + operation + "'";
             throw new DomainExecutorException(message);
         }
+    }
+
+    public Dataset<Row> getAdjoiningDataFrameForReferenceDataFrame(
+            SparkSession spark,
+            String adjoiningSourceName,
+            Map<String, String> columnMappings,
+            Dataset<Row> referenceDataFrame
+    ) {
+        val tableTuple = new TableTuple(adjoiningSourceName);
+        val tableIdentifier = new TableIdentifier(sourceRootPath, hiveDatabaseName, tableTuple.getSchema(), tableTuple.getTable());
+
+        val columnTypes = new HashMap<String, String>();
+        Arrays.stream(referenceDataFrame.schema().fields()).forEach(field -> columnTypes.put(field.name(), field.dataType().typeName()));
+
+        if (columnMappings.isEmpty()) {
+            return spark.emptyDataFrame();
+        } else {
+            // Create a filter expression using the column names and values from the reference dataFrame
+            val filterExpression = columnMappings.keySet().stream().map(columnName -> {
+                        val otherTableColumnName = columnMappings.get(columnName);
+                        val columnTypeName = columnTypes.getOrDefault(columnName, DataTypes.NullType.typeName());
+
+                        if (isNumericType(columnTypeName) || columnTypeName.equalsIgnoreCase(DataTypes.BooleanType.typeName())) {
+                            val columnValue = referenceDataFrame.first().getAs(columnName);
+                            return otherTableColumnName + " = " + columnValue;
+                        } else {
+                            String columnValue = referenceDataFrame.first().getAs(columnName);
+                            // Adding quotes to non-numeric and non-boolean column values
+                            return otherTableColumnName + " = '" + columnValue + "'";
+                        }
+                    }
+            ).collect(Collectors.joining(" and "));
+
+            logger.debug("Adjoining dataframe selection expression: " + filterExpression);
+
+            val adjoiningDataFrame = storage.get(spark, tableIdentifier);
+            // Filter rows in source dataFrame using the filter expression
+            if (adjoiningDataFrame.isEmpty()) {
+                logger.warn("Adjoining dataFrame from path {} is empty", tableIdentifier.toPath());
+                return adjoiningDataFrame;
+            } else {
+                return adjoiningDataFrame.where(filterExpression);
+            }
+        }
+    }
+
+    private static boolean isNumericType(String columnTypeName) {
+        return columnTypeName.equalsIgnoreCase(DataTypes.LongType.typeName()) ||
+                columnTypeName.equalsIgnoreCase(DataTypes.ShortType.typeName()) ||
+                columnTypeName.equalsIgnoreCase(DataTypes.IntegerType.typeName()) ||
+                columnTypeName.equalsIgnoreCase(DataTypes.FloatType.typeName()) ||
+                columnTypeName.equalsIgnoreCase(DataTypes.DoubleType.typeName()) ||
+                columnTypeName.equalsIgnoreCase(DataTypes.ByteType.typeName()) ||
+                columnTypeName.equalsIgnoreCase(DataTypes.createDecimalType().typeName());
     }
 
     private boolean schemaContains(Dataset<Row> dataFrame, String field) {
