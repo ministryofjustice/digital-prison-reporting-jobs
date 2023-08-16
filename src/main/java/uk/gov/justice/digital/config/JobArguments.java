@@ -6,6 +6,7 @@ import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.CommandLinePropertySource;
 import io.micronaut.context.env.MapPropertySource;
 import io.micronaut.context.env.PropertySource;
+import io.micronaut.logging.LogLevel;
 import lombok.val;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
@@ -30,6 +31,7 @@ public class JobArguments {
     public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
     public static final String AWS_KINESIS_ENDPOINT_URL = "dpr.aws.kinesis.endpointUrl";
     public static final String AWS_REGION = "dpr.aws.region";
+    public static final String LOG_LEVEL = "dpr.log.level";
     public static final String CONTRACT_REGISTRY_NAME = "dpr.contract.registryName";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
     public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
@@ -58,6 +60,21 @@ public class JobArguments {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Job initialised with parameters: {}", config);
+    }
+
+    public LogLevel getLogLevel() {
+        String logLevel = getArgument(LOG_LEVEL).toLowerCase();
+        switch (logLevel) {
+            case "info":
+                return LogLevel.INFO;
+            case "warn":
+                return LogLevel.WARN;
+            case "error":
+                return LogLevel.ERROR;
+            default:
+                logger.warn("Invalid log level {} provided. Defaulting to WARN", logLevel);
+                return LogLevel.WARN;
+        }
     }
 
     public String getAwsRegion() {

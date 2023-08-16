@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -43,6 +44,7 @@ public class DataHubJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
 
 
+    private final JobArguments arguments;
     private final KinesisReader kinesisReader;
     private final RawZone rawZone;
     private final StructuredZoneLoad structuredZoneLoad;
@@ -55,6 +57,7 @@ public class DataHubJob implements Runnable {
 
     @Inject
     public DataHubJob(
+        JobArguments arguments,
         KinesisReader kinesisReader,
         RawZone rawZone,
         StructuredZoneLoad structuredZoneLoad,
@@ -66,6 +69,7 @@ public class DataHubJob implements Runnable {
         SparkSessionProvider sparkSessionProvider
     ) {
         logger.info("Initializing DataHubJob");
+        this.arguments = arguments;
         this.kinesisReader = kinesisReader;
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
@@ -94,7 +98,8 @@ public class DataHubJob implements Runnable {
 
             val startTime = System.currentTimeMillis();
 
-            val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf());
+            val logLevel = arguments.getLogLevel();
+            val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf(), logLevel);
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             val dataFrame = converter.convert(rowRdd);
 
@@ -111,8 +116,9 @@ public class DataHubJob implements Runnable {
                     val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
                     val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
 
-                    if (!curatedCdcDataFrame.isEmpty()) domainService
-                            .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+                    // TODO: Disabling incremental domain refresh for now. Will be re-introduced after full load is complete in prod
+//                    if (!curatedCdcDataFrame.isEmpty()) domainService
+//                            .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
 
                     dataFrameForTable.unpersist();
                 } catch (Exception e) {

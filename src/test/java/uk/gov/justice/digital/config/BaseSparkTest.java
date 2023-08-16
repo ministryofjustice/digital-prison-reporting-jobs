@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.config;
 
+import io.micronaut.logging.LogLevel;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
@@ -28,7 +29,7 @@ public class BaseSparkTest {
 	protected static SparkSession spark;
 
 	private static SparkSession createSparkSession() {
-		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration);
+		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration, LogLevel.INFO);
 	}
 
 	@BeforeAll

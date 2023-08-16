@@ -11,7 +11,7 @@ import java.util.TimeZone;
 @Singleton
 public class SparkSessionProvider {
 
-    public SparkSession getConfiguredSparkSession(SparkConf sparkConf) {
+    public SparkSession getConfiguredSparkSession(SparkConf sparkConf, LogLevel logLevel) {
         // We set the overall default timezone to UTC before then configuring the spark session to also use UTC.
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.UTC));
 
@@ -33,13 +33,13 @@ public class SparkSessionProvider {
                                 .enableHiveSupport()
                                 .getOrCreate();
 
-        session.sparkContext().setLogLevel(LogLevel.WARN.name());
+        session.sparkContext().setLogLevel(logLevel.name());
 
         return session;
     }
 
-    public SparkSession getConfiguredSparkSession() {
-        return getConfiguredSparkSession(new SparkConf());
+    public SparkSession getConfiguredSparkSession(LogLevel logLevel) {
+        return getConfiguredSparkSession(new SparkConf(), logLevel);
     }
 
 }

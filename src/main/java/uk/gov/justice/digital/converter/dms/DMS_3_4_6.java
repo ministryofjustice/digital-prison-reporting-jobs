@@ -7,6 +7,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
@@ -119,8 +120,11 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
     private final SparkSession spark;
 
     @Inject
-    public DMS_3_4_6(SparkSessionProvider sparkSessionProvider) {
-        this.spark = sparkSessionProvider.getConfiguredSparkSession();
+    public DMS_3_4_6(
+            JobArguments arguments,
+            SparkSessionProvider sparkSessionProvider
+    ) {
+        this.spark = sparkSessionProvider.getConfiguredSparkSession(arguments.getLogLevel());
     }
 
     @Override

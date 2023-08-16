@@ -101,7 +101,7 @@ public class DomainService {
                             executor.saveDomain(spark, transformedDataFrame, domainName, tableDefinition, operation);
                         } catch (Exception e) {
                             logger.warn(
-                                    "Failed to incrementally {} domain record for table {}_{}",
+                                    "Failed to incrementally {} domain {} and table {}",
                                     operation,
                                     domainName,
                                     recordTableName,
