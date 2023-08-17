@@ -6,6 +6,7 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DomainService;
@@ -22,11 +23,17 @@ public class DomainRefreshJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainRefreshJob.class);
 
+    private final JobArguments arguments;
     private final DomainService domainService;
     private final SparkSessionProvider sparkSessionProvider;
 
     @Inject
-    public DomainRefreshJob(DomainService domainService, SparkSessionProvider sparkSessionProvider) {
+    public DomainRefreshJob(
+            JobArguments arguments,
+            DomainService domainService,
+            SparkSessionProvider sparkSessionProvider
+    ) {
+        this.arguments = arguments;
         this.domainService = domainService;
         this.sparkSessionProvider = sparkSessionProvider;
     }
@@ -39,7 +46,7 @@ public class DomainRefreshJob implements Runnable {
     @Override
     public void run() {
         try {
-            domainService.run(sparkSessionProvider.getConfiguredSparkSession());
+            domainService.run(sparkSessionProvider.getConfiguredSparkSession(arguments.getLogLevel()));
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
             System.exit(1);
