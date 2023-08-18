@@ -2,6 +2,9 @@ package uk.gov.justice.digital.service;
 
 import io.delta.tables.DeltaTable;
 import lombok.val;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -12,7 +15,15 @@ import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
 
 @Singleton
 public class DataStorageService {
@@ -168,10 +179,18 @@ public class DataStorageService {
 
     public void vacuum(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
         logger.info("Vacuuming Delta table {}.{}", tableId.getSchema(), tableId.getTable());
+        vacuum(spark, tableId.toPath());
+    }
 
-        getTable(spark, tableId.toPath())
+    /**
+     * Run a delta lake vacuum operation on the delta table at the given tablePath.
+     */
+    public void vacuum(SparkSession spark, String tablePath) throws DataStorageException {
+        logger.info("Vacuuming Delta table at {}", tablePath);
+        getTable(spark, tablePath)
                 .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"))
                 .vacuum();
+        logger.info("Finished vacuuming Delta table at {}", tablePath);
     }
 
     public Dataset<Row> get(SparkSession spark, TableIdentifier tableId) {
@@ -207,5 +226,46 @@ public class DataStorageService {
         if (deltaTable.isPresent()) updateManifest(deltaTable.get());
         else logger.warn("Unable to update manifest for table: {} Not a delta table", tablePath);
     }
+
+    /**
+     * Runs a delta lake compaction on the Delta table at the given tablePath
+     */
+
+    public void compactDeltaTable(SparkSession spark, String tablePath) throws DataStorageException {
+        logger.info("Compacting table at path: {}", tablePath);
+        val deltaTable = getTable(spark, tablePath);
+        deltaTable
+                .orElseThrow(() -> new DataStorageException(format("Failed to compact table at path %s. Table does not exist", tablePath)))
+                .optimize().executeCompaction();
+        logger.info("Finished compacting table at path: {}", tablePath);
+    }
+
+    /**
+     * List all Delta table paths immediately below rootPath
+     * @return The list of delta table paths (including hadoop filesystem prefix, e.g. s3://)
+     */
+    public List<String> listDeltaTablePaths(SparkSession spark, String rootPath) throws DataStorageException {
+        logger.info("Listing all delta table paths below: {}", rootPath);
+        try {
+            val fs = FileSystem.get(new URI(rootPath), spark.sparkContext().hadoopConfiguration());
+            val path = new Path(rootPath);
+            return Arrays.stream(fs.listStatus(path))
+                    .filter(FileStatus::isDirectory)
+                    .map(FileStatus::getPath)
+                    .map(Path::toUri)
+                    .map(URI::toString)
+                    .filter(tablePath -> DeltaTable.isDeltaTable(spark, tablePath))
+                    .collect(Collectors.toList());
+        } catch (URISyntaxException e) {
+            val errorMessage = format("Badly formatted root path when listing delta tables: %s", rootPath);
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage, e);
+        } catch (IOException e) {
+            val errorMessage = format("Exception encountered when listing delta tables at root path: %s", rootPath);
+            logger.error(errorMessage);
+            throw new DataStorageException(errorMessage, e);
+        }
+    }
+
 
 }
