@@ -53,24 +53,15 @@ public abstract class StructuredZone implements Zone {
     public Dataset<Row> process(SparkSession spark, Dataset<Row> filteredRecords, Row table) throws DataStorageException {
 
         val sortedRecords = filteredRecords.orderBy(col(TIMESTAMP));
-        val rowCount = sortedRecords.count();
-
-        logger.info("Processing batch with {} records", rowCount);
-
-        val startTime = System.currentTimeMillis();
 
         String sourceName = table.getAs(SOURCE);
         String tableName = table.getAs(TABLE);
 
         val sourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
 
-        logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
-
         val structuredDataFrame = sourceReference.isPresent()
                 ? handleSchemaFound(spark, sortedRecords, sourceReference.get())
                 : handleNoSchemaFound(spark, sortedRecords, sourceName, tableName);
-
-        logger.info("Processed batch with {} rows in {}ms", rowCount, System.currentTimeMillis() - startTime);
 
         return structuredDataFrame;
     }
@@ -99,7 +90,7 @@ public abstract class StructuredZone implements Zone {
             String source,
             String table
     ) throws DataStorageException {
-        logger.error("Structured Zone Violation - No schema found for {}/{} - writing {} records",
+        logger.info("Violation - No schema found for {}/{} - writing {} records",
                 source,
                 table,
                 dataFrame.count()
@@ -131,7 +122,12 @@ public abstract class StructuredZone implements Zone {
                 .drop(col(VALID));
 
         if (!invalidRecords.isEmpty()) {
-            logger.error("Structured Zone Violation - {} records failed schema validation", invalidRecords.count());
+            logger.info(
+                    "Violation - {} records failed schema validation for source {}, table {}",
+                    invalidRecords.count(),
+                    source,
+                    table
+            );
             writer.writeInvalidRecords(spark, destinationPath, invalidRecords);
         }
     }
