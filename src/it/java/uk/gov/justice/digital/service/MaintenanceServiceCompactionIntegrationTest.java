@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.service;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
@@ -9,10 +9,12 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
 class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
 
-    private MaintenanceService underTest;
+    private static MaintenanceService underTest;
 
-    @BeforeEach
-    public void setup() {
+    @BeforeAll
+    public static void setupTest() throws Exception {
+        setupDeltaTablesFixture();
+        setupNonDeltaFilesAndDirs();
         underTest = new MaintenanceService(new DataStorageService());
     }
 

@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
@@ -10,10 +11,15 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
 public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
     private static final DataStorageService underTest = new DataStorageService();
+
+    @BeforeAll
+    public static void setupTest() throws Exception {
+        setupDeltaTablesFixture();
+        setupNonDeltaFilesAndDirs();
+    }
     @Test
     public void shouldListOnlyDeltaTablePaths() throws Exception {
         List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString());
-        deltaTables.forEach(System.out::println);
         // Should ignore non-delta table directories and files in the rootPath
         assertEquals(2, deltaTables.size());
     }

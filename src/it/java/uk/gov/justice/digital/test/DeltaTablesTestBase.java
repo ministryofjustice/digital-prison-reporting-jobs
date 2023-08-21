@@ -2,7 +2,6 @@ package uk.gov.justice.digital.test;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 
@@ -14,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.justice.digital.test.SparkTestHelpers.*;
 
 /**
- * Sets up a test environment with some semi-realistic delta tables and extraneous files/dirs on disk
+ * Helper to set up a test environment with some semi-realistic delta tables and extraneous files/dirs on disk
  */
 public class DeltaTablesTestBase extends BaseSparkTest {
     @TempDir
@@ -22,23 +21,27 @@ public class DeltaTablesTestBase extends BaseSparkTest {
     protected static Path offendersTablePath;
     protected static Path offenderBookingsTablePath;
 
-    @BeforeAll
-    public static void setupDeltaTables() throws IOException {
+
+    protected static void setupDeltaTablesFixture() {
         SparkTestHelpers helpers = new SparkTestHelpers(spark);
-        // Using offenders data is an arbitrary choice here to provide some test data
         offendersTablePath = rootPath.resolve("offenders").toAbsolutePath();
         offenderBookingsTablePath = rootPath.resolve("offender-bookings").toAbsolutePath();
-        // repartition to force the data in the delta table to have multiple small files at the start of the test
+        // repartition to force the data in the delta table to have multiple small files at the start of tests
         int largeNumPartitions = 5;
         Dataset<Row> offenders = helpers.readSampleParquet(OFFENDERS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
         helpers.overwriteDeltaTable(offendersTablePath.toString(), offenders);
         Dataset<Row> offenderBookings = helpers.readSampleParquet(OFFENDER_BOOKINGS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
         helpers.overwriteDeltaTable(offenderBookingsTablePath.toString(), offenderBookings);
+    }
 
-        // Create some files and directories that should be ignored
+    /**
+     * Adds some extraneous non-delta table files and directories in to the root path
+     */
+    protected static void setupNonDeltaFilesAndDirs() throws IOException {
         assertTrue(rootPath.resolve("file-to-be-ignored.parquet").toFile().createNewFile());
         assertTrue(rootPath.resolve("dir-to-be-ignored").toFile().mkdirs());
         assertTrue(rootPath.resolve("dir-to-be-ignored").resolve("file-to-be-ignored2.parquet").toFile().createNewFile());
+
     }
 
     protected void setDeltaTableRetentionToZero(String tablePath) {

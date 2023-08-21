@@ -16,12 +16,13 @@ import static picocli.CommandLine.Command;
 /**
  * Job that runs a delta lake compaction on any tables it finds immediately under the provided Hadoop compatible path.
  * A compaction will rewrite small files into larger files that are more efficient for read operations. It will
- * not remove the old files that it has compacted.
+ * not remove the old files that it has compacted until a separate vacuum is run.
  */
 @Command(name = "CompactionJob")
 public class CompactionJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(CompactionJob.class);
+
     private final MaintenanceService maintenanceService;
     private final SparkSessionProvider sparkSessionProvider;
     private final JobArguments jobArguments;
