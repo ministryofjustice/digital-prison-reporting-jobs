@@ -153,7 +153,7 @@ public class DataHubJob implements Runnable {
     private List<Row> getTablesInBatch(Dataset<Row> dataFrame) {
         return dataFrame
                 .select(TABLE, SOURCE, OPERATION)
-                .distinct()
+                .dropDuplicates(TABLE, SOURCE)
                 .collectAsList();
     }
 
