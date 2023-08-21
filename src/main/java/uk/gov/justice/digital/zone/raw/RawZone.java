@@ -63,8 +63,10 @@ public class RawZone implements Zone {
 
         storage.updateDeltaManifestForTable(spark, tablePath);
 
-        logger.info("Processed batch with {} records in {}ms",
+        logger.info("Processed batch with {} records for {}/{} in {}ms",
                 count,
+                rowSource,
+                rowTable,
                 System.currentTimeMillis() - startTime
         );
 

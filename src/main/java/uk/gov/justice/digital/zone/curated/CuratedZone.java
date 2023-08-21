@@ -39,12 +39,6 @@ public abstract class CuratedZone implements Zone {
     @Override
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
 
-        val count = dataFrame.count();
-
-        logger.info("Processing batch with {} records", count);
-
-        val startTime = System.currentTimeMillis();
-
         String sourceName = table.getAs(SOURCE);
         String tableName = table.getAs(TABLE);
 
@@ -60,11 +54,6 @@ public abstract class CuratedZone implements Zone {
             );
 
             writer.writeValidRecords(spark, curatedTablePath, sourceReference.getPrimaryKey(), dataFrame);
-
-            logger.info("Processed batch with {} records in {}ms",
-                    count,
-                    System.currentTimeMillis() - startTime
-            );
 
             return dataFrame;
         } else {
