@@ -11,12 +11,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build with Gradle
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'corretto'
+
+      - name: Run Jacoco report
         uses: gradle/gradle-build-action@v2
         with:
           arguments: jacocoTestReport
 
-      - name: PR comment with file
+      - name: PR comment
         uses: thollander/actions-comment-pull-request@v2
         with:
           message: |
