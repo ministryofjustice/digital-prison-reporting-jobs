@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import io.delta.tables.DeltaOptimizeBuilder;
 import io.delta.tables.DeltaTable;
 import lombok.val;
 import org.apache.spark.sql.DataFrameWriter;
@@ -19,8 +20,7 @@ import uk.gov.justice.digital.exception.DataStorageException;
 
 import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +32,9 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @Mock
     private DeltaTable mockDeltaTable;
+
+    @Mock
+    private DeltaOptimizeBuilder mockDeltaOptimize;
 
     @Mock
     private Dataset<Row> mockDataSet;
@@ -173,6 +176,37 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenDeltaTableExists();
         underTest.vacuum(spark, tableId);
         verify(mockDeltaTable).vacuum();
+    }
+
+    @Test
+    public void shouldVacuumForDeltaTablePath() throws DataStorageException {
+        givenDeltaTableExists();
+        underTest.vacuum(spark, tableId.toPath());
+        verify(mockDeltaTable).vacuum();
+    }
+
+    @Test
+    public void shouldCompactDeltaTable() throws DataStorageException {
+        givenDeltaTableExists();
+        when(mockDeltaTable.optimize()).thenReturn(mockDeltaOptimize);
+
+        underTest.compactDeltaTable(spark, tableId.toPath());
+        verify(mockDeltaTable).optimize();
+        verify(mockDeltaOptimize).executeCompaction();
+    }
+
+    @Test
+    public void shouldThrowForBadlyFormattedDeltaTablePath() {
+        assertThrows(DataStorageException.class, () ->
+                underTest.listDeltaTablePaths(spark, "://some-path")
+        );
+    }
+
+    @Test
+    public void shouldThrowWhenDeltaTablePathDoesNotExist() {
+        assertThrows(DataStorageException.class, () ->
+            underTest.listDeltaTablePaths(spark, "/doesnotexist")
+        );
     }
 
     @Test
