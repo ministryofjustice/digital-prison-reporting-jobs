@@ -24,11 +24,9 @@ jobs:
         id: calculate-test-coverage
         run: |
           ./gradlew jacocoTestReport > logs.txt
-          MESSAGE=$(grep 'Test Coverage:' logs.txt -A6)
-          echo "MESSAGE=$MESSAGE" >> "$GITHUB_OUTPUT"
+          grep 'Test Coverage:' logs.txt -A6 > message.txt
 
       - name: PR comment
         uses: thollander/actions-comment-pull-request@v2
         with:
-          message: |
-            ${{ steps.calculate-test-coverage.outputs.MESSAGE }}
+          filePath: message.txt

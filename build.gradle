@@ -147,9 +147,8 @@ jacocoTestReport {
     dependsOn test
     dependsOn integrationTest
     reports {
-        xml.required = true
+        xml.required = false
         html.required = true
-        csv.required = true
     }
 }
 
