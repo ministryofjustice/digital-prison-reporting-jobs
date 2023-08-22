@@ -20,17 +20,15 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 
-      - name: Execute Gradle build
-        run: ./gradlew jacocoTestReport > logs.txt
-
-      - name: Upload build reports
-        uses: actions/upload-artifact@v3
-        with:
-          name: logs
-          path: logs.txt
+      - name: Calculate test coverage
+        id: calculate-test-coverage
+        run: |
+          ./gradlew jacocoTestReport > logs.txt
+          MESSAGE=$(grep 'Test Coverage:' logs.txt -A6)
+          echo "MESSAGE=$MESSAGE" >> "$GITHUB_OUTPUT"
 
       - name: PR comment
         uses: thollander/actions-comment-pull-request@v2
         with:
           message: |
-            Hello world ! :wave:
+            ${{ steps.calculate-test-coverage.outputs.MESSAGE }}
