@@ -7,6 +7,7 @@ plugins {
     id 'org.owasp.dependencycheck'  version '8.2.1'
     id 'org.gradle.java-test-fixtures'
     id 'io.micronaut.minimal.library'  version '3.7.5'
+    id 'org.barfuin.gradle.jacocolog' version '3.1.0'
 }
 
 group 'uk.gov.justice'
@@ -146,7 +147,7 @@ jacocoTestReport {
     dependsOn test
     dependsOn integrationTest
     reports {
-        xml.required = true
+        xml.required = false
         html.required = true
     }
 }
