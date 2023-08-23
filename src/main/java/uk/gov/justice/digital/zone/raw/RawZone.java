@@ -47,7 +47,7 @@ public class RawZone implements Zone {
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
 
-        logger.info("Processing batch with {} records for source: {} table: {}",
+        logger.warn("Processing batch with {} records for source: {} table: {}",
                 count,
                 rowSource,
                 rowTable
@@ -63,7 +63,7 @@ public class RawZone implements Zone {
 
         storage.updateDeltaManifestForTable(spark, tablePath);
 
-        logger.info("Processed batch with {} records for {}/{} in {}ms",
+        logger.warn("Processed batch with {} records for {}/{} in {}ms",
                 count,
                 rowSource,
                 rowTable,
