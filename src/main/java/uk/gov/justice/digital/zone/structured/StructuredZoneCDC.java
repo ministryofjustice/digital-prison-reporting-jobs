@@ -49,17 +49,21 @@ public class StructuredZoneCDC extends StructuredZone {
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
         val filteredRecords = dataFrame.filter(col(OPERATION).isin(cdcOperations));
 
-        val rowCount = filteredRecords.count();
-        String sourceName = table.getAs(SOURCE);
-        String tableName = table.getAs(TABLE);
+        if (filteredRecords.isEmpty()) {
+            return spark.emptyDataFrame();
+        } else {
+            val rowCount = filteredRecords.count();
+            String sourceName = table.getAs(SOURCE);
+            String tableName = table.getAs(TABLE);
 
-        val startTime = System.currentTimeMillis();
+            val startTime = System.currentTimeMillis();
 
-        logger.info("Processing {} records for {}/{}", rowCount, sourceName, tableName);
-        val result = super.process(spark, filteredRecords, table);
-        logger.info("Processed batch with {} rows in {}ms", rowCount, System.currentTimeMillis() - startTime);
+            logger.warn("Processing {} records for {}/{}", rowCount, sourceName, tableName);
+            val result = super.process(spark, filteredRecords, table);
+            logger.warn("Processed batch with {} rows in {}ms", rowCount, System.currentTimeMillis() - startTime);
 
-        return result;
+            return result;
+        }
     }
 
 }

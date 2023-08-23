@@ -89,12 +89,12 @@ public class DataHubJob implements Runnable {
 
     private void batchProcessor(JavaRDD<byte[]> batch) {
         if (batch.isEmpty()) {
-            logger.info("Batch: {} - Skipping empty batch", batch.id());
+            logger.warn("Batch: {} - Skipping empty batch", batch.id());
         }
         else {
             val batchCount = batch.count();
 
-            logger.info("Batch: {} - Processing {} records", batch.id(), batchCount);
+            logger.warn("Batch: {} - Processing {} records", batch.id(), batchCount);
 
             val startTime = System.currentTimeMillis();
 
@@ -102,6 +102,8 @@ public class DataHubJob implements Runnable {
             val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf(), logLevel);
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             val dataFrame = converter.convert(rowRdd);
+
+            logger.warn("Batch: {} - Converted {} records", batch.id(), dataFrame.count());
 
             getTablesInBatch(dataFrame).forEach(tableInfo -> {
                 try {
@@ -127,7 +129,7 @@ public class DataHubJob implements Runnable {
                 }
             });
 
-            logger.info("Batch: {} - Processed {} records - processed batch in {}ms",
+            logger.warn("Batch: {} - Processed {} records - processed batch in {}ms",
                     batch.id(),
                     batchCount,
                     System.currentTimeMillis() - startTime
