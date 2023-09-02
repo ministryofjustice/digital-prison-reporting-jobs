@@ -19,6 +19,7 @@ import uk.gov.justice.digital.job.filter.NomisDataFilter;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.apache.spark.sql.functions.udf;
 
@@ -87,7 +88,7 @@ public class JsonValidator implements Serializable {
                         jsonValidator.validate(originalJson, parsedJson, schema),
                         DataTypes.StringType
                 )
-            );
+            ).asNondeterministic();
     }
 
     public String validate(
@@ -102,23 +103,25 @@ public class JsonValidator implements Serializable {
         TypeReference<Map<String,Object>> mapTypeReference = new TypeReference<Map<String,Object>>() {};
 
         val originalData = objectMapper.readValue(originalJson, mapTypeReference);
-        val parsedData = objectMapper.readValue(parsedJson, mapTypeReference);
+        val parsedDataWithNullColumnsDropped = removeNullValues(objectMapper.readValue(parsedJson, mapTypeReference));
 
         val nomisFilter = new NomisDataFilter(schema);
 
-        // Apply data filtesr. See NomisDataFilter.
-        val filteredData = nomisFilter.apply(originalData);
+        // Apply data filters. See NomisDataFilter.
+        val filteredDataWithNullColumnsDropped = removeNullValues(nomisFilter.apply(originalData));
 
         // Check that
         //  o the original and parsed data match using a simple equality check
         //  o any fields declared not-nullable have a value
-        val result = filteredData.equals(parsedData) &&
+        val result = filteredDataWithNullColumnsDropped.equals(parsedDataWithNullColumnsDropped) &&
                 allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
 
         logger.info("JSON validation result - json valid: {}", result);
 
         if (!result) {
-            val difference = Maps.difference(filteredData, parsedData);
+            // We treat null fields the same as missing fields
+            val difference = Maps.difference(filteredDataWithNullColumnsDropped, parsedDataWithNullColumnsDropped);
+
             val errorMessage = String.format("JSON validation failed. Parsed and Raw JSON have the following differences: %s", difference);
             logger.error(errorMessage);
             return errorMessage;
@@ -144,6 +147,14 @@ public class JsonValidator implements Serializable {
             }
         }
         return true;
+    }
+
+    private Map<String, Object> removeNullValues(Map<String, Object> map) {
+        return map
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
 }

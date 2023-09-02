@@ -3,14 +3,12 @@ package uk.gov.justice.digital.job.udf;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
-import org.apache.logging.log4j.core.util.Assert;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
 
 import static java.util.AbstractMap.SimpleEntry;
 import static org.apache.spark.sql.types.DataTypes.IntegerType;
@@ -37,7 +35,7 @@ class JsonValidatorTest {
     @Test
     public void shouldPassValidJsonWithOnlyMandatoryFieldSet() throws JsonProcessingException {
         val json = createJsonFromEntries(Collections.singletonList(entry(Fields.MANDATORY, "somevalue")));
-        Assert.isEmpty(underTest.validate(json, json, schema));
+        assertThat(underTest.validate(json, json, schema), is(emptyString()));
     }
 
     @Test
@@ -47,14 +45,14 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
         ));
-        Assert.isEmpty(underTest.validate(json, json, schema));
+        assertThat(underTest.validate(json, json, schema), is(emptyString()));
     }
 
     @Test
     public void shouldPassValidJsonIrrespectiveOfFieldOrdering() throws JsonProcessingException {
         val json = "{\"mandatory\":\"foo\",\"numeric\":1}";
         val jsonWithReverseFieldOrder = "{\"numeric\":1,\"mandatory\":\"foo\"}";
-        Assert.isEmpty(underTest.validate(json, jsonWithReverseFieldOrder, schema));
+        assertThat(underTest.validate(json, jsonWithReverseFieldOrder, schema), is(emptyString()));
     }
 
     @Test
@@ -63,7 +61,7 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
         ));
-        Assert.isNonEmpty(underTest.validate(json, json, schema));
+        assertThat(underTest.validate(json, json, schema), not(emptyString()));
     }
 
     @Test
@@ -80,7 +78,7 @@ class JsonValidatorTest {
                 entry(Fields.NUMERIC, "42")
         ));
 
-        Assert.isNonEmpty(underTest.validate(json, fakeParsedJson, schema));
+        assertThat(underTest.validate(json, fakeParsedJson, schema), not(emptyString()));
     }
 
     /**
@@ -102,19 +100,67 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue")
         ));
 
-        Assert.isNonEmpty(underTest.validate(json, fakeParsedJson, schema));
+        assertThat(underTest.validate(json, fakeParsedJson, schema), not(emptyString()));
     }
 
     @Test
-    public void shouldPassWhenThereIsNoContent() throws JsonProcessingException {
+    public void shouldFailWhenComparingJsonStringAndNullObject() throws JsonProcessingException {
         val json = createJsonFromEntries(Arrays.asList(
                 entry(Fields.MANDATORY, "somevalue"),
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, "this is not a number")
         ));
 
-        Assert.isEmpty(underTest.validate(null, json, schema));
-        Assert.isEmpty(underTest.validate(json, null, schema));
+        assertThat(underTest.validate(null, json, schema), not(emptyString()));
+        assertThat(underTest.validate(json, null, schema), not(emptyString()));
+    }
+
+    @Test
+    public void shouldTreatMissingFieldsAsEqualToNullFields() throws JsonProcessingException {
+        val optionalFieldIsNull = createJsonFromEntries(Arrays.asList(
+                entry(Fields.MANDATORY, "someValue"),
+                entry(Fields.OPTIONAL, null),
+                entry(Fields.NUMERIC, "42")
+        ));
+
+        val optionalFieldMissing = createJsonFromEntries(Arrays.asList(
+                entry(Fields.MANDATORY, "someValue"),
+                entry(Fields.NUMERIC, "42")
+        ));
+
+        assertThat(
+                underTest.validate(optionalFieldMissing, optionalFieldIsNull, schema),
+                is(emptyString())
+        );
+
+        assertThat(
+                underTest.validate(optionalFieldIsNull, optionalFieldMissing, schema),
+                is(emptyString())
+        );
+    }
+
+    @Test
+    public void shouldTreatNonNullOptionalFieldsAsDifferentFromMissingFields() throws JsonProcessingException {
+        val optionalFieldNotNull = createJsonFromEntries(Arrays.asList(
+                entry(Fields.MANDATORY, "someValue"),
+                entry(Fields.OPTIONAL, "anotherValue"),
+                entry(Fields.NUMERIC, "42")
+        ));
+
+        val optionalFieldMissing = createJsonFromEntries(Arrays.asList(
+                entry(Fields.MANDATORY, "someValue"),
+                entry(Fields.NUMERIC, "42")
+        ));
+
+        assertThat(
+                underTest.validate(optionalFieldMissing, optionalFieldNotNull, schema),
+                not(emptyString())
+        );
+
+        assertThat(
+                underTest.validate(optionalFieldNotNull, optionalFieldMissing, schema),
+                not(emptyString())
+        );
     }
 
     private static SimpleEntry<String, Object> entry(String key, Object value) {
@@ -122,10 +168,9 @@ class JsonValidatorTest {
     }
 
     private static String createJsonFromEntries(List<SimpleEntry<String, Object>> entries) throws JsonProcessingException {
-            return objectMapper.writeValueAsString(
-                    entries.stream()
-                            .collect(Collectors.toMap(SimpleEntry::getKey, SimpleEntry::getValue))
-            );
+        val map = new HashMap<>();
+        entries.forEach(answer -> map.put(answer.getKey(), answer.getValue()));
+        return objectMapper.writeValueAsString(map);
     }
 
 }

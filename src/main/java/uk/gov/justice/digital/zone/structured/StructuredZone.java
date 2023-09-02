@@ -59,11 +59,9 @@ public abstract class StructuredZone implements Zone {
 
         val sourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
 
-        val structuredDataFrame = sourceReference.isPresent()
+        return sourceReference.isPresent()
                 ? handleSchemaFound(spark, sortedRecords, sourceReference.get())
                 : handleNoSchemaFound(spark, sortedRecords, sourceName, tableName);
-
-        return structuredDataFrame;
     }
 
     private Dataset<Row> handleSchemaFound(
