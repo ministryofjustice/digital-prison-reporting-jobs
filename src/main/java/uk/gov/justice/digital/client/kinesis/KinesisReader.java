@@ -2,7 +2,7 @@ package uk.gov.justice.digital.client.kinesis;
 
 import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
-import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaDStream;
@@ -24,12 +24,15 @@ public class KinesisReader {
     private final JavaDStream<byte[]> kinesisStream;
 
     @Inject
-    public KinesisReader(JobArguments jobArguments,
-                         JobProperties jobProperties) {
+    public KinesisReader(
+            JobArguments jobArguments,
+            JobProperties jobProperties,
+            SparkContext sparkContext
+    ) {
         String jobName = jobProperties.getSparkJobName();
 
         streamingContext = new JavaStreamingContext(
-                new SparkConf().setAppName(jobName),
+                sparkContext.getConf(),
                 jobArguments.getKinesisReaderBatchDuration()
         );
 
@@ -59,9 +62,20 @@ public class KinesisReader {
     }
 
     public void startAndAwaitTermination() throws InterruptedException {
+        this.start();
+        streamingContext.awaitTermination();
+        logger.info("KinesisReader terminated");
+    }
+
+    public void start() {
+        logger.info("Starting KinesisReader");
         streamingContext.start();
         logger.info("KinesisReader started");
-        streamingContext.awaitTermination();
+    }
+
+    public void stop() {
+        logger.info("Stopping KinesisReader");
+        streamingContext.stop();
         logger.info("KinesisReader terminated");
     }
 
