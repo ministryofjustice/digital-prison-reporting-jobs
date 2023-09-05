@@ -116,7 +116,7 @@ public class JsonValidator implements Serializable {
         val result = filteredDataWithNullColumnsDropped.equals(parsedDataWithNullColumnsDropped) &&
                 allNotNullFieldsHaveValues(schema, objectMapper.readTree(originalJson));
 
-        logger.info("JSON validation result - json valid: {}", result);
+        logger.debug("JSON validation result - json valid: {}", result);
 
         if (!result) {
             // We treat null fields the same as missing fields
