@@ -15,6 +15,7 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DomainService;
@@ -75,7 +76,7 @@ public class DataHubJob implements Runnable {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
 
         this.spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
-        this.kinesisReader = new KinesisReader(arguments, properties, spark.sparkContext());
+        this.kinesisReader = new KinesisReader(arguments, jobName, spark.sparkContext());
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;

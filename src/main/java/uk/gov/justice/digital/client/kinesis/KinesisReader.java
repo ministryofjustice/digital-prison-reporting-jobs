@@ -4,6 +4,7 @@ import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -13,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.config.JobProperties;
 
 @Bean
 public class KinesisReader {
@@ -26,13 +26,11 @@ public class KinesisReader {
     @Inject
     public KinesisReader(
             JobArguments jobArguments,
-            JobProperties jobProperties,
+            String jobName,
             SparkContext sparkContext
     ) {
-        String jobName = jobProperties.getSparkJobName();
-
         streamingContext = new JavaStreamingContext(
-                sparkContext.getConf(),
+                JavaSparkContext.fromSparkContext(sparkContext),
                 jobArguments.getKinesisReaderBatchDuration()
         );
 
