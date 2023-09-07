@@ -36,25 +36,6 @@ import java.util.stream.Collectors;
  *   o handling of dates represented in the incoming raw data as an ISO 8601 datetime string with the time values all
  *     set to zero
  * <p>
- * and can be used as follows within Spark SQL
- * <p>
- * StructType schema = .... // Some schema defining the format of the JSON being processed
- * <p>
- * UserDefinedFunction jsonValidator = JsonValidator.createAndRegister(
- *      schema,
- *      someDataFrame.sparkSession(),
- *      sourceName,
- *      tableName
- * );
- * <p>
- * // dataframe with a single string column 'rawJson' containing JSON to parse and validate against a schema
- * someDataFrame
- *  .withColumn("parsedJson", from_json(col("rawJson"), schema))
- *  .withColumn("valid", jsonValidator.apply(col("rawData"), to_json("parsedJson")))
- * <p>
- * The dataframe can then be filtered on the value of the boolean valid column where
- *  o true -> the JSON has passed validation
- *  o false -> the JSON has not passed validation
  */
 public class JsonValidator {
 
