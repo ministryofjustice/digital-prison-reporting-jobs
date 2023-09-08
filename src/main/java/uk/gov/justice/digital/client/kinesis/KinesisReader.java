@@ -34,6 +34,8 @@ public class KinesisReader {
                 jobArguments.getKinesisReaderBatchDuration()
         );
 
+        streamingContext.checkpoint(jobArguments.getCheckpointLocation());
+
         kinesisStream = JavaDStream.fromDStream(
                 KinesisInputDStream.builder()
                         .streamingContext(streamingContext)

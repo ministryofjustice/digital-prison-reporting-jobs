@@ -49,6 +49,8 @@ public class JobArguments {
     public static final String DATA_MART_DB_NAME = "dpr.datamart.db.name";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
 
+    public static final String CHECKPOINT_LOCATION = "checkpoint.location";
+
     private final Map<String, String> config;
 
     @Inject
@@ -150,6 +152,10 @@ public class JobArguments {
 
     public String getMaintenanceTablesRootPath() {
         return getArgument(MAINTENANCE_TABLES_ROOT_PATH);
+    }
+
+    public String getCheckpointLocation() {
+        return getArgument(CHECKPOINT_LOCATION);
     }
 
     private String getArgument(String argumentName) {
