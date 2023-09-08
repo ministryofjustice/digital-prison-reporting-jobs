@@ -2,8 +2,9 @@ package uk.gov.justice.digital.client.kinesis;
 
 import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
-import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
@@ -13,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.config.JobProperties;
 
 @Bean
 public class KinesisReader {
@@ -24,12 +24,13 @@ public class KinesisReader {
     private final JavaDStream<byte[]> kinesisStream;
 
     @Inject
-    public KinesisReader(JobArguments jobArguments,
-                         JobProperties jobProperties) {
-        String jobName = jobProperties.getSparkJobName();
-
+    public KinesisReader(
+            JobArguments jobArguments,
+            String jobName,
+            SparkContext sparkContext
+    ) {
         streamingContext = new JavaStreamingContext(
-                new SparkConf().setAppName(jobName),
+                JavaSparkContext.fromSparkContext(sparkContext),
                 jobArguments.getKinesisReaderBatchDuration()
         );
 
@@ -59,9 +60,20 @@ public class KinesisReader {
     }
 
     public void startAndAwaitTermination() throws InterruptedException {
+        this.start();
+        streamingContext.awaitTermination();
+        logger.info("KinesisReader terminated");
+    }
+
+    public void start() {
+        logger.info("Starting KinesisReader");
         streamingContext.start();
         logger.info("KinesisReader started");
-        streamingContext.awaitTermination();
+    }
+
+    public void stop() {
+        logger.info("Stopping KinesisReader");
+        streamingContext.stop();
         logger.info("KinesisReader terminated");
     }
 

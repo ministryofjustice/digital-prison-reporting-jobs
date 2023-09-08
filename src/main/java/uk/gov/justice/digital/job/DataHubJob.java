@@ -2,16 +2,20 @@ package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DomainService;
@@ -44,8 +48,7 @@ public class DataHubJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
 
 
-    private final JobArguments arguments;
-    private final KinesisReader kinesisReader;
+    public final KinesisReader kinesisReader;
     private final RawZone rawZone;
     private final StructuredZoneLoad structuredZoneLoad;
     private final StructuredZoneCDC structuredZoneCDC;
@@ -53,12 +56,12 @@ public class DataHubJob implements Runnable {
     private final CuratedZoneCDC curatedZoneCDC;
     private final DomainService domainService;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
-    private final SparkSessionProvider sparkSessionProvider;
+    private final SparkSession spark;
 
     @Inject
     public DataHubJob(
         JobArguments arguments,
-        KinesisReader kinesisReader,
+        JobProperties properties,
         RawZone rawZone,
         StructuredZoneLoad structuredZoneLoad,
         StructuredZoneCDC structuredZoneCDC,
@@ -69,8 +72,11 @@ public class DataHubJob implements Runnable {
         SparkSessionProvider sparkSessionProvider
     ) {
         logger.info("Initializing DataHubJob");
-        this.arguments = arguments;
-        this.kinesisReader = kinesisReader;
+        String jobName = properties.getSparkJobName();
+        SparkConf sparkConf = new SparkConf().setAppName(jobName);
+
+        this.spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
+        this.kinesisReader = new KinesisReader(arguments, jobName, spark.sparkContext());
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
@@ -78,7 +84,6 @@ public class DataHubJob implements Runnable {
         this.curatedZoneCDC = curatedZoneCDC;
         this.domainService = domainService;
         this.converter = converter;
-        this.sparkSessionProvider = sparkSessionProvider;
         logger.info("DataHubJob initialization complete");
     }
 
@@ -87,7 +92,7 @@ public class DataHubJob implements Runnable {
         PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
     }
 
-    private void batchProcessor(JavaRDD<byte[]> batch) {
+    public void batchProcessor(JavaRDD<byte[]> batch) {
         if (batch.isEmpty()) {
             logger.warn("Batch: {} - Skipping empty batch", batch.id());
         }
@@ -98,8 +103,6 @@ public class DataHubJob implements Runnable {
 
             val startTime = System.currentTimeMillis();
 
-            val logLevel = arguments.getLogLevel();
-            val spark = sparkSessionProvider.getConfiguredSparkSession(batch.context().getConf(), logLevel);
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             val dataFrame = converter.convert(rowRdd);
 
