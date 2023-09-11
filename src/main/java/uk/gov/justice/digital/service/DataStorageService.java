@@ -187,9 +187,11 @@ public class DataStorageService {
      */
     public void vacuum(SparkSession spark, String tablePath) throws DataStorageException {
         logger.info("Vacuuming Delta table at {}", tablePath);
-        getTable(spark, tablePath)
+        val deltaTable = getTable(spark, tablePath);
+        deltaTable
                 .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"))
                 .vacuum();
+        updateManifest(deltaTable.get());
         logger.info("Finished vacuuming Delta table at {}", tablePath);
     }
 
@@ -237,6 +239,7 @@ public class DataStorageService {
         deltaTable
                 .orElseThrow(() -> new DataStorageException(format("Failed to compact table at path %s. Table does not exist", tablePath)))
                 .optimize().executeCompaction();
+        updateManifest(deltaTable.get());
         logger.info("Finished compacting table at path: {}", tablePath);
     }
 
