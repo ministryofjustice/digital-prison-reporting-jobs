@@ -94,19 +94,14 @@ public class DataHubJob implements Runnable {
 
     public void batchProcessor(JavaRDD<byte[]> batch) {
         if (batch.isEmpty()) {
-            logger.warn("Batch: {} - Skipping empty batch", batch.id());
-        }
-        else {
-            val batchCount = batch.count();
-
-            logger.warn("Batch: {} - Processing {} records", batch.id(), batchCount);
+            logger.info("Batch: {} - Skipping empty batch", batch.id());
+        } else {
+            logger.debug("Batch: {} - Processing records", batch.id());
 
             val startTime = System.currentTimeMillis();
 
             val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
             val dataFrame = converter.convert(rowRdd);
-
-            logger.warn("Batch: {} - Converted {} records", batch.id(), dataFrame.count());
 
             getTablesInBatch(dataFrame).forEach(tableInfo -> {
                 try {
@@ -116,25 +111,25 @@ public class DataHubJob implements Runnable {
                     rawZone.process(spark, dataFrameForTable, tableInfo);
 
                     val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
-                    curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
-
                     val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
+
+                    dataFrameForTable.unpersist();
+
+                    curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
                     val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
 
                     // TODO: Disabling incremental domain refresh for now. Will be re-introduced after full load is complete in prod
 //                    if (!curatedCdcDataFrame.isEmpty()) domainService
 //                            .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
 
-                    dataFrameForTable.unpersist();
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);
                 }
             });
 
-            logger.warn("Batch: {} - Processed {} records - processed batch in {}ms",
+            logger.debug("Batch: {} - Processed records - processed batch in {}ms",
                     batch.id(),
-                    batchCount,
                     System.currentTimeMillis() - startTime
             );
         }

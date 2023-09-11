@@ -31,37 +31,37 @@ import static org.apache.spark.sql.functions.udf;
  * <p>
  * By design, from_json will forcibly enable nullable on all fields declared in the schema. This resolves potential
  * downstream issues with parquet but makes it harder for us to validate JSON principally because from_json
- *   o silently allows fields declared notNull to be null
- *   o silently converts fields with incompatible values to null
+ * o silently allows fields declared notNull to be null
+ * o silently converts fields with incompatible values to null
  * <p>
  * For this reason this validator *must* be used *after* first parsing a JSON string with from_json.
  * <p>
  * This validator performs the following checks
- *   o original and parsed json *must* be equal - if there is a difference this indicates a bad value in the source data
- *     e.g. a String value when a Numeric value was expected
- *   o all fields declared notNull *must* have a value
- *   o handling of dates represented in the incoming raw data as an ISO 8601 datetime string with the time values all
- *     set to zero
+ * o original and parsed json *must* be equal - if there is a difference this indicates a bad value in the source data
+ * e.g. a String value when a Numeric value was expected
+ * o all fields declared notNull *must* have a value
+ * o handling of dates represented in the incoming raw data as an ISO 8601 datetime string with the time values all
+ * set to zero
  * <p>
  * and can be used as follows within Spark SQL
  * <p>
  * StructType schema = .... // Some schema defining the format of the JSON being processed
  * <p>
  * UserDefinedFunction jsonValidator = JsonValidator.createAndRegister(
- *      schema,
- *      someDataFrame.sparkSession(),
- *      sourceName,
- *      tableName
+ * schema,
+ * someDataFrame.sparkSession(),
+ * sourceName,
+ * tableName
  * );
  * <p>
  * // dataframe with a single string column 'rawJson' containing JSON to parse and validate against a schema
  * someDataFrame
- *  .withColumn("parsedJson", from_json(col("rawJson"), schema))
- *  .withColumn("valid", jsonValidator.apply(col("rawData"), to_json("parsedJson")))
+ * .withColumn("parsedJson", from_json(col("rawJson"), schema))
+ * .withColumn("valid", jsonValidator.apply(col("rawData"), to_json("parsedJson")))
  * <p>
  * The dataframe can then be filtered on the value of the boolean valid column where
- *  o true -> the JSON has passed validation
- *  o false -> the JSON has not passed validation
+ * o true -> the JSON has passed validation
+ * o false -> the JSON has not passed validation
  */
 public class JsonValidator implements Serializable {
 
@@ -72,35 +72,32 @@ public class JsonValidator implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(JsonValidator.class);
 
     public static UserDefinedFunction createAndRegister(
-        StructType schema,
-        SparkSession sparkSession,
-        String schemaName,
-        String tableName) {
-
-        val jsonValidator = new JsonValidator();
+            StructType schema,
+            SparkSession sparkSession,
+            String schemaName,
+            String tableName) {
 
         return sparkSession
-            .udf()
-            .register(
-                String.format("udfValidatorFor%s%s", schemaName, tableName),
-                udf(
-                    (UDF2<String, String, String>) (String originalJson, String parsedJson) ->
-                        jsonValidator.validate(originalJson, parsedJson, schema),
-                        DataTypes.StringType
-                )
-            ).asNondeterministic();
+                .udf()
+                .register(
+                        String.format("udfValidatorFor%s%s", schemaName, tableName),
+                        udf((UDF2<String, String, String>) (String originalJson, String parsedJson) ->
+                                        validate(originalJson, parsedJson, schema),
+                                DataTypes.StringType
+                        )
+                ).asNondeterministic();
     }
 
-    public String validate(
-        String originalJson,
-        String parsedJson,
-        StructType schema
+    public static String validate(
+            String originalJson,
+            String parsedJson,
+            StructType schema
     ) throws JsonProcessingException {
 
         // null content is still valid
         if (originalJson == null || parsedJson == null) return "Json data was parsed as null";
 
-        TypeReference<Map<String,Object>> mapTypeReference = new TypeReference<Map<String,Object>>() {};
+        TypeReference<Map<String, Object>> mapTypeReference = new TypeReference<Map<String, Object>>() {};
 
         val originalData = objectMapper.readValue(originalJson, mapTypeReference);
         val parsedDataWithNullColumnsDropped = removeNullValues(objectMapper.readValue(parsedJson, mapTypeReference));
@@ -129,7 +126,7 @@ public class JsonValidator implements Serializable {
 
     }
 
-    private boolean allNotNullFieldsHaveValues(StructType schema, JsonNode json) {
+    private static boolean allNotNullFieldsHaveValues(StructType schema, JsonNode json) {
         for (StructField structField : schema.fields()) {
             // Skip fields that are declared nullable in the table schema.
             if (structField.nullable()) continue;
@@ -149,7 +146,7 @@ public class JsonValidator implements Serializable {
         return true;
     }
 
-    private Map<String, Object> removeNullValues(Map<String, Object> map) {
+    private static Map<String, Object> removeNullValues(Map<String, Object> map) {
         return map
                 .entrySet()
                 .stream()

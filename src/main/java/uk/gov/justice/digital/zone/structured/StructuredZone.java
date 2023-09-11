@@ -88,11 +88,7 @@ public abstract class StructuredZone implements Zone {
             String source,
             String table
     ) throws DataStorageException {
-        logger.info("Violation - No schema found for {}/{} - writing {} records",
-                source,
-                table,
-                dataFrame.count()
-        );
+        logger.warn("Violation - No schema found for {}/{}", source, table);
 
         val missingSchemaRecords = dataFrame
                 .select(col(DATA), col(METADATA))
@@ -120,12 +116,7 @@ public abstract class StructuredZone implements Zone {
                 .drop(col(VALID));
 
         if (!invalidRecords.isEmpty()) {
-            logger.info(
-                    "Violation - {} records failed schema validation for source {}, table {}",
-                    invalidRecords.count(),
-                    source,
-                    table
-            );
+            logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
             writer.writeInvalidRecords(spark, destinationPath, invalidRecords);
         }
     }
@@ -139,12 +130,11 @@ public abstract class StructuredZone implements Zone {
         val validRecords = dataFrame.filter(col(VALID).equalTo(true)).select(PARSED_DATA + ".*", OPERATION);
 
         if (!validRecords.isEmpty()) {
-            logger.info("Writing {} valid records", validRecords.count());
             writer.writeValidRecords(spark, destinationPath, primaryKey, validRecords);
 
             return validRecords;
         } else {
-            logger.info("No valid records found");
+            logger.warn("No valid records found");
             return createEmptyDataFrame(validRecords);
         }
     }
@@ -156,13 +146,13 @@ public abstract class StructuredZone implements Zone {
             String source,
             String table
     ) {
-        logger.info("Validating data against schema: {}/{}", source, table);
-        val jsonValidator = JsonValidator.createAndRegister(schema, spark, source, table);
+        logger.debug("Validating data against schema: {}/{}", source, table);
+        val validator = JsonValidator.createAndRegister(schema, spark, source, table);
 
         return dataFrame
                 .select(col(DATA), col(METADATA), col(OPERATION))
                 .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
-                .withColumn(ERROR, jsonValidator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)))
+                .withColumn(ERROR, validator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)))
                 .withColumn(VALID, col(ERROR).equalTo(lit("")));
     }
 
