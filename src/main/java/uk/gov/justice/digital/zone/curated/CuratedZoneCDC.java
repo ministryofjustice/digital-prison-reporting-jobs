@@ -50,15 +50,14 @@ public class CuratedZoneCDC extends CuratedZone {
         if (dataFrame.isEmpty()) {
             return spark.emptyDataFrame();
         } else {
-            val rowCount = dataFrame.count();
             String sourceName = table.getAs(SOURCE);
             String tableName = table.getAs(TABLE);
 
             val startTime = System.currentTimeMillis();
 
-            logger.warn("Processing {} records for {}/{}", rowCount, sourceName, tableName);
+            logger.debug("Processing records for {}/{}", sourceName, tableName);
             val result = super.process(spark, dataFrame, table);
-            logger.warn("Processed batch with {} rows in {}ms", rowCount, System.currentTimeMillis() - startTime);
+            logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
 
             return result;
         }

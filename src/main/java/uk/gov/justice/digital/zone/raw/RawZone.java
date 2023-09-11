@@ -41,34 +41,24 @@ public class RawZone implements Zone {
 
     @Override
     public Dataset<Row> process(SparkSession spark, Dataset<Row> records, Row table) throws DataStorageException {
-        val count = records.count();
         val startTime = System.currentTimeMillis();
 
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
 
-        logger.warn("Processing batch with {} records for source: {} table: {}",
-                count,
-                rowSource,
-                rowTable
-        );
+        logger.debug("Processing batch for source: {} table: {}", rowSource, rowTable);
 
         val tablePath = getTablePath(rowSource, rowTable);
 
-        logger.info("Applying batch with {} records to deltalake table: {}", count, tablePath);
+        logger.debug("Applying batch to deltalake table: {}", tablePath);
         val rawDataFrame = createRawDataFrame(records);
         storage.appendDistinct(tablePath, rawDataFrame, new SourceReference.PrimaryKey(PRIMARY_KEY_NAME));
 
-        logger.info("Append completed successfully");
+        logger.debug("Append completed successfully");
 
         storage.updateDeltaManifestForTable(spark, tablePath);
 
-        logger.warn("Processed batch with {} records for {}/{} in {}ms",
-                count,
-                rowSource,
-                rowTable,
-                System.currentTimeMillis() - startTime
-        );
+        logger.debug("Processed batch for {}/{} in {}ms", rowSource, rowTable, System.currentTimeMillis() - startTime);
 
         return rawDataFrame;
     }
