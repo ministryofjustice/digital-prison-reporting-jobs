@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.client.kinesis;
 
-import io.micronaut.context.annotation.Bean;
-import jakarta.inject.Inject;
+import lombok.val;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -15,30 +14,44 @@ import org.slf4j.LoggerFactory;
 import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobArguments;
 
-@Bean
 public class KinesisReader {
 
     private static final Logger logger = LoggerFactory.getLogger(KinesisReader.class);
 
     private final JavaStreamingContext streamingContext;
-    private final JavaDStream<byte[]> kinesisStream;
 
-    @Inject
     public KinesisReader(
             JobArguments jobArguments,
             String jobName,
-            SparkContext sparkContext
+            SparkContext sparkContext,
+            VoidFunction<JavaRDD<byte[]>> batchProcessor
     ) {
-        streamingContext = new JavaStreamingContext(
+        if (jobArguments.isCheckpointEnabled()) {
+            logger.info("Checkpointing is enabled. checkpointLocation: {}", jobArguments.getCheckpointLocation());
+            streamingContext = JavaStreamingContext.getOrCreate(
+                    jobArguments.getCheckpointLocation(),
+                    () -> create(jobArguments, jobName, sparkContext, batchProcessor)
+            );
+        } else {
+            logger.info("Checkpointing is disabled.");
+            streamingContext = create(jobArguments, jobName, sparkContext, batchProcessor);
+        }
+    }
+
+    private static JavaStreamingContext create(JobArguments jobArguments,
+                        String jobName,
+                        SparkContext sparkContext,
+                        VoidFunction<JavaRDD<byte[]>> batchProcessor) {
+        logger.info("Creating new Streaming Context");
+        val ssc = new JavaStreamingContext(
                 JavaSparkContext.fromSparkContext(sparkContext),
                 jobArguments.getKinesisReaderBatchDuration()
         );
 
-        streamingContext.checkpoint(jobArguments.getCheckpointLocation());
-
-        kinesisStream = JavaDStream.fromDStream(
+        // We need to pass a Scala classtag which looks a little ugly in Java.
+        JavaDStream<byte[]> kinesisStream = JavaDStream.fromDStream(
                 KinesisInputDStream.builder()
-                        .streamingContext(streamingContext)
+                        .streamingContext(ssc)
                         .endpointUrl(jobArguments.getAwsKinesisEndpointUrl())
                         .regionName(jobArguments.getAwsRegion())
                         .streamName(jobArguments.getKinesisReaderStreamName())
@@ -55,10 +68,11 @@ public class KinesisReader {
                 jobArguments.getKinesisReaderStreamName(),
                 jobArguments.getKinesisReaderBatchDuration()
         );
-    }
-
-    public void setBatchProcessor(VoidFunction<JavaRDD<byte[]>> batchProcessor) {
         kinesisStream.foreachRDD(batchProcessor);
+        if (jobArguments.isCheckpointEnabled()) {
+            ssc.checkpoint(jobArguments.getCheckpointLocation());
+        }
+        return ssc;
     }
 
     public void startAndAwaitTermination() throws InterruptedException {
@@ -73,9 +87,9 @@ public class KinesisReader {
         logger.info("KinesisReader started");
     }
 
-    public void stop() {
+    public void stopGracefully() {
         logger.info("Stopping KinesisReader");
-        streamingContext.stop();
+        streamingContext.stop(true, true);
         logger.info("KinesisReader terminated");
     }
 

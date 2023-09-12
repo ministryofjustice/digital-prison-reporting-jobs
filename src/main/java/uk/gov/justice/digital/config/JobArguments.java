@@ -51,6 +51,8 @@ public class JobArguments {
 
     public static final String CHECKPOINT_LOCATION = "checkpoint.location";
 
+    public static final String CHECKPOINT_ENABLED = "checkpoint.enabled";
+
     private final Map<String, String> config;
 
     @Inject
@@ -156,6 +158,13 @@ public class JobArguments {
 
     public String getCheckpointLocation() {
         return getArgument(CHECKPOINT_LOCATION);
+    }
+
+    public boolean isCheckpointEnabled() {
+        return Optional
+                .ofNullable(config.get(CHECKPOINT_ENABLED))
+                .map(Boolean::parseBoolean)
+                .orElse(false);
     }
 
     private String getArgument(String argumentName) {

@@ -75,7 +75,7 @@ public class DataHubJob implements Runnable {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
 
         this.spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
-        this.kinesisReader = new KinesisReader(arguments, jobName, spark.sparkContext());
+        this.kinesisReader = new KinesisReader(arguments, jobName, spark.sparkContext(), this::batchProcessor);
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
@@ -136,10 +136,10 @@ public class DataHubJob implements Runnable {
     @Override
     public void run() {
         try {
-            kinesisReader.setBatchProcessor(this::batchProcessor);
             kinesisReader.startAndAwaitTermination();
         } catch (Exception e) {
             if (e instanceof InterruptedException) {
+                kinesisReader.stopGracefully();
                 logger.error("Kinesis job interrupted", e);
             } else {
                 logger.error("Exception occurred during streaming job", e);
