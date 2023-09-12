@@ -96,7 +96,7 @@ public class DataHubJob implements Runnable {
         if (batch.isEmpty()) {
             logger.info("Batch: {} - Skipping empty batch", batch.id());
         } else {
-            logger.debug("Batch: {} - Processing records", batch.id());
+            logger.info("Batch: {} - Processing records", batch.id());
 
             val startTime = System.currentTimeMillis();
 
@@ -138,6 +138,10 @@ public class DataHubJob implements Runnable {
     @Override
     public void run() {
         try {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                logger.warn("Shutdown hook invoked");
+            }));
+
             kinesisReader.setBatchProcessor(this::batchProcessor);
             kinesisReader.startAndAwaitTermination();
         } catch (Exception e) {

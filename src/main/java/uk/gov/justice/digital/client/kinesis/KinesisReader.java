@@ -61,7 +61,14 @@ public class KinesisReader {
 
     public void startAndAwaitTermination() throws InterruptedException {
         this.start();
-        streamingContext.awaitTermination();
+        try {
+            streamingContext.awaitTermination();
+        } catch(Throwable e) {
+            logger.warn("Throwing out of startAndAwaitTermination", e);
+            throw e;
+        } finally {
+            logger.warn("Streaming context terminating");
+        }
         logger.info("KinesisReader terminated");
     }
 
