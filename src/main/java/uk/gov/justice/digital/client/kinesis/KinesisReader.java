@@ -40,7 +40,7 @@ public class KinesisReader {
                         .endpointUrl(jobArguments.getAwsKinesisEndpointUrl())
                         .regionName(jobArguments.getAwsRegion())
                         .streamName(jobArguments.getKinesisReaderStreamName())
-                        .initialPosition(new KinesisInitialPositions.TrimHorizon())
+                        .initialPosition(new KinesisInitialPositions.Latest())
                         .checkpointAppName(jobName)
                         .build(),
                 // We need to pass a Scala classtag which looks a little ugly in Java.
