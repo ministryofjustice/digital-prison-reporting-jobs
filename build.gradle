@@ -149,7 +149,7 @@ jacocoTestReport {
     dependsOn test
     dependsOn integrationTest
     reports {
-        xml.required = false
+        xml.required = true
         html.required = true
     }
 }
@@ -178,6 +178,20 @@ test {
     }
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     println("\nUsing $maxParallelForks executors")
+}
+
+tasks["sonar"].dependsOn test
+
+sonar {
+    properties {
+        property "sonar.exclusions", ""
+        property "sonar.coverage.exclusions", ""
+        property "sonar.jacoco.reportPath", "${project.buildDir}/jacoco/test.exec"
+        property "sonar.projectKey", "ministryofjustice_digital-prison-reporting-jobs"
+        property "sonar.organization", "ministryofjustice"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.projectName", "DPR :: digital-prison-reporting-jobs"
+    }
 }
 
 assemble {
