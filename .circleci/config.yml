@@ -19,6 +19,7 @@ workflows:
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
           quality_gate: true
+          sonar_command: sonar
           sync_args: "--exclude '*' --include '*-all*jar'"
           deploy_script: true
           deploy_to_test: true # Deploy to Test Environment
