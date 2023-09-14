@@ -181,7 +181,7 @@ test {
     println("\nUsing $maxParallelForks executors")
 }
 
-sonar {
+sonarqube {
     properties {
         property "sonar.exclusions", ""
         property "sonar.coverage.exclusions", ""
