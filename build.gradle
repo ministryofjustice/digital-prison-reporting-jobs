@@ -181,8 +181,6 @@ test {
     println("\nUsing $maxParallelForks executors")
 }
 
-tasks["sonar"].dependsOn test
-
 sonar {
     properties {
         property "sonar.exclusions", ""
@@ -195,6 +193,8 @@ sonar {
         property "sonar.core.codeCoveragePlugin", "jacoco"
     }
 }
+
+tasks["sonar"].dependsOn test
 
 assemble {
   dependsOn shadowJar
