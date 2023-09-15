@@ -4,41 +4,6 @@ orbs:
   reporting: ministryofjustice/hmpps-reporting@dev:719864b232e0b253bf90070e89d9c7584347c05f
   slack: circleci/slack@4.12.5  
 
-jobs:
-  gradle-test:
-    docker:
-      - image: cimg/openjdk:8.0
-    environment:
-      JVM_OPTS: -Xmx3200m
-    steps:
-      - checkout
-      - run: ./gradlew test
-      - store_artifacts:
-          path: build/reports/jacoco
-          destination: test_coverage
-      - store_artifacts:
-          path: build/reports/checkstyle
-          destination: checkstyle
-      - run: 
-          name: list folders and files
-          command: ls -lsrt; pwd; ls -lsrt * ; ls -lsrt build/reports  ; ls -lsrt build/jacoco
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-  sonar-analysis:
-    docker:
-      - image: cimg/openjdk:11.0.12
-    steps:
-      - attach_workspace:
-          at: .
-      - run: 
-          name: list folders and files
-          command: ls -lsrt; pwd; ls -lsrt *     
-      - run:
-          name: Run sonar analysis
-          command: ./gradlew sonar
-
 workflows:
   checkout-build-publish:
     jobs:
@@ -67,8 +32,8 @@ workflows:
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
-          # quality_gate: true
-          # sonar_command: sonar
+          quality_gate: false
+          sonar_command: sonar
           sync_args: "--exclude '*' --include '*-all*jar'"
           deploy_script: true
           deploy_to_test: true # Deploy to Test Environment
