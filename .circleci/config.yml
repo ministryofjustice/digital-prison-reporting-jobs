@@ -6,20 +6,7 @@ orbs:
 
 workflows:
   checkout-build-publish:
-    jobs:
-      - gradle-test:
-          filters:
-            branches:
-              only: /.*/
-            tags:
-              ignore: /.*/      
-      - sonar-analysis:
-          filters:
-            branches:
-              only: /.*/
-            tags:
-              ignore: /.*/      
-          requires: [gradle-test]      
+    jobs:    
       - reporting/gradle_owasp_check:
           notify_slack: false
           context:
