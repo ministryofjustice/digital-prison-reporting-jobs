@@ -69,8 +69,6 @@ public class KinesisReader {
         this.start();
         streamingContext.awaitTermination();
         logger.info("KinesisReader terminated");
-        job.commit();
-        logger.info("Glue job committed");
     }
 
     public void start() {
