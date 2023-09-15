@@ -2,6 +2,9 @@ package uk.gov.justice.digital.job;
 
 import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
@@ -15,7 +18,6 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DomainService;
@@ -28,11 +30,16 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TIMESTAMP;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
@@ -57,6 +64,8 @@ public class DataHubJob implements Runnable {
     private final DomainService domainService;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
     private final SparkSession spark;
+
+    private static final URI stopFile = URI.create("s3://dpr-working-test/stopFile");
 
     @Inject
     public DataHubJob(
@@ -92,11 +101,22 @@ public class DataHubJob implements Runnable {
         PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
     }
 
-    public void batchProcessor(JavaRDD<byte[]> batch) {
+    private boolean shouldWeStop() throws IOException {
+        FileSystem fs = FileSystem.get(stopFile, spark.sparkContext().hadoopConfiguration());
+        return !fs.exists(new Path(stopFile));
+    }
+
+    public void batchProcessor(JavaRDD<byte[]> batch) throws IOException {
+        if(shouldWeStop()) {
+            logger.info("Batch cancelled: Time to stop");
+            kinesisReader.stop();
+            logger.info("Batch cancelled: gracefully stopped, exiting");
+            System.exit(0);
+        }
         if (batch.isEmpty()) {
             logger.info("Batch: {} - Skipping empty batch", batch.id());
         } else {
-            logger.debug("Batch: {} - Processing records", batch.id());
+            logger.info("Batch: {} - Processing records", batch.id());
 
             val startTime = System.currentTimeMillis();
 
