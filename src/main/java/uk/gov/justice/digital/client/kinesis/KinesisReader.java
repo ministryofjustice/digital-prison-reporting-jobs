@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.client.kinesis;
 
+import com.amazonaws.services.glue.GlueContext;
+import com.amazonaws.services.glue.util.Job$;
 import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
 import org.apache.spark.SparkContext;
@@ -21,6 +23,7 @@ public class KinesisReader {
     private static final Logger logger = LoggerFactory.getLogger(KinesisReader.class);
 
     private final JavaStreamingContext streamingContext;
+    private final Job$ job;
     private final JavaDStream<byte[]> kinesisStream;
 
     @Inject
@@ -33,6 +36,9 @@ public class KinesisReader {
                 JavaSparkContext.fromSparkContext(sparkContext),
                 jobArguments.getKinesisReaderBatchDuration()
         );
+
+        GlueContext glueContext = new GlueContext(sparkContext);
+        job = Job$.MODULE$.init(jobName, glueContext, jobArguments.getConfig());
 
         kinesisStream = JavaDStream.fromDStream(
                 KinesisInputDStream.builder()
@@ -63,6 +69,8 @@ public class KinesisReader {
         this.start();
         streamingContext.awaitTermination();
         logger.info("KinesisReader terminated");
+        job.commit();
+        logger.info("Glue job committed");
     }
 
     public void start() {
@@ -73,8 +81,8 @@ public class KinesisReader {
 
     public void stop() {
         logger.info("Stopping KinesisReader");
-        streamingContext.stop(true, true);
-        logger.info("KinesisReader terminated");
+        job.commit();
+        logger.info("Glue job committed");
     }
 
 }

@@ -51,6 +51,11 @@ public class JobArguments {
 
     private final Map<String, String> config;
 
+    public Map<String, String> getConfig() {
+        // FIXME: reference escapes!
+        return this.config;
+    }
+
     @Inject
     public JobArguments(ApplicationContext context) {
         this(getCommandLineArgumentsFromContext(context));
