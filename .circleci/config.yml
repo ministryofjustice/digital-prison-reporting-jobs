@@ -23,7 +23,7 @@ jobs:
           name: list folders and files
           command: ls -lsrt; pwd; ls -lsrt * ; ls -lsrt build/reports  ; ls -lsrt build/jacoco
       - persist_to_workspace:
-          root: ~/
+          root: .
           paths:
             - build/reports
   sonar-analysis:
@@ -31,7 +31,7 @@ jobs:
       - image: cimg/openjdk:11.0.12
     steps:
       - attach_workspace:
-          at: ~/
+          at: .
       - run: 
           name: list folders and files
           command: ls -lsrt; pwd; ls -lsrt *     
