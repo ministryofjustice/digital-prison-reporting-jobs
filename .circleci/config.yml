@@ -21,7 +21,7 @@ jobs:
           destination: checkstyle
       - run: 
           name: list folders and files
-          command: ls -lsrt; pwd; ls -lsrt *          
+          command: ls -lsrt; pwd; ls -lsrt * ; ls -lsrt build/reports  ; ls -lsrt build/jacoco
       - persist_to_workspace:
           root: ~/
           paths:
