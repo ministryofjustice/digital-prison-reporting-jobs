@@ -21,6 +21,7 @@ public class SparkSessionProvider {
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.streaming.stopGracefullyOnShutdown", "true")
+                .set("spark.streaming.receiver.writeAheadLog.enable", "true")
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .set("spark.sql.legacy.charVarcharAsString", "true")
