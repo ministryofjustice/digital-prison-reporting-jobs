@@ -39,14 +39,26 @@ jobs:
 workflows:
   checkout-build-publish:
     jobs:
-      - gradle-test
-      - sonar-analysis
+      - gradle-test:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              ignore: /.*/      
+      - sonar-analysis:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              ignore: /.*/      
+          requires: [gradle-test]      
       - reporting/gradle_owasp_check:
           notify_slack: false
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache"
+          requires: [sonar-analysis]
       - reporting/gradle_build_publish:
           tag: "8.0"
           app: digital-prison-reporting-jobs
