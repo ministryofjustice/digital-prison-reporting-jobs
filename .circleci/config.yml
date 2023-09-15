@@ -13,7 +13,6 @@ workflows:
             - hmpps-reporting-common
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache"
-          requires: [sonar-analysis]
       - reporting/gradle_build_publish:
           tag: "8.0"
           app: digital-prison-reporting-jobs
