@@ -15,7 +15,6 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DomainService;
@@ -118,9 +117,8 @@ public class DataHubJob implements Runnable {
                     curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
                     val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
 
-                    // TODO: Disabling incremental domain refresh for now. Will be re-introduced after full load is complete in prod
-//                    if (!curatedCdcDataFrame.isEmpty()) domainService
-//                            .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+                    if (!curatedCdcDataFrame.isEmpty()) domainService
+                            .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
 
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);

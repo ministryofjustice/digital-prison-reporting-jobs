@@ -3,11 +3,15 @@ package uk.gov.justice.digital.service;
 import com.google.common.collect.ImmutableList;
 import jakarta.inject.Inject;
 import lombok.val;
+import org.apache.hadoop.shaded.com.google.re2j.Pattern;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.constructor.DuplicateKeyException;
 import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.DomainExecutor;
@@ -21,6 +25,7 @@ import javax.inject.Singleton;
 import java.util.*;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.Load;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.getOperation;
@@ -34,6 +39,9 @@ public class DomainService {
     private final DomainDefinitionClient domainClient;
     private final DomainExecutor executor;
     private final JobArguments arguments;
+    private static final Pattern aliasRegexPattern = Pattern.compile(" (\\S+)(\\s+as\\s+)(\\S+) ");
+    private static final Pattern joinExprRegexPattern = Pattern
+            .compile("((join)|((left)(\\s+)(join))|((right)(\\s+)(join))|((full)(\\s+)(join)))");
 
     @Inject
     public DomainService(
@@ -61,7 +69,7 @@ public class DomainService {
         String tableName = tableInfo.getAs(TABLE);
         val domainDefinitions = getDomainDefinitions();
         val domainDefinitionsForSource = filterDomainDefinitionsForSource(domainDefinitions, tableName);
-        logger.info("Found {} domains with source table {}", domainDefinitionsForSource.size(), tableName);
+        logger.debug("Found {} domains with source table {}", domainDefinitionsForSource.size(), tableName);
 
         if (domainDefinitionsForSource.isEmpty()) {
             // log and proceed when no domain is found for the table
@@ -69,42 +77,44 @@ public class DomainService {
         } else {
             domainDefinitionsForSource.forEach(domainDefinition ->
                     dataFrame.collectAsList()
-                            .forEach(row -> refreshCDCRecord(spark, domainDefinition, row, tableName))
+                            .forEach(row -> refreshDomainUsingCDCRecord(spark, domainDefinition, row, tableName))
             );
         }
     }
 
-    private void refreshCDCRecord(SparkSession spark, DomainDefinition domainDefinition, Row row, String recordTableName) {
+    private void refreshDomainUsingCDCRecord(SparkSession spark, DomainDefinition domainDefinition, Row row, String referenceTableName) {
         String unvalidatedOperation = row.getAs(OPERATION);
         val domainName = domainDefinition.getName();
         val optionalOperation = getOperation(unvalidatedOperation);
         val cdcOperations = optionalOperation.filter(operation -> operation != Load); // discard load records
 
         cdcOperations.ifPresent(operation -> {
-            val singleRecord = spark.createDataFrame(new ArrayList<>(ImmutableList.of(row)), row.schema());
+            val referenceDataframe = lowerCaseColumnNames(spark, row);
 
             domainDefinition.getTables().forEach(tableDefinition -> {
                         val tableTransform = tableDefinition.getTransform();
                         val violations = tableDefinition.getViolations();
-                        val sourceToRecordMap = buildSourceToRecordsMap(singleRecord, tableDefinition, recordTableName);
 
                         try {
                             String tableName = tableDefinition.getName();
+                            val sourceToRecordMap = buildSourceToRecordsMap(spark, referenceDataframe, tableDefinition, referenceTableName);
 
-                            logger.info("Applying transform for CDC record of table " + tableName);
+                            logger.debug("Applying transform for CDC record of table " + tableName);
                             val transformedDataFrame = executor.applyTransform(spark, sourceToRecordMap, tableTransform);
+                            logger.debug("Transformed record " + transformedDataFrame);
 
-                            logger.info("Applying violations for CDC record of table " + tableName);
+                            logger.debug("Applying violations for CDC record of table " + tableName);
                             executor.applyViolations(spark, transformedDataFrame, violations);
 
-                            logger.info("Saving transformed CDC record of table " + tableName);
-                            executor.saveDomain(spark, transformedDataFrame, domainName, tableDefinition, operation);
+                            logger.debug("Saving transformed CDC record of table " + tableName);
+                            executor.applyDomain(spark, transformedDataFrame, domainName, tableDefinition, operation);
                         } catch (Exception e) {
                             logger.warn(
-                                    "Failed to incrementally {} domain {} and table {}",
+                                    "Failed to incrementally {} domain {}_{} given record {}",
                                     operation,
                                     domainName,
-                                    recordTableName,
+                                    tableDefinition.getName(),
+                                    referenceTableName,
                                     e
                             );
                         }
@@ -145,7 +155,7 @@ public class DomainService {
                                                  String tableName) throws DomainServiceException {
         try {
             val domainDefinition = domainClient.getDomainDefinition(domainName, tableName);
-            logger.info("Retrieved domain definition for domain: '{}' table: '{}'", domainName, tableName);
+            logger.debug("Retrieved domain definition for domain: '{}' table: '{}'", domainName, tableName);
             return domainDefinition;
         } catch (DatabaseClientException e) {
             String errorMessage = "DynamoDB request failed: ";
@@ -186,19 +196,115 @@ public class DomainService {
     }
 
     private Map<String, Dataset<Row>> buildSourceToRecordsMap(
-            Dataset<Row> dataFrame,
+            SparkSession spark,
+            Dataset<Row> referenceDataFrame,
             TableDefinition tableDefinition,
-            String rowTable
+            String referenceTableName
     ) {
-        Map<String, Dataset<Row>> sourceToRecordMap = new HashMap<>();
+        val sourceToRecordMap = new HashMap<String, Dataset<Row>>();
+        val viewText = tableDefinition.getTransform().getViewText().replaceAll("\\n", " ");
         tableDefinition
                 .getTransform()
                 .getSources()
-                .forEach(source -> {
-                    if (source.toLowerCase().endsWith(rowTable.toLowerCase())) {
-                        sourceToRecordMap.put(source, dataFrame);
+                .forEach(adjoiningTableName -> {
+                    if (adjoiningTableName.toLowerCase().endsWith(referenceTableName.toLowerCase())) {
+                        sourceToRecordMap.put(adjoiningTableName, referenceDataFrame);
+                    } else {
+                        try {
+                            val columnMappings = buildColumnMapBetweenReferenceAndAdjoiningTables(referenceTableName, adjoiningTableName, viewText);
+                            val adjoiningDataFrame = executor
+                                    .getAdjoiningDataFrameForReferenceDataFrame(spark, adjoiningTableName, columnMappings, referenceDataFrame);
+                            if (adjoiningDataFrame.isEmpty()) {
+                                logger.warn("Adjoining dataFrame is empty for source {} and viewText {}", adjoiningTableName, viewText);
+                            } else {
+                                sourceToRecordMap.put(adjoiningTableName, adjoiningDataFrame);
+                            }
+                        } catch (DomainServiceException | DuplicateKeyException e) {
+                            logger.warn("Failed to to get dataFrame for other table source {} ", adjoiningTableName, e);
+                        }
                     }
                 });
         return sourceToRecordMap;
+    }
+
+    protected Map<String, String> buildColumnMapBetweenReferenceAndAdjoiningTables(
+            String referenceTableName,
+            String adjoiningTableName,
+            String viewText
+    ) throws DomainServiceException {
+        val columnMappings = new HashMap<String, String>();
+
+        val fromExpression = viewText.toLowerCase().split(" from ", 2)[1];
+        val aliasesResolved = resolveAliases(fromExpression);
+        val joinExpressions = aliasesResolved.split(joinExprRegexPattern.pattern());
+
+        for (String joinExpression : joinExpressions) {
+            val onExpressions = joinExpression.split(" on ");
+
+            if (onExpressions.length == 2) {
+                // ViewText has a join expression
+                val joinClause = onExpressions[1];
+                val andExpressions = Arrays
+                        .stream(joinClause.split(" and "))
+                        .map(String::trim)
+                        .filter(x ->
+                                x.toLowerCase().contains(referenceTableName.toLowerCase()) &&
+                                        x.toLowerCase().contains(adjoiningTableName.toLowerCase())
+                        )
+                        .collect(Collectors.toList());
+
+                val joinColumns = andExpressions
+                        .stream()
+                        .flatMap(str -> Arrays.stream(str.trim().split("=")).map(String::trim))
+                        .collect(Collectors.toList());
+
+                val currentTableJoinColumns = joinColumns
+                        .stream()
+                        .filter(column -> column.trim().contains(referenceTableName.toLowerCase()))
+                        .map(x -> x.substring(x.lastIndexOf(".") + 1))
+                        .collect(Collectors.toList());
+
+                val otherTableJoinColumns = joinColumns
+                        .stream()
+                        .filter(column -> column.trim().contains(adjoiningTableName.toLowerCase()))
+                        .map(x -> x.substring(x.lastIndexOf(".") + 1))
+                        .collect(Collectors.toList());
+
+                if (currentTableJoinColumns.size() == otherTableJoinColumns.size()) {
+                    val intermediateMap = IntStream.range(0, currentTableJoinColumns.size())
+                            .boxed()
+                            .collect(Collectors.toMap(currentTableJoinColumns::get, otherTableJoinColumns::get));
+                    columnMappings.putAll(intermediateMap);
+                } else {
+                    throw new DomainServiceException("Join expression length mismatch in viewText " + viewText);
+                }
+            }
+        }
+
+        return columnMappings;
+    }
+
+    private String resolveAliases(String sqlText) {
+        String aliasReplacedText = sqlText;
+        val matcher = aliasRegexPattern.matcher(sqlText);
+
+        while (matcher.find()) {
+            val originalName = matcher.group(1);
+            val alias = matcher.group(3);
+            aliasReplacedText = aliasReplacedText
+                    .replaceAll(" as " + alias, " ")
+                    .replaceAll(alias, originalName);
+        }
+
+        return aliasReplacedText;
+    }
+
+    private static Dataset<Row> lowerCaseColumnNames(SparkSession spark, Row row) {
+        val dataFrame = spark.createDataFrame(new ArrayList<>(ImmutableList.of(row)), row.schema());
+        return dataFrame.select(
+                Arrays.stream(dataFrame.columns())
+                        .map(column -> functions.col(column).as(column.toLowerCase()))
+                        .toArray(Column[]::new)
+        );
     }
 }

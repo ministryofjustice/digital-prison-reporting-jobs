@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
@@ -316,6 +319,43 @@ class DomainExecutorTest extends BaseSparkTest {
         );
     }
 
+    @Test
+    public void shouldReturnEmptyDataFrameWhenGettingAdjoiningDataFrameGivenEmptyColumnMapping() {
+        val source = "nomis";
+
+        val sourcePath = this.tmp.toFile().getAbsolutePath() + "/" + source;
+        val testSchemaService = mock(DomainSchemaService.class);
+        val executor = createExecutor(sourcePath, targetPath(), storage, testSchemaService);
+        val columnMappings = new HashMap<String, String>();
+
+        val result = executor.getAdjoiningDataFrameForReferenceDataFrame(spark, source, columnMappings, spark.emptyDataFrame());
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void shouldReturnFilteredDataFrameWhenGettingAdjoiningDataFrameGivenColumnMappings() {
+        val source = "nomis";
+
+        val sourcePath = this.tmp.toFile().getAbsolutePath() + "/" + source;
+        val testSchemaService = mock(DomainSchemaService.class);
+        val executor = createExecutor(sourcePath, targetPath(), testStorage, testSchemaService);
+
+        val columnMappings = new HashMap<String, String>();
+        columnMappings.put("table_1_column_1", "table_2_column_1");
+        columnMappings.put("table_1_column_2", "table_2_column_2");
+        columnMappings.put("table_1_column_3", "table_2_column_3");
+
+        when(testStorage.get(eq(spark), any(TableIdentifier.class))).thenReturn(createAdjoiningDataFrame());
+
+        val result = executor.getAdjoiningDataFrameForReferenceDataFrame(spark, source, columnMappings, createReferenceDataFrame());
+
+        assertIterableEquals(
+                Collections.singletonList(RowFactory.create("table_id", "column_1_value", 20, false, "row_2_column_4_value")),
+                result.collectAsList()
+        );
+    }
+
     private DomainDefinition getDomain(String resource) throws IOException {
         return mapper.readValue(ResourceLoader.getResource(resource), DomainDefinition.class);
     }
@@ -351,6 +391,38 @@ class DomainExecutorTest extends BaseSparkTest {
         refs.put("nomis.offender_bookings", helpers.getOffenderBookings(tmp));
         refs.put("nomis.offenders", helpers.getOffenders(tmp));
         return refs;
+    }
+
+    private static Dataset<Row> createReferenceDataFrame() {
+        val tableSchema = new StructType()
+                .add("id", DataTypes.StringType)
+                .add("table_1_column_1", DataTypes.StringType)
+                .add("table_1_column_2", DataTypes.IntegerType)
+                .add("table_1_column_3", DataTypes.BooleanType);
+
+        val id = "table_id";
+        val column1Value = "column_1_value";
+        val column2Value = 20;
+        val column3Value = false;
+
+        val rows = Collections.singletonList(RowFactory.create(id, column1Value, column2Value, column3Value));
+
+        return spark.createDataFrame(rows, tableSchema);
+    }
+
+    private static Dataset<Row> createAdjoiningDataFrame() {
+        val tableSchema = new StructType()
+                .add("id", DataTypes.StringType)
+                .add("table_2_column_1", DataTypes.StringType)
+                .add("table_2_column_2", DataTypes.IntegerType)
+                .add("table_2_column_3", DataTypes.BooleanType)
+                .add("table_2_column_4", DataTypes.StringType);
+
+        List<Row> rows = new ArrayList<>();
+        rows.add(RowFactory.create("row_1_id", "row_1_column_1_value", 21, true, "row_1_column_4_value"));
+        rows.add(RowFactory.create("table_id", "column_1_value", 20, false, "row_2_column_4_value"));
+
+        return spark.createDataFrame(rows, tableSchema);
     }
 
 }
