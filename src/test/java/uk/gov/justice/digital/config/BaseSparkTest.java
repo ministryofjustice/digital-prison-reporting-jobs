@@ -29,7 +29,7 @@ public class BaseSparkTest {
 	protected static SparkSession spark;
 
 	private static SparkSession createSparkSession() {
-		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration, LogLevel.INFO);
+		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration, LogLevel.INFO, false);
 	}
 
 	@BeforeAll
