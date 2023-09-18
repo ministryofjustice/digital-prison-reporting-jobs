@@ -16,7 +16,6 @@ public class SparkSessionProvider {
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.UTC));
 
         sparkConf
-                .setMaster("local[*]")
                 .set("spark.databricks.delta.autoCompact.enabled", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
