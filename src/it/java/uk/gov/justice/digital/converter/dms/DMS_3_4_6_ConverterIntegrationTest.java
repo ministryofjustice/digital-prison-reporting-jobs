@@ -7,6 +7,7 @@ import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import java.util.Arrays;
@@ -31,7 +32,8 @@ class DMS_3_4_6_ConverterIntegrationTest extends BaseSparkTest {
     };
 
     private static final JobArguments arguments = new JobArguments(config);
-    private static final DMS_3_4_6 underTest = new DMS_3_4_6(arguments, new SparkSessionProvider());
+    private static final JobProperties properties = () -> "some job name";
+    private static final DMS_3_4_6 underTest = new DMS_3_4_6(arguments, properties, new SparkSessionProvider());
 
     @Test
     void shouldConvertValidDataCorrectly() {

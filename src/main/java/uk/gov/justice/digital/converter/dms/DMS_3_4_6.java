@@ -2,17 +2,21 @@ package uk.gov.justice.digital.converter.dms;
 
 import jakarta.inject.Inject;
 import lombok.val;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.*;
 
@@ -119,14 +123,28 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>>, Seriali
     // Allow parse errors to fail silently when parsing the raw JSON string to allow control records to be filtered.
     private static final Map<String, String> jsonOptions = Collections.singletonMap("mode", "PERMISSIVE");
 
-    private final SparkSession spark;
+    private final JobArguments arguments;
+    private final JobProperties properties;
+    private final SparkSessionProvider sparkSessionProvider;
+
+    // SparkSession object requires special handling for Spark checkpointing since it can not be deserialized
+    // in a working state from a checkpoint.
+    // Transient ensures Java does not attempt to serialize it.
+    // Volatile ensures it keeps the 'final' concurrency initialization guarantee.
+    private transient volatile SparkSession spark;
 
     @Inject
     public DMS_3_4_6(
             JobArguments arguments,
+            JobProperties properties,
             SparkSessionProvider sparkSessionProvider
     ) {
-        this.spark = sparkSessionProvider.getConfiguredSparkSession(arguments.getLogLevel());
+        this.arguments = arguments;
+        this.properties = properties;
+        this.sparkSessionProvider = sparkSessionProvider;
+        //todo duplicated code
+        SparkConf sparkConf = new SparkConf().setAppName(properties.getSparkJobName());
+        this.spark = this.sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
     }
 
     @Override
@@ -167,6 +185,12 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>>, Seriali
             );
         // Strictly apply the parsed data schema which will fail if any values are null.
         return spark.createDataFrame(df.javaRDD(), PARSED_DATA_SCHEMA);
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        SparkConf sparkConf = new SparkConf().setAppName(properties.getSparkJobName());
+        this.spark = this.sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
     }
 
 }

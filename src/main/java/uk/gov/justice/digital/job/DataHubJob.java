@@ -28,12 +28,17 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TIMESTAMP;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
@@ -60,7 +65,12 @@ public class DataHubJob implements Serializable, Runnable {
 
     private final JobArguments arguments;
     private final JobProperties properties;
-    private final SparkSession spark;
+    private final SparkSessionProvider sparkSessionProvider;
+    // SparkSession object requires special handling for Spark checkpointing since it can not be deserialized
+    // in a working state from a checkpoint.
+    // Transient ensures Java does not attempt to serialize it.
+    // Volatile ensures it keeps the 'final' concurrency initialization guarantee.
+    private transient volatile SparkSession spark;
     @Inject
     public DataHubJob(
         JobArguments arguments,
@@ -84,6 +94,7 @@ public class DataHubJob implements Serializable, Runnable {
         this.curatedZoneCDC = curatedZoneCDC;
         this.domainService = domainService;
         this.converter = converter;
+        this.sparkSessionProvider = sparkSessionProvider;
         String jobName = properties.getSparkJobName();
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
         spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
@@ -171,5 +182,12 @@ public class DataHubJob implements Serializable, Runnable {
                 : dataFrame
                 .filter(col(SOURCE).equalTo(source).and(col(TABLE).equalTo(table)))
                 .orderBy(col(TIMESTAMP));
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        String jobName = properties.getSparkJobName();
+        SparkConf sparkConf = new SparkConf().setAppName(jobName);
+        this.spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
     }
 }

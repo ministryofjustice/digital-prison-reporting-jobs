@@ -5,11 +5,14 @@ import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 
+import java.io.Serializable;
 import java.time.ZoneOffset;
 import java.util.TimeZone;
 
 @Singleton
-public class SparkSessionProvider {
+public class SparkSessionProvider implements Serializable {
+
+    private static final long serialVersionUID = 7084308957890651117L;
 
     public SparkSession getConfiguredSparkSession(SparkConf sparkConf, LogLevel logLevel, boolean enableWriteAheadLog) {
         // We set the overall default timezone to UTC before then configuring the spark session to also use UTC.

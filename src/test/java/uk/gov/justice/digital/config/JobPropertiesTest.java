@@ -12,7 +12,7 @@ class JobPropertiesTest {
     private static final String SPARK_JOB_NAME_KEY = "spark.glue.JOB_NAME";
     private static final String SPARK_JOB_NAME = "SomeTestJob";
 
-    private static final JobProperties underTest = new JobProperties();
+    private static final JobPropertiesImpl underTest = new JobPropertiesImpl();
 
     @BeforeEach
     public void setupProperties() {
