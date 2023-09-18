@@ -145,6 +145,7 @@ public class DataHubJob implements Serializable, Runnable {
         try {
             streamingContext.start();
             streamingContext.awaitTermination();
+            streamingContext.close();
         } catch (Exception e) {
             if (e instanceof InterruptedException) {
                 streamingContext.stop(true, true);
@@ -153,8 +154,6 @@ public class DataHubJob implements Serializable, Runnable {
                 logger.error("Exception occurred during streaming job", e);
                 System.exit(1);
             }
-        } finally {
-            streamingContext.close();
         }
     }
 

@@ -8,9 +8,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.val;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
+import java.io.Serializable;
 import java.util.*;
 
-public abstract class DynamoDBClient {
+public abstract class DynamoDBClient implements Serializable {
+
+    private static final long serialVersionUID = 3057998036760385193L;
 
     private final AmazonDynamoDB client;
     private final String tableName;
