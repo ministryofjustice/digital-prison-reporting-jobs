@@ -11,7 +11,7 @@ import java.util.TimeZone;
 @Singleton
 public class SparkSessionProvider {
 
-    public SparkSession getConfiguredSparkSession(SparkConf sparkConf, LogLevel logLevel) {
+    public SparkSession getConfiguredSparkSession(SparkConf sparkConf, LogLevel logLevel, boolean enableWriteAheadLog) {
         // We set the overall default timezone to UTC before then configuring the spark session to also use UTC.
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.UTC));
 
@@ -21,7 +21,6 @@ public class SparkSessionProvider {
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.streaming.stopGracefullyOnShutdown", "true")
-//                .set("spark.streaming.receiver.writeAheadLog.enable", "true")
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .set("spark.sql.legacy.charVarcharAsString", "true")
@@ -30,6 +29,9 @@ public class SparkSessionProvider {
                 .set("spark.sql.parquet.int96RebaseModeInWrite", "CORRECTED")
                 // Standardise on UTC.
                 .set("spark.sql.session.timeZone", "UTC");
+        if(enableWriteAheadLog) {
+            sparkConf.set("spark.streaming.receiver.writeAheadLog.enable", "true");
+        }
 
         SparkSession session = SparkSession.builder()
                                 .config(sparkConf)
@@ -42,7 +44,7 @@ public class SparkSessionProvider {
     }
 
     public SparkSession getConfiguredSparkSession(LogLevel logLevel) {
-        return getConfiguredSparkSession(new SparkConf(), logLevel);
+        return getConfiguredSparkSession(new SparkConf(), logLevel, false);
     }
 
 }

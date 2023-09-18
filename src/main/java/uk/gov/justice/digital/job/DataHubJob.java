@@ -75,8 +75,6 @@ public class DataHubJob implements Serializable, Runnable {
         SparkSessionProvider sparkSessionProvider
     ) {
         logger.info("Initializing DataHubJob");
-
-
         this.arguments = arguments;
         this.properties = properties;
         this.rawZone = rawZone;
@@ -88,7 +86,7 @@ public class DataHubJob implements Serializable, Runnable {
         this.converter = converter;
         String jobName = properties.getSparkJobName();
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
-        spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
+        spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
         logger.info("DataHubJob initialization complete");
     }
 
