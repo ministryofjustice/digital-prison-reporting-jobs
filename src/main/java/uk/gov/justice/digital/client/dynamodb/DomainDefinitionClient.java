@@ -11,11 +11,13 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.exception.DatabaseClientException;
 
+import java.io.Serializable;
 import java.util.List;
 
 @Singleton
-public class DomainDefinitionClient extends DynamoDBClient {
+public class DomainDefinitionClient extends DynamoDBClient implements Serializable {
 
+    private static final long serialVersionUID = -1135540843313411207L;
     private static final Logger logger = LoggerFactory.getLogger(DomainDefinitionClient.class);
 
     private static final String primaryKey = "primaryId";

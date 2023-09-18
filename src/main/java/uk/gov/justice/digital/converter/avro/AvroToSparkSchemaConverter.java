@@ -8,6 +8,7 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.converter.Converter;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -26,7 +27,9 @@ import java.util.stream.Collectors;
  *        conversion.
  */
 @Singleton
-public class AvroToSparkSchemaConverter implements Converter<String, StructType> {
+public class AvroToSparkSchemaConverter implements Converter<String, StructType>, Serializable {
+
+    private static final long serialVersionUID = -6210938090267007642L;
 
     @Override
     public StructType convert(String avroSchemaString) {

@@ -16,12 +16,16 @@ import uk.gov.justice.digital.zone.Zone;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import java.io.Serializable;
+
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 @Singleton
-public class RawZone implements Zone {
+public class RawZone implements Zone, Serializable {
+
+    private static final long serialVersionUID = 3724270591665414383L;
 
     public static final String PRIMARY_KEY_NAME = "id";
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);

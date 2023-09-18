@@ -12,6 +12,7 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.Consumer;
@@ -19,7 +20,9 @@ import java.util.function.Consumer;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.getOperation;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 
-public abstract class Writer {
+public abstract class Writer implements Serializable {
+
+    private static final long serialVersionUID = 5382255468250995673L;
 
     private static final Logger logger = LoggerFactory.getLogger(Writer.class);
 

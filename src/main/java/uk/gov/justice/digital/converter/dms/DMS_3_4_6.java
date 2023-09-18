@@ -13,6 +13,7 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.io.Serializable;
 import java.util.*;
 
 import static org.apache.spark.sql.functions.*;
@@ -29,8 +30,9 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
  */
 @Singleton
 @Named("converterForDMS_3_4_6")
-public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
+public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>>, Serializable {
 
+    private static final long serialVersionUID = -2613032829910284152L;
     public static final String CONVERTER_VERSION = "dms:3.4.6";
     public static final String ORIGINAL = "original";
     public static final String JSON_DATA = "jsonData";

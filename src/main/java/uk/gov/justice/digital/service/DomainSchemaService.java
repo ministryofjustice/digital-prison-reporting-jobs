@@ -15,6 +15,9 @@ import uk.gov.justice.digital.exception.DomainSchemaException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,17 +26,25 @@ import java.util.regex.Pattern;
 
 // TODO - this should not use the glueClient directly
 @Singleton
-public class DomainSchemaService {
+public class DomainSchemaService implements Serializable {
+
+    private static final long serialVersionUID = -6137688451781867571L;
 
     private final static String TABLE_NAME_PATTERN = "^\\w*$";
     private final static String SCHEMA_TABLE_SEPARATOR = "_";
 
     private static final Logger logger = LoggerFactory.getLogger(DomainSchemaService.class);
 
-    private final AWSGlue glueClient;
+    private final GlueClientProvider glueClientProvider;
+
+    // AWSGlue object requires special handling for Spark checkpointing since it is not serializable.
+    // Transient ensures Java does not attempt to serialize it.
+    // Volatile ensures it keeps the 'final' concurrency initialization guarantee.
+    private transient volatile AWSGlue glueClient;
 
     @Inject
     public DomainSchemaService(GlueClientProvider glueClientProvider) {
+        this.glueClientProvider = glueClientProvider;
         this.glueClient = glueClientProvider.getClient();
     }
 
@@ -195,5 +206,10 @@ public class DomainSchemaService {
     }
     private boolean validateTableName(String tablename) {
         return Pattern.matches(TABLE_NAME_PATTERN, tablename);
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        this.glueClient = this.glueClientProvider.getClient();
     }
 }

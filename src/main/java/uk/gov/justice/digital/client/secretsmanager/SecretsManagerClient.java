@@ -10,9 +10,12 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.SecretsManagerClientException;
 
 import javax.inject.Singleton;
+import java.io.Serializable;
 
 @Singleton
-public class SecretsManagerClient {
+public class SecretsManagerClient implements Serializable {
+
+    private static final long serialVersionUID = -4487191414062715636L;
 
     private static final Logger logger = LoggerFactory.getLogger(SecretsManagerClient.class);
 

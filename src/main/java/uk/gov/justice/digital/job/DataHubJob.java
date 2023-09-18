@@ -8,10 +8,11 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
-import uk.gov.justice.digital.client.kinesis.KinesisReader;
+import uk.gov.justice.digital.client.kinesis.KinesisStreamingContextProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
@@ -27,6 +28,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -42,12 +44,12 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
  */
 @Singleton
 @Command(name = "DataHubJob")
-public class DataHubJob implements Runnable {
+public class DataHubJob implements Serializable, Runnable {
+
+    private static final long serialVersionUID = -8033674902036450536L;
 
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
 
-
-    public final KinesisReader kinesisReader;
     private final RawZone rawZone;
     private final StructuredZoneLoad structuredZoneLoad;
     private final StructuredZoneCDC structuredZoneCDC;
@@ -55,8 +57,10 @@ public class DataHubJob implements Runnable {
     private final CuratedZoneCDC curatedZoneCDC;
     private final DomainService domainService;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
-    private final SparkSession spark;
 
+    private final JobArguments arguments;
+    private final JobProperties properties;
+    private final SparkSession spark;
     @Inject
     public DataHubJob(
         JobArguments arguments,
@@ -71,11 +75,10 @@ public class DataHubJob implements Runnable {
         SparkSessionProvider sparkSessionProvider
     ) {
         logger.info("Initializing DataHubJob");
-        String jobName = properties.getSparkJobName();
-        SparkConf sparkConf = new SparkConf().setAppName(jobName);
 
-        this.spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
-        this.kinesisReader = new KinesisReader(arguments, jobName, spark.sparkContext(), this::batchProcessor);
+
+        this.arguments = arguments;
+        this.properties = properties;
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
@@ -83,6 +86,9 @@ public class DataHubJob implements Runnable {
         this.curatedZoneCDC = curatedZoneCDC;
         this.domainService = domainService;
         this.converter = converter;
+        String jobName = properties.getSparkJobName();
+        SparkConf sparkConf = new SparkConf().setAppName(jobName);
+        spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
         logger.info("DataHubJob initialization complete");
     }
 
@@ -135,16 +141,22 @@ public class DataHubJob implements Runnable {
 
     @Override
     public void run() {
+        String jobName = properties.getSparkJobName();
+        JavaStreamingContext streamingContext =
+                KinesisStreamingContextProvider.buildStreamingContext(arguments, jobName, spark.sparkContext(), this::batchProcessor);
         try {
-            kinesisReader.startAndAwaitTermination();
+            streamingContext.start();
+            streamingContext.awaitTermination();
         } catch (Exception e) {
             if (e instanceof InterruptedException) {
-                kinesisReader.stopGracefully();
+                streamingContext.stop(true, true);
                 logger.error("Kinesis job interrupted", e);
             } else {
                 logger.error("Exception occurred during streaming job", e);
                 System.exit(1);
             }
+        } finally {
+            streamingContext.close();
         }
     }
 

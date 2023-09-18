@@ -25,11 +25,14 @@ import uk.gov.justice.digital.service.DomainSchemaService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Singleton
-public class DomainExecutor {
+public class DomainExecutor implements Serializable {
+
+    private static final long serialVersionUID = 6419653384257818675L;
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 

@@ -14,10 +14,14 @@ import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
 
+import java.io.Serializable;
+
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public abstract class CuratedZone implements Zone {
+public abstract class CuratedZone implements Zone, Serializable {
+
+    private static final long serialVersionUID = -9142928315917072122L;
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZone.class);
 

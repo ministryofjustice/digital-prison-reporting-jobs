@@ -15,11 +15,15 @@ import uk.gov.justice.digital.writer.structured.StructuredZoneCdcWriter;
 
 import javax.inject.Inject;
 
+import java.io.Serializable;
+
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.cdcOperations;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public class StructuredZoneCDC extends StructuredZone {
+public class StructuredZoneCDC extends StructuredZone implements Serializable {
+
+    private static final long serialVersionUID = -1294039396682180381L;
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZoneCDC.class);
 

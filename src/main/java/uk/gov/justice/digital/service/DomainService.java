@@ -22,6 +22,7 @@ import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.exception.DomainServiceException;
 
 import javax.inject.Singleton;
+import java.io.Serializable;
 import java.util.*;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
@@ -32,7 +33,9 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.getOperat
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 @Singleton
-public class DomainService {
+public class DomainService implements Serializable {
+
+    private static final long serialVersionUID = -5931346808828482550L;
 
     private static final Logger logger = LoggerFactory.getLogger(DomainService.class);
 

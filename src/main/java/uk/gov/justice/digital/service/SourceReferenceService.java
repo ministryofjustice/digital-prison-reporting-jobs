@@ -17,11 +17,14 @@ import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Singleton
-public class SourceReferenceService {
+public class SourceReferenceService implements Serializable {
+
+    private static final long serialVersionUID = 7995805215566659457L;
 
     private static final Logger logger = LoggerFactory.getLogger(SourceReferenceService.class);
 

@@ -11,6 +11,7 @@ import javax.inject.Inject;
 
 public class CuratedZoneCdcWriter extends Writer {
 
+    private static final long serialVersionUID = -7393921506128460852L;
     private final DataStorageService storage;
 
     @Inject

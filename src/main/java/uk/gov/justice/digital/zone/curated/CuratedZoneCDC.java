@@ -16,11 +16,15 @@ import uk.gov.justice.digital.writer.curated.CuratedZoneCdcWriter;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import java.io.Serializable;
+
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 
 @Singleton
-public class CuratedZoneCDC extends CuratedZone {
+public class CuratedZoneCDC extends CuratedZone implements Serializable {
+
+    private static final long serialVersionUID = 6703771889364775424L;
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZoneCDC.class);
 

@@ -16,6 +16,7 @@ import uk.gov.justice.digital.writer.Writer;
 import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 
@@ -23,7 +24,9 @@ import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
-public abstract class StructuredZone implements Zone {
+public abstract class StructuredZone implements Zone, Serializable {
+
+    private static final long serialVersionUID = 7305299867913939915L;
 
     public static final String ERROR = "error";
     public static final String PARSED_DATA = "parsedData";

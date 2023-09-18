@@ -6,12 +6,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DataStorageException;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * Responsible for performing maintenance tasks.
  */
-public class MaintenanceService {
+public class MaintenanceService implements Serializable {
+
+    private static final long serialVersionUID = -6763152377193447760L;
 
     private static final Logger logger = LoggerFactory.getLogger(MaintenanceService.class);
     private final DataStorageService storageService;

@@ -14,18 +14,17 @@ import org.slf4j.LoggerFactory;
 import scala.reflect.ClassTag$;
 import uk.gov.justice.digital.config.JobArguments;
 
-public class KinesisReader {
+public class KinesisStreamingContextProvider {
+    private static final Logger logger = LoggerFactory.getLogger(KinesisStreamingContextProvider.class);
 
-    private static final Logger logger = LoggerFactory.getLogger(KinesisReader.class);
 
-    private final JavaStreamingContext streamingContext;
-
-    public KinesisReader(
+    public static JavaStreamingContext buildStreamingContext(
             JobArguments jobArguments,
             String jobName,
             SparkContext sparkContext,
             VoidFunction<JavaRDD<byte[]>> batchProcessor
     ) {
+        JavaStreamingContext streamingContext;
         if (jobArguments.isCheckpointEnabled()) {
             logger.info("Checkpointing is enabled. checkpointLocation: {}", jobArguments.getCheckpointLocation());
             streamingContext = JavaStreamingContext.getOrCreate(
@@ -36,6 +35,7 @@ public class KinesisReader {
             logger.info("Checkpointing is disabled.");
             streamingContext = create(jobArguments, jobName, sparkContext, batchProcessor);
         }
+        return streamingContext;
     }
 
     private static JavaStreamingContext create(JobArguments jobArguments,
@@ -74,23 +74,4 @@ public class KinesisReader {
         }
         return ssc;
     }
-
-    public void startAndAwaitTermination() throws InterruptedException {
-        this.start();
-        streamingContext.awaitTermination();
-        logger.info("KinesisReader terminated");
-    }
-
-    public void start() {
-        logger.info("Starting KinesisReader");
-        streamingContext.start();
-        logger.info("KinesisReader started");
-    }
-
-    public void stopGracefully() {
-        logger.info("Stopping KinesisReader");
-        streamingContext.stop(true, true);
-        logger.info("KinesisReader terminated");
-    }
-
 }

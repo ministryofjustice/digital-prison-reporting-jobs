@@ -16,6 +16,8 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OP
 
 public class StructuredZoneLoadWriter extends Writer {
 
+    private static final long serialVersionUID = -3583789704495907268L;
+
     private static final Logger logger = LoggerFactory.getLogger(StructuredZoneLoadWriter.class);
 
     private final DataStorageService storage;

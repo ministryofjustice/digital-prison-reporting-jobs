@@ -16,6 +16,7 @@ import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -26,7 +27,9 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 
 @Singleton
-public class DataStorageService {
+public class DataStorageService implements Serializable {
+
+    private static final long serialVersionUID = 4410497606104566358L;
 
     private static final String SOURCE = "source";
     private static final String TARGET = "target";

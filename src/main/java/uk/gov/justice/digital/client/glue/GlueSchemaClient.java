@@ -10,17 +10,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.util.Optional;
 
 @Singleton
-public class GlueSchemaClient {
+public class GlueSchemaClient implements Serializable {
 
-    private final AWSGlue glueClient;
+    private static final long serialVersionUID = 3954160928940543821L;
+
+    private final GlueClientProvider glueClientProvider;
+
+    // AWSGlue object requires special handling for Spark checkpointing since it is not serializable.
+    // Transient ensures Java does not attempt to serialize it.
+    // Volatile ensures it keeps the 'final' concurrency initialization guarantee.
+    private transient volatile AWSGlue glueClient;
     private final String contractRegistryName;
 
     @Inject
     public GlueSchemaClient(GlueClientProvider glueClientProvider,
                             JobArguments jobArguments) {
+        this.glueClientProvider = glueClientProvider;
         this.glueClient = glueClientProvider.getClient();
         this.contractRegistryName = jobArguments.getContractRegistryName();
     }
@@ -56,6 +67,11 @@ public class GlueSchemaClient {
     public static class GlueSchemaResponse {
         private final String id;
         private final String avro;
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        this.glueClient = this.glueClientProvider.getClient();
     }
 
 }

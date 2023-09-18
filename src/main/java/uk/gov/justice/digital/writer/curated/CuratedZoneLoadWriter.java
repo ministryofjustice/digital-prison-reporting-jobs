@@ -12,6 +12,8 @@ import javax.inject.Inject;
 
 public class CuratedZoneLoadWriter extends Writer {
 
+    private static final long serialVersionUID = 632863103580485871L;
+
     private final DataStorageService storage;
 
     @Inject

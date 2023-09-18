@@ -12,6 +12,8 @@ import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
 import java.util.Map;
@@ -24,7 +26,9 @@ import java.util.stream.Collectors;
  * Arguments are taken from the values parsed by the CommandLinePropertySource.
  */
 @Singleton
-public class JobArguments {
+public class JobArguments implements Serializable {
+
+    private static final long serialVersionUID = -1001099370904486957L;
 
     private static final Logger logger = LoggerFactory.getLogger(JobArguments.class);
 
