@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.SecretsManagerClientException;
 
 import javax.inject.Singleton;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 
 @Singleton
@@ -19,11 +21,17 @@ public class SecretsManagerClient implements Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(SecretsManagerClient.class);
 
-    private final AWSSecretsManager secretsClient;
+    private final SecretsManagerClientProvider secretsClientProvider;
+
+    // AWSSecretsManager object requires special handling for Spark checkpointing since it is not serializable.
+    // Transient ensures Java does not attempt to serialize it.
+    // Volatile ensures it keeps the 'final' concurrency initialization guarantee.
+    private transient volatile AWSSecretsManager secretsClient;
 
     @Inject
-    public SecretsManagerClient(SecretsManagerClientProvider secretsClient) {
-        this.secretsClient = secretsClient.getClient();
+    public SecretsManagerClient(SecretsManagerClientProvider secretsClientProvider) {
+        this.secretsClientProvider = secretsClientProvider;
+        this.secretsClient = secretsClientProvider.getClient();
     }
 
     public <T> T getSecret(String secretId, Class<T> type) throws SecretsManagerClientException {
@@ -37,6 +45,11 @@ public class SecretsManagerClient implements Serializable {
             logger.error(errorMessage, ex);
             throw new SecretsManagerClientException(errorMessage);
         }
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        this.secretsClient = this.secretsClientProvider.getClient();
     }
 
 }

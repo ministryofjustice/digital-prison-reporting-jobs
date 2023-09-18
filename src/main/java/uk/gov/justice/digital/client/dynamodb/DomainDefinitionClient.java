@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.client.dynamodb;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -29,12 +28,12 @@ public class DomainDefinitionClient extends DynamoDBClient implements Serializab
     @Inject
     public DomainDefinitionClient(DynamoDBClientProvider dynamoDBClientProvider,
                                   JobArguments jobArguments) {
-        this(dynamoDBClientProvider.getClient(), jobArguments.getDomainRegistry());
+        this(dynamoDBClientProvider, jobArguments.getDomainRegistry());
         logger.info("DomainDefinitionClient initialization complete");
     }
 
-    private DomainDefinitionClient(AmazonDynamoDB dynamoDB, String tableName) {
-        super(dynamoDB, tableName, primaryKey, indexName, sortKeyName, dataField);
+    private DomainDefinitionClient(DynamoDBClientProvider dynamoDBClientProvider, String tableName) {
+        super(dynamoDBClientProvider, tableName, primaryKey, indexName, sortKeyName, dataField);
     }
 
     public DomainDefinition getDomainDefinition(String domainName, String tableName) throws DatabaseClientException {
