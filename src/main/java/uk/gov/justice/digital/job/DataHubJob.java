@@ -96,9 +96,17 @@ public class DataHubJob implements Serializable, Runnable {
         this.converter = converter;
         this.sparkSessionProvider = sparkSessionProvider;
         String jobName = properties.getSparkJobName();
-        SparkConf sparkConf = new SparkConf().setAppName(jobName);
+        SparkConf sparkConf = jobArgumentsToSparkConf(arguments, jobName);
         spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
         logger.info("DataHubJob initialization complete");
+    }
+
+    // todo sort this out
+    public static SparkConf jobArgumentsToSparkConf(JobArguments arguments, String sparkJobName) {
+        return new SparkConf()
+                .setAppName(sparkJobName)
+                .set("spark.streaming.kinesis.retry.waitTime", arguments.getKinesisReaderRetryWaitTime())
+                .set("spark.streaming.kinesis.retry.maxAttempts", Integer.toString(arguments.getKinesisReaderRetryMaxAttempts()));
     }
 
     public static void main(String[] args) {
@@ -110,7 +118,7 @@ public class DataHubJob implements Serializable, Runnable {
         if (batch.isEmpty()) {
             logger.info("Batch: {} - Skipping empty batch", batch.id());
         } else {
-            logger.debug("Batch: {} - Processing records", batch.id());
+            logger.info("Batch: {} - Processing records", batch.id());
 
             val startTime = System.currentTimeMillis();
 
@@ -187,7 +195,7 @@ public class DataHubJob implements Serializable, Runnable {
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         String jobName = properties.getSparkJobName();
-        SparkConf sparkConf = new SparkConf().setAppName(jobName);
+        SparkConf sparkConf = jobArgumentsToSparkConf(arguments, jobName);
         this.spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
     }
 }

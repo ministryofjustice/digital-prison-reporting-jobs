@@ -10,6 +10,7 @@ import io.micronaut.logging.LogLevel;
 import lombok.val;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
+import org.apache.spark.streaming.kinesis.KinesisReadConfigurations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,8 @@ public class JobArguments implements Serializable {
     public static final String DOMAIN_TARGET_PATH = "dpr.domain.target.path";
     public static final String DOMAIN_TABLE_NAME = "dpr.domain.table.name";
     public static final String KINESIS_READER_BATCH_DURATION_SECONDS = "dpr.kinesis.reader.batchDurationSeconds";
+    public static final String KINESIS_READER_RETRY_WAIT_TIME = "dpr.kinesis.reader.retry.waitTime";
+    public static final String KINESIS_READER_RETRY_MAX_ATTEMPTS = "dpr.kinesis.reader.retry.maxAttempts";
     public static final String KINESIS_READER_STREAM_NAME = "dpr.kinesis.reader.streamName";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
@@ -106,6 +109,19 @@ public class JobArguments implements Serializable {
         val durationSeconds = getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
         val parsedDuration = Long.parseLong(durationSeconds);
         return Durations.seconds(parsedDuration);
+    }
+
+    public String getKinesisReaderRetryWaitTime() {
+        return Optional
+                .ofNullable(config.get(KINESIS_READER_RETRY_WAIT_TIME))
+                .orElse(KinesisReadConfigurations.DEFAULT_RETRY_WAIT_TIME());
+    }
+
+    public int getKinesisReaderRetryMaxAttempts() {
+        return Optional
+                .ofNullable(config.get(KINESIS_READER_RETRY_MAX_ATTEMPTS))
+                .map(Integer::parseInt)
+                .orElse(KinesisReadConfigurations.DEFAULT_MAX_RETRIES());
     }
 
     public String getRawS3Path() {

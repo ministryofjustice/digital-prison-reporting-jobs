@@ -23,6 +23,7 @@ import java.util.*;
 import static org.apache.spark.sql.functions.*;
 import static org.apache.spark.sql.types.DataTypes.StringType;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.job.DataHubJob.jobArgumentsToSparkConf;
 
 /**
  * Converter that takes raw data from DMS v3.4.6 and converts it into the standardised data representation for
@@ -143,7 +144,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>>, Seriali
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
         //todo duplicated code
-        SparkConf sparkConf = new SparkConf().setAppName(properties.getSparkJobName());
+        SparkConf sparkConf = jobArgumentsToSparkConf(arguments, properties.getSparkJobName());
         this.spark = this.sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
     }
 
@@ -189,7 +190,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>>, Seriali
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
-        SparkConf sparkConf = new SparkConf().setAppName(properties.getSparkJobName());
+        SparkConf sparkConf = jobArgumentsToSparkConf(arguments, properties.getSparkJobName());
         this.spark = this.sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel(), arguments.isCheckpointEnabled());
     }
 
