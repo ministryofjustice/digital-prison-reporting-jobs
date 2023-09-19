@@ -10,6 +10,8 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
+import uk.gov.justice.digital.common.ColumnMapping;
+import uk.gov.justice.digital.common.SourceMapping;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DomainSchemaException;
@@ -321,34 +323,50 @@ class DomainExecutorTest extends BaseSparkTest {
 
     @Test
     public void shouldReturnEmptyDataFrameWhenGettingAdjoiningDataFrameGivenEmptyColumnMapping() {
-        val source = "nomis";
+        val source = "nomis.source";
+        val destination = "nomis.destination";
 
         val sourcePath = this.tmp.toFile().getAbsolutePath() + "/" + source;
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath, targetPath(), storage, testSchemaService);
-        val columnMappings = new HashMap<String, String>();
+        val aliases = new HashMap<String, String>();
+        val columnMappings = new HashMap<ColumnMapping, ColumnMapping>();
+        val sourceMapping = SourceMapping.create(source, destination, aliases, columnMappings);
 
-        val result = executor.getAdjoiningDataFrameForReferenceDataFrame(spark, source, columnMappings, spark.emptyDataFrame());
+        val result = executor.getAdjoiningDataFrame(spark, sourceMapping, spark.emptyDataFrame());
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     public void shouldReturnFilteredDataFrameWhenGettingAdjoiningDataFrameGivenColumnMappings() {
-        val source = "nomis";
+        val source = "nomis.source";
+        val destination = "nomis.destination";
+        val aliases = new HashMap<String, String>();
 
         val sourcePath = this.tmp.toFile().getAbsolutePath() + "/" + source;
         val testSchemaService = mock(DomainSchemaService.class);
         val executor = createExecutor(sourcePath, targetPath(), testStorage, testSchemaService);
 
-        val columnMappings = new HashMap<String, String>();
-        columnMappings.put("table_1_column_1", "table_2_column_1");
-        columnMappings.put("table_1_column_2", "table_2_column_2");
-        columnMappings.put("table_1_column_3", "table_2_column_3");
+        val columnMappings = new HashMap<ColumnMapping, ColumnMapping>();
+        columnMappings.put(
+                ColumnMapping.create("table_1", "table_1_column_1"),
+                ColumnMapping.create("table_2", "table_2_column_1")
+        );
+        columnMappings.put(
+                ColumnMapping.create("table_1", "table_1_column_2"),
+                ColumnMapping.create("table_2", "table_2_column_2")
+        );
+        columnMappings.put(
+                ColumnMapping.create("table_1", "table_1_column_3"),
+                ColumnMapping.create("table_2", "table_2_column_3")
+        );
+
+        val sourceMapping = SourceMapping.create(source, destination, aliases, columnMappings);
 
         when(testStorage.get(eq(spark), any(TableIdentifier.class))).thenReturn(createAdjoiningDataFrame());
 
-        val result = executor.getAdjoiningDataFrameForReferenceDataFrame(spark, source, columnMappings, createReferenceDataFrame());
+        val result = executor.getAdjoiningDataFrame(spark, sourceMapping, createReferenceDataFrame());
 
         assertIterableEquals(
                 Collections.singletonList(RowFactory.create("table_id", "column_1_value", 20, false, "row_2_column_4_value")),

@@ -10,6 +10,7 @@ import org.apache.spark.sql.execution.ExplainMode;
 import org.apache.spark.sql.types.DataTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.common.SourceMapping;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.domain.model.*;
@@ -395,38 +396,41 @@ public class DomainExecutor {
         }
     }
 
-    public Dataset<Row> getAdjoiningDataFrameForReferenceDataFrame(
+    public Dataset<Row> getAdjoiningDataFrame(
             SparkSession spark,
-            String adjoiningSourceName,
-            Map<String, String> columnMappings,
+            SourceMapping sourceMapping,
             Dataset<Row> referenceDataFrame
     ) {
+        val adjoiningSourceName = sourceMapping.getDestinationTable();
         val tableTuple = new TableTuple(adjoiningSourceName);
         val tableIdentifier = new TableIdentifier(sourceRootPath, hiveDatabaseName, tableTuple.getSchema(), tableTuple.getTable());
 
+        val columnMappings = sourceMapping.getColumnMap();
         val columnTypes = new HashMap<String, String>();
         Arrays.stream(referenceDataFrame.schema().fields()).forEach(field -> columnTypes.put(field.name(), field.dataType().typeName()));
 
         if (columnMappings.isEmpty()) {
             return spark.emptyDataFrame();
         } else {
+            val conjunctiveOperator = sourceMapping.getTableAliases().isEmpty()? " and " : " or ";
             // Create a filter expression using the column names and values from the reference dataFrame
-            val filterExpression = columnMappings.keySet().stream().map(columnName -> {
-                        val otherTableColumnName = columnMappings.get(columnName);
-                        val columnTypeName = columnTypes.getOrDefault(columnName, DataTypes.NullType.typeName());
+            val filterExpression = columnMappings.keySet().stream().map(columnMapping -> {
+                        val adjoiningTableColumnName = columnMappings.get(columnMapping).getColumnName();
+                        val referenceSourceColumnName = columnMapping.getColumnName();
+                        val columnTypeName = columnTypes.getOrDefault(referenceSourceColumnName, DataTypes.NullType.typeName());
 
                         if (isNumericType(columnTypeName) || columnTypeName.equalsIgnoreCase(DataTypes.BooleanType.typeName())) {
-                            val columnValue = referenceDataFrame.first().getAs(columnName);
-                            return otherTableColumnName + " = " + columnValue;
+                            val columnValue = referenceDataFrame.first().getAs(referenceSourceColumnName);
+                            return adjoiningTableColumnName + " = " + columnValue;
                         } else {
-                            String columnValue = referenceDataFrame.first().getAs(columnName);
+                            String columnValue = referenceDataFrame.first().getAs(referenceSourceColumnName);
                             // Adding quotes to non-numeric and non-boolean column values
-                            return otherTableColumnName + " = '" + columnValue + "'";
+                            return adjoiningTableColumnName + " = '" + columnValue + "'";
                         }
                     }
-            ).collect(Collectors.joining(" and "));
+            ).collect(Collectors.joining(conjunctiveOperator));
 
-            logger.debug("Adjoining dataframe selection expression: " + filterExpression);
+            logger.debug("Adjoining dataframe {} selection expression: {}", adjoiningSourceName, filterExpression);
 
             val adjoiningDataFrame = storage.get(spark, tableIdentifier);
             // Filter rows in source dataFrame using the filter expression
