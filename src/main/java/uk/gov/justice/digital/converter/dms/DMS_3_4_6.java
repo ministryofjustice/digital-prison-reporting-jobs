@@ -100,7 +100,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
         new StructType()
             .add(ORIGINAL, StringType);
 
-    private static final StructType recordSchema =
+    public static final StructType RECORD_SCHEMA =
         new StructType()
                 .add(DATA, StringType, IS_NULLABLE) // Data varies per table, so we leave parsing to the StructuredZone.
                 .add(METADATA, new StructType()
@@ -127,11 +127,52 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
         this.spark = sparkSessionProvider.getConfiguredSparkSession(arguments.getLogLevel());
     }
 
+    public Dataset<Row> convert(Dataset<Row> inputDf) {
+//        val df =
+//                spark.createDataFrame(rdd, eventsSchema)
+//                .withColumn(RAW, col(ORIGINAL))
+//                .withColumn(JSON_DATA, from_json(col(ORIGINAL), RECORD_SCHEMA, jsonOptions))
+//                 .select(RAW,JSON_DATA + ".*")
+        val df = inputDf
+                .select(RAW, DATA, METADATA, METADATA + ".*")
+                // Construct a dataframe that aligns to the parsed data schema
+                .select(
+                        lit("").as(RAW), // TODO would need to get raw back with json func
+                        col(DATA),
+                        to_json(col(METADATA)).as(METADATA),
+                        col("timestamp").as(TIMESTAMP),
+                        // when there is a partition-key-value we should use it
+                        (when(col("partition-key-value").isNotNull(), col("partition-key-value"))
+                                // when not and there is an operation == insert, update, delete
+                                .when(col("partition-key-value").isNull().and(expr("operation == 'insert'")),
+                                        concat(col("schema-name"), lit("."), col("table-name"), lit("."), col("transaction-id")))
+
+                                .when(col("partition-key-value").isNull().and(expr("operation == 'update'")),
+                                        concat(col("schema-name"), lit("."), col("table-name"), lit("."), col("transaction-id")))
+
+                                .when(col("partition-key-value").isNull().and(expr("operation == 'delete'")),
+                                        concat(col("schema-name"), lit("."), col("table-name"), lit("."), col("transaction-id")))
+                                // when it is something else and there is a transaction-id, use that
+                                .when(col("transaction-id").isNotNull(), col("transaction-id"))
+                                // otherwise we MD5 the raw as this SHOULD be unique
+                                .otherwise(md5(col(RAW)))
+                        ).as(KEY),
+                        col("record-type").as(DATA_TYPE),
+                        lower(col("schema-name")).as(SOURCE),
+                        lower(col("table-name")).as(TABLE),
+                        lower(col("operation")).as(OPERATION),
+                        col("transaction-id").as(TRANSACTION_ID),
+                        lit(CONVERTER_VERSION).as(CONVERTER)
+                );
+        // Strictly apply the parsed data schema which will fail if any values are null.
+        return spark.createDataFrame(df.javaRDD(), PARSED_DATA_SCHEMA);
+    }
+
     @Override
     public Dataset<Row> convert(JavaRDD<Row> rdd) {
         val df = spark.createDataFrame(rdd, eventsSchema)
             .withColumn(RAW, col(ORIGINAL))
-            .withColumn(JSON_DATA, from_json(col(ORIGINAL), recordSchema, jsonOptions))
+            .withColumn(JSON_DATA, from_json(col(ORIGINAL), RECORD_SCHEMA, jsonOptions))
             .select(RAW,JSON_DATA + ".*")
             .select(RAW, DATA, METADATA, METADATA + ".*")
             // Construct a dataframe that aligns to the parsed data schema

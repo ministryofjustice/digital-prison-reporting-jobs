@@ -1,27 +1,35 @@
 package uk.gov.justice.digital.client.kinesis;
 
+import com.amazonaws.services.glue.DataSource;
+import com.amazonaws.services.glue.GlueContext;
+import com.amazonaws.services.glue.util.Job$;
+import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.context.annotation.Bean;
 import jakarta.inject.Inject;
 import org.apache.spark.SparkContext;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.VoidFunction;
-import org.apache.spark.streaming.api.java.JavaDStream;
-import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.apache.spark.streaming.kinesis.KinesisInitialPositions;
-import org.apache.spark.streaming.kinesis.KinesisInputDStream;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.reflect.ClassTag$;
+import scala.collection.JavaConverters;
+import scala.runtime.BoxedUnit;
 import uk.gov.justice.digital.config.JobArguments;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.RECORD_SCHEMA;
 
 @Bean
 public class KinesisReader {
 
     private static final Logger logger = LoggerFactory.getLogger(KinesisReader.class);
 
-    private final JavaStreamingContext streamingContext;
-    private final JavaDStream<byte[]> kinesisStream;
+    private final JobArguments jobArguments;
+    private final GlueContext glueContext;
+    private final Job$ job;
+    private final DataSource source;
 
     @Inject
     public KinesisReader(
@@ -29,52 +37,39 @@ public class KinesisReader {
             String jobName,
             SparkContext sparkContext
     ) {
-        streamingContext = new JavaStreamingContext(
-                JavaSparkContext.fromSparkContext(sparkContext),
-                jobArguments.getKinesisReaderBatchDuration()
-        );
+        this.jobArguments = jobArguments;
+        this.glueContext = new GlueContext(sparkContext);
+        this.job = Job$.MODULE$.init(jobName, glueContext, jobArguments.getConfig());
 
-        kinesisStream = JavaDStream.fromDStream(
-                KinesisInputDStream.builder()
-                        .streamingContext(streamingContext)
-                        .endpointUrl(jobArguments.getAwsKinesisEndpointUrl())
-                        .regionName(jobArguments.getAwsRegion())
-                        .streamName(jobArguments.getKinesisReaderStreamName())
-                        .initialPosition(new KinesisInitialPositions.TrimHorizon())
-                        .checkpointAppName(jobName)
-                        .build(),
-                // We need to pass a Scala classtag which looks a little ugly in Java.
-                ClassTag$.MODULE$.apply(byte[].class)
-        );
-
-        logger.info("Configuration - endpointUrl: {} awsRegion: {} streamName: {} batchDuration: {}",
-                jobArguments.getAwsKinesisEndpointUrl(),
-                jobArguments.getAwsRegion(),
-                jobArguments.getKinesisReaderStreamName(),
-                jobArguments.getKinesisReaderBatchDuration()
-        );
+        Map<String, String> kinesisConnectionOptions = new HashMap<>();
+        kinesisConnectionOptions.put("streamARN", "arn:aws:kinesis:eu-west-2:771283872747:stream/dpr-kinesis-ingestor-development");
+        kinesisConnectionOptions.put("startingPosition", "TRIM_HORIZON");
+        // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-json-home.html
+        kinesisConnectionOptions.put("classification", "json");
+        kinesisConnectionOptions.put("inferSchema", "false");
+        kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
+        JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(kinesisConnectionOptions));
+        this.source = glueContext.getSource("kinesis", connectionOptions, "", "");
     }
 
-    public void setBatchProcessor(VoidFunction<JavaRDD<byte[]>> batchProcessor) {
-        kinesisStream.foreachRDD(batchProcessor);
-    }
+    public void runGlueJob(VoidFunction<Dataset<Row>> batchProcessor) {
+        // https://docs.aws.amazon.com/glue/latest/dg/glue-etl-scala-apis-glue-gluecontext.html#glue-etl-scala-apis-glue-gluecontext-defs-forEachBatch
+        Map<String, String> batchProcessingOptions = new HashMap<>();
+        batchProcessingOptions.put("windowSize", jobArguments.getKinesisReaderBatchDuration().toString());
+        batchProcessingOptions.put("checkpointLocation", "s3://dpr-working-development/checkpoints");
+        batchProcessingOptions.put("batchMaxRetries", "3");
+        JsonOptions batchOptions = new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
 
-    public void startAndAwaitTermination() throws InterruptedException {
-        this.start();
-        streamingContext.awaitTermination();
-        logger.info("KinesisReader terminated");
-    }
-
-    public void start() {
-        logger.info("Starting KinesisReader");
-        streamingContext.start();
-        logger.info("KinesisReader started");
-    }
-
-    public void stop() {
-        logger.info("Stopping KinesisReader");
-        streamingContext.stop();
-        logger.info("KinesisReader terminated");
+        glueContext.forEachBatch(source.getDataFrame(), (batch, batchId) -> {
+            try {
+                batchProcessor.call(batch);
+            } catch (Exception e) {
+                logger.error("Caught unexpected exception", e);
+                throw new RuntimeException("Caught unexpected exception", e);
+            }
+            return BoxedUnit.UNIT;
+        }, batchOptions);
+        job.commit();
     }
 
 }

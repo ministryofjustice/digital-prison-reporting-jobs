@@ -6,7 +6,6 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +14,7 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DomainService;
@@ -27,11 +27,13 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TIMESTAMP;
 
 /**
  * Job that reads DMS 3.4.6 load events from a Kinesis stream and processes the data as follows
@@ -54,7 +56,7 @@ public class DataHubJob implements Runnable {
     private final CuratedZoneLoad curatedZoneLoad;
     private final CuratedZoneCDC curatedZoneCDC;
     private final DomainService domainService;
-    private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
+    private final DMS_3_4_6 converter;
     private final SparkSession spark;
 
     @Inject
@@ -67,7 +69,7 @@ public class DataHubJob implements Runnable {
         CuratedZoneLoad curatedZoneLoad,
         CuratedZoneCDC curatedZoneCDC,
         DomainService domainService,
-        @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
+        @Named("converterForDMS_3_4_6") DMS_3_4_6 converter,
         SparkSessionProvider sparkSessionProvider
     ) {
         logger.info("Initializing DataHubJob");
@@ -91,16 +93,15 @@ public class DataHubJob implements Runnable {
         PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
     }
 
-    public void batchProcessor(JavaRDD<byte[]> batch) {
+    public void batchProcessor(Dataset<Row> batch) {
+        int batchId = batch.rdd().id();
         if (batch.isEmpty()) {
-            logger.info("Batch: {} - Skipping empty batch", batch.id());
+            logger.info("Batch: {} - Skipping empty batch", batchId);
         } else {
-            logger.debug("Batch: {} - Processing records", batch.id());
-
+            logger.debug("Batch: {} - Processing records", batchId);
             val startTime = System.currentTimeMillis();
 
-            val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
-            val dataFrame = converter.convert(rowRdd);
+            val dataFrame = converter.convert(batch);
 
             getTablesInBatch(dataFrame).forEach(tableInfo -> {
                 try {
@@ -127,7 +128,7 @@ public class DataHubJob implements Runnable {
             });
 
             logger.debug("Batch: {} - Processed records - processed batch in {}ms",
-                    batch.id(),
+                    batchId,
                     System.currentTimeMillis() - startTime
             );
         }
@@ -135,17 +136,7 @@ public class DataHubJob implements Runnable {
 
     @Override
     public void run() {
-        try {
-            kinesisReader.setBatchProcessor(this::batchProcessor);
-            kinesisReader.startAndAwaitTermination();
-        } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                logger.error("Kinesis job interrupted", e);
-            } else {
-                logger.error("Exception occurred during streaming job", e);
-                System.exit(1);
-            }
-        }
+        kinesisReader.runGlueJob(this::batchProcessor);
     }
 
     private List<Row> getTablesInBatch(Dataset<Row> dataFrame) {
