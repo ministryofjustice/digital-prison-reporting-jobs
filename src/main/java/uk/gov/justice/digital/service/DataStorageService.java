@@ -81,25 +81,55 @@ public class DataStorageService {
         }
     }
 
+    public void upsertRecords(
+            SparkSession spark,
+            String tablePath,
+            Dataset<Row> dataFrame,
+            SourceReference.PrimaryKey primaryKey) {
+        val dt = getTable(spark, tablePath);
+
+        try {
+            if (dt.isPresent()) {
+                val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+                logger.debug("Upsert records from {} using condition: {}", tablePath, condition);
+                dt.get().as(SOURCE)
+                        .merge(dataFrame.as(TARGET), condition)
+                        .whenMatched()
+                        .updateAll()
+                        .whenNotMatched()
+                        .insertAll()
+                        .execute();
+            } else {
+                logger.error("Failed to upsert table {}. Delta table is not present", tablePath);
+            }
+        } catch (Exception e) {
+            val errorMessage = String.format("Failed to upsert table %s", tablePath);
+            logger.error(errorMessage, e);
+        }
+    }
+
     public void updateRecords(
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) throws DataStorageException {
+            SourceReference.PrimaryKey primaryKey) {
         val dt = getTable(spark, tablePath);
 
-        if (dt.isPresent() && dataFrame != null) {
-            val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-            logger.debug("Updating records from {} using condition: {}", tablePath, condition);
-            dt.get().as(SOURCE)
-                    .merge(dataFrame.as(TARGET), condition)
-                    .whenMatched()
-                    .updateAll()
-                    .execute();
-        } else {
-            val errorMessage = String.format("Failed to update table %s. Delta table isPresent = %s", tablePath, dt.isPresent());
-            logger.error(errorMessage);
-            throw new DataStorageException(errorMessage);
+        try {
+            if (dt.isPresent()) {
+                val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+                logger.debug("Updating records from {} using condition: {}", tablePath, condition);
+                dt.get().as(SOURCE)
+                        .merge(dataFrame.as(TARGET), condition)
+                        .whenMatched()
+                        .updateAll()
+                        .execute();
+            } else {
+                logger.error("Failed to update table {}. Delta table is not present", tablePath);
+            }
+        } catch (Exception e) {
+            val errorMessage = String.format("Failed to update table %s", tablePath);
+            logger.error(errorMessage, e);
         }
     }
 
@@ -107,21 +137,24 @@ public class DataStorageService {
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) throws DataStorageException {
+            SourceReference.PrimaryKey primaryKey) {
         val dt = getTable(spark, tablePath);
 
-        if (dt.isPresent() && dataFrame != null) {
-            val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-            logger.debug("Deleting records from {} using condition: {}", tablePath, condition);
-            dt.get().as(SOURCE)
-                    .merge(dataFrame.as(TARGET), condition)
-                    .whenMatched()
-                    .delete()
-                    .execute();
-        } else {
-            val errorMessage = "Failed to access Delta table for delete";
-            logger.error(errorMessage);
-            throw new DataStorageException(errorMessage);
+        try {
+            if (dt.isPresent()) {
+                val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+                logger.debug("Deleting records from {} using condition: {}", tablePath, condition);
+                dt.get().as(SOURCE)
+                        .merge(dataFrame.as(TARGET), condition)
+                        .whenMatched()
+                        .delete()
+                        .execute();
+            } else {
+                logger.error("Failed to delete table {}. Delta table is not present", tablePath);
+            }
+        } catch (Exception e) {
+            val errorMessage = String.format("Failed to delete table %s", tablePath);
+            logger.error(errorMessage, e);
         }
     }
 

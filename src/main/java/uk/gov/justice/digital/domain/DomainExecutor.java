@@ -247,17 +247,20 @@ public class DomainExecutor {
     public void applyDomain(
             SparkSession spark,
             Dataset<Row> dataFrame,
-            String domainTableName,
+            String domainName,
             TableDefinition tableDefinition,
             DMS_3_4_6.Operation operation
     ) throws DataStorageException {
         val primaryKeyName = tableDefinition.getPrimaryKey();
-        logger.debug("Writing {} record: {} with primary key {}", operation.getName(), domainTableName, primaryKeyName);
+        val domainTableName = tableDefinition.getName();
+
+        logger.debug("Writing {} record: {} with primary key {}", operation.getName(), domainName, primaryKeyName);
+
         TableIdentifier target = new TableIdentifier(
                 targetRootPath,
                 hiveDatabaseName,
-                tableDefinition.getName(),
-                tableDefinition.getName()
+                domainName,
+                domainTableName
         );
         val primaryKey = new SourceReference.PrimaryKey(primaryKeyName);
         switch (operation) {
@@ -266,7 +269,7 @@ public class DomainExecutor {
                 storage.endTableUpdates(spark, target);
                 break;
             case Insert:
-                storage.append(target.toPath(), dataFrame);
+                storage.upsertRecords(spark, target.toPath(), dataFrame, primaryKey);
                 storage.endTableUpdates(spark, target);
                 break;
             case Update:

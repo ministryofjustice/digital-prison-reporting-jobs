@@ -103,7 +103,7 @@ public abstract class Writer {
 
         switch (operation) {
             case Insert:
-                storage.appendDistinct(destinationPath, dataFrame, primaryKey);
+                storage.upsertRecords(spark, destinationPath, dataFrame, primaryKey);
                 break;
             case Update:
                 storage.updateRecords(spark, destinationPath, dataFrame, primaryKey);

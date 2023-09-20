@@ -73,7 +73,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).appendDistinct(eq(curatedPath), dataframeCaptor.capture(), any());
+        doNothing().when(mockDataStorage).upsertRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any());
         doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any());
         doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
@@ -94,7 +94,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).appendDistinct(eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).upsertRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
         underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
 
@@ -134,45 +134,6 @@ class CuratedZoneCdcTest extends BaseSparkTest {
                 expectedRecords.drop(OPERATION).collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
-    }
-
-    @Test
-    public void shouldContinueWhenInsertFails() throws DataStorageException {
-        val records = createStructuredInsertDataset(spark);
-
-        givenTheSchemaExists();
-        givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("insert failed")).when(mockDataStorage).appendDistinct(any(), any(), any());
-
-        underTest.process(spark, records, dataMigrationEventRow).collect();
-
-        assertTrue(getAllCapturedRecords(dataframeCaptor).isEmpty());
-    }
-
-    @Test
-    public void shouldContinueWhenUpdateFails() throws DataStorageException {
-        val records = createStructuredUpdateDataset(spark);
-
-        givenTheSchemaExists();
-        givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("update failed")).when(mockDataStorage).updateRecords(eq(spark), any(), any(), any());
-
-        underTest.process(spark, records, dataMigrationEventRow).collect();
-
-        assertTrue(getAllCapturedRecords(dataframeCaptor).isEmpty());
-    }
-
-    @Test
-    public void shouldContinueWhenDeletionFails() throws DataStorageException {
-        val records = createStructuredDeleteDataset(spark);
-
-        givenTheSchemaExists();
-        givenTheSourceReferenceIsValid();
-        doThrow(new DataStorageException("deletion failed")).when(mockDataStorage).deleteRecords(eq(spark), any(), any(), any());
-
-        underTest.process(spark, records, dataMigrationEventRow).collect();
-
-        assertTrue(getAllCapturedRecords(dataframeCaptor).isEmpty());
     }
 
     @Test
