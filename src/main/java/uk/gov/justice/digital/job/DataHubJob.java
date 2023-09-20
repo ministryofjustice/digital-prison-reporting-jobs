@@ -18,6 +18,7 @@ import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DomainService;
+import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.raw.RawZone;
@@ -54,6 +55,7 @@ public class DataHubJob implements Runnable {
     private final CuratedZoneLoad curatedZoneLoad;
     private final CuratedZoneCDC curatedZoneCDC;
     private final DomainService domainService;
+    private final SourceReferenceService sourceReferenceService;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
     private final SparkSession spark;
 
@@ -67,6 +69,7 @@ public class DataHubJob implements Runnable {
         CuratedZoneLoad curatedZoneLoad,
         CuratedZoneCDC curatedZoneCDC,
         DomainService domainService,
+        SourceReferenceService sourceReferenceService,
         @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
         SparkSessionProvider sparkSessionProvider
     ) {
@@ -82,6 +85,7 @@ public class DataHubJob implements Runnable {
         this.curatedZoneLoad = curatedZoneLoad;
         this.curatedZoneCDC = curatedZoneCDC;
         this.domainService = domainService;
+        this.sourceReferenceService = sourceReferenceService;
         this.converter = converter;
         logger.info("DataHubJob initialization complete");
     }
@@ -117,8 +121,20 @@ public class DataHubJob implements Runnable {
                     curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
                     val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
 
-                    if (!curatedCdcDataFrame.isEmpty()) domainService
-                            .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+                    String sourceName = tableInfo.getAs(SOURCE);
+                    String tableName = tableInfo.getAs(TABLE);
+
+                    val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
+                    optionalSourceReference.ifPresent(sourceReference -> {
+                                if (!curatedCdcDataFrame.isEmpty()) domainService
+                                        .refreshDomainUsingDataFrame(
+                                                spark,
+                                                curatedCdcDataFrame,
+                                                sourceReference.getSource(),
+                                                sourceReference.getTable()
+                                        );
+                            }
+                    );
 
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
