@@ -29,7 +29,7 @@ workflows:
           build_args:
             description: Extra Args for Gradle Build Args
             type: string
-            default: 'org.gradle.jvmargs=-Xmx4096m -XX:MaxPermSize=4096m'
+            default: "org.gradle.jvmargs=-Xmx4096m -XX:MaxPermSize=4096m"
           filters:
             branches:
               only: /.*/
