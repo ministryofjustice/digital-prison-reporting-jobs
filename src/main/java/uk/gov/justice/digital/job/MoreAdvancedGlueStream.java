@@ -2,6 +2,7 @@ package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
+import com.amazonaws.services.glue.util.GlueArgParser;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.configuration.picocli.PicocliRunner;
@@ -30,6 +31,8 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.RECORD_SCHEMA;
 public class MoreAdvancedGlueStream implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(MoreAdvancedGlueStream.class);
+
+    private static volatile String[] argArray;
     private final JobArguments arguments;
     private final JobProperties properties;
     private final BatchProcessorProvider batchProcessorProvider;
@@ -47,6 +50,7 @@ public class MoreAdvancedGlueStream implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job started");
+        argArray = args;
         PicocliRunner.run(MoreAdvancedGlueStream.class, MicronautContext.withArgs(args));
     }
 
@@ -55,8 +59,10 @@ public class MoreAdvancedGlueStream implements Runnable {
         SparkContext spark = new SparkContext();
         spark.setLogLevel("INFO");
         GlueContext glueContext = new GlueContext(spark);
-        SparkSession sparkSession = glueContext.getSparkSession();
-        Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());
+//        SparkSession sparkSession = glueContext.getSparkSession();
+//        Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());
+        scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(argArray, new String[]{"JOB_NAME"});
+        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
 
         DataSource kinesisDataSource = glueGetSource(glueContext);
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
