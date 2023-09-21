@@ -52,9 +52,9 @@ dependencies {
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
     compileOnly "org.apache.hadoop:hadoop-aws:$hadoopVersion"
     compileOnly "com.amazonaws:amazon-kinesis-client:$awsKinesisVersion" // transitively brings in java-sdk-core
-
     // See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-using-etl-library
-    implementation "com.amazonaws:AWSGlueETL:$glueApiVersion"
+    compileOnly "com.amazonaws:AWSGlueETL:$glueApiVersion"
+
     implementation "com.amazonaws:aws-java-sdk-secretsmanager:$awsSdkVersion" // transitively brings in java-sdk-core
     implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion" // transitively brings in java-sdk-core
     implementation "org.apache.spark:spark-avro_2.12:$sparkVersion"
