@@ -30,7 +30,13 @@ public class BasicGlueStream {
     private static String kinesisStreamName = "dpr-kinesis-ingestor-development";;
 
     public static void main(String[] args) {
-        glueMain(args);
+//        glueMain(args);
+        try {
+            sparkMain(args);
+        } catch (TimeoutException e) {
+            logger.error("Unexpected Exception", e);
+            System.exit(1);
+        }
     }
 
     public static void sparkMain(String[] args) throws TimeoutException {
@@ -55,7 +61,7 @@ public class BasicGlueStream {
         SparkContext spark = new SparkContext();
         spark.setLogLevel("INFO");
         GlueContext glueContext = new GlueContext(spark);
-        SparkSession sparkSession = glueContext.getSparkSession();
+//        SparkSession sparkSession = glueContext.getSparkSession();
         scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(args, new String[]{"JOB_NAME"});
         Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
 
@@ -88,12 +94,6 @@ public class BasicGlueStream {
         kinesisConnectionOptions.put("inferSchema", "false");
         kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(kinesisConnectionOptions));
-        // getSource, getSourceWithFormat, createDataFrameFromOptions
-        //connectionOptions: Use with getSource, createDataFrameFromOptions
-        //
-        //additionalOptions: Use with getCatalogSource
-        //
-        //options: Use with getSourceWithFormat
         return glueContext.getSource("kinesis", connectionOptions, "", "");
     }
 
@@ -103,6 +103,7 @@ public class BasicGlueStream {
                 .option("streamName", kinesisStreamName)
                 .option("endpointUrl", kinesisEndpointUrl)
                 .option("startingPosition", kinesisStartingPosition)
+                .schema(RECORD_SCHEMA)
                 .load();
     }
 }
