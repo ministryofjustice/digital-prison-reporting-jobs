@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
-import com.amazonaws.services.glue.util.GlueArgParser;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.configuration.picocli.PicocliRunner;
@@ -27,11 +26,6 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.RECORD_SCHEMA;
 public class MoreAdvancedGlueStream implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(MoreAdvancedGlueStream.class);
-
-    private static final String kinesisEndpointUrl = "https://kinesis.eu-west-2.amazonaws.com";
-    private static final String kinesisStartingPosition = "TRIM_HORIZON";
-    private static String kinesisStreamName = "dpr-kinesis-ingestor-development";
-
     private final JobArguments arguments;
     private final JobProperties properties;
     private final BatchProcessorProvider batchProcessorProvider;
@@ -57,7 +51,7 @@ public class MoreAdvancedGlueStream implements Runnable {
         SparkContext spark = new SparkContext();
         spark.setLogLevel("INFO");
         GlueContext glueContext = new GlueContext(spark);
-//        SparkSession sparkSession = glueContext.getSparkSession();
+        SparkSession sparkSession = glueContext.getSparkSession();
         Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());
 
         DataSource kinesisDataSource = glueGetSource(glueContext);
@@ -69,9 +63,12 @@ public class MoreAdvancedGlueStream implements Runnable {
         batchProcessingOptions.put("batchMaxRetries", "3");
         JsonOptions batchOptions = new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
 
-        glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
+        BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession);
+
+        glueContext.forEachBatch(sourceDf, (Dataset<Row> batch, Object batchId) -> {
             long cnt = batch.count();
             logger.info("Batch saw {} records", cnt);
+            batchProcessor.processBatch(batch);
             return BoxedUnit.UNIT;
         }, batchOptions);
 
@@ -90,15 +87,5 @@ public class MoreAdvancedGlueStream implements Runnable {
         kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(kinesisConnectionOptions));
         return glueContext.getSource("kinesis", connectionOptions, "", "");
-    }
-
-    private static Dataset<Row> readStream(SparkSession sparkSession) {
-        return sparkSession.readStream()   // readstream() returns type DataStreamReader
-                .format("kinesis")
-                .option("streamName", kinesisStreamName)
-                .option("endpointUrl", kinesisEndpointUrl)
-                .option("startingPosition", kinesisStartingPosition)
-                .schema(RECORD_SCHEMA)
-                .load();
     }
 }

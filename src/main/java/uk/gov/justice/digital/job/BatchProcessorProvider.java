@@ -53,7 +53,7 @@ public class BatchProcessorProvider {
         this.converter = converter;
     }
 
-    public BatchProcessor batchProcessor(SparkSession spark) {
+    public BatchProcessor createBatchProcessor(SparkSession spark) {
         return batch -> {
             int batchId = batch.rdd().id();
             if (batch.isEmpty()) {
