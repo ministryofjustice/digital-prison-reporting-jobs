@@ -134,7 +134,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
 //                .withColumn(JSON_DATA, from_json(col(ORIGINAL), RECORD_SCHEMA, jsonOptions))
 //                 .select(RAW,JSON_DATA + ".*")
         val df = inputDf
-                .select(RAW, DATA, METADATA, METADATA + ".*")
+//                .select(RAW, DATA, METADATA, METADATA + ".*")
                 // Construct a dataframe that aligns to the parsed data schema
                 .select(
                         lit("").as(RAW), // TODO would need to get raw back with json func
