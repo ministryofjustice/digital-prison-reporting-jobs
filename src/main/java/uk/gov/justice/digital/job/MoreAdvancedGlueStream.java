@@ -14,8 +14,10 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.job.context.MicronautContext;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,21 +31,20 @@ public class MoreAdvancedGlueStream implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(MoreAdvancedGlueStream.class);
 
     private static volatile String[] argArray;
-//    private final JobArguments arguments;
+    private final JobArguments arguments;
 //    private final JobProperties properties;
 //    private final BatchProcessorProvider batchProcessorProvider;
 
-    public MoreAdvancedGlueStream(){}
-//    @Inject
-//    public MoreAdvancedGlueStream(
-//            JobArguments arguments,
+    @Inject
+    public MoreAdvancedGlueStream(
+            JobArguments arguments
 //            JobProperties properties,
 //            BatchProcessorProvider batchProcessorProvider
-//    ) {
-//        this.arguments = arguments;
+    ) {
+        this.arguments = arguments;
 //        this.properties = properties;
 //        this.batchProcessorProvider = batchProcessorProvider;
-//    }
+    }
 
     public static void main(String[] args) {
         logger.info("Job started");
@@ -59,7 +60,8 @@ public class MoreAdvancedGlueStream implements Runnable {
 //        SparkSession sparkSession = glueContext.getSparkSession();
 //        Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());
         scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(argArray, new String[]{"JOB_NAME"});
-        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
+        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, arguments.getConfig());
+//        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
 
         DataSource kinesisDataSource = glueGetSource(glueContext);
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
