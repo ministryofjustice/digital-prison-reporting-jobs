@@ -11,6 +11,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import picocli.CommandLine;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
 import uk.gov.justice.digital.config.JobArguments;
@@ -18,11 +19,14 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.context.MicronautContext;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
 
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.RECORD_SCHEMA;
 
+@Singleton
+@CommandLine.Command(name = "MoreAdvancedGlueStream")
 public class MoreAdvancedGlueStream implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(MoreAdvancedGlueStream.class);
@@ -43,7 +47,7 @@ public class MoreAdvancedGlueStream implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job started");
-        PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
+        PicocliRunner.run(MoreAdvancedGlueStream.class, MicronautContext.withArgs(args));
     }
 
     @Override
@@ -63,12 +67,12 @@ public class MoreAdvancedGlueStream implements Runnable {
         batchProcessingOptions.put("batchMaxRetries", "3");
         JsonOptions batchOptions = new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
 
-        BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession);
+//        BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession);
 
         glueContext.forEachBatch(sourceDf, (Dataset<Row> batch, Object batchId) -> {
             long cnt = batch.count();
             logger.info("Batch saw {} records", cnt);
-            batchProcessor.processBatch(batch);
+//            batchProcessor.processBatch(batch);
             return BoxedUnit.UNIT;
         }, batchOptions);
 
