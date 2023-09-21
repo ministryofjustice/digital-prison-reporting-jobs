@@ -26,6 +26,10 @@ workflows:
           notify_slack: true
           channel: dpr_cicd_alerts
           command: jar shadowJar # Skip tests when building jar, they've already run
+          build_args:
+            description: Extra Args for Gradle Build Args
+            type: string
+            default: 'org.gradle.jvmargs=-Xmx4096m -XX:MaxPermSize=4096m'
           filters:
             branches:
               only: /.*/
