@@ -9,17 +9,13 @@ import io.micronaut.configuration.picocli.PicocliRunner;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
-import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.context.MicronautContext;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,20 +29,21 @@ public class MoreAdvancedGlueStream implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(MoreAdvancedGlueStream.class);
 
     private static volatile String[] argArray;
-    private final JobArguments arguments;
-    private final JobProperties properties;
-    private final BatchProcessorProvider batchProcessorProvider;
+//    private final JobArguments arguments;
+//    private final JobProperties properties;
+//    private final BatchProcessorProvider batchProcessorProvider;
 
-    @Inject
-    public MoreAdvancedGlueStream(
-            JobArguments arguments,
-            JobProperties properties,
-            BatchProcessorProvider batchProcessorProvider
-    ) {
-        this.arguments = arguments;
-        this.properties = properties;
-        this.batchProcessorProvider = batchProcessorProvider;
-    }
+    public MoreAdvancedGlueStream(){}
+//    @Inject
+//    public MoreAdvancedGlueStream(
+//            JobArguments arguments,
+//            JobProperties properties,
+//            BatchProcessorProvider batchProcessorProvider
+//    ) {
+//        this.arguments = arguments;
+//        this.properties = properties;
+//        this.batchProcessorProvider = batchProcessorProvider;
+//    }
 
     public static void main(String[] args) {
         logger.info("Job started");
@@ -75,7 +72,7 @@ public class MoreAdvancedGlueStream implements Runnable {
 
 //        BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession);
 
-        glueContext.forEachBatch(sourceDf, (Dataset<Row> batch, Object batchId) -> {
+        glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
             long cnt = batch.count();
             logger.info("Batch saw {} records", cnt);
 //            batchProcessor.processBatch(batch);
