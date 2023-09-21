@@ -10,7 +10,6 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
@@ -28,27 +27,27 @@ public class RawZone implements Zone {
 
     private final String rawS3Path;
     private final DataStorageService storage;
-    private final SourceReferenceService sourceReferenceService;
 
     @Inject
-    public RawZone(JobArguments jobArguments,
-                   DataStorageService storage,
-                   SourceReferenceService sourceReferenceService) {
+    public RawZone(JobArguments jobArguments, DataStorageService storage) {
         this.rawS3Path = jobArguments.getRawS3Path();
         this.storage = storage;
-        this.sourceReferenceService = sourceReferenceService;
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> records, Row table) throws DataStorageException {
+    public Dataset<Row> process(
+            SparkSession spark,
+            Dataset<Row> records,
+            SourceReference sourceReference
+    ) throws DataStorageException {
         val startTime = System.currentTimeMillis();
 
-        String rowSource = table.getAs(SOURCE);
-        String rowTable = table.getAs(TABLE);
+        String rowSource = sourceReference.getSource();
+        String rowTable = sourceReference.getTable();
 
         logger.debug("Processing batch for source: {} table: {}", rowSource, rowTable);
 
-        val tablePath = getTablePath(rowSource, rowTable);
+        val tablePath = getTablePath(sourceReference);
 
         logger.debug("Applying batch to deltalake table: {}", tablePath);
         val rawDataFrame = createRawDataFrame(records);
@@ -70,11 +69,8 @@ public class RawZone implements Zone {
                 col(TIMESTAMP), col(KEY), col(SOURCE), col(TABLE), col(OPERATION), col(CONVERTER), col(RAW));
     }
 
-    private String getTablePath(String rowSource, String rowTable) {
-        return sourceReferenceService.getSourceReference(rowSource, rowTable)
-                .map(r -> createValidatedPath(rawS3Path, r.getSource(), r.getTable()))
-                // Revert to source and table from row where no match exists in the schema reference service.
-                .orElse(createValidatedPath(rawS3Path, rowSource, rowTable));
+    private String getTablePath(SourceReference sourceReference) {
+        return createValidatedPath(rawS3Path, sourceReference.getSource(), sourceReference.getTable());
     }
 
 }

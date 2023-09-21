@@ -15,8 +15,10 @@ import uk.gov.justice.digital.client.kinesis.KinesisReader;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
@@ -32,6 +34,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
+import static uk.gov.justice.digital.common.CommonDataFields.*;
+import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 /**
@@ -56,22 +61,25 @@ public class DataHubJob implements Runnable {
     private final CuratedZoneCDC curatedZoneCDC;
     private final DomainService domainService;
     private final SourceReferenceService sourceReferenceService;
+    private final DataStorageService storageService;
     private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
+    private final String violationsPath;
     private final SparkSession spark;
 
     @Inject
     public DataHubJob(
-        JobArguments arguments,
-        JobProperties properties,
-        RawZone rawZone,
-        StructuredZoneLoad structuredZoneLoad,
-        StructuredZoneCDC structuredZoneCDC,
-        CuratedZoneLoad curatedZoneLoad,
-        CuratedZoneCDC curatedZoneCDC,
-        DomainService domainService,
-        SourceReferenceService sourceReferenceService,
-        @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
-        SparkSessionProvider sparkSessionProvider
+            JobArguments arguments,
+            JobProperties properties,
+            RawZone rawZone,
+            StructuredZoneLoad structuredZoneLoad,
+            StructuredZoneCDC structuredZoneCDC,
+            CuratedZoneLoad curatedZoneLoad,
+            CuratedZoneCDC curatedZoneCDC,
+            DomainService domainService,
+            SourceReferenceService sourceReferenceService,
+            DataStorageService storageService,
+            @Named("converterForDMS_3_4_6") Converter<JavaRDD<Row>, Dataset<Row>> converter,
+            SparkSessionProvider sparkSessionProvider
     ) {
         logger.info("Initializing DataHubJob");
         String jobName = properties.getSparkJobName();
@@ -86,7 +94,9 @@ public class DataHubJob implements Runnable {
         this.curatedZoneCDC = curatedZoneCDC;
         this.domainService = domainService;
         this.sourceReferenceService = sourceReferenceService;
+        this.storageService = storageService;
         this.converter = converter;
+        this.violationsPath = arguments.getViolationsS3Path();
         logger.info("DataHubJob initialization complete");
     }
 
@@ -111,41 +121,46 @@ public class DataHubJob implements Runnable {
                     val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
                     dataFrameForTable.persist();
 
-                    rawZone.process(spark, dataFrameForTable, tableInfo);
-
-                    val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
-                    val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
-
-                    dataFrameForTable.unpersist();
-
-                    curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
-                    val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
-
                     String sourceName = tableInfo.getAs(SOURCE);
                     String tableName = tableInfo.getAs(TABLE);
 
                     val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
-                    optionalSourceReference.ifPresent(sourceReference -> {
-                                if (!curatedCdcDataFrame.isEmpty()) domainService
-                                        .refreshDomainUsingDataFrame(
-                                                spark,
-                                                curatedCdcDataFrame,
-                                                sourceReference.getSource(),
-                                                sourceReference.getTable()
-                                        );
-                            }
-                    );
+
+                    if (optionalSourceReference.isPresent()) {
+                        val sourceReference = optionalSourceReference.get();
+
+                        rawZone.process(spark, dataFrameForTable, sourceReference);
+
+                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, sourceReference);
+                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, sourceReference);
+
+                        dataFrameForTable.unpersist();
+
+                        curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
+                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, sourceReference);
+
+                        if (!curatedCdcDataFrame.isEmpty()) domainService
+                                .refreshDomainUsingDataFrame(
+                                        spark,
+                                        curatedCdcDataFrame,
+                                        sourceReference.getSource(),
+                                        sourceReference.getTable()
+                                );
+                    } else {
+                        handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
+                    }
 
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);
                 }
+
+                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
+                        batch.id(),
+                        System.currentTimeMillis() - startTime
+                );
             });
 
-            logger.debug("Batch: {} - Processed records - processed batch in {}ms",
-                    batch.id(),
-                    System.currentTimeMillis() - startTime
-            );
         }
     }
 
@@ -164,6 +179,24 @@ public class DataHubJob implements Runnable {
         }
     }
 
+    private void handleNoSchemaFound(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table
+    ) throws DataStorageException {
+        logger.warn("Violation - No schema found for {}/{}", source, table);
+        val destinationPath = createValidatedPath(violationsPath, source, table);
+
+        val missingSchemaRecords = dataFrame
+                .select(col(DATA), col(METADATA))
+                .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)))
+                .drop(OPERATION);
+
+        storageService.append(destinationPath, missingSchemaRecords);
+        storageService.updateDeltaManifestForTable(spark, destinationPath);
+    }
+
     private List<Row> getTablesInBatch(Dataset<Row> dataFrame) {
         return dataFrame
                 .select(TABLE, SOURCE, OPERATION)
@@ -174,8 +207,7 @@ public class DataHubJob implements Runnable {
     private Dataset<Row> extractDataFrameForSourceTable(Dataset<Row> dataFrame, Row row) {
         final String source = row.getAs(SOURCE);
         final String table = row.getAs(TABLE);
-        return (dataFrame == null) ? null
-                : dataFrame
+        return dataFrame
                 .filter(col(SOURCE).equalTo(source).and(col(TABLE).equalTo(table)))
                 .orderBy(col(TIMESTAMP));
     }

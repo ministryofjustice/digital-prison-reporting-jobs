@@ -30,12 +30,10 @@ class JsonValidatorTest {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final JsonValidator underTest = new JsonValidator();
-
     @Test
     public void shouldPassValidJsonWithOnlyMandatoryFieldSet() throws JsonProcessingException {
         val json = createJsonFromEntries(Collections.singletonList(entry(Fields.MANDATORY, "somevalue")));
-        assertThat(underTest.validate(json, json, schema), is(emptyString()));
+        assertThat(JsonValidator.validate(json, json, schema), is(emptyString()));
     }
 
     @Test
@@ -45,14 +43,14 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
         ));
-        assertThat(underTest.validate(json, json, schema), is(emptyString()));
+        assertThat(JsonValidator.validate(json, json, schema), is(emptyString()));
     }
 
     @Test
     public void shouldPassValidJsonIrrespectiveOfFieldOrdering() throws JsonProcessingException {
         val json = "{\"mandatory\":\"foo\",\"numeric\":1}";
         val jsonWithReverseFieldOrder = "{\"numeric\":1,\"mandatory\":\"foo\"}";
-        assertThat(underTest.validate(json, jsonWithReverseFieldOrder, schema), is(emptyString()));
+        assertThat(JsonValidator.validate(json, jsonWithReverseFieldOrder, schema), is(emptyString()));
     }
 
     @Test
@@ -61,7 +59,7 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue"),
                 entry(Fields.NUMERIC, 1)
         ));
-        assertThat(underTest.validate(json, json, schema), not(emptyString()));
+        assertThat(JsonValidator.validate(json, json, schema), not(emptyString()));
     }
 
     @Test
@@ -78,7 +76,7 @@ class JsonValidatorTest {
                 entry(Fields.NUMERIC, "42")
         ));
 
-        assertThat(underTest.validate(json, fakeParsedJson, schema), not(emptyString()));
+        assertThat(JsonValidator.validate(json, fakeParsedJson, schema), not(emptyString()));
     }
 
     /**
@@ -100,7 +98,7 @@ class JsonValidatorTest {
                 entry(Fields.OPTIONAL, "anotherValue")
         ));
 
-        assertThat(underTest.validate(json, fakeParsedJson, schema), not(emptyString()));
+        assertThat(JsonValidator.validate(json, fakeParsedJson, schema), not(emptyString()));
     }
 
     @Test
@@ -111,8 +109,8 @@ class JsonValidatorTest {
                 entry(Fields.NUMERIC, "this is not a number")
         ));
 
-        assertThat(underTest.validate(null, json, schema), not(emptyString()));
-        assertThat(underTest.validate(json, null, schema), not(emptyString()));
+        assertThat(JsonValidator.validate(null, json, schema), not(emptyString()));
+        assertThat(JsonValidator.validate(json, null, schema), not(emptyString()));
     }
 
     @Test
@@ -129,12 +127,12 @@ class JsonValidatorTest {
         ));
 
         assertThat(
-                underTest.validate(optionalFieldMissing, optionalFieldIsNull, schema),
+                JsonValidator.validate(optionalFieldMissing, optionalFieldIsNull, schema),
                 is(emptyString())
         );
 
         assertThat(
-                underTest.validate(optionalFieldIsNull, optionalFieldMissing, schema),
+                JsonValidator.validate(optionalFieldIsNull, optionalFieldMissing, schema),
                 is(emptyString())
         );
     }
@@ -153,12 +151,12 @@ class JsonValidatorTest {
         ));
 
         assertThat(
-                underTest.validate(optionalFieldMissing, optionalFieldNotNull, schema),
+                JsonValidator.validate(optionalFieldMissing, optionalFieldNotNull, schema),
                 not(emptyString())
         );
 
         assertThat(
-                underTest.validate(optionalFieldNotNull, optionalFieldMissing, schema),
+                JsonValidator.validate(optionalFieldNotNull, optionalFieldMissing, schema),
                 not(emptyString())
         );
     }
