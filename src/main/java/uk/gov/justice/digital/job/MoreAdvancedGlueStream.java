@@ -33,17 +33,17 @@ public class MoreAdvancedGlueStream implements Runnable {
     private static volatile String[] argArray;
     private final JobArguments arguments;
 //    private final JobProperties properties;
-//    private final BatchProcessorProvider batchProcessorProvider;
+    private final BatchProcessorProvider batchProcessorProvider;
 
     @Inject
     public MoreAdvancedGlueStream(
-            JobArguments arguments
+            JobArguments arguments,
 //            JobProperties properties,
-//            BatchProcessorProvider batchProcessorProvider
+            BatchProcessorProvider batchProcessorProvider
     ) {
         this.arguments = arguments;
 //        this.properties = properties;
-//        this.batchProcessorProvider = batchProcessorProvider;
+        this.batchProcessorProvider = batchProcessorProvider;
     }
 
     public static void main(String[] args) {

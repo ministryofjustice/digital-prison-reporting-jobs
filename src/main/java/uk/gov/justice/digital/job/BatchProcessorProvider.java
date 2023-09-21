@@ -15,6 +15,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
@@ -43,7 +44,7 @@ public class BatchProcessorProvider {
             CuratedZoneLoad curatedZoneLoad,
             CuratedZoneCDC curatedZoneCDC,
             DomainService domainService,
-            DMS_3_4_6 converter) {
+            @Named("converterForDMS_3_4_6") DMS_3_4_6 converter) {
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
