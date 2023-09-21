@@ -1,7 +1,11 @@
 package uk.gov.justice.digital.job;
 
+import com.amazonaws.services.glue.GlueContext;
+import com.amazonaws.services.glue.util.Job$;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
@@ -31,6 +35,7 @@ import javax.inject.Singleton;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -55,6 +60,8 @@ public class DataHubJob implements Serializable, Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
 
+    private static final URI stopFile = URI.create("s3://dpr-working-test/stopFile");
+
     private final RawZone rawZone;
     private final StructuredZoneLoad structuredZoneLoad;
     private final StructuredZoneCDC structuredZoneCDC;
@@ -71,6 +78,8 @@ public class DataHubJob implements Serializable, Runnable {
     // Transient ensures Java does not attempt to serialize it.
     // Volatile ensures it keeps the 'final' concurrency initialization guarantee.
     private transient volatile SparkSession spark;
+
+    private Job$ job;
     @Inject
     public DataHubJob(
         JobArguments arguments,
@@ -114,7 +123,18 @@ public class DataHubJob implements Serializable, Runnable {
         PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
     }
 
-    public void batchProcessor(JavaRDD<byte[]> batch) {
+    private boolean shouldWeStop() throws IOException {
+        FileSystem fs = FileSystem.get(stopFile, spark.sparkContext().hadoopConfiguration());
+        return !fs.exists(new Path(stopFile));
+    }
+
+    public void batchProcessor(JavaRDD<byte[]> batch) throws IOException {
+        if(shouldWeStop()) {
+            logger.info("Batch cancelled: Time to stop");
+            job.commit();
+            logger.info("Batch cancelled: gracefully stopped, exiting");
+            System.exit(0);
+        }
         if (batch.isEmpty()) {
             logger.info("Batch: {} - Skipping empty batch", batch.id());
         } else {
@@ -161,6 +181,8 @@ public class DataHubJob implements Serializable, Runnable {
         String jobName = properties.getSparkJobName();
         JavaStreamingContext streamingContext =
                 KinesisStreamingContextProvider.buildStreamingContext(arguments, jobName, spark.sparkContext(), this::batchProcessor);
+        GlueContext glueContext = new GlueContext(streamingContext.sparkContext());
+        job = Job$.MODULE$.init(jobName, glueContext, arguments.getConfig());
         try {
             streamingContext.start();
             streamingContext.awaitTermination();

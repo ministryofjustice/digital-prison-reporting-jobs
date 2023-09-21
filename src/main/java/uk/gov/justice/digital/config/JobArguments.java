@@ -89,6 +89,10 @@ public class JobArguments implements Serializable {
         }
     }
 
+    public Map<String, String> getConfig() {
+        return Collections.unmodifiableMap(this.config);
+    }
+
     public String getAwsRegion() {
         return getArgument(AWS_REGION);
     }
