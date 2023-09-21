@@ -5,36 +5,60 @@ import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.GlueArgParser;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
+import io.micronaut.configuration.picocli.PicocliRunner;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
+import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.job.context.MicronautContext;
 
+import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.RECORD_SCHEMA;
 
-public class BasicGlueStream {
+public class MoreAdvancedGlueStream implements Runnable {
 
-    private static final Logger logger = LoggerFactory.getLogger(BasicGlueStream.class);
+    private static final Logger logger = LoggerFactory.getLogger(MoreAdvancedGlueStream.class);
 
-    public static void main(String[] args) {
-        glueMain(args);
+    private static final String kinesisEndpointUrl = "https://kinesis.eu-west-2.amazonaws.com";
+    private static final String kinesisStartingPosition = "TRIM_HORIZON";
+    private static String kinesisStreamName = "dpr-kinesis-ingestor-development";
+
+    private final JobArguments arguments;
+    private final JobProperties properties;
+    private final BatchProcessorProvider batchProcessorProvider;
+
+    @Inject
+    public MoreAdvancedGlueStream(
+            JobArguments arguments,
+            JobProperties properties,
+            BatchProcessorProvider batchProcessorProvider
+    ) {
+        this.arguments = arguments;
+        this.properties = properties;
+        this.batchProcessorProvider = batchProcessorProvider;
     }
 
-    public static void glueMain(String[] args) {
-        // example https://github.com/JeremyDOwens/aws-glue-streaming-example/blob/master/src/main/scala/ExampleJob.scala
-        // although it uses an open source kinesis structured streaming data source
+    public static void main(String[] args) {
+        logger.info("Job started");
+        PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
+    }
+
+    @Override
+    public void run() {
         SparkContext spark = new SparkContext();
         spark.setLogLevel("INFO");
         GlueContext glueContext = new GlueContext(spark);
 //        SparkSession sparkSession = glueContext.getSparkSession();
-        scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(args, new String[]{"JOB_NAME"});
-        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
+        Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());
 
         DataSource kinesisDataSource = glueGetSource(glueContext);
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
@@ -66,5 +90,15 @@ public class BasicGlueStream {
         kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(kinesisConnectionOptions));
         return glueContext.getSource("kinesis", connectionOptions, "", "");
+    }
+
+    private static Dataset<Row> readStream(SparkSession sparkSession) {
+        return sparkSession.readStream()   // readstream() returns type DataStreamReader
+                .format("kinesis")
+                .option("streamName", kinesisStreamName)
+                .option("endpointUrl", kinesisEndpointUrl)
+                .option("startingPosition", kinesisStartingPosition)
+                .schema(RECORD_SCHEMA)
+                .load();
     }
 }
