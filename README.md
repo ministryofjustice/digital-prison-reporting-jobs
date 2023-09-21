@@ -103,6 +103,10 @@ project.
 - Reference or link any relevant JIRA tickets in the pull request notes
 - At least one approval is required before a PR can be merged
 
+## Releases
+
+- Release 1.0.0
+
 ## TODO
 
 - Modify the Dependabot file to suit the [dependency manager](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#package-ecosystem) you plan to use and for [automated pull requests for package updates](https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/enabling-and-disabling-dependabot-version-updates#enabling-dependabot-version-updates). Dependabot is enabled in the settings by default.
