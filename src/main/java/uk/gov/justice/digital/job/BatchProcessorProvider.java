@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -56,44 +55,44 @@ public class BatchProcessorProvider {
 
     public BatchProcessor createBatchProcessor(SparkSession spark) {
         return batch -> {
-            int batchId = batch.rdd().id();
-            if (batch.isEmpty()) {
-                logger.info("Batch: {} - Skipping empty batch", batchId);
-            } else {
-                logger.debug("Batch: {} - Processing records", batchId);
-                val startTime = System.currentTimeMillis();
-
-                val dataFrame = converter.convert(batch);
-
-                getTablesInBatch(dataFrame).forEach(tableInfo -> {
-                    try {
-                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
-                        dataFrameForTable.persist();
-
-                        rawZone.process(spark, dataFrameForTable, tableInfo);
-
-                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
-                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
-
-                        dataFrameForTable.unpersist();
-
-                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
-                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
-
-                        if (!curatedCdcDataFrame.isEmpty()) domainService
-                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
-
-                    } catch (Exception e) {
-                        logger.error("Caught unexpected exception", e);
-                        throw new RuntimeException("Caught unexpected exception", e);
-                    }
-                });
-
-                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
-                        batchId,
-                        System.currentTimeMillis() - startTime
-                );
-            }
+//            int batchId = batch.rdd().id();
+//            if (batch.isEmpty()) {
+//                logger.info("Batch: {} - Skipping empty batch", batchId);
+//            } else {
+//                logger.debug("Batch: {} - Processing records", batchId);
+//                val startTime = System.currentTimeMillis();
+//
+//                val dataFrame = converter.convert(batch);
+//
+//                getTablesInBatch(dataFrame).forEach(tableInfo -> {
+//                    try {
+//                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
+//                        dataFrameForTable.persist();
+//
+//                        rawZone.process(spark, dataFrameForTable, tableInfo);
+//
+//                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
+//                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
+//
+//                        dataFrameForTable.unpersist();
+//
+//                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
+//                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
+//
+//                        if (!curatedCdcDataFrame.isEmpty()) domainService
+//                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+//
+//                    } catch (Exception e) {
+//                        logger.error("Caught unexpected exception", e);
+//                        throw new RuntimeException("Caught unexpected exception", e);
+//                    }
+//                });
+//
+//                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
+//                        batchId,
+//                        System.currentTimeMillis() - startTime
+//                );
+//            }
         };
     }
 
