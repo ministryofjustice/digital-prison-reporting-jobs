@@ -15,6 +15,7 @@ import uk.gov.justice.digital.zone.raw.RawZone;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
+import javax.inject.Singleton;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
@@ -23,6 +24,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SO
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TIMESTAMP;
 
+@Singleton
 public class BatchProcessorProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(BatchProcessorProvider.class);

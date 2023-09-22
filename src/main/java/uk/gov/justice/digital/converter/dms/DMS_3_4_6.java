@@ -118,7 +118,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
             .add(CONVERTER, StringType, NOT_NULL);
 
 
-    private static final StructType eventsSchema =
+    public static final StructType eventsSchema =
             new StructType()
                     .add(ORIGINAL, StringType);
 
@@ -142,16 +142,23 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
     private final SparkSession spark;
 
     @Inject
-    public DMS_3_4_6(
-            SparkSession spark
-    ) {
+    public DMS_3_4_6(SparkSession spark) {
         this.spark = spark;
     }
 
     public Dataset<Row> convert(Dataset<Row> inputDf) {
         val df = inputDf
                 .select(
-                        to_json(struct(col(DATA), col(METADATA))).as(RAW),
+//                        to_json(struct(col(DATA), col(METADATA))).as(RAW),
+                        // TODO: Is there a better way to avoid to_json messing up the raw escape characters?
+                        // Example of the issue when using to_json: {\"data\":\"{\\\"OFFENDER_BOOK_ID\\\":1
+                        concat(
+                                lit("{\"data\": "),
+                                col(DATA),
+                                lit(", \"metadata\": "),
+                                col(METADATA).cast(StringType),
+                                lit("}")
+                        ).as(RAW),
                         col(DATA),
                         col(METADATA),
                         col(METADATA + ".*")

@@ -74,7 +74,7 @@ public class MoreAdvancedGlueStream implements Runnable {
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
 
         Map<String, String> batchProcessingOptions = new HashMap<>();
-        batchProcessingOptions.put("windowSize", arguments.getKinesisReaderBatchDuration().toString());
+        batchProcessingOptions.put("windowSize", arguments.getKinesisReaderBatchDuration().toString() + " seconds");
         batchProcessingOptions.put("checkpointLocation", "s3://dpr-working-development/checkpoints");
         batchProcessingOptions.put("batchMaxRetries", "3");
         JsonOptions batchOptions = new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
@@ -82,13 +82,7 @@ public class MoreAdvancedGlueStream implements Runnable {
         BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession, new DMS_3_4_6(sparkSession));
 
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
-            try {
-                batchProcessor.processBatch(batch);
-            } catch (Exception e) {
-                logger.error("Unexpected Exception", e);
-                throw new RuntimeException(e);
-            }
-
+            batchProcessor.processBatch(batch);
             return BoxedUnit.UNIT;
         }, batchOptions);
 
