@@ -16,17 +16,16 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
-
-import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.test.Fixtures.*;
-import static uk.gov.justice.digital.test.ZoneFixtures.*;
+import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredLoadDataset;
+import static uk.gov.justice.digital.test.ZoneFixtures.createTestDataset;
 
 @ExtendWith(MockitoExtension.class)
 class StructuredZoneLoadTest extends BaseSparkTest {
@@ -39,9 +38,6 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
     @Mock
     private DataStorageService mockDataStorage;
-
-    @Mock
-    private SourceReferenceService mockSourceReferenceService;
 
     @Captor
     ArgumentCaptor<Dataset<Row>> dataframeCaptor;
@@ -61,8 +57,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
         underTest = new StructuredZoneLoad(
                 mockJobArguments,
-                mockDataStorage,
-                mockSourceReferenceService
+                mockDataStorage
         );
     }
 
@@ -71,7 +66,6 @@ class StructuredZoneLoadTest extends BaseSparkTest {
         val expectedRecords = createStructuredLoadDataset(spark);
         val structuredPath = createValidatedPath(STRUCTURED_PATH, TABLE_SOURCE, TABLE_NAME);
 
-        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing()
                 .when(mockDataStorage)
@@ -79,7 +73,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
-                underTest.process(spark, testDataSet, dataMigrationEventRow).collectAsList()
+                underTest.process(spark, testDataSet, mockSourceReference).collectAsList()
         );
 
         assertIterableEquals(
@@ -90,37 +84,19 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
     @Test
     public void shouldHandleInvalidRecords() throws DataStorageException {
-        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
 
-        assertNotNull(underTest.process(spark, testDataSet, dataMigrationEventRow));
-    }
-
-    @Test
-    public void shouldHandleNoSchemaFound() throws DataStorageException {
-        givenTheSchemaDoesNotExist();
-
-        assertTrue(underTest.process(spark, testDataSet, dataMigrationEventRow).isEmpty());
+        assertNotNull(underTest.process(spark, testDataSet, mockSourceReference));
     }
 
     @Test
     public void shouldKeepNullColumnsInData() throws DataStorageException {
-        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).appendDistinct(any(), any(), any());
 
-        val structuredLoadRecords = underTest.process(spark, testDataSet, dataMigrationEventRow);
+        val structuredLoadRecords = underTest.process(spark, testDataSet, mockSourceReference);
 
         assertTrue(hasNullColumns(structuredLoadRecords));
-    }
-
-    private void givenTheSchemaExists() {
-        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
-                .thenReturn(Optional.of(mockSourceReference));
-    }
-
-    private void givenTheSchemaDoesNotExist() {
-        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenReturn(Optional.empty());
     }
 
     private void givenTheSourceReferenceIsValid() {

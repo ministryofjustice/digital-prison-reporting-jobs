@@ -16,12 +16,8 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
-
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -42,9 +38,6 @@ class CuratedZoneCdcTest extends BaseSparkTest {
     @Mock
     private DataStorageService mockDataStorage;
 
-    @Mock
-    private SourceReferenceService mockSourceReferenceService;
-
     @Captor
     ArgumentCaptor<Dataset<Row>> dataframeCaptor;
 
@@ -62,8 +55,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         underTest = new CuratedZoneCDC(
                 mockJobArguments,
-                mockDataStorage,
-                mockSourceReferenceService
+                mockDataStorage
         );
     }
 
@@ -71,7 +63,6 @@ class CuratedZoneCdcTest extends BaseSparkTest {
     public void shouldWriteStructuredIncrementalRecordsToDeltaTable() throws DataStorageException {
         val expectedRecords = createStructuredIncrementalDataset(spark);
 
-        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).upsertRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any());
         doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any());
@@ -79,7 +70,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
-                underTest.process(spark, expectedRecords, dataMigrationEventRow).collectAsList()
+                underTest.process(spark, expectedRecords, mockSourceReference).collectAsList()
         );
 
         assertIterableEquals(
@@ -92,11 +83,10 @@ class CuratedZoneCdcTest extends BaseSparkTest {
     public void shouldHandleValidInsertRecords() throws DataStorageException {
         val expectedRecords = createStructuredInsertDataset(spark);
 
-        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).upsertRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
-        underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
+        underTest.process(spark, expectedRecords, mockSourceReference).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -108,11 +98,10 @@ class CuratedZoneCdcTest extends BaseSparkTest {
     public void shouldHandleValidUpdateRecords() throws DataStorageException {
         val expectedRecords = createStructuredUpdateDataset(spark);
 
-        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
-        underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
+        underTest.process(spark, expectedRecords, mockSourceReference).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
@@ -124,34 +113,15 @@ class CuratedZoneCdcTest extends BaseSparkTest {
     public void shouldHandleValidDeleteRecords() throws DataStorageException {
         val expectedRecords = createStructuredDeleteDataset(spark);
 
-        givenTheSchemaExists();
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
 
-        underTest.process(spark, expectedRecords, dataMigrationEventRow).collect();
+        underTest.process(spark, expectedRecords, mockSourceReference).collect();
 
         assertIterableEquals(
                 expectedRecords.drop(OPERATION).collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
-    }
-
-    @Test
-    public void shouldHandleNoSchemaFound() throws DataStorageException {
-        val testDataSet = createStructuredIncrementalDataset(spark);
-
-        givenTheSchemaDoesNotExist();
-
-        assertTrue(underTest.process(spark, testDataSet, dataMigrationEventRow).isEmpty());
-    }
-
-    private void givenTheSchemaExists() {
-        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
-                .thenReturn(Optional.of(mockSourceReference));
-    }
-
-    private void givenTheSchemaDoesNotExist() {
-        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME)).thenReturn(Optional.empty());
     }
 
     private void givenTheSourceReferenceIsValid() {

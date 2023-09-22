@@ -11,7 +11,6 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.udf.JsonValidator;
-import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.writer.Writer;
 import uk.gov.justice.digital.zone.Zone;
 
@@ -20,12 +19,12 @@ import java.util.Collections;
 import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
+import static uk.gov.justice.digital.common.CommonDataFields.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
 
 public abstract class StructuredZone implements Zone {
 
-    public static final String ERROR = "error";
     public static final String PARSED_DATA = "parsedData";
     public static final String VALID = "valid";
 
@@ -35,33 +34,18 @@ public abstract class StructuredZone implements Zone {
 
     private final String structuredPath;
     private final String violationsPath;
-    private final SourceReferenceService sourceReferenceService;
     private final Writer writer;
 
     @Inject
-    public StructuredZone(
-            JobArguments jobArguments,
-            SourceReferenceService sourceReferenceService,
-            Writer writer
-    ) {
+    protected StructuredZone(JobArguments jobArguments, Writer writer) {
         this.writer = writer;
         this.structuredPath = jobArguments.getStructuredS3Path();
         this.violationsPath = jobArguments.getViolationsS3Path();
-        this.sourceReferenceService = sourceReferenceService;
     }
 
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> filteredRecords, Row table) throws DataStorageException {
-
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> filteredRecords, SourceReference sourceReference) throws DataStorageException {
         val sortedRecords = filteredRecords.orderBy(col(TIMESTAMP));
-
-        String sourceName = table.getAs(SOURCE);
-        String tableName = table.getAs(TABLE);
-
-        val sourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
-
-        return sourceReference.isPresent()
-                ? handleSchemaFound(spark, sortedRecords, sourceReference.get())
-                : handleNoSchemaFound(spark, sortedRecords, sourceName, tableName);
+        return handleSchemaFound(spark, sortedRecords, sourceReference);
     }
 
     private Dataset<Row> handleSchemaFound(
@@ -80,23 +64,6 @@ public abstract class StructuredZone implements Zone {
         handleInvalidRecords(spark, validatedDataFrame, source, table, validationFailedViolationPath);
 
         return handleValidRecords(spark, validatedDataFrame, tablePath, sourceReference.getPrimaryKey());
-    }
-
-    private Dataset<Row> handleNoSchemaFound(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table
-    ) throws DataStorageException {
-        logger.warn("Violation - No schema found for {}/{}", source, table);
-
-        val missingSchemaRecords = dataFrame
-                .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)));
-
-        writer.writeInvalidRecords(spark, createValidatedPath(violationsPath, source, table), missingSchemaRecords);
-
-        return createEmptyDataFrame(dataFrame);
     }
 
     private void handleInvalidRecords(

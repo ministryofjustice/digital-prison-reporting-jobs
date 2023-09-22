@@ -13,11 +13,8 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.zone.raw.RawZone;
 
 import java.util.Collections;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.mockito.ArgumentMatchers.*;
@@ -39,9 +36,6 @@ class RawZoneTest extends BaseSparkTest {
     @Mock
     private DataStorageService mockDataStorageService;
 
-    @Mock
-    private SourceReferenceService mockSourceReferenceService;
-
     Dataset<Row> testRecords = createTestDataset(spark);
 
     @Test
@@ -49,9 +43,6 @@ class RawZoneTest extends BaseSparkTest {
         val expectedRecords = createExpectedRawDataset(spark);
 
         val rawPath = createValidatedPath(RAW_PATH, TABLE_SOURCE, TABLE_NAME);
-
-        when(mockSourceReferenceService.getSourceReference(TABLE_SOURCE, TABLE_NAME))
-                .thenReturn(Optional.of(mockSourceReference));
 
         doNothing()
                 .when(mockDataStorageService)
@@ -62,13 +53,12 @@ class RawZoneTest extends BaseSparkTest {
 
         val underTest = new RawZone(
                 jobArguments,
-                mockDataStorageService,
-                mockSourceReferenceService
+                mockDataStorageService
         );
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
-                underTest.process(spark, testRecords, dataMigrationEventRow).collectAsList()
+                underTest.process(spark, testRecords, mockSourceReference).collectAsList()
         );
     }
 

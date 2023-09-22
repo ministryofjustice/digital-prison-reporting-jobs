@@ -7,9 +7,9 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.writer.Writer;
 import uk.gov.justice.digital.writer.structured.StructuredZoneCdcWriter;
 
@@ -27,18 +27,17 @@ public class StructuredZoneCDC extends StructuredZone {
     @Inject
     public StructuredZoneCDC(
             JobArguments jobArguments,
-            DataStorageService storage,
-            SourceReferenceService sourceReference
+            DataStorageService storage
     ) {
-        this(jobArguments, sourceReference, createWriter(storage));
+        this(jobArguments, createWriter(storage));
     }
 
+    @SuppressWarnings("unused")
     private StructuredZoneCDC(
             JobArguments jobArguments,
-            SourceReferenceService sourceReference,
             Writer writer
     ) {
-        super(jobArguments, sourceReference, writer);
+        super(jobArguments, writer);
     }
 
     private static Writer createWriter(DataStorageService storage) {
@@ -46,19 +45,19 @@ public class StructuredZoneCDC extends StructuredZone {
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
         val filteredRecords = dataFrame.filter(col(OPERATION).isin(cdcOperations));
 
         if (filteredRecords.isEmpty()) {
             return spark.emptyDataFrame();
         } else {
-            String sourceName = table.getAs(SOURCE);
-            String tableName = table.getAs(TABLE);
+            String sourceName = sourceReference.getSource();
+            String tableName = sourceReference.getTable();
 
             val startTime = System.currentTimeMillis();
 
             logger.debug("Processing records for {}/{}", sourceName, tableName);
-            val result = super.process(spark, filteredRecords, table);
+            val result = super.process(spark, filteredRecords, sourceReference);
             logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
 
             return result;

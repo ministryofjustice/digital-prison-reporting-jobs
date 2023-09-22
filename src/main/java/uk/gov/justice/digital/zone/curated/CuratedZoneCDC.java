@@ -7,17 +7,15 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.writer.Writer;
 import uk.gov.justice.digital.writer.curated.CuratedZoneCdcWriter;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 
 @Singleton
 public class CuratedZoneCDC extends CuratedZone {
@@ -27,18 +25,17 @@ public class CuratedZoneCDC extends CuratedZone {
     @Inject
     public CuratedZoneCDC(
             JobArguments jobArguments,
-            DataStorageService storage,
-            SourceReferenceService sourceReferenceService
+            DataStorageService storage
     ) {
-        this(jobArguments, sourceReferenceService, createWriter(storage));
+        this(jobArguments, createWriter(storage));
     }
 
+    @SuppressWarnings("unused")
     private CuratedZoneCDC(
             JobArguments jobArguments,
-            SourceReferenceService sourceReference,
             Writer writer
     ) {
-        super(jobArguments, sourceReference, writer);
+        super(jobArguments, writer);
     }
 
     private static Writer createWriter(DataStorageService storage) {
@@ -46,17 +43,17 @@ public class CuratedZoneCDC extends CuratedZone {
     }
 
     @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, Row table) throws DataStorageException {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
         if (dataFrame.isEmpty()) {
             return spark.emptyDataFrame();
         } else {
-            String sourceName = table.getAs(SOURCE);
-            String tableName = table.getAs(TABLE);
+            String sourceName = sourceReference.getSource();
+            String tableName = sourceReference.getTable();
 
             val startTime = System.currentTimeMillis();
 
             logger.debug("Processing records for {}/{}", sourceName, tableName);
-            val result = super.process(spark, dataFrame, table);
+            val result = super.process(spark, dataFrame, sourceReference);
             logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
 
             return result;
