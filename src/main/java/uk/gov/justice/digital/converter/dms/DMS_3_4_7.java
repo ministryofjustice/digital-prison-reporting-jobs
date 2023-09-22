@@ -17,10 +17,10 @@ import java.util.*;
 
 import static org.apache.spark.sql.functions.*;
 import static org.apache.spark.sql.types.DataTypes.StringType;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 
 /**
- * Converter that takes raw data from DMS v3.4.6 and converts it into the standardised data representation for
+ * Converter that takes raw data from DMS v3.4.7 and converts it into the standardised data representation for
  * onward processing. See Converter.PARSED_DATA_SCHEMA
  * <p>
  * This converter will fail with an exception if
@@ -28,10 +28,10 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
  *   o after parsing, any of the fields in the standard format are null
  */
 @Singleton
-@Named("converterForDMS_3_4_6")
-public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
+@Named("converterForDMS_3_4_7")
+public class DMS_3_4_7 implements Converter<JavaRDD<Row>, Dataset<Row>> {
 
-    public static final String CONVERTER_VERSION = "dms:3.4.6";
+    public static final String CONVERTER_VERSION = "dms:3.4.7";
     public static final String ORIGINAL = "original";
     public static final String JSON_DATA = "jsonData";
 
@@ -120,7 +120,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
     private final SparkSession spark;
 
     @Inject
-    public DMS_3_4_6(
+    public DMS_3_4_7(
             JobArguments arguments,
             SparkSessionProvider sparkSessionProvider
     ) {

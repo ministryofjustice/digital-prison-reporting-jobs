@@ -21,7 +21,7 @@ import java.util.Map;
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.CommonDataFields.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 
 public abstract class StructuredZone implements Zone {
 

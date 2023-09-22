@@ -18,7 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.dynamodb.DomainDefinitionClient;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.DomainExecutor;
 import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 import static uk.gov.justice.digital.test.Fixtures.getAllCapturedRecords;
 
 @ExtendWith(MockitoExtension.class)
@@ -77,8 +77,8 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = DMS_3_4_6.Operation.class, names = {"Insert", "Update", "Delete"})
-    public void shouldIncrementallyRefreshRecordsForCDCOperations(DMS_3_4_6.Operation operation) throws Exception {
+    @EnumSource(value = DMS_3_4_7.Operation.class, names = {"Insert", "Update", "Delete"})
+    public void shouldIncrementallyRefreshRecordsForCDCOperations(DMS_3_4_7.Operation operation) throws Exception {
         val recordsToInsert = createInputDataFrame(operation);
         val domainDefinition = createDomainDefinition();
         val domainDefinitions = Collections.singletonList(domainDefinition);
@@ -124,8 +124,8 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = DMS_3_4_6.Operation.class, names = {"Insert", "Update", "Delete", "Load"})
-    public void shouldSkipAndContinueWhenNoMatchingDomainDefinitionIsFound(DMS_3_4_6.Operation operation) throws Exception {
+    @EnumSource(value = DMS_3_4_7.Operation.class, names = {"Insert", "Update", "Delete", "Load"})
+    public void shouldSkipAndContinueWhenNoMatchingDomainDefinitionIsFound(DMS_3_4_7.Operation operation) throws Exception {
         val recordsToInsert = createInputDataFrame(operation);
         val domainDefinition = createDomainDefinition();
         val domainDefinitions = Collections.singletonList(domainDefinition);
@@ -138,8 +138,8 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = DMS_3_4_6.Operation.class, names = {"Insert", "Update", "Delete", "Load"})
-    public void shouldFailWhenThereAreNoDomainDefinitions(DMS_3_4_6.Operation operation) throws Exception {
+    @EnumSource(value = DMS_3_4_7.Operation.class, names = {"Insert", "Update", "Delete", "Load"})
+    public void shouldFailWhenThereAreNoDomainDefinitions(DMS_3_4_7.Operation operation) throws Exception {
         val recordsToInsert = createInputDataFrame(operation);
         List<DomainDefinition> domainDefinitions = Collections.emptyList();
 
@@ -154,8 +154,8 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = DMS_3_4_6.Operation.class, names = {"Load"})
-    public void shouldNotIncrementallyRefreshRecordsForLoadOperations(DMS_3_4_6.Operation operation) throws Exception {
+    @EnumSource(value = DMS_3_4_7.Operation.class, names = {"Load"})
+    public void shouldNotIncrementallyRefreshRecordsForLoadOperations(DMS_3_4_7.Operation operation) throws Exception {
         val recordsToInsert = createInputDataFrame(operation);
         val domainDefinition = createDomainDefinition();
 
@@ -188,7 +188,7 @@ public class DomainServiceTest extends BaseSparkTest {
         return spark.createDataFrame(records, tableSchema);
     }
 
-    private Dataset<Row> createInputDataFrame(DMS_3_4_6.Operation operation) {
+    private Dataset<Row> createInputDataFrame(DMS_3_4_7.Operation operation) {
         val tableSchema = new StructType()
                 .add("table_id", DataTypes.StringType)
                 .add("description", DataTypes.StringType)

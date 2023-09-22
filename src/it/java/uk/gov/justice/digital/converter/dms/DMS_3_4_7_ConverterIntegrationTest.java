@@ -16,9 +16,9 @@ import java.util.Map;
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.*;
 import static uk.gov.justice.digital.config.JobArguments.LOG_LEVEL;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 
-class DMS_3_4_6_ConverterIntegrationTest extends BaseSparkTest {
+class DMS_3_4_7_ConverterIntegrationTest extends BaseSparkTest {
 
     private static final String DATA_PATH = "src/it/resources/data/dms_record.json";
     private static final String CONTROL_PATH = "src/it/resources/data/null-data-dms-record.json";
@@ -31,7 +31,7 @@ class DMS_3_4_6_ConverterIntegrationTest extends BaseSparkTest {
     };
 
     private static final JobArguments arguments = new JobArguments(config);
-    private static final DMS_3_4_6 underTest = new DMS_3_4_6(arguments, new SparkSessionProvider());
+    private static final DMS_3_4_7 underTest = new DMS_3_4_7(arguments, new SparkSessionProvider());
 
     @Test
     void shouldConvertValidDataCorrectly() {
