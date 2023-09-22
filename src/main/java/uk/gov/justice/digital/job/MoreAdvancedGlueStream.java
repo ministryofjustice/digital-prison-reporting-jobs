@@ -7,6 +7,7 @@ import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
+import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -20,6 +21,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.job.context.MicronautContext;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import javax.inject.Singleton;
 import java.util.HashMap;
@@ -57,8 +59,10 @@ public class MoreAdvancedGlueStream implements Runnable {
 
     @Override
     public void run() {
-        SparkContext spark = new SparkContext();
-        spark.setLogLevel("INFO");
+        SparkConf sparkConf = new SparkConf();
+        SparkSessionProvider.configureSparkConf(sparkConf);
+        SparkContext spark = new SparkContext(sparkConf);
+        spark.setLogLevel(arguments.getLogLevel().name());
         GlueContext glueContext = new GlueContext(spark);
         SparkSession sparkSession = glueContext.getSparkSession();
 //        Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());

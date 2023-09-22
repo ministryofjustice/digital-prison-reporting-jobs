@@ -7,17 +7,37 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.Converter;
-import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.expr;
+import static org.apache.spark.sql.functions.from_json;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.lower;
+import static org.apache.spark.sql.functions.md5;
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.to_json;
+import static org.apache.spark.sql.functions.when;
 import static org.apache.spark.sql.types.DataTypes.StringType;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.CONVERTER;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.DATA;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.DATA_TYPE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.KEY;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.METADATA;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.RAW;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SOURCE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TRANSACTION_ID;
 
 /**
  * Converter that takes raw data from DMS v3.4.6 and converts it into the standardised data representation for

@@ -56,8 +56,6 @@ public class BatchProcessorProvider {
             if (batch.isEmpty()) {
                 logger.info("Batch: {} - Skipping empty batch", batchId);
             } else {
-                long cnt = batch.count();
-                logger.info("Batch saw {} records", cnt);
                 logger.info("Batch: {} - Processing records", batchId);
                 val startTime = System.currentTimeMillis();
 
