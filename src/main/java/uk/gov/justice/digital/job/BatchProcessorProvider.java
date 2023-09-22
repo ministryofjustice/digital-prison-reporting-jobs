@@ -56,39 +56,46 @@ public class BatchProcessorProvider {
             if (batch.isEmpty()) {
                 logger.info("Batch: {} - Skipping empty batch", batchId);
             } else {
-                logger.debug("Batch: {} - Processing records", batchId);
-                val startTime = System.currentTimeMillis();
-
-                val dataFrame = converter.convert(batch);
-
-                getTablesInBatch(dataFrame).forEach(tableInfo -> {
-                    try {
-                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
-                        dataFrameForTable.persist();
-
-                        rawZone.process(spark, dataFrameForTable, tableInfo);
-
-                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
-                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
-
-                        dataFrameForTable.unpersist();
-
-                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
-                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
-
-                        if (!curatedCdcDataFrame.isEmpty()) domainService
-                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
-
-                    } catch (Exception e) {
-                        logger.error("Caught unexpected exception", e);
-                        throw new RuntimeException("Caught unexpected exception", e);
-                    }
-                });
-
-                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
-                        batchId,
-                        System.currentTimeMillis() - startTime
-                );
+                long cnt = batch.count();
+                logger.info("Batch saw {} records", cnt);
+                batch.printSchema();
+                logger.info(batch.schema().treeString());
+                logger.info(batch.schema().toString());
+                logger.info(batch.schema().prettyJson());
+                logger.info(batch.schema().catalogString());
+                logger.info("Batch: {} - Processing records", batchId);
+//                val startTime = System.currentTimeMillis();
+//
+//                val dataFrame = converter.convert(batch);
+//
+//                getTablesInBatch(dataFrame).forEach(tableInfo -> {
+//                    try {
+//                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
+//                        dataFrameForTable.persist();
+//
+//                        rawZone.process(spark, dataFrameForTable, tableInfo);
+//
+//                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
+//                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
+//
+//                        dataFrameForTable.unpersist();
+//
+//                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
+//                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
+//
+//                        if (!curatedCdcDataFrame.isEmpty()) domainService
+//                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+//
+//                    } catch (Exception e) {
+//                        logger.error("Caught unexpected exception", e);
+//                        throw new RuntimeException("Caught unexpected exception", e);
+//                    }
+//                });
+//
+//                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
+//                        batchId,
+//                        System.currentTimeMillis() - startTime
+//                );
             }
         };
     }

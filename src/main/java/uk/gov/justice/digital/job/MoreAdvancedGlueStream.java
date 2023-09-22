@@ -10,6 +10,7 @@ import jakarta.inject.Inject;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -17,6 +18,7 @@ import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
 import uk.gov.justice.digital.job.context.MicronautContext;
 
 import javax.inject.Singleton;
@@ -58,7 +60,7 @@ public class MoreAdvancedGlueStream implements Runnable {
         SparkContext spark = new SparkContext();
         spark.setLogLevel("INFO");
         GlueContext glueContext = new GlueContext(spark);
-//        SparkSession sparkSession = glueContext.getSparkSession();
+        SparkSession sparkSession = glueContext.getSparkSession();
 //        Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());
         scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(argArray, new String[]{"JOB_NAME"});
         Job.init(parsedArgs.apply("JOB_NAME"), glueContext, arguments.getConfig());
@@ -73,12 +75,10 @@ public class MoreAdvancedGlueStream implements Runnable {
         batchProcessingOptions.put("batchMaxRetries", "3");
         JsonOptions batchOptions = new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
 
-//        BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession);
+        BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession, new DMS_3_4_6(sparkSession));
 
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
-            long cnt = batch.count();
-            logger.info("Batch saw {} records", cnt);
-//            batchProcessor.processBatch(batch);
+            batchProcessor.processBatch(batch);
             return BoxedUnit.UNIT;
         }, batchOptions);
 

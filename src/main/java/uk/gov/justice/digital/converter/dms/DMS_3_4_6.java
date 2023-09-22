@@ -121,10 +121,9 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
 
     @Inject
     public DMS_3_4_6(
-            JobArguments arguments,
-            SparkSessionProvider sparkSessionProvider
+            SparkSession spark
     ) {
-        this.spark = sparkSessionProvider.getConfiguredSparkSession(arguments.getLogLevel());
+        this.spark = spark;
     }
 
     public Dataset<Row> convert(Dataset<Row> inputDf) {
