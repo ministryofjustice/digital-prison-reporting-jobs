@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.job;
 
+import jakarta.inject.Inject;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -13,8 +15,6 @@ import uk.gov.justice.digital.zone.raw.RawZone;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
@@ -33,8 +33,6 @@ public class BatchProcessorProvider {
     private final CuratedZoneLoad curatedZoneLoad;
     private final CuratedZoneCDC curatedZoneCDC;
     private final DomainService domainService;
-    private final DMS_3_4_6 converter;
-
     @Inject
     public BatchProcessorProvider(
             RawZone rawZone,
@@ -42,57 +40,56 @@ public class BatchProcessorProvider {
             StructuredZoneCDC structuredZoneCDC,
             CuratedZoneLoad curatedZoneLoad,
             CuratedZoneCDC curatedZoneCDC,
-            DomainService domainService,
-            @Named("converterForDMS_3_4_6") DMS_3_4_6 converter) {
+            DomainService domainService
+    ) {
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
         this.curatedZoneLoad = curatedZoneLoad;
         this.curatedZoneCDC = curatedZoneCDC;
         this.domainService = domainService;
-        this.converter = converter;
     }
 
-    public BatchProcessor createBatchProcessor(SparkSession spark) {
+    public BatchProcessor createBatchProcessor(SparkSession spark, DMS_3_4_6 converter) {
         return batch -> {
-//            int batchId = batch.rdd().id();
-//            if (batch.isEmpty()) {
-//                logger.info("Batch: {} - Skipping empty batch", batchId);
-//            } else {
-//                logger.debug("Batch: {} - Processing records", batchId);
-//                val startTime = System.currentTimeMillis();
-//
-//                val dataFrame = converter.convert(batch);
-//
-//                getTablesInBatch(dataFrame).forEach(tableInfo -> {
-//                    try {
-//                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
-//                        dataFrameForTable.persist();
-//
-//                        rawZone.process(spark, dataFrameForTable, tableInfo);
-//
-//                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
-//                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
-//
-//                        dataFrameForTable.unpersist();
-//
-//                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
-//                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
-//
-//                        if (!curatedCdcDataFrame.isEmpty()) domainService
-//                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
-//
-//                    } catch (Exception e) {
-//                        logger.error("Caught unexpected exception", e);
-//                        throw new RuntimeException("Caught unexpected exception", e);
-//                    }
-//                });
-//
-//                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
-//                        batchId,
-//                        System.currentTimeMillis() - startTime
-//                );
-//            }
+            int batchId = batch.rdd().id();
+            if (batch.isEmpty()) {
+                logger.info("Batch: {} - Skipping empty batch", batchId);
+            } else {
+                logger.debug("Batch: {} - Processing records", batchId);
+                val startTime = System.currentTimeMillis();
+
+                val dataFrame = converter.convert(batch);
+
+                getTablesInBatch(dataFrame).forEach(tableInfo -> {
+                    try {
+                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
+                        dataFrameForTable.persist();
+
+                        rawZone.process(spark, dataFrameForTable, tableInfo);
+
+                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
+                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
+
+                        dataFrameForTable.unpersist();
+
+                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
+                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
+
+                        if (!curatedCdcDataFrame.isEmpty()) domainService
+                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+
+                    } catch (Exception e) {
+                        logger.error("Caught unexpected exception", e);
+                        throw new RuntimeException("Caught unexpected exception", e);
+                    }
+                });
+
+                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
+                        batchId,
+                        System.currentTimeMillis() - startTime
+                );
+            }
         };
     }
 

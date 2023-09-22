@@ -6,6 +6,7 @@ import com.amazonaws.services.glue.util.GlueArgParser;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.configuration.picocli.PicocliRunner;
+import jakarta.inject.Inject;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -15,9 +16,9 @@ import picocli.CommandLine;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.context.MicronautContext;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,17 +33,17 @@ public class MoreAdvancedGlueStream implements Runnable {
 
     private static volatile String[] argArray;
     private final JobArguments arguments;
-//    private final JobProperties properties;
+    private final JobProperties properties;
     private final BatchProcessorProvider batchProcessorProvider;
 
     @Inject
     public MoreAdvancedGlueStream(
             JobArguments arguments,
-//            JobProperties properties,
+            JobProperties properties,
             BatchProcessorProvider batchProcessorProvider
     ) {
         this.arguments = arguments;
-//        this.properties = properties;
+        this.properties = properties;
         this.batchProcessorProvider = batchProcessorProvider;
     }
 
