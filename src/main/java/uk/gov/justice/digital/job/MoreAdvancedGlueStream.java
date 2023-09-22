@@ -78,7 +78,13 @@ public class MoreAdvancedGlueStream implements Runnable {
         BatchProcessor batchProcessor = batchProcessorProvider.createBatchProcessor(sparkSession, new DMS_3_4_6(sparkSession));
 
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
-            batchProcessor.processBatch(batch);
+            try {
+                batchProcessor.processBatch(batch);
+            } catch (Exception e) {
+                logger.error("Unexpected Exception", e);
+                throw new RuntimeException(e);
+            }
+
             return BoxedUnit.UNIT;
         }, batchOptions);
 
