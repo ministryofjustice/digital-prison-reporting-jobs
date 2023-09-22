@@ -93,8 +93,9 @@ public class MoreAdvancedGlueStream implements Runnable {
         kinesisConnectionOptions.put("startingPosition", "TRIM_HORIZON");
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-json-home.html
         kinesisConnectionOptions.put("classification", "json");
-        kinesisConnectionOptions.put("inferSchema", "false");
-        kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
+//        kinesisConnectionOptions.put("inferSchema", "false");
+//        kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
+        kinesisConnectionOptions.put("inferSchema", "true");
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(kinesisConnectionOptions));
         return glueContext.getSource("kinesis", connectionOptions, "", "");
     }
