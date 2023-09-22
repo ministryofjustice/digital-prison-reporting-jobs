@@ -58,7 +58,6 @@ public class BatchProcessorProvider {
             } else {
                 long cnt = batch.count();
                 logger.info("Batch saw {} records", cnt);
-                logger.info(batch.schema().treeString());
                 batch.limit(2).foreach(row -> {
                     logger.info(row.toString());
                 });
