@@ -58,16 +58,15 @@ public class BatchProcessorProvider {
             } else {
                 long cnt = batch.count();
                 logger.info("Batch saw {} records", cnt);
-                batch.printSchema();
-                logger.info(batch.schema().treeString());
-                logger.info(batch.schema().toString());
-                logger.info(batch.schema().prettyJson());
-                logger.info(batch.schema().catalogString());
+                batch.limit(2).foreach(row -> {
+                    logger.info(row.toString());
+                });
                 logger.info("Batch: {} - Processing records", batchId);
-//                val startTime = System.currentTimeMillis();
-//
+                val startTime = System.currentTimeMillis();
+
 //                val dataFrame = converter.convert(batch);
-//
+//                logger.info(dataFrame.schema().treeString());
+
 //                getTablesInBatch(dataFrame).forEach(tableInfo -> {
 //                    try {
 //                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
@@ -91,11 +90,11 @@ public class BatchProcessorProvider {
 //                        throw new RuntimeException("Caught unexpected exception", e);
 //                    }
 //                });
-//
-//                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
-//                        batchId,
-//                        System.currentTimeMillis() - startTime
-//                );
+
+                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
+                        batchId,
+                        System.currentTimeMillis() - startTime
+                );
             }
         };
     }
