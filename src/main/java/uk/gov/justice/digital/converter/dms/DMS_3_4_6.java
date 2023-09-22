@@ -128,10 +128,17 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
 
     public Dataset<Row> convert(Dataset<Row> inputDf) {
         val df = inputDf
-                .select(DATA, METADATA, METADATA + ".*")
+                .select(
+                        col(DATA),
+                        col(METADATA),
+                        to_json(struct(col(DATA), col(METADATA))).as(RAW)
+                )
+//                .select(col(DATA), col(METADATA), lit("").as(RAW))
+                .select(RAW, DATA, METADATA, METADATA + ".*")
                 // Construct a dataframe that aligns to the parsed data schema
                 .select(
-                        lit("").as(RAW), // TODO would need to get raw back with json func
+                        col(RAW),
+                        to_json(struct(col(DATA), col(METADATA))).as(RAW), // TODO would need to get raw back with json func
                         col(DATA),
                         to_json(col(METADATA)).as(METADATA),
                         col("timestamp").as(TIMESTAMP),

@@ -31,7 +31,7 @@ class DMS_3_4_6_ConverterIntegrationTest extends BaseSparkTest {
     };
 
     private static final JobArguments arguments = new JobArguments(config);
-    private static final DMS_3_4_6 underTest = new DMS_3_4_6(new SparkSessionProvider().getConfiguredSparkSession(arguments.getLogLevel()));
+    private static final DMS_3_4_6 underTest = new DMS_3_4_6(spark);
 
     @Test
     void shouldConvertValidDataCorrectly() {
