@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
-import com.amazonaws.services.glue.util.GlueArgParser;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.configuration.picocli.PicocliRunner;
@@ -59,22 +58,23 @@ public class MoreAdvancedGlueStream implements Runnable {
 
     @Override
     public void run() {
-        SparkConf sparkConf = new SparkConf();
+        String jobName = properties.getSparkJobName();
+        SparkConf sparkConf = new SparkConf().setAppName(jobName);
         SparkSessionProvider.configureSparkConf(sparkConf);
         SparkContext spark = new SparkContext(sparkConf);
         spark.setLogLevel(arguments.getLogLevel().name());
         GlueContext glueContext = new GlueContext(spark);
         SparkSession sparkSession = glueContext.getSparkSession();
-//        Job.init(properties.getSparkJobName(), glueContext, arguments.getConfig());
-        scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(argArray, new String[]{"JOB_NAME"});
-        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, arguments.getConfig());
+        Job.init(jobName, glueContext, arguments.getConfig());
+//        scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(argArray, new String[]{"JOB_NAME"});
+//        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, arguments.getConfig());
 //        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
 
         DataSource kinesisDataSource = glueGetSource(glueContext);
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
 
         Map<String, String> batchProcessingOptions = new HashMap<>();
-        batchProcessingOptions.put("windowSize", "30 seconds");
+        batchProcessingOptions.put("windowSize", arguments.getKinesisReaderBatchDuration().toString());
         batchProcessingOptions.put("checkpointLocation", "s3://dpr-working-development/checkpoints");
         batchProcessingOptions.put("batchMaxRetries", "3");
         JsonOptions batchOptions = new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
