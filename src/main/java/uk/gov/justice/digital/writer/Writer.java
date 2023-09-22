@@ -7,7 +7,7 @@ import org.apache.spark.sql.SparkSession;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_6;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -16,8 +16,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.Consumer;
 
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.Operation.getOperation;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.getOperation;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 
 public abstract class Writer {
 
@@ -95,7 +95,7 @@ public abstract class Writer {
             DataStorageService storage,
             String destinationPath,
             SourceReference.PrimaryKey primaryKey,
-            DMS_3_4_6.Operation operation,
+            DMS_3_4_7.Operation operation,
             Row row
     ) throws DataStorageException {
         val list = new ArrayList<>(Collections.singletonList(row));
