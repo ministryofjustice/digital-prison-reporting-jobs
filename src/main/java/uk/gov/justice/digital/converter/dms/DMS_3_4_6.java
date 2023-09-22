@@ -127,13 +127,8 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
     }
 
     public Dataset<Row> convert(Dataset<Row> inputDf) {
-//        val df =
-//                spark.createDataFrame(rdd, eventsSchema)
-//                .withColumn(RAW, col(ORIGINAL))
-//                .withColumn(JSON_DATA, from_json(col(ORIGINAL), RECORD_SCHEMA, jsonOptions))
-//                 .select(RAW,JSON_DATA + ".*")
         val df = inputDf
-//                .select(RAW, DATA, METADATA, METADATA + ".*")
+                .select(DATA, METADATA, METADATA + ".*")
                 // Construct a dataframe that aligns to the parsed data schema
                 .select(
                         lit("").as(RAW), // TODO would need to get raw back with json func

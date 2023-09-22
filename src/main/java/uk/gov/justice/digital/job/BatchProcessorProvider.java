@@ -58,14 +58,14 @@ public class BatchProcessorProvider {
             } else {
                 long cnt = batch.count();
                 logger.info("Batch saw {} records", cnt);
-                batch.limit(2).foreach(row -> {
-                    logger.info(row.toString());
-                });
                 logger.info("Batch: {} - Processing records", batchId);
                 val startTime = System.currentTimeMillis();
 
-//                val dataFrame = converter.convert(batch);
-//                logger.info(dataFrame.schema().treeString());
+                val dataFrame = converter.convert(batch);
+                logger.info(dataFrame.schema().treeString());
+                dataFrame.limit(2).foreach(row -> {
+                        logger.info(row.toString());
+                });
 
 //                getTablesInBatch(dataFrame).forEach(tableInfo -> {
 //                    try {
