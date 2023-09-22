@@ -131,7 +131,10 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
                 .select(
                         col(DATA),
                         col(METADATA),
-                        to_json(struct(col(DATA), col(METADATA))).as(RAW)
+                        to_json(struct(
+                                to_json(col(DATA)),
+                                to_json(col(METADATA))
+                        )).as(RAW)
                 )
                 .select(RAW, DATA, METADATA, METADATA + ".*")
                 // Construct a dataframe that aligns to the parsed data schema
