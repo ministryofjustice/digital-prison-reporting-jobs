@@ -4,6 +4,7 @@ import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
+import io.delta.tables.DeltaTable;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import org.apache.spark.SparkConf;
@@ -64,10 +65,15 @@ public class MoreAdvancedGlueStream implements Runnable {
         GlueContext glueContext = new GlueContext(spark);
         SparkSession sparkSession = glueContext.getSparkSession();
         Job.init(jobName, glueContext, arguments.getConfig());
+
+        DeltaTable dt = DeltaTable.forPath(sparkSession, "s3://dpr-raw-zone-development/nomis/offender_external_movements/");
+        dt.detail().foreach(r -> {
+            glueContext.logWarning(r::toString);
+        });
+
 //        scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(argArray, new String[]{"JOB_NAME"});
 //        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, arguments.getConfig());
 //        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
-
         DataSource kinesisDataSource = glueGetSource(glueContext);
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
 
