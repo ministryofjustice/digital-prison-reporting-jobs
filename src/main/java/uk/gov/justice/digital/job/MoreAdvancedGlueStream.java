@@ -34,7 +34,6 @@ public class MoreAdvancedGlueStream implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(MoreAdvancedGlueStream.class);
 
-    private static volatile String[] argArray;
     private final JobArguments arguments;
     private final JobProperties properties;
     private final BatchProcessorProvider batchProcessorProvider;
@@ -52,7 +51,6 @@ public class MoreAdvancedGlueStream implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job started");
-        argArray = args;
         PicocliRunner.run(MoreAdvancedGlueStream.class, MicronautContext.withArgs(args));
     }
 

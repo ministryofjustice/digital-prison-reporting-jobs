@@ -103,9 +103,23 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
         public static final Object[] cdcOperations = {Insert.getName(), Update.getName(), Delete.getName()};
     }
 
+    public static final StructType RECORD_SCHEMA =
+            new StructType()
+                    .add(DATA, StringType, IS_NULLABLE) // Data varies per table, so we leave parsing to the StructuredZone.
+                    .add(METADATA, new StructType()
+                            .add("timestamp", StringType)
+                            .add("record-type", StringType)
+                            .add("operation", StringType)
+                            .add("partition-key-type", StringType)
+                            .add("partition-key-value", StringType)
+                            .add("schema-name", StringType)
+                            .add("table-name", StringType)
+                            .add("transaction-id", StringType, IS_NULLABLE)
+                    );
+
     // This schema defines the common output format to be created from the incoming data.
     protected static final StructType PARSED_DATA_SCHEMA = new StructType()
-            .add(RAW, StringType, NOT_NULL)
+            .add(RAW, RECORD_SCHEMA, NOT_NULL)
             .add(DATA, StringType, IS_NULLABLE)
             .add(METADATA, StringType, NOT_NULL)
             .add(TIMESTAMP, StringType, NOT_NULL)
@@ -122,19 +136,6 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
             new StructType()
                     .add(ORIGINAL, StringType);
 
-    public static final StructType RECORD_SCHEMA =
-            new StructType()
-                    .add(DATA, StringType, IS_NULLABLE) // Data varies per table, so we leave parsing to the StructuredZone.
-                    .add(METADATA, new StructType()
-                            .add("timestamp", StringType)
-                            .add("record-type", StringType)
-                            .add("operation", StringType)
-                            .add("partition-key-type", StringType)
-                            .add("partition-key-value", StringType)
-                            .add("schema-name", StringType)
-                            .add("table-name", StringType)
-                            .add("transaction-id", StringType, IS_NULLABLE)
-                    );
 
     // Allow parse errors to fail silently when parsing the raw JSON string to allow control records to be filtered.
     private static final Map<String, String> jsonOptions = Collections.singletonMap("mode", "PERMISSIVE");
@@ -149,15 +150,8 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
     public Dataset<Row> convert(Dataset<Row> inputDf) {
         val df = inputDf
                 .select(
-//                        to_json(struct(col(DATA), col(METADATA))).as(RAW),
-                        // TODO: Is there a better way to avoid to_json messing up the raw escape characters?
-                        // Example of the issue when using to_json: {\"data\":\"{\\\"OFFENDER_BOOK_ID\\\":1
-                        concat(
-                                lit("{\"data\": "),
-                                col(DATA),
-                                lit(", \"metadata\": "),
-                                to_json(col(METADATA)),
-                                lit("}")
+                        struct(
+                            col("*")
                         ).as(RAW),
                         col(DATA),
                         col(METADATA),
@@ -183,7 +177,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
                                 // when it is something else and there is a transaction-id, use that
                                 .when(col("transaction-id").isNotNull(), col("transaction-id"))
                                 // otherwise we MD5 the raw as this SHOULD be unique
-                                .otherwise(md5(col(RAW)))
+                                .otherwise(md5(to_json(col(RAW))))
                         ).as(KEY),
                         col("record-type").as(DATA_TYPE),
                         lower(col("schema-name")).as(SOURCE),
@@ -223,7 +217,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
                                 // when it is something else and there is a transaction-id, use that
                                 .when(col("transaction-id").isNotNull(), col("transaction-id"))
                                 // otherwise we MD5 the raw as this SHOULD be unique
-                                .otherwise(md5(col(RAW)))
+                                .otherwise(md5(to_json(col(RAW))))
                         ).as(KEY),
                         col("record-type").as(DATA_TYPE),
                         lower(col("schema-name")).as(SOURCE),
