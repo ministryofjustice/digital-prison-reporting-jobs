@@ -1,17 +1,15 @@
 package uk.gov.justice.digital.config;
 
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.CommandLinePropertySource;
 import io.micronaut.context.env.MapPropertySource;
 import io.micronaut.context.env.PropertySource;
 import io.micronaut.logging.LogLevel;
-import lombok.val;
-import org.apache.spark.streaming.Duration;
-import org.apache.spark.streaming.Durations;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Collections;
 import java.util.Map;
@@ -95,9 +93,7 @@ public class JobArguments {
         return getArgument(AWS_DYNAMODB_ENDPOINT_URL);
     }
     public String getKinesisReaderBatchDuration() {
-        val durationSeconds = getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
-        val parsedDuration = Long.parseLong(durationSeconds);
-        return Durations.seconds(parsedDuration).toString();
+        return getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
     }
 
     public String getKinesisStartingPosition() {
