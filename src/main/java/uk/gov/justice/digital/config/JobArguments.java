@@ -97,7 +97,7 @@ public class JobArguments {
     public String getKinesisReaderBatchDuration() {
         val durationSeconds = getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
         val parsedDuration = Long.parseLong(durationSeconds);
-        return Durations.seconds(parsedDuration).toFormattedString();
+        return Durations.seconds(parsedDuration).toString();
     }
 
     public String getKinesisStartingPosition() {
