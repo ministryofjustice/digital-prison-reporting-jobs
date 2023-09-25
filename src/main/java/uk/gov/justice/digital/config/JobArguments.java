@@ -69,6 +69,8 @@ public class JobArguments {
     public LogLevel getLogLevel() {
         String logLevel = getArgument(LOG_LEVEL).toLowerCase();
         switch (logLevel) {
+            case "debug":
+                return LogLevel.DEBUG;
             case "info":
                 return LogLevel.INFO;
             case "warn":
