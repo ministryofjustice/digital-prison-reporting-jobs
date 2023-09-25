@@ -156,7 +156,7 @@ public class DMS_3_4_6 implements Converter<JavaRDD<Row>, Dataset<Row>> {
                                 lit("{\"data\": "),
                                 col(DATA),
                                 lit(", \"metadata\": "),
-                                col(METADATA).cast(StringType),
+                                to_json(col(METADATA)),
                                 lit("}")
                         ).as(RAW),
                         col(DATA),
