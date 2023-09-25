@@ -61,13 +61,17 @@ public class MoreAdvancedGlueStream implements Runnable {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
         SparkSessionProvider.configureSparkConf(sparkConf);
         SparkContext spark = new SparkContext(sparkConf);
-        spark.setLogLevel(arguments.getLogLevel().name());
+        spark.setLogLevel(arguments.getLogLevel().name().toUpperCase());
         GlueContext glueContext = new GlueContext(spark);
         SparkSession sparkSession = glueContext.getSparkSession();
         Job.init(jobName, glueContext, arguments.getConfig());
 
         DeltaTable dt = DeltaTable.forPath(sparkSession, "s3://dpr-raw-zone-development/nomis/offender_external_movements/");
         dt.detail().foreach(r -> {
+            glueContext.logWarning(r::toString);
+        });
+
+        sparkSession.catalog().listDatabases().foreach(r -> {
             glueContext.logWarning(r::toString);
         });
 

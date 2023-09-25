@@ -71,6 +71,10 @@ public class DataStorageService {
             val dt = getTable(df.sparkSession(), tablePath);
             if(dt.isPresent()) {
                 val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+                logger.error("Condition: {}", condition);
+                dt.get().detail().foreach(r -> {
+                    logger.error(r.toString());
+                });
                 dt.get().as(SOURCE)
                         .merge(df.as(TARGET), condition )
                         .whenNotMatched().insertAll()
