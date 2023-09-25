@@ -66,15 +66,6 @@ public class MoreAdvancedGlueStream implements Runnable {
         SparkSession sparkSession = glueContext.getSparkSession();
         Job.init(jobName, glueContext, arguments.getConfig());
 
-        DeltaTable dt = DeltaTable.forPath(sparkSession, "s3://dpr-raw-zone-development/nomis/offender_external_movements/");
-        dt.detail().foreach(r -> {
-            glueContext.logWarning(r::toString);
-        });
-
-        sparkSession.catalog().listDatabases().foreach(r -> {
-            glueContext.logWarning(r::toString);
-        });
-
 //        scala.collection.immutable.Map<String, String> parsedArgs = GlueArgParser.getResolvedOptions(argArray, new String[]{"JOB_NAME"});
 //        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, arguments.getConfig());
 //        Job.init(parsedArgs.apply("JOB_NAME"), glueContext, JavaConverters.<String, String>mapAsJavaMap(parsedArgs));
@@ -102,7 +93,7 @@ public class MoreAdvancedGlueStream implements Runnable {
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
         Map<String, String> kinesisConnectionOptions = new HashMap<>();
         kinesisConnectionOptions.put("streamARN", "arn:aws:kinesis:eu-west-2:771283872747:stream/dpr-kinesis-ingestor-development");
-        kinesisConnectionOptions.put("startingPosition", "LATEST");
+        kinesisConnectionOptions.put("startingPosition", "latest");
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-json-home.html
         kinesisConnectionOptions.put("classification", "json");
         kinesisConnectionOptions.put("inferSchema", "false");
