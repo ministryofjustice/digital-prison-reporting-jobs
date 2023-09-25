@@ -4,7 +4,6 @@ import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
-import io.delta.tables.DeltaTable;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import org.apache.spark.SparkConf;
