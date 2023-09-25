@@ -82,6 +82,7 @@ public class DataHubJob implements Runnable {
         batchProcessingOptions.put("windowSize", arguments.getKinesisReaderBatchDuration());
         batchProcessingOptions.put("checkpointLocation", arguments.getCheckpointLocation());
         batchProcessingOptions.put("batchMaxRetries", Integer.toString(arguments.getBatchMaxRetries()));
+        logger.info("Batch Options: {}", batchProcessingOptions);
         return new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
     }
 
@@ -94,6 +95,7 @@ public class DataHubJob implements Runnable {
         kinesisConnectionOptions.put("classification", "json");
         kinesisConnectionOptions.put("inferSchema", "false");
         kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
+        logger.info("Kinesis Connection Options: {}", kinesisConnectionOptions);
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(kinesisConnectionOptions));
         return glueContext.getSource("kinesis", connectionOptions, "", "");
     }
