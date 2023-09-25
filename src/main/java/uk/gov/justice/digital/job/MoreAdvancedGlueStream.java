@@ -98,7 +98,7 @@ public class MoreAdvancedGlueStream implements Runnable {
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
         Map<String, String> kinesisConnectionOptions = new HashMap<>();
         kinesisConnectionOptions.put("streamARN", "arn:aws:kinesis:eu-west-2:771283872747:stream/dpr-kinesis-ingestor-development");
-        kinesisConnectionOptions.put("startingPosition", "TRIM_HORIZON");
+        kinesisConnectionOptions.put("startingPosition", "LATEST");
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-json-home.html
         kinesisConnectionOptions.put("classification", "json");
         kinesisConnectionOptions.put("inferSchema", "false");
