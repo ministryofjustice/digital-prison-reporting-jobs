@@ -64,7 +64,7 @@ class JobArgumentsIntegrationTest {
     @Test
     public void shouldThrowExceptionWhenKinesisReaderBatchDurationInvalid() {
         val underTest = new JobArguments(givenAContextWithArguments(
-                Collections.singletonMap(JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "this is not a number")
+                Collections.singletonMap(JobArguments.KINESIS_READER_BATCH_DURATION, "this is not a number")
         ));
 
         assertThrows(NumberFormatException.class, underTest::getKinesisReaderBatchDuration);
