@@ -74,7 +74,7 @@ public class MoreAdvancedGlueStream implements Runnable {
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
 
         Map<String, String> batchProcessingOptions = new HashMap<>();
-        batchProcessingOptions.put("windowSize", arguments.getKinesisReaderBatchDuration().toString() + " seconds");
+        batchProcessingOptions.put("windowSize", "30 seconds");
         batchProcessingOptions.put("checkpointLocation", "s3://dpr-working-development/checkpoints");
         batchProcessingOptions.put("batchMaxRetries", "3");
         JsonOptions batchOptions = new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
