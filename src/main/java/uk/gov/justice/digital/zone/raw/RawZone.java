@@ -46,19 +46,19 @@ public class RawZone implements Zone {
         String rowSource = table.getAs(SOURCE);
         String rowTable = table.getAs(TABLE);
 
-        logger.debug("Processing batch for source: {} table: {}", rowSource, rowTable);
+        logger.info("Processing batch for source: {} table: {}", rowSource, rowTable);
 
         val tablePath = getTablePath(rowSource, rowTable);
 
-        logger.debug("Applying batch to deltalake table: {}", tablePath);
+        logger.info("Applying batch to deltalake table: {}", tablePath);
         val rawDataFrame = createRawDataFrame(records);
         storage.appendDistinct(tablePath, rawDataFrame, new SourceReference.PrimaryKey(PRIMARY_KEY_NAME));
 
-        logger.debug("Append completed successfully");
+        logger.info("Append completed successfully");
 
         storage.updateDeltaManifestForTable(spark, tablePath);
 
-        logger.debug("Processed batch for {}/{} in {}ms", rowSource, rowTable, System.currentTimeMillis() - startTime);
+        logger.info("Processed batch for {}/{} in {}ms", rowSource, rowTable, System.currentTimeMillis() - startTime);
 
         return rawDataFrame;
     }
