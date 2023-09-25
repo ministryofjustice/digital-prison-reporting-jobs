@@ -17,7 +17,6 @@ import static org.mockito.Mockito.when;
 class JobArgumentsIntegrationTest {
 
     private static final Map<String, String> testArguments = Stream.of(new String[][] {
-            { JobArguments.AWS_KINESIS_ENDPOINT_URL, "https://kinesis.example.com" },
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
@@ -26,8 +25,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.DOMAIN_REGISTRY, "test_registry" },
             { JobArguments.DOMAIN_TARGET_PATH, "s3://somepath/domain/target" },
             { JobArguments.DOMAIN_TABLE_NAME, "test_table" },
-            { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "5" },
-            { JobArguments.KINESIS_READER_STREAM_NAME, "some-kinesis-stream" },
+            { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "5 seconds" },
             { JobArguments.RAW_S3_PATH, "s3://somepath/raw" },
             { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
             { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
@@ -42,7 +40,6 @@ class JobArgumentsIntegrationTest {
     public void shouldReturnCorrectValueForEachSupportedArgument() {
         Map<String, String> actualArguments = Stream.of(new Object[][] {
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
-                { JobArguments.AWS_KINESIS_ENDPOINT_URL, validArguments.getAwsKinesisEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },
                 { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, validArguments.getDomainCatalogDatabaseName() },
@@ -51,14 +48,13 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.DOMAIN_REGISTRY, validArguments.getDomainRegistry() },
                 { JobArguments.DOMAIN_TARGET_PATH, validArguments.getDomainTargetPath() },
                 { JobArguments.DOMAIN_TABLE_NAME, validArguments.getDomainTableName() },
-                { JobArguments.KINESIS_READER_STREAM_NAME, validArguments.getKinesisReaderStreamName() },
                 { JobArguments.RAW_S3_PATH, validArguments.getRawS3Path() },
                 { JobArguments.STRUCTURED_S3_PATH, validArguments.getStructuredS3Path() },
                 { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path() },
                 { JobArguments.CONTRACT_REGISTRY_NAME, validArguments.getContractRegistryName() },
                 // Convert the Duration ms value into seconds to align with the argument.
                 { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS,
-                        validArguments.getKinesisReaderBatchDuration().milliseconds() / 1000},
+                        validArguments.getKinesisReaderBatchDuration()},
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);

@@ -29,7 +29,6 @@ public class JobArguments {
     private static final Logger logger = LoggerFactory.getLogger(JobArguments.class);
 
     public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
-    public static final String AWS_KINESIS_ENDPOINT_URL = "dpr.aws.kinesis.endpointUrl";
     public static final String AWS_REGION = "dpr.aws.region";
     public static final String LOG_LEVEL = "dpr.log.level";
     public static final String CONTRACT_REGISTRY_NAME = "dpr.contract.registryName";
@@ -41,13 +40,17 @@ public class JobArguments {
     public static final String DOMAIN_TARGET_PATH = "dpr.domain.target.path";
     public static final String DOMAIN_TABLE_NAME = "dpr.domain.table.name";
     public static final String KINESIS_READER_BATCH_DURATION_SECONDS = "dpr.kinesis.reader.batchDurationSeconds";
-    public static final String KINESIS_READER_STREAM_NAME = "dpr.kinesis.reader.streamName";
+    public static final String KINESIS_STREAM_ARN = "dpr.kinesis.stream.arn";
+
+    public static final String KINESIS_STARTING_POSITION = "dpr.kinesis.starting.position";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
     public static final String REDSHIFT_SECRETS_NAME = "dpr.redshift.secrets.name";
     public static final String DATA_MART_DB_NAME = "dpr.datamart.db.name";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
+    public static final String CHECKPOINT_LOCATION = "dpr.checkpoint.location";
+    public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
 
     private final Map<String, String> config;
 
@@ -86,22 +89,27 @@ public class JobArguments {
         return getArgument(AWS_REGION);
     }
 
-    public String getAwsKinesisEndpointUrl() {
-        return getArgument(AWS_KINESIS_ENDPOINT_URL);
-    }
-
     public String getAwsDynamoDBEndpointUrl() {
         return getArgument(AWS_DYNAMODB_ENDPOINT_URL);
     }
-
-    public String getKinesisReaderStreamName() {
-        return getArgument(KINESIS_READER_STREAM_NAME);
-    }
-
-    public Duration getKinesisReaderBatchDuration() {
+    public String getKinesisReaderBatchDuration() {
         val durationSeconds = getArgument(KINESIS_READER_BATCH_DURATION_SECONDS);
         val parsedDuration = Long.parseLong(durationSeconds);
-        return Durations.seconds(parsedDuration);
+        return Durations.seconds(parsedDuration).toFormattedString();
+    }
+
+    public String getKinesisStartingPosition() {
+        // See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
+        // The possible values are "latest", "trim_horizon", "earliest", or a Timestamp string in UTC format
+        // in the pattern yyyy-mm-ddTHH:MM:SSZ
+        // (where Z represents a UTC timezone offset with a +/-. For example "2023-04-04T08:00:00-04:00").
+        return Optional
+                .ofNullable(config.get(KINESIS_STARTING_POSITION))
+                .orElse("trim_horizon");
+    }
+
+    public String getKinesisStreamArn() {
+        return getArgument(KINESIS_STREAM_ARN);
     }
 
     public String getRawS3Path() {
@@ -154,6 +162,17 @@ public class JobArguments {
 
     public String getMaintenanceTablesRootPath() {
         return getArgument(MAINTENANCE_TABLES_ROOT_PATH);
+    }
+
+    public String getCheckpointLocation() {
+        return getArgument(CHECKPOINT_LOCATION);
+    }
+
+    public int getBatchMaxRetries() {
+        return Optional
+                .ofNullable(config.get(BATCH_MAX_RETRIES))
+                .map(Integer::parseInt)
+                .orElse(3);
     }
 
     private String getArgument(String argumentName) {

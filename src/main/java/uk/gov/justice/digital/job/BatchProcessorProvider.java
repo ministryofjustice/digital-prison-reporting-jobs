@@ -24,6 +24,11 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.SO
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TABLE;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_6.ParsedDataFields.TIMESTAMP;
 
+/**
+ * Responsible for providing a BatchProcessor.
+ * Dependencies which rely on the SparkSession are manually injected to ensure spark contexts/sessions/etc.
+ * are created just once with a common configuration.
+ */
 @Singleton
 public class BatchProcessorProvider {
 
