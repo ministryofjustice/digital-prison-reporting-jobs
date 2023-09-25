@@ -39,7 +39,6 @@ public class JobArguments {
     public static final String DOMAIN_TABLE_NAME = "dpr.domain.table.name";
     public static final String KINESIS_READER_BATCH_DURATION = "dpr.kinesis.reader.batchDuration";
     public static final String KINESIS_STREAM_ARN = "dpr.kinesis.stream.arn";
-
     public static final String KINESIS_STARTING_POSITION = "dpr.kinesis.starting.position";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";

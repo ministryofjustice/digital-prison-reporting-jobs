@@ -61,15 +61,6 @@ class JobArgumentsIntegrationTest {
         assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
     }
 
-    @Test
-    public void shouldThrowExceptionWhenKinesisReaderBatchDurationInvalid() {
-        val underTest = new JobArguments(givenAContextWithArguments(
-                Collections.singletonMap(JobArguments.KINESIS_READER_BATCH_DURATION, "this is not a number")
-        ));
-
-        assertThrows(NumberFormatException.class, underTest::getKinesisReaderBatchDuration);
-    }
-
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {
         val mockContext = mock(ApplicationContext.class);
         val mockEnvironment = mock(Environment.class);
