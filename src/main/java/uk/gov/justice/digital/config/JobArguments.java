@@ -103,9 +103,11 @@ public class JobArguments {
         // The possible values are "latest", "trim_horizon", "earliest", or a Timestamp string in UTC format
         // in the pattern yyyy-mm-ddTHH:MM:SSZ
         // (where Z represents a UTC timezone offset with a +/-. For example "2023-04-04T08:00:00-04:00").
+        // We default to trim_horizon to avoid data loss
+        String defaultStarting = "trim_horizon";
         return Optional
                 .ofNullable(config.get(KINESIS_STARTING_POSITION))
-                .orElse("trim_horizon");
+                .orElse(defaultStarting);
     }
 
     public String getKinesisStreamArn() {
@@ -169,10 +171,11 @@ public class JobArguments {
     }
 
     public int getBatchMaxRetries() {
+        int glueDefaultBatchRetries = 3;
         return Optional
                 .ofNullable(config.get(BATCH_MAX_RETRIES))
                 .map(Integer::parseInt)
-                .orElse(3);
+                .orElse(glueDefaultBatchRetries);
     }
 
     private String getArgument(String argumentName) {

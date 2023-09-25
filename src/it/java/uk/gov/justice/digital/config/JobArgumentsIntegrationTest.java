@@ -25,7 +25,6 @@ class JobArgumentsIntegrationTest {
             { JobArguments.DOMAIN_REGISTRY, "test_registry" },
             { JobArguments.DOMAIN_TARGET_PATH, "s3://somepath/domain/target" },
             { JobArguments.DOMAIN_TABLE_NAME, "test_table" },
-            { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "5 seconds" },
             { JobArguments.RAW_S3_PATH, "s3://somepath/raw" },
             { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
             { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
@@ -52,9 +51,6 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.STRUCTURED_S3_PATH, validArguments.getStructuredS3Path() },
                 { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path() },
                 { JobArguments.CONTRACT_REGISTRY_NAME, validArguments.getContractRegistryName() },
-                // Convert the Duration ms value into seconds to align with the argument.
-                { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS,
-                        validArguments.getKinesisReaderBatchDuration()},
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
