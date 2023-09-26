@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'jacoco'
-    id 'com.github.johnrengelman.shadow' version '7.1.1'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'io.freefair.lombok' version '6.5.1'
     id 'org.sonarqube'  version '3.5.0.2730'
     id 'org.owasp.dependencycheck'  version '8.2.1'
@@ -25,6 +25,10 @@ jacoco {
 
 repositories {
     mavenCentral()
+    maven {
+        // See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-using-etl-library
+        url "https://aws-glue-etl-artifacts.s3.amazonaws.com/release/"
+    }
 }
 
 ext {
@@ -39,6 +43,7 @@ ext {
     hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.3' downgraded for Glue 4.0
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
     awsSdkVersion = '1.12.425'
+    glueApiVersion = '4.0.0'
 }
 
 dependencies {
@@ -48,6 +53,7 @@ dependencies {
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
     compileOnly "org.apache.hadoop:hadoop-aws:$hadoopVersion"
     compileOnly "com.amazonaws:amazon-kinesis-client:$awsKinesisVersion" // transitively brings in java-sdk-core
+    compileOnly "com.amazonaws:AWSGlueETL:$glueApiVersion"
 
     implementation "com.amazonaws:aws-java-sdk-secretsmanager:$awsSdkVersion" // transitively brings in java-sdk-core
     implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion" // transitively brings in java-sdk-core
