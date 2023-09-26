@@ -89,7 +89,7 @@ public class BatchProcessorProvider {
 
                     } catch (Exception e) {
                         logger.error("Caught unexpected exception", e);
-                        throw new BatchProcessingRuntimeException("Caught unexpected exception", e);
+                        throw new RuntimeException("Caught unexpected exception", e);
                     }
                 });
 

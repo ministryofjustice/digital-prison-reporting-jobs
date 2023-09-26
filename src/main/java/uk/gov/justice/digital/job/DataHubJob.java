@@ -71,9 +71,8 @@ public class DataHubJob implements Runnable {
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
             try {
                 batchProcessor.processBatch(batch);
-            } catch (BatchProcessingRuntimeException e) {
-                logger.error("Exiting due to batch processing exception", e);
-                // We need to explicitly System.exit when there is an error, rather than throw a RuntimeException, for Glue to set job status correctly
+            } catch (Exception e) {
+                logger.error("Exception occurred during streaming job", e);
                 System.exit(1);
             }
             return BoxedUnit.UNIT;
