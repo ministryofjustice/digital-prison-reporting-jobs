@@ -69,28 +69,26 @@ public class BatchProcessorProvider {
                 val dataFrame = converter.convert(batch);
 
                 getTablesInBatch(dataFrame).forEach(tableInfo -> {
-
                     try {
-                        throw new Exception("Testing failure status!");
-//                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
-//                        dataFrameForTable.persist();
-//
-//                        rawZone.process(spark, dataFrameForTable, tableInfo);
-//
-//                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
-//                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
-//
-//                        dataFrameForTable.unpersist();
-//
-//                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
-//                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
-//
-//                        if (!curatedCdcDataFrame.isEmpty()) domainService
-//                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
+                        dataFrameForTable.persist();
+
+                        rawZone.process(spark, dataFrameForTable, tableInfo);
+
+                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
+                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
+
+                        dataFrameForTable.unpersist();
+
+                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
+                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
+
+                        if (!curatedCdcDataFrame.isEmpty()) domainService
+                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
 
                     } catch (Exception e) {
                         logger.error("Caught unexpected exception", e);
-                        System.exit(1);
+                        throw new BatchProcessingRuntimeException("Caught unexpected exception", e);
                     }
                 });
 
