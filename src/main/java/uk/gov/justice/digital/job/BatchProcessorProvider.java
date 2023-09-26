@@ -70,21 +70,22 @@ public class BatchProcessorProvider {
 
                 getTablesInBatch(dataFrame).forEach(tableInfo -> {
                     try {
-                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
-                        dataFrameForTable.persist();
-
-                        rawZone.process(spark, dataFrameForTable, tableInfo);
-
-                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
-                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
-
-                        dataFrameForTable.unpersist();
-
-                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
-                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
-
-                        if (!curatedCdcDataFrame.isEmpty()) domainService
-                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
+                        throw new Exception("Testing glue job failed status!");
+//                        val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
+//                        dataFrameForTable.persist();
+//
+//                        rawZone.process(spark, dataFrameForTable, tableInfo);
+//
+//                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, tableInfo);
+//                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, tableInfo);
+//
+//                        dataFrameForTable.unpersist();
+//
+//                        curatedZoneLoad.process(spark, structuredLoadDataFrame, tableInfo);
+//                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, tableInfo);
+//
+//                        if (!curatedCdcDataFrame.isEmpty()) domainService
+//                                .refreshDomainUsingDataFrame(spark, curatedCdcDataFrame, tableInfo);
 
                     } catch (Exception e) {
                         logger.error("Caught unexpected exception", e);
