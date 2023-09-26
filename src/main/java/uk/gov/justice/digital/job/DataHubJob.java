@@ -61,9 +61,11 @@ public class DataHubJob implements Runnable {
             JobProperties properties,
             BatchProcessorProvider batchProcessorProvider
     ) {
+        logger.info("Initializing DataHubJob");
         this.arguments = arguments;
         this.properties = properties;
         this.batchProcessorProvider = batchProcessorProvider;
+        logger.info("DataHubJob initialization complete");
     }
 
     public static void main(String[] args) {

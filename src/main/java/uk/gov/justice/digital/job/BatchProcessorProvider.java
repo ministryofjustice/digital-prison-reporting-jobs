@@ -58,6 +58,7 @@ public class BatchProcessorProvider {
             SourceReferenceService sourceReferenceService,
             DataStorageService storageService
     ) {
+        logger.info("Initializing BatchProcessorProvider");
         this.rawZone = rawZone;
         this.structuredZoneLoad = structuredZoneLoad;
         this.structuredZoneCDC = structuredZoneCDC;
@@ -67,6 +68,7 @@ public class BatchProcessorProvider {
         this.sourceReferenceService = sourceReferenceService;
         this.storageService = storageService;
         this.violationsPath = arguments.getViolationsS3Path();
+        logger.info("BatchProcessorProvider initialization complete");
     }
 
     public BatchProcessor createBatchProcessor(SparkSession spark, Converter<Dataset<Row>, Dataset<Row>> converter) {
