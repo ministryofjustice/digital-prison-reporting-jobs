@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
-import uk.gov.justice.digital.client.kinesis.KinesisReader;
+import uk.gov.justice.digital.client.kinesis.KinesisSourceProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
@@ -43,16 +43,19 @@ public class DataHubJob implements Runnable {
     private final JobArguments arguments;
     private final JobProperties properties;
     private final BatchProcessor batchProcessor;
+    private final KinesisSourceProvider kinesisSourceProvider;
 
     @Inject
     public DataHubJob(
             JobArguments arguments,
             JobProperties properties,
+            KinesisSourceProvider kinesisSourceProvider,
             BatchProcessor batchProcessor
     ) {
         logger.info("Initializing DataHubJob");
         this.arguments = arguments;
         this.properties = properties;
+        this.kinesisSourceProvider = kinesisSourceProvider;
         this.batchProcessor = batchProcessor;
         logger.info("DataHubJob initialization complete");
     }
@@ -71,8 +74,8 @@ public class DataHubJob implements Runnable {
         logger.info("Initialising Job");
         Job.init(jobName, glueContext, arguments.getConfig());
 
-        logger.info("Initialising Kinesis data source");
-        DataSource kinesisDataSource = KinesisReader.getKinesisSource(glueContext, arguments);
+        logger.info("Initialising data source");
+        DataSource kinesisDataSource = kinesisSourceProvider.getKinesisSource(glueContext, arguments);
         Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
 
         logger.info("Initialising converter");

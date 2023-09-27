@@ -3,6 +3,7 @@ package uk.gov.justice.digital.client.kinesis;
 import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.JsonOptions;
+import io.micronaut.context.annotation.Bean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
@@ -13,10 +14,12 @@ import java.util.Map;
 
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.RECORD_SCHEMA;
 
-public class KinesisReader {
+@Bean
+public class KinesisSourceProvider {
 
-    private static final Logger logger = LoggerFactory.getLogger(KinesisReader.class);
-    public static DataSource getKinesisSource(GlueContext glueContext, JobArguments arguments) {
+    private static final Logger logger = LoggerFactory.getLogger(KinesisSourceProvider.class);
+    public DataSource getKinesisSource(GlueContext glueContext, JobArguments arguments) {
+        logger.info("Initialising Kinesis data source");
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
         Map<String, String> kinesisConnectionOptions = new HashMap<>();
         kinesisConnectionOptions.put("streamARN", arguments.getKinesisStreamArn());
