@@ -67,7 +67,6 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
 
     @BeforeAll
     public static void setUpData() {
-        createSession();
         createTableRecordDf = getData(DATA_CONTROL_RECORD_PATH);
         loadRecordDf = getData(DATA_LOAD_RECORD_PATH);
         cdcRecordDf = getData(DATA_UPDATE_RECORD_PATH);
