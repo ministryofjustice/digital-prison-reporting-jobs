@@ -59,20 +59,16 @@ public class BaseSparkTest {
 		spark.stop();
 	}
 
-	protected Dataset<Row> getData(final String path) {
-		JavaRDD<Row> rdd = spark
+	protected static Dataset<Row> getData(final String path) {
+		// Convert the input to the format that the converter will receive as input
+		return spark
 				.read()
 				.option("wholetext", "true")
 				.text(path)
-				.withColumn(RAW, col("value"))
-				.javaRDD();
-		// Convert the input to the format that the converter will receive as input
-		StructType eventsSchema = new StructType().add("original", StringType);
-		return spark.createDataFrame(rdd, eventsSchema)
 				.withColumn(
 						"jsonData",
 						from_json(
-								col("original"),
+								col("value"),
 								RECORD_SCHEMA,
 								Collections.singletonMap("mode", "PERMISSIVE")
 						)

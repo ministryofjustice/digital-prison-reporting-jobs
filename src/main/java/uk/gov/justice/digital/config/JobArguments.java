@@ -91,6 +91,7 @@ public class JobArguments {
     public String getAwsDynamoDBEndpointUrl() {
         return getArgument(AWS_DYNAMODB_ENDPOINT_URL);
     }
+
     public String getBatchDuration() {
         int numSeconds = Integer.parseInt(getArgument(BATCH_DURATION_SECONDS));
         return numSeconds + " seconds";

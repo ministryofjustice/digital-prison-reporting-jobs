@@ -4,6 +4,8 @@ import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.context.annotation.Bean;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
@@ -15,11 +17,14 @@ import java.util.Map;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.RECORD_SCHEMA;
 
 @Bean
-public class KinesisSourceProvider {
+public class KinesisDataProvider {
 
-    private static final Logger logger = LoggerFactory.getLogger(KinesisSourceProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(KinesisDataProvider.class);
 
-    public DataSource getKinesisSource(GlueContext glueContext, JobArguments arguments) {
+    /**
+     * Provides the source Dataset from Kinesis, ready for further processing.
+     */
+    public Dataset<Row> getSourceData(GlueContext glueContext, JobArguments arguments) {
         logger.info("Initialising Kinesis data source");
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
         Map<String, String> kinesisConnectionOptions = new HashMap<>();
@@ -31,6 +36,7 @@ public class KinesisSourceProvider {
         kinesisConnectionOptions.put("schema", RECORD_SCHEMA.toDDL());
         logger.info("Kinesis Connection Options: {}", kinesisConnectionOptions);
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(kinesisConnectionOptions));
-        return glueContext.getSource("kinesis", connectionOptions, "", "");
+        DataSource kinesisDataSource =  glueContext.getSource("kinesis", connectionOptions, "", "");
+        return kinesisDataSource.getDataFrame();
     }
 }

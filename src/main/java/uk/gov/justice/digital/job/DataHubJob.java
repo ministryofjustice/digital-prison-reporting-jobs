@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.amazonaws.services.glue.DataSource;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.Job;
 import com.amazonaws.services.glue.util.JsonOptions;
@@ -14,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
-import uk.gov.justice.digital.client.kinesis.KinesisSourceProvider;
+import uk.gov.justice.digital.client.kinesis.KinesisDataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
@@ -44,7 +43,7 @@ public class DataHubJob implements Runnable {
     private final JobProperties properties;
     private final SparkSessionProvider sparkSessionProvider;
     private final BatchProcessor batchProcessor;
-    private final KinesisSourceProvider kinesisSourceProvider;
+    private final KinesisDataProvider kinesisDataProvider;
 
 
     @Inject
@@ -52,14 +51,14 @@ public class DataHubJob implements Runnable {
             JobArguments arguments,
             JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
-            KinesisSourceProvider kinesisSourceProvider,
+            KinesisDataProvider kinesisDataProvider,
             BatchProcessor batchProcessor
     ) {
         logger.info("Initializing DataHubJob");
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
-        this.kinesisSourceProvider = kinesisSourceProvider;
+        this.kinesisDataProvider = kinesisDataProvider;
         this.batchProcessor = batchProcessor;
         logger.info("DataHubJob initialization complete");
     }
@@ -79,8 +78,7 @@ public class DataHubJob implements Runnable {
         Job.init(jobName, glueContext, arguments.getConfig());
 
         logger.info("Initialising data source");
-        DataSource kinesisDataSource = kinesisSourceProvider.getKinesisSource(glueContext, arguments);
-        Dataset<Row> sourceDf = kinesisDataSource.getDataFrame();
+        Dataset<Row> sourceDf = kinesisDataProvider.getSourceData(glueContext, arguments);
 
         logger.info("Initialising converter");
         Converter<Dataset<Row>, Dataset<Row>> converter = new DMS_3_4_7(sparkSession);

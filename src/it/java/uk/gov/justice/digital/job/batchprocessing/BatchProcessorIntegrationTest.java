@@ -1,9 +1,12 @@
 package uk.gov.justice.digital.job.batchprocessing;
 
 import lombok.val;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,6 +61,18 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
 
     private BatchProcessor undertest;
 
+    private static Dataset<Row> createTableRecordDf;
+    private static Dataset<Row> loadRecordDf;
+    private static Dataset<Row> cdcRecordDf;
+
+    @BeforeAll
+    public static void setUpData() {
+        createSession();
+        createTableRecordDf = getData(DATA_CONTROL_RECORD_PATH);
+        loadRecordDf = getData(DATA_LOAD_RECORD_PATH);
+        cdcRecordDf = getData(DATA_UPDATE_RECORD_PATH);
+    }
+
     @BeforeEach
     void setUp() {
         converter = new DMS_3_4_7(spark);
@@ -82,18 +97,16 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
         givenStructuredZoneCDCReturnsEmptyDataFrame();
         givenCuratedZoneCDCReturnsEmptyDataFrame();
 
-        val inputDf = getData(DATA_LOAD_RECORD_PATH);
+        undertest.processBatch(spark, converter, loadRecordDf);
 
-        undertest.processBatch(spark, converter, inputDf);
+        // There is 1 (table, source, operation) tuple in the input data
+        int expectedZoneIterations = 1;
 
-        // There is only one table, source, operation tuple in the input data
-        int expectedIterations = 1;
-
-        shouldProcessRawZone(expectedIterations);
-        shouldProcessStructuredZoneLoad(expectedIterations);
-        shouldProcessStructuredZoneCDC(expectedIterations);
-        shouldProcessCuratedZoneLoad(expectedIterations);
-        shouldProcessCuratedZoneCDC(expectedIterations);
+        shouldProcessRawZone(expectedZoneIterations);
+        shouldProcessStructuredZoneLoad(expectedZoneIterations);
+        shouldProcessStructuredZoneCDC(expectedZoneIterations);
+        shouldProcessCuratedZoneLoad(expectedZoneIterations);
+        shouldProcessCuratedZoneCDC(expectedZoneIterations);
     }
 
     @Test
@@ -106,21 +119,21 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
         givenStructuredZoneCDCReturnsEmptyDataFrame();
         givenCuratedZoneCDCReturnsEmptyDataFrame();
 
-        val inputDf = getData(DATA_CONTROL_RECORD_PATH)
-                .unionAll(getData(DATA_LOAD_RECORD_PATH))
-                .unionAll(getData(DATA_UPDATE_RECORD_PATH));
+        val inputDf = createTableRecordDf
+                .unionAll(loadRecordDf)
+                .unionAll(cdcRecordDf);
 
         undertest.processBatch(spark, converter, inputDf);
 
         // There are 3 (table, source, operation) tuples in the input data but 1 has no source reference
-        int expectedIterations = 2;
+        int expectedZoneIterations = 2;
         int expectedViolations = 1;
 
-        shouldProcessRawZone(expectedIterations);
-        shouldProcessStructuredZoneLoad(expectedIterations);
-        shouldProcessStructuredZoneCDC(expectedIterations);
-        shouldProcessCuratedZoneLoad(expectedIterations);
-        shouldProcessCuratedZoneCDC(expectedIterations);
+        shouldProcessRawZone(expectedZoneIterations);
+        shouldProcessStructuredZoneLoad(expectedZoneIterations);
+        shouldProcessStructuredZoneCDC(expectedZoneIterations);
+        shouldProcessCuratedZoneLoad(expectedZoneIterations);
+        shouldProcessCuratedZoneCDC(expectedZoneIterations);
 
         shouldAppendViolations(expectedViolations);
     }
