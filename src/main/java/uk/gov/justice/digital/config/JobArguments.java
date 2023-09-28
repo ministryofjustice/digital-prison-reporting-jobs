@@ -46,7 +46,7 @@ public class JobArguments {
     public static final String REDSHIFT_SECRETS_NAME = "dpr.redshift.secrets.name";
     public static final String DATA_MART_DB_NAME = "dpr.datamart.db.name";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
-    public static final String CHECKPOINT_LOCATION = "dpr.checkpoint.location";
+    public static final String CHECKPOINT_LOCATION = "checkpoint.location";
     public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
 
     private final Map<String, String> config;
