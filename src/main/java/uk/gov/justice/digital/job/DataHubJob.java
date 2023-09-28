@@ -42,19 +42,23 @@ public class DataHubJob implements Runnable {
 
     private final JobArguments arguments;
     private final JobProperties properties;
+    private final SparkSessionProvider sparkSessionProvider;
     private final BatchProcessor batchProcessor;
     private final KinesisSourceProvider kinesisSourceProvider;
+
 
     @Inject
     public DataHubJob(
             JobArguments arguments,
             JobProperties properties,
+            SparkSessionProvider sparkSessionProvider,
             KinesisSourceProvider kinesisSourceProvider,
             BatchProcessor batchProcessor
     ) {
         logger.info("Initializing DataHubJob");
         this.arguments = arguments;
         this.properties = properties;
+        this.sparkSessionProvider = sparkSessionProvider;
         this.kinesisSourceProvider = kinesisSourceProvider;
         this.batchProcessor = batchProcessor;
         logger.info("DataHubJob initialization complete");
@@ -68,7 +72,7 @@ public class DataHubJob implements Runnable {
     @Override
     public void run() {
         String jobName = properties.getSparkJobName();
-        GlueContext glueContext = SparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
+        GlueContext glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
         SparkSession sparkSession = glueContext.getSparkSession();
 
         logger.info("Initialising Job");
@@ -93,6 +97,7 @@ public class DataHubJob implements Runnable {
                     System.exit(1);
                 }
             }
+            // return type is Unit since we must use the Scala API
             return BoxedUnit.UNIT;
         }, createBatchOptions());
 
@@ -101,8 +106,9 @@ public class DataHubJob implements Runnable {
     }
 
     private JsonOptions createBatchOptions() {
+        // See https://docs.aws.amazon.com/glue/latest/dg/glue-etl-scala-apis-glue-gluecontext.html#glue-etl-scala-apis-glue-gluecontext-defs-forEachBatch
         Map<String, String> batchProcessingOptions = new HashMap<>();
-        batchProcessingOptions.put("windowSize", arguments.getKinesisReaderBatchDuration());
+        batchProcessingOptions.put("windowSize", arguments.getBatchDuration());
         batchProcessingOptions.put("checkpointLocation", arguments.getCheckpointLocation());
         batchProcessingOptions.put("batchMaxRetries", Integer.toString(arguments.getBatchMaxRetries()));
         logger.info("Batch Options: {}", batchProcessingOptions);

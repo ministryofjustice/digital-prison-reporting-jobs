@@ -37,7 +37,7 @@ public class JobArguments {
     public static final String DOMAIN_REGISTRY = "dpr.domain.registry";
     public static final String DOMAIN_TARGET_PATH = "dpr.domain.target.path";
     public static final String DOMAIN_TABLE_NAME = "dpr.domain.table.name";
-    public static final String KINESIS_READER_BATCH_DURATION = "dpr.kinesis.reader.batchDuration";
+    public static final String BATCH_DURATION_SECONDS = "dpr.batchDurationSeconds";
     public static final String KINESIS_STREAM_ARN = "dpr.kinesis.stream.arn";
     public static final String KINESIS_STARTING_POSITION = "dpr.kinesis.starting.position";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
@@ -91,8 +91,9 @@ public class JobArguments {
     public String getAwsDynamoDBEndpointUrl() {
         return getArgument(AWS_DYNAMODB_ENDPOINT_URL);
     }
-    public String getKinesisReaderBatchDuration() {
-        return getArgument(KINESIS_READER_BATCH_DURATION);
+    public String getBatchDuration() {
+        int numSeconds = Integer.parseInt(getArgument(BATCH_DURATION_SECONDS));
+        return numSeconds + " seconds";
     }
 
     public String getKinesisStartingPosition() {

@@ -13,7 +13,7 @@ import java.util.TimeZone;
 @Singleton
 public class SparkSessionProvider {
 
-    public static GlueContext createGlueContext(String jobName, LogLevel logLevel) {
+    public GlueContext createGlueContext(String jobName, LogLevel logLevel) {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
         SparkSessionProvider.configureSparkConf(sparkConf);
         SparkContext spark = new SparkContext(sparkConf);

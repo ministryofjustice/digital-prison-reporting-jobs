@@ -28,7 +28,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 /**
- * Responsible for providing a BatchProcessor.
+ * Responsible for processing batches of DMS records.
  * Dependencies which rely on the SparkSession are manually injected to ensure spark contexts/sessions/etc.
  * are created just once with a common configuration.
  */

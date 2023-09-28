@@ -29,7 +29,12 @@ class JobArgumentsIntegrationTest {
             { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
             { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
             { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com" },
-            { JobArguments.CONTRACT_REGISTRY_NAME, "SomeContractRegistryName" }
+            { JobArguments.CONTRACT_REGISTRY_NAME, "SomeContractRegistryName" },
+            { JobArguments.CHECKPOINT_LOCATION, "s3://somepath/checkpoint/app-name" },
+            { JobArguments.KINESIS_STREAM_ARN, "arn:aws:kinesis:eu-west-2:123456:stream/dpr-kinesis-ingestor-env" },
+            { JobArguments.KINESIS_STARTING_POSITION, "trim_horizon" },
+            { JobArguments.BATCH_MAX_RETRIES, "5" },
+            { JobArguments.LOG_LEVEL, "debug" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -51,9 +56,76 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.STRUCTURED_S3_PATH, validArguments.getStructuredS3Path() },
                 { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path() },
                 { JobArguments.CONTRACT_REGISTRY_NAME, validArguments.getContractRegistryName() },
+                { JobArguments.CHECKPOINT_LOCATION, validArguments.getCheckpointLocation() },
+                { JobArguments.KINESIS_STREAM_ARN, validArguments.getKinesisStreamArn() },
+                { JobArguments.KINESIS_STARTING_POSITION, validArguments.getKinesisStartingPosition() },
+                { JobArguments.BATCH_MAX_RETRIES, Integer.toString(validArguments.getBatchMaxRetries()) },
+                { JobArguments.LOG_LEVEL, validArguments.getLogLevel().toString().toLowerCase() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
+    }
+
+    @Test
+    public void shouldSetBatchDuration() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_DURATION_SECONDS, "30");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("30 seconds", jobArguments.getBatchDuration());
+    }
+
+    @Test
+    public void shouldThrowForNonIntegerBatchDuration() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_DURATION_SECONDS, "30 seconds");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(NumberFormatException.class, jobArguments::getBatchDuration);
+    }
+
+    @Test
+    public void shouldSetBatchMaxRetries() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_MAX_RETRIES, "20");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(20, jobArguments.getBatchMaxRetries());
+    }
+
+    @Test
+    public void shouldThrowForNonIntegerBatchMaxRetries() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_MAX_RETRIES, "10 retries");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(NumberFormatException.class, jobArguments::getBatchMaxRetries);
+    }
+
+    @Test
+    public void shouldSetAllowedLogLevels() {
+        for(String level: Arrays.asList("debug", "info", "warn", "error", "DEBUG", "INFO", "WARN", "ERROR")) {
+            HashMap<String, String> args = cloneTestArguments();
+            args.put(JobArguments.LOG_LEVEL, level);
+            JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+            assertEquals(level.toUpperCase(), jobArguments.getLogLevel().toString().toUpperCase());
+        }
+    }
+
+    @Test
+    public void shouldDefaultToWarnForNonAllowedLogLevel() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.LOG_LEVEL, "some level");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("WARN", jobArguments.getLogLevel().toString().toUpperCase());
+    }
+
+    @Test
+    public void shouldReturnCorrectValuesInGetConfig() {
+        Map<String, String> actualArguments = validArguments.getConfig();
+        assertEquals(testArguments, actualArguments);
+    }
+
+    @Test
+    public void shouldNotAllowGetConfigMapToBeModified() {
+        Map<String, String> arguments = validArguments.getConfig();
+        assertThrows(UnsupportedOperationException.class, () -> arguments.put(JobArguments.BATCH_MAX_RETRIES, "6"));
     }
 
     @Test
@@ -92,5 +164,9 @@ class JobArgumentsIntegrationTest {
         when(mockContext.getEnvironment()).thenReturn(mockEnvironment);
 
         return mockContext;
+    }
+
+    private static HashMap<String, String> cloneTestArguments() {
+        return (HashMap<String, String>)((HashMap<String, String>) testArguments).clone();
     }
 }

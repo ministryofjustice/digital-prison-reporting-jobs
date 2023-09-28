@@ -18,6 +18,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.RECORD_SCHEMA;
 public class KinesisSourceProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(KinesisSourceProvider.class);
+
     public DataSource getKinesisSource(GlueContext glueContext, JobArguments arguments) {
         logger.info("Initialising Kinesis data source");
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
