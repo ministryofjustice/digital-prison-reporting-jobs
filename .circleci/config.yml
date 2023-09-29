@@ -37,7 +37,7 @@ workflows:
           deploy_to_test: true # Deploy to Test Environment
           deploy_to_preprod: true # Deploy to PreProd Environment
           notify_jira: true
-          notify_slack: true
+          notify_slack: false
           channel: dpr_cicd_alerts
           command: jar shadowJar # Skip tests when building jar, they've already run
           filters:
@@ -76,7 +76,7 @@ workflows:
           sync_args: "--exclude '*' --include '*-all*jar'"
           deploy_script: true
           release_ready: true
-          notify_slack: true
+          notify_slack: false
           filters:
             branches:
               only: main
@@ -101,7 +101,7 @@ workflows:
                 - main
     jobs:
       - reporting/gradle_owasp_check:
-          notify_slack: true
+          notify_slack: false
           channel: dpr_cicd_alerts
           context:
             - hmpps-reporting-common
