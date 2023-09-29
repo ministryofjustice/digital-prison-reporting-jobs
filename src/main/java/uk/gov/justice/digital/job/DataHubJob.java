@@ -1,43 +1,30 @@
 package uk.gov.justice.digital.job;
 
+import com.amazonaws.services.glue.GlueContext;
+import com.amazonaws.services.glue.util.Job;
+import com.amazonaws.services.glue.util.JsonOptions;
 import io.micronaut.configuration.picocli.PicocliRunner;
-import lombok.val;
-import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
+import jakarta.inject.Inject;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
-import uk.gov.justice.digital.client.kinesis.KinesisReader;
+import scala.collection.JavaConverters;
+import scala.runtime.BoxedUnit;
+import uk.gov.justice.digital.client.kinesis.KinesisDataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.Converter;
-import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
+import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.DomainService;
-import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
-import uk.gov.justice.digital.zone.raw.RawZone;
-import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Singleton;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.lit;
-import static uk.gov.justice.digital.common.CommonDataFields.*;
-import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Job that reads DMS 3.4.7 load events from a Kinesis stream and processes the data as follows
@@ -52,51 +39,27 @@ public class DataHubJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataHubJob.class);
 
+    private final JobArguments arguments;
+    private final JobProperties properties;
+    private final SparkSessionProvider sparkSessionProvider;
+    private final BatchProcessor batchProcessor;
+    private final KinesisDataProvider kinesisDataProvider;
 
-    public final KinesisReader kinesisReader;
-    private final RawZone rawZone;
-    private final StructuredZoneLoad structuredZoneLoad;
-    private final StructuredZoneCDC structuredZoneCDC;
-    private final CuratedZoneLoad curatedZoneLoad;
-    private final CuratedZoneCDC curatedZoneCDC;
-    private final DomainService domainService;
-    private final SourceReferenceService sourceReferenceService;
-    private final DataStorageService storageService;
-    private final Converter<JavaRDD<Row>, Dataset<Row>> converter;
-    private final String violationsPath;
-    private final SparkSession spark;
 
     @Inject
     public DataHubJob(
             JobArguments arguments,
             JobProperties properties,
-            RawZone rawZone,
-            StructuredZoneLoad structuredZoneLoad,
-            StructuredZoneCDC structuredZoneCDC,
-            CuratedZoneLoad curatedZoneLoad,
-            CuratedZoneCDC curatedZoneCDC,
-            DomainService domainService,
-            SourceReferenceService sourceReferenceService,
-            DataStorageService storageService,
-            @Named("converterForDMS_3_4_7") Converter<JavaRDD<Row>, Dataset<Row>> converter,
-            SparkSessionProvider sparkSessionProvider
+            SparkSessionProvider sparkSessionProvider,
+            KinesisDataProvider kinesisDataProvider,
+            BatchProcessor batchProcessor
     ) {
         logger.info("Initializing DataHubJob");
-        String jobName = properties.getSparkJobName();
-        SparkConf sparkConf = new SparkConf().setAppName(jobName);
-
-        this.spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
-        this.kinesisReader = new KinesisReader(arguments, jobName, spark.sparkContext());
-        this.rawZone = rawZone;
-        this.structuredZoneLoad = structuredZoneLoad;
-        this.structuredZoneCDC = structuredZoneCDC;
-        this.curatedZoneLoad = curatedZoneLoad;
-        this.curatedZoneCDC = curatedZoneCDC;
-        this.domainService = domainService;
-        this.sourceReferenceService = sourceReferenceService;
-        this.storageService = storageService;
-        this.converter = converter;
-        this.violationsPath = arguments.getViolationsS3Path();
+        this.arguments = arguments;
+        this.properties = properties;
+        this.sparkSessionProvider = sparkSessionProvider;
+        this.kinesisDataProvider = kinesisDataProvider;
+        this.batchProcessor = batchProcessor;
         logger.info("DataHubJob initialization complete");
     }
 
@@ -105,110 +68,48 @@ public class DataHubJob implements Runnable {
         PicocliRunner.run(DataHubJob.class, MicronautContext.withArgs(args));
     }
 
-    public void batchProcessor(JavaRDD<byte[]> batch) {
-        if (batch.isEmpty()) {
-            logger.info("Batch: {} - Skipping empty batch", batch.id());
-        } else {
-            logger.debug("Batch: {} - Processing records", batch.id());
-
-            val startTime = System.currentTimeMillis();
-
-            val rowRdd = batch.map(d -> RowFactory.create(new String(d, StandardCharsets.UTF_8)));
-            val dataFrame = converter.convert(rowRdd);
-
-            getTablesInBatch(dataFrame).forEach(tableInfo -> {
-                try {
-                    val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
-                    dataFrameForTable.persist();
-
-                    String sourceName = tableInfo.getAs(SOURCE);
-                    String tableName = tableInfo.getAs(TABLE);
-
-                    val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
-
-                    if (optionalSourceReference.isPresent()) {
-                        val sourceReference = optionalSourceReference.get();
-
-                        rawZone.process(spark, dataFrameForTable, sourceReference);
-
-                        val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrameForTable, sourceReference);
-                        val structuredIncrementalDataFrame = structuredZoneCDC.process(spark, dataFrameForTable, sourceReference);
-
-                        dataFrameForTable.unpersist();
-
-                        curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
-                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, sourceReference);
-
-                        if (!curatedCdcDataFrame.isEmpty()) domainService
-                                .refreshDomainUsingDataFrame(
-                                        spark,
-                                        curatedCdcDataFrame,
-                                        sourceReference.getSource(),
-                                        sourceReference.getTable()
-                                );
-                    } else {
-                        handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
-                    }
-
-                } catch (Exception e) {
-                    logger.error("Caught unexpected exception", e);
-                    throw new RuntimeException("Caught unexpected exception", e);
-                }
-
-                logger.debug("Batch: {} - Processed records - processed batch in {}ms",
-                        batch.id(),
-                        System.currentTimeMillis() - startTime
-                );
-            });
-
-        }
-    }
-
     @Override
     public void run() {
-        try {
-            kinesisReader.setBatchProcessor(this::batchProcessor);
-            kinesisReader.startAndAwaitTermination();
-        } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                logger.error("Kinesis job interrupted", e);
-            } else {
-                logger.error("Exception occurred during streaming job", e);
-                System.exit(1);
+        String jobName = properties.getSparkJobName();
+        GlueContext glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
+        SparkSession sparkSession = glueContext.getSparkSession();
+
+        logger.info("Initialising Job");
+        Job.init(jobName, glueContext, arguments.getConfig());
+
+        logger.info("Initialising data source");
+        Dataset<Row> sourceDf = kinesisDataProvider.getSourceData(glueContext, arguments);
+
+        logger.info("Initialising converter");
+        Converter<Dataset<Row>, Dataset<Row>> converter = new DMS_3_4_7(sparkSession);
+
+        logger.info("Initialising per batch processing");
+        glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
+            try {
+                batchProcessor.processBatch(sparkSession, converter, batch);
+            } catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                    logger.error("Kinesis job interrupted", e);
+                } else {
+                    logger.error("Exception occurred during streaming job", e);
+                    System.exit(1);
+                }
             }
-        }
+            // return type is Unit since we must use the Scala API
+            return BoxedUnit.UNIT;
+        }, createBatchOptions());
+
+        logger.info("Committing Job");
+        Job.commit();
     }
 
-    private void handleNoSchemaFound(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table
-    ) throws DataStorageException {
-        logger.warn("Violation - No schema found for {}/{}", source, table);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
-
-        val missingSchemaRecords = dataFrame
-                .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)))
-                .drop(OPERATION);
-
-        storageService.append(destinationPath, missingSchemaRecords);
-        storageService.updateDeltaManifestForTable(spark, destinationPath);
-    }
-
-    private List<Row> getTablesInBatch(Dataset<Row> dataFrame) {
-        return dataFrame
-                .select(TABLE, SOURCE, OPERATION)
-                .dropDuplicates(TABLE, SOURCE)
-                .collectAsList();
-    }
-
-    private Dataset<Row> extractDataFrameForSourceTable(Dataset<Row> dataFrame, Row row) {
-        final String source = row.getAs(SOURCE);
-        final String table = row.getAs(TABLE);
-        return dataFrame
-                .filter(col(SOURCE).equalTo(source).and(col(TABLE).equalTo(table)))
-                .orderBy(col(TIMESTAMP));
+    private JsonOptions createBatchOptions() {
+        // See https://docs.aws.amazon.com/glue/latest/dg/glue-etl-scala-apis-glue-gluecontext.html#glue-etl-scala-apis-glue-gluecontext-defs-forEachBatch
+        Map<String, String> batchProcessingOptions = new HashMap<>();
+        batchProcessingOptions.put("windowSize", arguments.getBatchDuration());
+        batchProcessingOptions.put("checkpointLocation", arguments.getCheckpointLocation());
+        batchProcessingOptions.put("batchMaxRetries", Integer.toString(arguments.getBatchMaxRetries()));
+        logger.info("Batch Options: {}", batchProcessingOptions);
+        return new JsonOptions(JavaConverters.mapAsScalaMap(batchProcessingOptions));
     }
 }

@@ -17,7 +17,6 @@ import static org.mockito.Mockito.when;
 class JobArgumentsIntegrationTest {
 
     private static final Map<String, String> testArguments = Stream.of(new String[][] {
-            { JobArguments.AWS_KINESIS_ENDPOINT_URL, "https://kinesis.example.com" },
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
@@ -26,13 +25,16 @@ class JobArgumentsIntegrationTest {
             { JobArguments.DOMAIN_REGISTRY, "test_registry" },
             { JobArguments.DOMAIN_TARGET_PATH, "s3://somepath/domain/target" },
             { JobArguments.DOMAIN_TABLE_NAME, "test_table" },
-            { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "5" },
-            { JobArguments.KINESIS_READER_STREAM_NAME, "some-kinesis-stream" },
             { JobArguments.RAW_S3_PATH, "s3://somepath/raw" },
             { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
             { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
             { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com" },
-            { JobArguments.CONTRACT_REGISTRY_NAME, "SomeContractRegistryName" }
+            { JobArguments.CONTRACT_REGISTRY_NAME, "SomeContractRegistryName" },
+            { JobArguments.CHECKPOINT_LOCATION, "s3://somepath/checkpoint/app-name" },
+            { JobArguments.KINESIS_STREAM_ARN, "arn:aws:kinesis:eu-west-2:123456:stream/dpr-kinesis-ingestor-env" },
+            { JobArguments.KINESIS_STARTING_POSITION, "trim_horizon" },
+            { JobArguments.BATCH_MAX_RETRIES, "5" },
+            { JobArguments.LOG_LEVEL, "debug" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -42,7 +44,6 @@ class JobArgumentsIntegrationTest {
     public void shouldReturnCorrectValueForEachSupportedArgument() {
         Map<String, String> actualArguments = Stream.of(new Object[][] {
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
-                { JobArguments.AWS_KINESIS_ENDPOINT_URL, validArguments.getAwsKinesisEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },
                 { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, validArguments.getDomainCatalogDatabaseName() },
@@ -51,31 +52,85 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.DOMAIN_REGISTRY, validArguments.getDomainRegistry() },
                 { JobArguments.DOMAIN_TARGET_PATH, validArguments.getDomainTargetPath() },
                 { JobArguments.DOMAIN_TABLE_NAME, validArguments.getDomainTableName() },
-                { JobArguments.KINESIS_READER_STREAM_NAME, validArguments.getKinesisReaderStreamName() },
                 { JobArguments.RAW_S3_PATH, validArguments.getRawS3Path() },
                 { JobArguments.STRUCTURED_S3_PATH, validArguments.getStructuredS3Path() },
                 { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path() },
                 { JobArguments.CONTRACT_REGISTRY_NAME, validArguments.getContractRegistryName() },
-                // Convert the Duration ms value into seconds to align with the argument.
-                { JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS,
-                        validArguments.getKinesisReaderBatchDuration().milliseconds() / 1000},
+                { JobArguments.CHECKPOINT_LOCATION, validArguments.getCheckpointLocation() },
+                { JobArguments.KINESIS_STREAM_ARN, validArguments.getKinesisStreamArn() },
+                { JobArguments.KINESIS_STARTING_POSITION, validArguments.getKinesisStartingPosition() },
+                { JobArguments.BATCH_MAX_RETRIES, Integer.toString(validArguments.getBatchMaxRetries()) },
+                { JobArguments.LOG_LEVEL, validArguments.getLogLevel().toString().toLowerCase() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
     }
 
     @Test
-    public void shouldThrowAnExceptionWhenAMissingArgumentIsRequested() {
-        assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
+    public void shouldSetBatchDuration() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_DURATION_SECONDS, "30");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("30 seconds", jobArguments.getBatchDuration());
     }
 
     @Test
-    public void shouldThrowExceptionWhenKinesisReaderBatchDurationInvalid() {
-        val underTest = new JobArguments(givenAContextWithArguments(
-                Collections.singletonMap(JobArguments.KINESIS_READER_BATCH_DURATION_SECONDS, "this is not a number")
-        ));
+    public void shouldThrowForNonIntegerBatchDuration() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_DURATION_SECONDS, "30 seconds");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(NumberFormatException.class, jobArguments::getBatchDuration);
+    }
 
-        assertThrows(NumberFormatException.class, underTest::getKinesisReaderBatchDuration);
+    @Test
+    public void shouldSetBatchMaxRetries() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_MAX_RETRIES, "20");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(20, jobArguments.getBatchMaxRetries());
+    }
+
+    @Test
+    public void shouldThrowForNonIntegerBatchMaxRetries() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.BATCH_MAX_RETRIES, "10 retries");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(NumberFormatException.class, jobArguments::getBatchMaxRetries);
+    }
+
+    @Test
+    public void shouldSetAllowedLogLevels() {
+        for(String level: Arrays.asList("debug", "info", "warn", "error", "DEBUG", "INFO", "WARN", "ERROR")) {
+            HashMap<String, String> args = cloneTestArguments();
+            args.put(JobArguments.LOG_LEVEL, level);
+            JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+            assertEquals(level.toUpperCase(), jobArguments.getLogLevel().toString().toUpperCase());
+        }
+    }
+
+    @Test
+    public void shouldDefaultToWarnForNonAllowedLogLevel() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.LOG_LEVEL, "some level");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("WARN", jobArguments.getLogLevel().toString().toUpperCase());
+    }
+
+    @Test
+    public void shouldReturnCorrectValuesInGetConfig() {
+        Map<String, String> actualArguments = validArguments.getConfig();
+        assertEquals(testArguments, actualArguments);
+    }
+
+    @Test
+    public void shouldNotAllowGetConfigMapToBeModified() {
+        Map<String, String> arguments = validArguments.getConfig();
+        assertThrows(UnsupportedOperationException.class, () -> arguments.put(JobArguments.BATCH_MAX_RETRIES, "6"));
+    }
+
+    @Test
+    public void shouldThrowAnExceptionWhenAMissingArgumentIsRequested() {
+        assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {
@@ -109,5 +164,9 @@ class JobArgumentsIntegrationTest {
         when(mockContext.getEnvironment()).thenReturn(mockEnvironment);
 
         return mockContext;
+    }
+
+    private static HashMap<String, String> cloneTestArguments() {
+        return (HashMap<String, String>)((HashMap<String, String>) testArguments).clone();
     }
 }

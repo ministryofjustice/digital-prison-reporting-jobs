@@ -1,54 +1,34 @@
 package uk.gov.justice.digital.converter.dms;
 
-import io.micronaut.logging.LogLevel;
 import lombok.val;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
-import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.*;
-import static uk.gov.justice.digital.config.JobArguments.LOG_LEVEL;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 
 class DMS_3_4_7_ConverterIntegrationTest extends BaseSparkTest {
 
-    private static final String DATA_PATH = "src/it/resources/data/dms_record.json";
-    private static final String CONTROL_PATH = "src/it/resources/data/null-data-dms-record.json";
-
-    private static final String UPDATE_PATH = "src/it/resources/data/dms_update.json";
-
-    private static final Map<String, String> config = new HashMap<String, String>() {
-        private static final long serialVersionUID = 5070030455793271884L;
-        { put(LOG_LEVEL, LogLevel.INFO.name()); }
-    };
-
-    private static final JobArguments arguments = new JobArguments(config);
-    private static final DMS_3_4_7 underTest = new DMS_3_4_7(arguments, new SparkSessionProvider());
+    private static final DMS_3_4_7 underTest = new DMS_3_4_7(spark);
 
     @Test
     void shouldConvertValidDataCorrectly() {
         // Load JSON as text and slurp in the context of the whole file so we can read multiline JSON files.
-        val rdd = getData(DATA_PATH);
+        val inputDf = getData(DATA_LOAD_RECORD_PATH);
 
-        val converted = underTest.convert(rdd);
+        val converted = underTest.convert(inputDf);
 
         // Strict schema validation is applied so checking accounts agree should be sufficient here.
-        assertEquals(rdd.count(), converted.count());
+        assertEquals(inputDf.count(), converted.count());
     }
 
     @Test
     void shouldConvertARawDataRecordIntoTheCorrectColumns() {
-        val rdd = getData(DATA_PATH);
+        val inputDf = getData(DATA_LOAD_RECORD_PATH);
 
-        val converted = underTest.convert(rdd);
+        val converted = underTest.convert(inputDf);
         converted.show(false);
 
         val columnNames = Arrays.asList(converted.columns());
@@ -87,9 +67,9 @@ class DMS_3_4_7_ConverterIntegrationTest extends BaseSparkTest {
 
     @Test
     void shouldConvertARawControlRecordIntoTheCorrectColumns() {
-        val rdd = getData(CONTROL_PATH);
+        val inputDf = getData(DATA_CONTROL_RECORD_PATH);
 
-        val converted = underTest.convert(rdd);
+        val converted = underTest.convert(inputDf);
         converted.show(false);
 
         val columnNames = Arrays.asList(converted.columns());
@@ -128,9 +108,9 @@ class DMS_3_4_7_ConverterIntegrationTest extends BaseSparkTest {
 
     @Test
     void shouldConvertAnUpdateRecordIntoTheCorrectColumns() {
-        val rdd = getData(UPDATE_PATH);
+        val inputDf = getData(DATA_UPDATE_RECORD_PATH);
 
-        val converted = underTest.convert(rdd);
+        val converted = underTest.convert(inputDf);
 
         converted.show(false);
 
@@ -167,14 +147,4 @@ class DMS_3_4_7_ConverterIntegrationTest extends BaseSparkTest {
         assertNotNull(row.getAs(CONVERTER));
 
     }
-
-    private JavaRDD<Row> getData(final String path) {
-        return spark
-                .read()
-                .option("wholetext", "true")
-                .text(path)
-                .withColumn(RAW, col("value"))
-                .javaRDD();
-    }
-
 }
