@@ -6,6 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +36,8 @@ import static uk.gov.justice.digital.test.Fixtures.getAllCapturedRecords;
 public class DomainServiceTest extends BaseSparkTest {
 
     private static final String domainName = "SomeDomain";
-    private static final String domainTableName = "SomeDomainTable";
+    private static final String relevantDomainTableName = "RelevantDomainTable";
+    private static final String irrelevantDomainTableName = "IrrelevantDomainTable";
     private static final String source = "source";
 
     @Mock
@@ -63,7 +65,7 @@ public class DomainServiceTest extends BaseSparkTest {
 
         underTest.run(spark);
 
-        verify(mockDomainExecutor).doDomainDelete(spark, domainName, domainTableName);
+        verify(mockDomainExecutor).doDomainDelete(spark, domainName, relevantDomainTableName);
     }
 
     @Test
@@ -73,12 +75,12 @@ public class DomainServiceTest extends BaseSparkTest {
 
         underTest.run(spark);
 
-        verify(mockDomainExecutor).doFullDomainRefresh(spark, mockDomainDefinition, domainTableName, "insert");
+        verify(mockDomainExecutor).doFullDomainRefresh(spark, mockDomainDefinition, relevantDomainTableName, "insert");
     }
 
     @ParameterizedTest
     @EnumSource(value = DMS_3_4_7.Operation.class, names = {"Insert", "Update", "Delete"})
-    public void shouldIncrementallyRefreshRecordsForCDCOperations(DMS_3_4_7.Operation operation) throws Exception {
+    public void shouldIncrementallyRefreshRelevantDomainWhenGivenRecordsForCDCOperations(DMS_3_4_7.Operation operation) throws Exception {
         val recordsToInsert = createInputDataFrame(operation);
         val domainDefinition = createDomainDefinition();
         val domainDefinitions = Collections.singletonList(domainDefinition);
@@ -115,7 +117,7 @@ public class DomainServiceTest extends BaseSparkTest {
                         eq(operation)
                 );
 
-        underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, source, domainTableName);
+        underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, source, relevantDomainTableName);
 
         assertIterableEquals(
                 expectedCapturedRecords,
@@ -147,7 +149,7 @@ public class DomainServiceTest extends BaseSparkTest {
 
         assertThrows(
                 RuntimeException.class,
-                () -> underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, source, domainTableName)
+                () -> underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, source, relevantDomainTableName)
         );
 
         verifyNoInteractions(mockDomainExecutor);
@@ -161,20 +163,20 @@ public class DomainServiceTest extends BaseSparkTest {
 
         when(mockDomainDefinitionClient.getDomainDefinitions()).thenReturn(Collections.singletonList(domainDefinition));
 
-        assertDoesNotThrow(() -> underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, source, domainTableName));
+        assertDoesNotThrow(() -> underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, source, relevantDomainTableName));
 
         verifyNoInteractions(mockDomainExecutor);
     }
 
     private void givenJobArgumentsWithOperation(String operation) {
-        when(mockJobArguments.getDomainTableName()).thenReturn(domainTableName);
+        when(mockJobArguments.getDomainTableName()).thenReturn(relevantDomainTableName);
         when(mockJobArguments.getDomainName()).thenReturn(domainName);
         when(mockJobArguments.getDomainOperation()).thenReturn(operation);
     }
 
     private void givenTheClientReturnsADomainDefinition() throws Exception {
         when(mockDomainDefinition.getName()).thenReturn(domainName);
-        when(mockDomainDefinitionClient.getDomainDefinition(domainName, domainTableName)).thenReturn(mockDomainDefinition);
+        when(mockDomainDefinitionClient.getDomainDefinition(domainName, relevantDomainTableName)).thenReturn(mockDomainDefinition);
     }
 
     private Dataset<Row> createTransformedDataFrame(String id) {
@@ -205,6 +207,22 @@ public class DomainServiceTest extends BaseSparkTest {
     }
 
     private DomainDefinition createDomainDefinition() {
+        val tableDefinition = createDomainTableDefinition(relevantDomainTableName);
+        val irrelevantDomainTableDefinition = createDomainTableDefinition(irrelevantDomainTableName);
+
+        ArrayList<TableDefinition> tables = new ArrayList<>();
+        tables.add(tableDefinition);
+        tables.add(irrelevantDomainTableDefinition);
+
+        DomainDefinition domainDefinition = new DomainDefinition();
+        domainDefinition.setName(domainName);
+        domainDefinition.setTables(tables);
+
+        return domainDefinition;
+    }
+
+    @NotNull
+    private static TableDefinition createDomainTableDefinition(String domainTableName) {
         val tableDefinition = new TableDefinition();
         tableDefinition.setName(domainTableName);
         tableDefinition.setPrimaryKey("table_id");
@@ -223,15 +241,7 @@ public class DomainServiceTest extends BaseSparkTest {
         );
 
         tableDefinition.setTransform(transform);
-
-        ArrayList<TableDefinition> tables = new ArrayList<>();
-        tables.add(tableDefinition);
-
-        DomainDefinition domainDefinition = new DomainDefinition();
-        domainDefinition.setName(domainName);
-        domainDefinition.setTables(tables);
-
-        return domainDefinition;
+        return tableDefinition;
     }
 
 }

@@ -88,7 +88,9 @@ public class DomainService {
         cdcOperations.ifPresent(operation -> {
             val referenceDataframe = lowerCaseColumnNames(spark, row);
 
-            domainDefinition.getTables().forEach(tableDefinition -> {
+            domainDefinition.getTables().stream().filter(table ->
+                    table.getTransform().getSources().stream().anyMatch(source -> source.equalsIgnoreCase(referenceTableName))
+            ).forEach(tableDefinition -> {
                         val tableTransform = tableDefinition.getTransform();
                         val violations = tableDefinition.getViolations();
 
