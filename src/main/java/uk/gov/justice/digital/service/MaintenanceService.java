@@ -30,7 +30,8 @@ public class MaintenanceService {
     public void compactDeltaTables(SparkSession spark, String rootPath) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table compaction for tables under root path: {}", rootPath);
         List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath);
-        logger.info("Found delta tables at: {}", java.lang.String.join(", ", (deltaTablePaths)));
+        logger.info("Found {} delta tables", deltaTablePaths.size());
+        logger.debug("Found delta tables at the following paths: {}", String.join(", ", (deltaTablePaths)));
         attemptAll(deltaTablePaths, path -> storageService.compactDeltaTable(spark, path));
         logger.info("Finished delta table compaction for root path: {}", rootPath);
     }
@@ -41,7 +42,8 @@ public class MaintenanceService {
     public void vacuumDeltaTables(SparkSession spark, String rootPath) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table vacuum for tables under root path {}", rootPath);
         List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath);
-        logger.info("Found delta tables at: {}", java.lang.String.join(", ", (deltaTablePaths)));
+        logger.info("Found {} delta tables", deltaTablePaths.size());
+        logger.debug("Found delta tables at the following paths: {}", String.join(", ", (deltaTablePaths)));
         attemptAll(deltaTablePaths, path -> storageService.vacuum(spark, path));
         logger.info("Finished delta table vacuum for tables under root path: {}", rootPath);
     }
