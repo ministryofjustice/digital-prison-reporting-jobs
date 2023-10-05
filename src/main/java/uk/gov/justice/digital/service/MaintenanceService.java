@@ -70,7 +70,7 @@ public class MaintenanceService {
             }
         }
         if(numFailed != 0) {
-            java.lang.String msg = format("Finished maintenance operation with %d failures", numFailed);
+            String msg = format("Finished maintenance operation with %d failures", numFailed);
             logger.error(msg);
             throw new MaintenanceOperationFailedException(msg);
         }

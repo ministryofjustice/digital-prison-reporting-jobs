@@ -50,15 +50,12 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    public void shouldTryToCompactAllTablesWhenCompactionFailsWithException() throws Exception {
+    public void shouldTryToCompactAllTablesWhenCompactionFailsWithConcurrentDeleteReadException() throws Exception {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath)).thenReturn(deltaTablePaths);
 
-        doThrow(new DataStorageException("Failed compaction"))
-                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), eq(table1));
-
-        doThrow(new RuntimeException(
-                "Failed compaction"))
-                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), eq(table2));
+        // This is a specific Exception we have seen and want to handle
+        doThrow(new ConcurrentDeleteReadException("Failed compaction"))
+                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), anyString());
 
         assertThrows(MaintenanceOperationFailedException.class, () -> underTest.compactDeltaTables(mockSparkSession, rootPath));
         verify(mockDataStorageService).compactDeltaTable(mockSparkSession, table1);
@@ -67,11 +64,16 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    public void shouldTryToCompactAllTablesWhenCompactionFailsWithConcurrentDeleteReadException() throws Exception {
+    public void shouldTryToCompactAllTablesWhenCompactionFailsWithException() throws Exception {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath)).thenReturn(deltaTablePaths);
 
-        doThrow(new ConcurrentDeleteReadException("Failed compaction"))
-                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), anyString());
+        // make sure we handle checked and unchecked exceptions in general
+        doThrow(new DataStorageException("Failed compaction"))
+                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), eq(table1));
+
+        doThrow(new RuntimeException(
+                "Failed compaction"))
+                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), eq(table2));
 
         assertThrows(MaintenanceOperationFailedException.class, () -> underTest.compactDeltaTables(mockSparkSession, rootPath));
         verify(mockDataStorageService).compactDeltaTable(mockSparkSession, table1);
