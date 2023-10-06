@@ -24,26 +24,31 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
         int depthLimit = 1;
         assertMultipleParquetFilesPrecondition(offendersTablePath);
         assertMultipleParquetFilesPrecondition(offenderBookingsTablePath);
+        assertMultipleParquetFilesPrecondition(agencyLocationsTablePathDepth2);
+        assertMultipleParquetFilesPrecondition(internalLocationsTablePathDepth3);
         // Compaction should add a single new parquet file containing all the data from the original files.
         // It won't remove the old parquet files until a vacuum occurs and the data has passed its retention period.
-        long originalNumberOfParquetFilesOffenders = countParquetFiles(offendersTablePath);
-        long originalNumberOfParquetFilesOffenderBookings = countParquetFiles(offenderBookingsTablePath);
-
-
-        long expectedNumberOfParquetFilesAfterCompactionOffenders = originalNumberOfParquetFilesOffenders + 1;
-        long expectedNumberOfParquetFilesAfterCompactionOffenderBookings = originalNumberOfParquetFilesOffenderBookings + 1;
+        long originalNumFilesOffenders = countParquetFiles(offendersTablePath);
+        long originalNumFilesOffenderBookings = countParquetFiles(offenderBookingsTablePath);
+        long originalNumFilesAgencyLocations = countParquetFiles(agencyLocationsTablePathDepth2);
+        long originalNumFilesInternalLocations = countParquetFiles(internalLocationsTablePathDepth3);
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
         // In this test we verify compaction using both the effect on number of files and the reported delta operations.
         // In other tests we just check the delta operations in metadata.
-        assertEquals(expectedNumberOfParquetFilesAfterCompactionOffenders, countParquetFiles(offendersTablePath));
-        assertEquals(expectedNumberOfParquetFilesAfterCompactionOffenderBookings, countParquetFiles(offenderBookingsTablePath));
+        long expectedNumFilesAfterOffenders = originalNumFilesOffenders + 1;
+        long expectedNumbFilesAfterOffenderBookings = originalNumFilesOffenderBookings + 1;
+
+        assertEquals(expectedNumFilesAfterOffenders, countParquetFiles(offendersTablePath));
+        assertEquals(expectedNumbFilesAfterOffenderBookings, countParquetFiles(offenderBookingsTablePath));
+        assertEquals(originalNumFilesAgencyLocations, countParquetFiles(agencyLocationsTablePathDepth2));
+        assertEquals(originalNumFilesInternalLocations, countParquetFiles(internalLocationsTablePathDepth3));
 
         assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
         assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
-        assertEquals(0, numberOfCompactions(agencyLocationsTablePath.toString()));
-        assertEquals(0, numberOfCompactions(internalLocationsTablePath.toString()));
+        assertEquals(0, numberOfCompactions(agencyLocationsTablePathDepth2.toString()));
+        assertEquals(0, numberOfCompactions(internalLocationsTablePathDepth3.toString()));
     }
 
     @Test
@@ -54,8 +59,8 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
 
         assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
         assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
-        assertEquals(1, numberOfCompactions(agencyLocationsTablePath.toString()));
-        assertEquals(0, numberOfCompactions(internalLocationsTablePath.toString()));
+        assertEquals(1, numberOfCompactions(agencyLocationsTablePathDepth2.toString()));
+        assertEquals(0, numberOfCompactions(internalLocationsTablePathDepth3.toString()));
     }
 
     @Test
@@ -66,7 +71,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
 
         assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
         assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
-        assertEquals(1, numberOfCompactions(agencyLocationsTablePath.toString()));
-        assertEquals(1, numberOfCompactions(internalLocationsTablePath.toString()));
+        assertEquals(1, numberOfCompactions(agencyLocationsTablePathDepth2.toString()));
+        assertEquals(1, numberOfCompactions(internalLocationsTablePathDepth3.toString()));
     }
 }

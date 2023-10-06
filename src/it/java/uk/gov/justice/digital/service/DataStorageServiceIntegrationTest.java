@@ -18,7 +18,7 @@ public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
         setupNonDeltaFilesAndDirs();
     }
     @Test
-    public void shouldListOnlyDeltaTablePathsInRoot() throws Exception {
+    public void shouldListDeltaTablePathsInRootIgnoringNonDeltaDirsAndFiles() throws Exception {
         int depthLimitToRecurseDeltaTables = 1;
         List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
         // Should ignore non-delta table directories and files in the rootPath

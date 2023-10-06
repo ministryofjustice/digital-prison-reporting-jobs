@@ -20,13 +20,13 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
 
         assertMultipleParquetFilesPrecondition(offendersTablePath);
         assertMultipleParquetFilesPrecondition(offenderBookingsTablePath);
-        assertMultipleParquetFilesPrecondition(agencyLocationsTablePath);
-        assertMultipleParquetFilesPrecondition(internalLocationsTablePath);
+        assertMultipleParquetFilesPrecondition(agencyLocationsTablePathDepth2);
+        assertMultipleParquetFilesPrecondition(internalLocationsTablePathDepth3);
 
         setDeltaTableRetentionToZero(offendersTablePath.toString());
         setDeltaTableRetentionToZero(offenderBookingsTablePath.toString());
-        setDeltaTableRetentionToZero(agencyLocationsTablePath.toString());
-        setDeltaTableRetentionToZero(internalLocationsTablePath.toString());
+        setDeltaTableRetentionToZero(agencyLocationsTablePathDepth2.toString());
+        setDeltaTableRetentionToZero(internalLocationsTablePathDepth3.toString());
     }
 
     @Test
@@ -40,8 +40,8 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
         assertEquals(1, countParquetFiles(offendersTablePath));
         assertEquals(1, countParquetFiles(offenderBookingsTablePath));
         // The tables in subdirectories have not been compacted
-        assertTrue(countParquetFiles(agencyLocationsTablePath) > 1);
-        assertTrue(countParquetFiles(internalLocationsTablePath) > 1);
+        assertTrue(countParquetFiles(agencyLocationsTablePathDepth2) > 1);
+        assertTrue(countParquetFiles(internalLocationsTablePathDepth3) > 1);
     }
 
     @Test
@@ -54,9 +54,9 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
         // The tables in the root and 2nd level have been compacted
         assertEquals(1, countParquetFiles(offendersTablePath));
         assertEquals(1, countParquetFiles(offenderBookingsTablePath));
-        assertEquals(1, countParquetFiles(agencyLocationsTablePath));
+        assertEquals(1, countParquetFiles(agencyLocationsTablePathDepth2));
         // The tables in subdirectories below depth 2 have not been compacted
-        assertTrue(countParquetFiles(internalLocationsTablePath) > 1);
+        assertTrue(countParquetFiles(internalLocationsTablePathDepth3) > 1);
     }
 
     @Test
@@ -69,8 +69,8 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
         // The tables have all been compacted down to level 3 subdirectories
         assertEquals(1, countParquetFiles(offendersTablePath));
         assertEquals(1, countParquetFiles(offenderBookingsTablePath));
-        assertEquals(1, countParquetFiles(agencyLocationsTablePath));
-        assertEquals(1, countParquetFiles(internalLocationsTablePath));
+        assertEquals(1, countParquetFiles(agencyLocationsTablePathDepth2));
+        assertEquals(1, countParquetFiles(internalLocationsTablePathDepth3));
     }
 
 }

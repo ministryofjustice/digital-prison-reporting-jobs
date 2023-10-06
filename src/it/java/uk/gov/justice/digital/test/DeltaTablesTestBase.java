@@ -20,16 +20,16 @@ public class DeltaTablesTestBase extends BaseSparkTest {
     protected Path rootPath;
     protected Path offendersTablePath;
     protected Path offenderBookingsTablePath;
-    protected Path agencyLocationsTablePath;
-    protected Path internalLocationsTablePath;
+    protected Path agencyLocationsTablePathDepth2;
+    protected Path internalLocationsTablePathDepth3;
 
 
     protected void setupDeltaTablesFixture() {
         SparkTestHelpers helpers = new SparkTestHelpers(spark);
         offendersTablePath = rootPath.resolve("offenders").toAbsolutePath();
         offenderBookingsTablePath = rootPath.resolve("offender-bookings").toAbsolutePath();
-        agencyLocationsTablePath = rootPath.resolve("another-dir-depth-1").resolve("agency-locations").toAbsolutePath();
-        internalLocationsTablePath = rootPath.resolve("another-dir-depth-1").resolve("yet-another-dir-depth-2").resolve("internal-locations").toAbsolutePath();
+        agencyLocationsTablePathDepth2 = rootPath.resolve("another-dir-depth-1").resolve("agency-locations").toAbsolutePath();
+        internalLocationsTablePathDepth3 = rootPath.resolve("another-dir-depth-1").resolve("yet-another-dir-depth-2").resolve("internal-locations").toAbsolutePath();
         // repartition to force the data in the delta table to have multiple small files at the start of tests
         int largeNumPartitions = 5;
         Dataset<Row> offenders = helpers.readSampleParquet(OFFENDERS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
@@ -38,9 +38,9 @@ public class DeltaTablesTestBase extends BaseSparkTest {
         helpers.overwriteDeltaTable(offenderBookingsTablePath.toString(), offenderBookings);
 
         Dataset<Row> agencyLocations = helpers.readSampleParquet(AGENCY_LOCATIONS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
-        helpers.overwriteDeltaTable(agencyLocationsTablePath.toString(), agencyLocations);
+        helpers.overwriteDeltaTable(agencyLocationsTablePathDepth2.toString(), agencyLocations);
         Dataset<Row> internalLocations = helpers.readSampleParquet(INTERNAL_LOCATIONS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
-        helpers.overwriteDeltaTable(internalLocationsTablePath.toString(), internalLocations);
+        helpers.overwriteDeltaTable(internalLocationsTablePathDepth3.toString(), internalLocations);
     }
 
     /**
