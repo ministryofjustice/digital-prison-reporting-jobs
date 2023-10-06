@@ -46,6 +46,7 @@ public class JobArguments {
     public static final String REDSHIFT_SECRETS_NAME = "dpr.redshift.secrets.name";
     public static final String DATA_MART_DB_NAME = "dpr.datamart.db.name";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
+    public static final String MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH = "dpr.maintenance.listtable.recurseMaxDepth";
     public static final String CHECKPOINT_LOCATION = "checkpoint.location";
     public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
 
@@ -163,6 +164,16 @@ public class JobArguments {
 
     public String getMaintenanceTablesRootPath() {
         return getArgument(MAINTENANCE_TABLES_ROOT_PATH);
+    }
+
+    public int getMaintenanceListTableRecurseMaxDepth() {
+        // The Domain layer only has a depth of 2, with tables nested under domains
+        // e.g. s3://dpr-domain-preproduction/establishment/living_unit/
+        int defaultRecurseDepth = 2;
+        return Optional
+                .ofNullable(config.get(MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH))
+                .map(Integer::parseInt)
+                .orElse(defaultRecurseDepth);
     }
 
     public String getCheckpointLocation() {

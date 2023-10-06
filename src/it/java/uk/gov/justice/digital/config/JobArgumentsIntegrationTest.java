@@ -35,6 +35,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.KINESIS_STARTING_POSITION, "trim_horizon" },
             { JobArguments.BATCH_MAX_RETRIES, "5" },
             { JobArguments.LOG_LEVEL, "debug" },
+            { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, "1" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -61,6 +62,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.KINESIS_STARTING_POSITION, validArguments.getKinesisStartingPosition() },
                 { JobArguments.BATCH_MAX_RETRIES, Integer.toString(validArguments.getBatchMaxRetries()) },
                 { JobArguments.LOG_LEVEL, validArguments.getLogLevel().toString().toLowerCase() },
+                { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, Integer.toString(validArguments.getMaintenanceListTableRecurseMaxDepth()) },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);

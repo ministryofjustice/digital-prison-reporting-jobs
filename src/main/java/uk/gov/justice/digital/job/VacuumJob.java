@@ -48,7 +48,11 @@ public class VacuumJob implements Runnable {
         try {
             logger.info("Vacuum running");
             SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments.getLogLevel());
-            maintenanceService.vacuumDeltaTables(spark, jobArguments.getMaintenanceTablesRootPath());
+
+            String rootPath = jobArguments.getMaintenanceTablesRootPath();
+            int maxDepth = jobArguments.getMaintenanceListTableRecurseMaxDepth();
+
+            maintenanceService.vacuumDeltaTables(spark, rootPath, maxDepth);
             logger.info("Vacuum finished");
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);

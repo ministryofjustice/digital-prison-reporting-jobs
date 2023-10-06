@@ -48,7 +48,11 @@ public class CompactionJob implements Runnable {
         try {
             logger.info("Compaction running");
             SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments.getLogLevel());
-            maintenanceService.compactDeltaTables(spark, jobArguments.getMaintenanceTablesRootPath());
+
+            String rootPath = jobArguments.getMaintenanceTablesRootPath();
+            int maxDepth = jobArguments.getMaintenanceListTableRecurseMaxDepth();
+
+            maintenanceService.compactDeltaTables(spark, rootPath, maxDepth);
             logger.info("Compaction finished");
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);

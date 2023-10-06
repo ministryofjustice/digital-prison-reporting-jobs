@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.service;
 
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
@@ -12,16 +12,33 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
     private static final DataStorageService underTest = new DataStorageService();
 
-    @BeforeAll
-    public static void setupTest() throws Exception {
+    @BeforeEach
+    public void setupTest() throws Exception {
         setupDeltaTablesFixture();
         setupNonDeltaFilesAndDirs();
     }
     @Test
     public void shouldListOnlyDeltaTablePaths() throws Exception {
-        List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString());
+        int depthLimitToRecurseDeltaTables = 1;
+        List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
         // Should ignore non-delta table directories and files in the rootPath
         assertEquals(2, deltaTables.size());
+    }
+
+    @Test
+    public void shouldRecurseToListOnlyDeltaTablePaths() throws Exception {
+        int depthLimitToRecurseDeltaTables = 2;
+        List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
+        // Should ignore non-delta table directories and files in the rootPath
+        assertEquals(3, deltaTables.size());
+    }
+
+    @Test
+    public void shouldRecurseFurtherToListOnlyDeltaTablePaths() throws Exception {
+        int depthLimitToRecurseDeltaTables = 3;
+        List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
+        // Should ignore non-delta table directories and files in the rootPath
+        assertEquals(4, deltaTables.size());
     }
 
     @Test

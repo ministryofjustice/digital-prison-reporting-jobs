@@ -18,8 +18,10 @@ import javax.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -279,21 +281,16 @@ public class DataStorageService {
     }
 
     /**
-     * List all Delta table paths immediately below rootPath
+     * List all Delta table paths below rootPath recursively to the provided depth limit
      * @return The list of delta table paths (including hadoop filesystem prefix, e.g. s3://)
      */
-    public List<String> listDeltaTablePaths(SparkSession spark, String rootPath) throws DataStorageException {
+    public List<String> listDeltaTablePaths(SparkSession spark, String rootPath, int depthLimit) throws DataStorageException {
         logger.info("Listing all delta table paths below: {}", rootPath);
         try {
             val fs = FileSystem.get(new URI(rootPath), spark.sparkContext().hadoopConfiguration());
-            val path = new Path(rootPath);
-            return Arrays.stream(fs.listStatus(path))
-                    .filter(FileStatus::isDirectory)
-                    .map(FileStatus::getPath)
-                    .map(Path::toUri)
-                    .map(URI::toString)
-                    .filter(tablePath -> DeltaTable.isDeltaTable(spark, tablePath))
-                    .collect(Collectors.toList());
+            List<String> deltaTablePathAccumulator = new ArrayList<>();
+            collectDeltaTablePaths(spark, fs, rootPath, depthLimit, deltaTablePathAccumulator);
+            return deltaTablePathAccumulator;
         } catch (URISyntaxException e) {
             val errorMessage = format("Badly formatted root path when listing delta tables: %s", rootPath);
             logger.error(errorMessage);
@@ -303,6 +300,37 @@ public class DataStorageService {
             logger.error(errorMessage);
             throw new DataStorageException(errorMessage, e);
         }
+    }
+
+    /**
+     * Helper to recurse all delta table paths to given depth.
+     * Uses an accumulator rather than keeping intermediate results on the stack.
+     */
+    private void collectDeltaTablePaths(SparkSession spark, FileSystem fs, String rootPath, int depthLimit, List<String> accumulator) throws IOException {
+        logger.debug("Listing all delta table paths below: {}", rootPath);
+        val path = new Path(rootPath);
+
+        Map<Boolean, List<String>> deltaTablesAndDirs = Arrays.stream(fs.listStatus(path))
+                .filter(FileStatus::isDirectory)
+                .map(FileStatus::getPath)
+                .map(Path::toUri)
+                .map(URI::toString)
+                .collect(Collectors.partitioningBy(tablePath -> DeltaTable.isDeltaTable(spark, tablePath)));
+
+        val deltaTables = deltaTablesAndDirs.get(true);
+        accumulator.addAll(deltaTables);
+        logger.debug("Found {} delta tables under {}", deltaTables.size(), rootPath);
+
+        if(depthLimit > 1) {
+            val otherDirs = deltaTablesAndDirs.get(false);
+            logger.debug("Found {} directories that are not delta tables to recurse under {}", otherDirs.size(), rootPath);
+            for(String dir: otherDirs) {
+                collectDeltaTablePaths(spark, fs, dir, depthLimit - 1, accumulator);
+            }
+        } else {
+            logger.debug("Reached depth limit. Skipping recursing non-delta table directories under path {}", rootPath);
+        }
+
     }
 
 

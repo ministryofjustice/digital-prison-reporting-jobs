@@ -1,25 +1,27 @@
 package uk.gov.justice.digital.service;
 
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
 class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
 
-    private static MaintenanceService underTest;
+    private MaintenanceService underTest;
 
-    @BeforeAll
-    public static void setupTest() throws Exception {
+    @BeforeEach
+    public void setupTest() throws Exception {
         setupDeltaTablesFixture();
         setupNonDeltaFilesAndDirs();
         underTest = new MaintenanceService(new DataStorageService());
     }
 
     @Test
-    public void shouldCompactAllDeltaTables() throws Exception {
+    public void shouldCompactDeltaTableWhenRecursingDepth1() throws Exception {
+        int depthLimit = 1;
         assertMultipleParquetFilesPrecondition(offendersTablePath);
         assertMultipleParquetFilesPrecondition(offenderBookingsTablePath);
         // Compaction should add a single new parquet file containing all the data from the original files.
@@ -27,12 +29,47 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
         long originalNumberOfParquetFilesOffenders = countParquetFiles(offendersTablePath);
         long originalNumberOfParquetFilesOffenderBookings = countParquetFiles(offenderBookingsTablePath);
 
+
         long expectedNumberOfParquetFilesAfterCompactionOffenders = originalNumberOfParquetFilesOffenders + 1;
         long expectedNumberOfParquetFilesAfterCompactionOffenderBookings = originalNumberOfParquetFilesOffenderBookings + 1;
 
-        underTest.compactDeltaTables(spark, rootPath.toString());
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
         assertEquals(expectedNumberOfParquetFilesAfterCompactionOffenders, countParquetFiles(offendersTablePath));
         assertEquals(expectedNumberOfParquetFilesAfterCompactionOffenderBookings, countParquetFiles(offenderBookingsTablePath));
+
+        assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
+        assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
+        assertEquals(0, numberOfCompactions(agencyLocationsTablePath.toString()));
+        assertEquals(0, numberOfCompactions(internalLocationsTablePath.toString()));
+    }
+
+    @Test
+    public void shouldCompactDeltaTablesWhenRecursingDepth2() throws Exception {
+        int depthLimit = 2;
+
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
+
+        assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
+        assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
+        assertEquals(1, numberOfCompactions(agencyLocationsTablePath.toString()));
+        assertEquals(0, numberOfCompactions(internalLocationsTablePath.toString()));
+    }
+
+    @Test
+    public void shouldCompactDeltaTablesWhenRecursingDepth3() throws Exception {
+        int depthLimit = 3;
+
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
+
+        assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
+        assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
+        assertEquals(1, numberOfCompactions(agencyLocationsTablePath.toString()));
+        assertEquals(1, numberOfCompactions(internalLocationsTablePath.toString()));
+    }
+
+    private static long numberOfCompactions(String tablePath) {
+        return spark.sql(format("DESCRIBE HISTORY delta.`%s`", tablePath))
+                .where("operation = 'OPTIMIZE'").count();
     }
 }
