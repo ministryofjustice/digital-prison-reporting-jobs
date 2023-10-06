@@ -52,6 +52,14 @@ class MaintenanceServiceTest {
     }
 
     @Test
+    public void compactShouldListTablePaths() throws Exception {
+        underTest.compactDeltaTables(mockSparkSession, rootPath, 1);
+        verify(mockDataStorageService).listDeltaTablePaths(mockSparkSession, rootPath, 1);
+        underTest.compactDeltaTables(mockSparkSession, "s3://anotherpath", 2);
+        verify(mockDataStorageService).listDeltaTablePaths(mockSparkSession, "s3://anotherpath", 2);
+    }
+
+    @Test
     public void shouldTryToCompactAllTablesWhenCompactionFailsWithConcurrentDeleteReadException() throws Exception {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)).thenReturn(deltaTablePaths);
 
@@ -90,6 +98,14 @@ class MaintenanceServiceTest {
         verify(mockDataStorageService).vacuum(mockSparkSession, table1);
         verify(mockDataStorageService).vacuum(mockSparkSession, table2);
         verify(mockDataStorageService).vacuum(mockSparkSession, table3);
+    }
+
+    @Test
+    public void vacuumShouldListTablePaths() throws Exception {
+        underTest.vacuumDeltaTables(mockSparkSession, rootPath, 1);
+        verify(mockDataStorageService).listDeltaTablePaths(mockSparkSession, rootPath, 1);
+        underTest.vacuumDeltaTables(mockSparkSession, "s3://anotherpath", 2);
+        verify(mockDataStorageService).listDeltaTablePaths(mockSparkSession, "s3://anotherpath", 2);
     }
 
     @Test

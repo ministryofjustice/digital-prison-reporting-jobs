@@ -28,8 +28,8 @@ public class DeltaTablesTestBase extends BaseSparkTest {
         SparkTestHelpers helpers = new SparkTestHelpers(spark);
         offendersTablePath = rootPath.resolve("offenders").toAbsolutePath();
         offenderBookingsTablePath = rootPath.resolve("offender-bookings").toAbsolutePath();
-        agencyLocationsTablePath = rootPath.resolve("another-dir").resolve("agency-locations").toAbsolutePath();
-        internalLocationsTablePath = rootPath.resolve("another-dir").resolve("yet-another-dir").resolve("internal-locations").toAbsolutePath();
+        agencyLocationsTablePath = rootPath.resolve("another-dir-depth-1").resolve("agency-locations").toAbsolutePath();
+        internalLocationsTablePath = rootPath.resolve("another-dir-depth-1").resolve("yet-another-dir-depth-2").resolve("internal-locations").toAbsolutePath();
         // repartition to force the data in the delta table to have multiple small files at the start of tests
         int largeNumPartitions = 5;
         Dataset<Row> offenders = helpers.readSampleParquet(OFFENDERS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
@@ -66,6 +66,11 @@ public class DeltaTablesTestBase extends BaseSparkTest {
                 countParquetFiles(path) > 1,
                 "Test pre-condition failed - we want to start with multiple parquet files in this test"
         );
+    }
+
+    protected static long numberOfCompactions(String tablePath) {
+        return spark.sql(format("DESCRIBE HISTORY delta.`%s`", tablePath))
+                .where("operation = 'OPTIMIZE'").count();
     }
 
 }

@@ -303,26 +303,27 @@ public class DataStorageService {
     }
 
     /**
-     * Helper to recurse all delta table paths to given depth.
+     * Helper to recurse all delta table paths depth-first to given depth.
      * Uses an accumulator rather than keeping intermediate results on the stack.
      */
     private void collectDeltaTablePaths(SparkSession spark, FileSystem fs, String rootPath, int depthLimit, List<String> accumulator) throws IOException {
         logger.debug("Listing all delta table paths below: {}", rootPath);
         val path = new Path(rootPath);
 
-        Map<Boolean, List<String>> deltaTablesAndDirs = Arrays.stream(fs.listStatus(path))
+        Map<Boolean, List<String>> deltaTablesAndOtherDirs = Arrays.stream(fs.listStatus(path))
                 .filter(FileStatus::isDirectory)
                 .map(FileStatus::getPath)
                 .map(Path::toUri)
                 .map(URI::toString)
                 .collect(Collectors.partitioningBy(tablePath -> DeltaTable.isDeltaTable(spark, tablePath)));
 
-        val deltaTables = deltaTablesAndDirs.get(true);
+        val deltaTables = deltaTablesAndOtherDirs.get(true);
         accumulator.addAll(deltaTables);
         logger.debug("Found {} delta tables under {}", deltaTables.size(), rootPath);
 
         if(depthLimit > 1) {
-            val otherDirs = deltaTablesAndDirs.get(false);
+            // We can keep recursing so let's look in all the directories at this level
+            val otherDirs = deltaTablesAndOtherDirs.get(false);
             logger.debug("Found {} directories that are not delta tables to recurse under {}", otherDirs.size(), rootPath);
             for(String dir: otherDirs) {
                 collectDeltaTablePaths(spark, fs, dir, depthLimit - 1, accumulator);

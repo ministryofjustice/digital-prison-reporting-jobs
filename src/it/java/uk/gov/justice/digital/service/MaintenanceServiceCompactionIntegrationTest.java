@@ -35,6 +35,8 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
+        // In this test we verify compaction using both the effect on number of files and the reported delta operations.
+        // In other tests we just check the delta operations in metadata.
         assertEquals(expectedNumberOfParquetFilesAfterCompactionOffenders, countParquetFiles(offendersTablePath));
         assertEquals(expectedNumberOfParquetFilesAfterCompactionOffenderBookings, countParquetFiles(offenderBookingsTablePath));
 
@@ -66,10 +68,5 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
         assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
         assertEquals(1, numberOfCompactions(agencyLocationsTablePath.toString()));
         assertEquals(1, numberOfCompactions(internalLocationsTablePath.toString()));
-    }
-
-    private static long numberOfCompactions(String tablePath) {
-        return spark.sql(format("DESCRIBE HISTORY delta.`%s`", tablePath))
-                .where("operation = 'OPTIMIZE'").count();
     }
 }
