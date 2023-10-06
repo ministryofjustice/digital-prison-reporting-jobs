@@ -25,11 +25,11 @@ public class MaintenanceService {
     }
 
     /**
-     * Runs a delta lake compaction on all delta lake tables immediately below rootPath
+     * Runs a delta lake compaction on all delta lake tables recursively below rootPath with the given depth limit
      */
-    public void compactDeltaTables(SparkSession spark, String rootPath) throws DataStorageException, MaintenanceOperationFailedException {
+    public void compactDeltaTables(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table compaction for tables under root path: {}", rootPath);
-        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath);
+        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
         logger.info("Found {} delta tables", deltaTablePaths.size());
         logger.debug("Found delta tables at the following paths: {}", String.join(", ", (deltaTablePaths)));
         attemptAll(deltaTablePaths, path -> storageService.compactDeltaTable(spark, path));
@@ -37,11 +37,11 @@ public class MaintenanceService {
     }
 
     /**
-     * Runs a delta lake vacuum on all delta lake tables immediately below rootPath
+     * Runs a delta lake vacuum on all delta lake tables recursively below rootPath with the given depth limit
      */
-    public void vacuumDeltaTables(SparkSession spark, String rootPath) throws DataStorageException, MaintenanceOperationFailedException {
+    public void vacuumDeltaTables(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table vacuum for tables under root path {}", rootPath);
-        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath);
+        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
         logger.info("Found {} delta tables", deltaTablePaths.size());
         logger.debug("Found delta tables at the following paths: {}", String.join(", ", (deltaTablePaths)));
         attemptAll(deltaTablePaths, path -> storageService.vacuum(spark, path));

@@ -26,7 +26,10 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DataStorageServiceTest extends BaseSparkTest {
 
+    private static final int DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES = 1;
+
     private static final DataStorageService underTest = new DataStorageService();
+
 
     private MockedStatic<DeltaTable> mockDeltaTableStatic;
 
@@ -198,14 +201,14 @@ class DataStorageServiceTest extends BaseSparkTest {
     @Test
     public void shouldThrowForBadlyFormattedDeltaTablePath() {
         assertThrows(DataStorageException.class, () ->
-                underTest.listDeltaTablePaths(spark, "://some-path")
+                underTest.listDeltaTablePaths(spark, "://some-path", DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)
         );
     }
 
     @Test
     public void shouldThrowWhenDeltaTablePathDoesNotExist() {
         assertThrows(DataStorageException.class, () ->
-            underTest.listDeltaTablePaths(spark, "/doesnotexist")
+            underTest.listDeltaTablePaths(spark, "/doesnotexist", DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)
         );
     }
 

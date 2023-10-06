@@ -17,27 +17,36 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.*;
  */
 public class DeltaTablesTestBase extends BaseSparkTest {
     @TempDir
-    protected static Path rootPath;
-    protected static Path offendersTablePath;
-    protected static Path offenderBookingsTablePath;
+    protected Path rootPath;
+    protected Path offendersTablePath;
+    protected Path offenderBookingsTablePath;
+    protected Path agencyLocationsTablePathDepth2;
+    protected Path internalLocationsTablePathDepth3;
 
 
-    protected static void setupDeltaTablesFixture() {
+    protected void setupDeltaTablesFixture() {
         SparkTestHelpers helpers = new SparkTestHelpers(spark);
         offendersTablePath = rootPath.resolve("offenders").toAbsolutePath();
         offenderBookingsTablePath = rootPath.resolve("offender-bookings").toAbsolutePath();
+        agencyLocationsTablePathDepth2 = rootPath.resolve("another-dir-depth-1").resolve("agency-locations").toAbsolutePath();
+        internalLocationsTablePathDepth3 = rootPath.resolve("another-dir-depth-1").resolve("yet-another-dir-depth-2").resolve("internal-locations").toAbsolutePath();
         // repartition to force the data in the delta table to have multiple small files at the start of tests
         int largeNumPartitions = 5;
         Dataset<Row> offenders = helpers.readSampleParquet(OFFENDERS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
         helpers.overwriteDeltaTable(offendersTablePath.toString(), offenders);
         Dataset<Row> offenderBookings = helpers.readSampleParquet(OFFENDER_BOOKINGS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
         helpers.overwriteDeltaTable(offenderBookingsTablePath.toString(), offenderBookings);
+
+        Dataset<Row> agencyLocations = helpers.readSampleParquet(AGENCY_LOCATIONS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
+        helpers.overwriteDeltaTable(agencyLocationsTablePathDepth2.toString(), agencyLocations);
+        Dataset<Row> internalLocations = helpers.readSampleParquet(INTERNAL_LOCATIONS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
+        helpers.overwriteDeltaTable(internalLocationsTablePathDepth3.toString(), internalLocations);
     }
 
     /**
      * Adds some extraneous non-delta table files and directories in to the root path
      */
-    protected static void setupNonDeltaFilesAndDirs() throws IOException {
+    protected void setupNonDeltaFilesAndDirs() throws IOException {
         assertTrue(rootPath.resolve("file-to-be-ignored.parquet").toFile().createNewFile());
         assertTrue(rootPath.resolve("dir-to-be-ignored").toFile().mkdirs());
         assertTrue(rootPath.resolve("dir-to-be-ignored").resolve("file-to-be-ignored2.parquet").toFile().createNewFile());
@@ -57,6 +66,11 @@ public class DeltaTablesTestBase extends BaseSparkTest {
                 countParquetFiles(path) > 1,
                 "Test pre-condition failed - we want to start with multiple parquet files in this test"
         );
+    }
+
+    protected static long numberOfCompactions(String tablePath) {
+        return spark.sql(format("DESCRIBE HISTORY delta.`%s`", tablePath))
+                .where("operation = 'OPTIMIZE'").count();
     }
 
 }
