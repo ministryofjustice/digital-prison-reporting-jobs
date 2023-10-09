@@ -40,7 +40,7 @@ ext {
     micronautVersion = '3.8.7'
     mockitoVersion = '4.11.0'
     sparkVersion = '3.3.0'
-    hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.3' downgraded for Glue 4.0
+    hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.1' downgraded for Glue 4.0
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
     awsSdkVersion = '1.12.425'
     glueApiVersion = '4.0.0'

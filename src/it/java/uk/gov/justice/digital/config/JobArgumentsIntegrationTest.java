@@ -5,6 +5,9 @@ import io.micronaut.context.env.CommandLinePropertySource;
 import io.micronaut.context.env.Environment;
 import lombok.val;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +36,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.CHECKPOINT_LOCATION, "s3://somepath/checkpoint/app-name" },
             { JobArguments.KINESIS_STREAM_ARN, "arn:aws:kinesis:eu-west-2:123456:stream/dpr-kinesis-ingestor-env" },
             { JobArguments.KINESIS_STARTING_POSITION, "trim_horizon" },
+            { JobArguments.ADD_IDLE_TIME_BETWEEN_READS, "true" },
             { JobArguments.BATCH_MAX_RETRIES, "5" },
             { JobArguments.LOG_LEVEL, "debug" },
             { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, "1" },
@@ -60,6 +64,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.CHECKPOINT_LOCATION, validArguments.getCheckpointLocation() },
                 { JobArguments.KINESIS_STREAM_ARN, validArguments.getKinesisStreamArn() },
                 { JobArguments.KINESIS_STARTING_POSITION, validArguments.getKinesisStartingPosition() },
+                { JobArguments.ADD_IDLE_TIME_BETWEEN_READS, validArguments.addIdleTimeBetweenReads() },
                 { JobArguments.BATCH_MAX_RETRIES, Integer.toString(validArguments.getBatchMaxRetries()) },
                 { JobArguments.LOG_LEVEL, validArguments.getLogLevel().toString().toLowerCase() },
                 { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, Integer.toString(validArguments.getMaintenanceListTableRecurseMaxDepth()) },
@@ -116,6 +121,24 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.LOG_LEVEL, "some level");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals("WARN", jobArguments.getLogLevel().toString().toUpperCase());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "not a boolean", "1", "0", "" })
+    public void shouldDefaultToFalseForNonBooleanValueForAddIdleTimeBetweenReads(String input) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.ADD_IDLE_TIME_BETWEEN_READS, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("false", jobArguments.addIdleTimeBetweenReads());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldConvertValidValueForAddIdleTimeBetweenReadsToBoolean(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.ADD_IDLE_TIME_BETWEEN_READS, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected.toString(), jobArguments.addIdleTimeBetweenReads());
     }
 
     @Test

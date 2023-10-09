@@ -46,6 +46,7 @@ public class JobArguments {
     // (where Z represents a UTC timezone offset with a +/-. For example "2023-04-04T08:00:00-04:00").
     // We default to trim_horizon to avoid data loss
     public static final String KINESIS_STARTING_POSITION_DEFAULT = "trim_horizon";
+    public static final String ADD_IDLE_TIME_BETWEEN_READS = "dpr.add.idle.time.between.reads";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
@@ -122,6 +123,13 @@ public class JobArguments {
 
     public String getKinesisStartingPosition() {
         return getArgument(KINESIS_STARTING_POSITION, KINESIS_STARTING_POSITION_DEFAULT);
+    }
+
+    public String addIdleTimeBetweenReads() {
+        return String.valueOf(
+                Optional.of(config.get(ADD_IDLE_TIME_BETWEEN_READS).toLowerCase())
+                .map(Boolean::parseBoolean)
+                .orElse(false));
     }
 
     public String getKinesisStreamArn() {
