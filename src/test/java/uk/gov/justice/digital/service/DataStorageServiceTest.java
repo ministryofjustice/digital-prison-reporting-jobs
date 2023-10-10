@@ -25,6 +25,7 @@ import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import java.nio.file.Path;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,7 +46,7 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     private static final int DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES = 1;
 
-    private static final DataStorageService underTest = new DataStorageService(new JobArguments());
+    private static final DataStorageService underTest = new DataStorageService(new JobArguments(Collections.emptyMap()));
 
 
     private MockedStatic<DeltaTable> mockDeltaTableStatic;

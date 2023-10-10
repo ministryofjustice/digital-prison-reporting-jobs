@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
+import java.util.Collections;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
@@ -17,7 +19,7 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     public void setupTest() throws Exception {
         setupDeltaTablesFixture();
         setupNonDeltaFilesAndDirs();
-        underTest = new MaintenanceService(new DataStorageService(new JobArguments()));
+        underTest = new MaintenanceService(new DataStorageService(new JobArguments(Collections.emptyMap())));
 
         assertMultipleParquetFilesPrecondition(offendersTablePath);
         assertMultipleParquetFilesPrecondition(offenderBookingsTablePath);

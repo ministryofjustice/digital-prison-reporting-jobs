@@ -5,13 +5,14 @@ import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
 public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
-    private static final DataStorageService underTest = new DataStorageService(new JobArguments());
+    private static final DataStorageService underTest = new DataStorageService(new JobArguments(Collections.emptyMap()));
 
     @BeforeEach
     public void setupTest() throws Exception {
