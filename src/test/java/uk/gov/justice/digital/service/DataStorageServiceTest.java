@@ -1,5 +1,9 @@
 package uk.gov.justice.digital.service;
 
+import io.delta.exceptions.ConcurrentAppendException;
+import io.delta.tables.DeltaMergeBuilder;
+import io.delta.tables.DeltaMergeMatchedActionBuilder;
+import io.delta.tables.DeltaMergeNotMatchedActionBuilder;
 import io.delta.tables.DeltaOptimizeBuilder;
 import io.delta.tables.DeltaTable;
 import lombok.val;
@@ -16,13 +20,25 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import java.nio.file.Path;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DataStorageServiceTest extends BaseSparkTest {
@@ -45,6 +61,13 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @Mock
     private DataFrameWriter<Row> mockDataFrameWriter;
+
+    @Mock
+    private DeltaMergeBuilder mockDeltaMergeBuilder;
+    @Mock
+    private DeltaMergeNotMatchedActionBuilder mockDeltaMergeNotMatchedActionBuilder;
+    @Mock
+    private DeltaMergeMatchedActionBuilder mockDeltaMergeMatchedActionBuilder;
 
     @TempDir
     private Path folder;
@@ -234,9 +257,306 @@ class DataStorageServiceTest extends BaseSparkTest {
         verifyManifestGeneratedWithExpectedModeString();
     }
 
+    @Test
+    public void shouldRetryAppendAndSucceedEventually() throws DataStorageException {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenSaveThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.append(tablePath, mockDataSet);
+        verify(mockDataFrameWriter, times(2)).save();
+    }
+
+    @Test
+    public void shouldRetryAppendDistinctAndSucceedEventually() throws DataStorageException {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+
+        stubAppendDistinct();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenMergeThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.appendDistinct(tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(2)).execute();
+    }
+
+    @Test
+    public void shouldRetryUpsertRecordsAndSucceedEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+
+        stubUpsertRecords();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenMergeThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.upsertRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(2)).execute();
+    }
+
+    @Test
+    public void shouldRetryUpdateRecordsAndSucceedEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+
+        stubUpdateRecords();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenMergeThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.updateRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(2)).execute();
+    }
+
+    @Test
+    public void shouldRetryDeleteRecordsAndSucceedEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+
+        stubDeleteRecords();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenMergeThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.deleteRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(2)).execute();
+    }
+
+    @Test
+    public void shouldRetryCompactAndSucceedEventually() throws DataStorageException {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenCompactThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.compactDeltaTable(spark, tablePath);
+        verify(mockDeltaOptimize, times(2)).executeCompaction();
+    }
+
+    @Test
+    public void shouldRetryVacuumAndSucceedEventually() throws DataStorageException {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenVacuumThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.vacuum(spark, tablePath);
+        verify(mockDeltaTable, times(2)).vacuum();
+    }
+
+    @Test
+    public void shouldRetryAppendAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenSaveThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        assertThrows(ConcurrentAppendException.class, () -> dataStorageService.append(tablePath, mockDataSet));
+        verify(mockDataFrameWriter, times(retryAttempts)).save();
+    }
+    @Test
+    public void shouldRetryAppendDistinctAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+
+        stubAppendDistinct();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenMergeThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        assertThrows(ConcurrentAppendException.class, () -> {
+            dataStorageService.appendDistinct(tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        });
+        verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
+    }
+
+    @Test
+    public void shouldRetryUpsertRecordsAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+
+        stubUpsertRecords();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenMergeThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.upsertRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
+    }
+
+    @Test
+    public void shouldRetryUpdateRecordsAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+
+        stubUpdateRecords();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenMergeThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.updateRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
+    }
+
+    @Test
+    public void shouldRetryDeleteRecordsAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+
+        stubDeleteRecords();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenMergeThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.deleteRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
+    }
+
+    @Test
+    public void shouldRetryCompactAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenCompactThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        assertThrows(ConcurrentAppendException.class, () -> {
+            dataStorageService.compactDeltaTable(spark, tablePath);
+        });
+        verify(mockDeltaOptimize, times(retryAttempts)).executeCompaction();
+    }
+
+    @Test
+    public void shouldRetryVacuumAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenVacuumThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        assertThrows(ConcurrentAppendException.class, () -> {
+            dataStorageService.vacuum(spark, tablePath);
+        });
+        verify(mockDeltaTable, times(retryAttempts)).vacuum();
+    }
+
+    private void givenSaveThrowsEveryTime(Class<? extends Throwable> toBeThrown) {
+        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
+
+        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.mode(anyString())).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
+        doThrow(toBeThrown).when(mockDataFrameWriter).save();
+    }
+
+    private void givenSaveThrowsFirstTime(Class<? extends Throwable> toBeThrown) {
+        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
+
+        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.mode(anyString())).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
+        doThrow(toBeThrown)
+                .doNothing()
+                .when(mockDataFrameWriter).save();
+    }
+
+    private void givenConfiguredRetriesJobArgs(int numRetries, JobArguments mockJobArguments) {
+        when(mockJobArguments.getDataStorageRetryPolicyMaxAttempts()).thenReturn(numRetries);
+        when(mockJobArguments.getDataStorageRetryPolicyMinWaitMillis()).thenReturn(1L);
+        when(mockJobArguments.getDataStorageRetryPolicyMaxWaitMillis()).thenReturn(10L);
+        when(mockJobArguments.getDataStorageRetryPolicyJitterFactor()).thenReturn(0.1D);
+    }
+
+    private void givenMergeThrowsEveryTime(Class<? extends Throwable> toBeThrown) {
+        doThrow(toBeThrown).when(mockDeltaMergeBuilder).execute();
+    }
+
+    private void givenMergeThrowsFirstTime(Class<? extends Throwable> toBeThrown) {
+        doThrow(toBeThrown)
+                .doNothing()
+                .when(mockDeltaMergeBuilder).execute();
+    }
+
+    private void givenCompactThrowsEveryTime(Class<? extends Throwable> toBeThrown) {
+        when(mockDeltaTable.optimize()).thenReturn(mockDeltaOptimize);
+        when(mockDeltaOptimize.executeCompaction()).thenThrow(toBeThrown);
+    }
+
+    private void givenCompactThrowsFirstTime(Class<? extends Throwable> toBeThrown) {
+        when(mockDeltaTable.optimize()).thenReturn(mockDeltaOptimize);
+        when(mockDeltaOptimize.executeCompaction())
+                .thenThrow(toBeThrown)
+                .thenReturn(spark.emptyDataFrame());
+    }
+
+    private void givenVacuumThrowsEveryTime(Class<? extends Throwable> toBeThrown) {
+        when(mockDeltaTable.vacuum()).thenThrow(toBeThrown);
+    }
+
+    private void givenVacuumThrowsFirstTime(Class<? extends Throwable> toBeThrown) {
+        when(mockDeltaTable.vacuum())
+                .thenThrow(toBeThrown)
+                .thenReturn(spark.emptyDataFrame());
+    }
+
+    private void stubAppendDistinct() {
+        when(mockDeltaTable.as(anyString())).thenReturn(mockDeltaTable);
+        when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenNotMatched()).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
+        when(mockDeltaMergeNotMatchedActionBuilder.insertAll()).thenReturn(mockDeltaMergeBuilder);
+    }
+
+    private void stubUpsertRecords() {
+        when(mockDeltaTable.as(anyString())).thenReturn(mockDeltaTable);
+        when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenMatched()).thenReturn(mockDeltaMergeMatchedActionBuilder);
+        when(mockDeltaMergeMatchedActionBuilder.updateAll()).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenNotMatched()).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
+        when(mockDeltaMergeNotMatchedActionBuilder.insertAll()).thenReturn(mockDeltaMergeBuilder);
+    }
+
+    private void stubUpdateRecords() {
+        when(mockDeltaTable.as(anyString())).thenReturn(mockDeltaTable);
+        when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenMatched()).thenReturn(mockDeltaMergeMatchedActionBuilder);
+        when(mockDeltaMergeMatchedActionBuilder.updateAll()).thenReturn(mockDeltaMergeBuilder);
+    }
+
+    private void stubDeleteRecords() {
+        when(mockDeltaTable.as(anyString())).thenReturn(mockDeltaTable);
+        when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenMatched()).thenReturn(mockDeltaMergeMatchedActionBuilder);
+        when(mockDeltaMergeMatchedActionBuilder.delete()).thenReturn(mockDeltaMergeBuilder);
+    }
+
     private void givenDeltaTableExists() {
-        when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
-        when(DeltaTable.forPath(spark, tablePath)).thenReturn(mockDeltaTable);
+        when(DeltaTable.isDeltaTable(any(), eq(tablePath))).thenReturn(true);
+        when(DeltaTable.forPath(any(), eq(tablePath))).thenReturn(mockDeltaTable);
     }
 
     private void verifyManifestGeneratedWithExpectedModeString() {
