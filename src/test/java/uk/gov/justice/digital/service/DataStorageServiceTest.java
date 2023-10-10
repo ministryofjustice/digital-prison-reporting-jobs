@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
@@ -28,7 +29,7 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     private static final int DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES = 1;
 
-    private static final DataStorageService underTest = new DataStorageService();
+    private static final DataStorageService underTest = new DataStorageService(new JobArguments());
 
 
     private MockedStatic<DeltaTable> mockDeltaTableStatic;

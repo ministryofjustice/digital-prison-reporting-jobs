@@ -2,9 +2,9 @@ package uk.gov.justice.digital.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
-import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
@@ -16,7 +16,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     public void setupTest() throws Exception {
         setupDeltaTablesFixture();
         setupNonDeltaFilesAndDirs();
-        underTest = new MaintenanceService(new DataStorageService());
+        underTest = new MaintenanceService(new DataStorageService(new JobArguments()));
     }
 
     @Test

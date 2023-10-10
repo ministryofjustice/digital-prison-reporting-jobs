@@ -2,6 +2,7 @@ package uk.gov.justice.digital.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
 import java.util.List;
@@ -10,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
 public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
-    private static final DataStorageService underTest = new DataStorageService();
+    private static final DataStorageService underTest = new DataStorageService(new JobArguments());
 
     @BeforeEach
     public void setupTest() throws Exception {

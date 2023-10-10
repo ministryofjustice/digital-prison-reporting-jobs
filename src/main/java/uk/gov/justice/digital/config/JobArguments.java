@@ -49,6 +49,17 @@ public class JobArguments {
     public static final String MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH = "dpr.maintenance.listtable.recurseMaxDepth";
     public static final String CHECKPOINT_LOCATION = "checkpoint.location";
     public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
+    public static final String DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS = "dpr.datastorage.write.retrypolicy.maxAttempts";
+    public static final int DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS_DEFAULT = 1;
+
+    public static final String DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS = "dpr.datastorage.write.retrypolicy.minWaitMillis";
+    public static final long DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS_DEFAULT = 1000L;
+
+    public static final String DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS = "dpr.datastorage.write.retrypolicy.maxWaitMillis";
+    public static final long DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS_DEFAULT = 10000L;
+
+    public static final String DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR = "dpr.datastorage.write.retrypolicy.jitterFactor";
+    public static final double DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR_DEFAULT = 0.25;
 
     private final Map<String, String> config;
 
@@ -62,6 +73,11 @@ public class JobArguments {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         logger.info("Job initialised with parameters: {}", config);
+    }
+
+    // Visible for testing
+    public JobArguments() {
+        config = Collections.emptyMap();
     }
 
     public LogLevel getLogLevel() {
@@ -170,10 +186,7 @@ public class JobArguments {
         // The Domain layer only has a depth of 2, with tables nested under domains
         // e.g. s3://dpr-domain-preproduction/establishment/living_unit/
         int defaultRecurseDepth = 2;
-        return Optional
-                .ofNullable(config.get(MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH))
-                .map(Integer::parseInt)
-                .orElse(defaultRecurseDepth);
+        return getArgument(MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, defaultRecurseDepth);
     }
 
     public String getCheckpointLocation() {
@@ -182,16 +195,57 @@ public class JobArguments {
 
     public int getBatchMaxRetries() {
         int glueDefaultBatchRetries = 3;
-        return Optional
-                .ofNullable(config.get(BATCH_MAX_RETRIES))
-                .map(Integer::parseInt)
-                .orElse(glueDefaultBatchRetries);
+        return getArgument(BATCH_MAX_RETRIES, glueDefaultBatchRetries);
     }
+
+    public int getDataStorageRetryPolicyMaxAttempts() {
+        return getArgument(DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS, DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS_DEFAULT);
+    }
+
+    public long getDataStorageRetryPolicyMinWaitMillis() {
+        return getArgument(DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS, DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS_DEFAULT);
+    }
+
+    public long getDataStorageRetryPolicyMaxWaitMillis() {
+        return getArgument(DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS, DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS_DEFAULT);
+    }
+
+    public double getDataStorageRetryPolicyJitterFactor() {
+        return getArgument(DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR, DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR_DEFAULT);
+    }
+
 
     private String getArgument(String argumentName) {
         return Optional
                 .ofNullable(config.get(argumentName))
                 .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
+    }
+
+    private String getArgument(String argumentName, String defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .orElse(defaultValue);
+    }
+
+    private int getArgument(String argumentName, int defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Integer::parseInt)
+                .orElse(defaultValue);
+    }
+
+    private long getArgument(String argumentName, long defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Long::parseLong)
+                .orElse(defaultValue);
+    }
+
+    private double getArgument(String argumentName, double defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Double::parseDouble)
+                .orElse(defaultValue);
     }
 
     // Where command line arguments are present Micronaut will create a CommandLinePropertySource instance which

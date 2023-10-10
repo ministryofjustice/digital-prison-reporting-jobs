@@ -10,8 +10,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
-import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.service.DataStorageService;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -50,8 +48,13 @@ public class SparkTestHelpers {
                 folder.toFile().getAbsolutePath() + "sample-nomis.agency_locations.parquet");
     }
 
-    public void persistDataset(TableIdentifier location, Dataset<Row> df) throws DataStorageException {
-        new DataStorageService().replace(location.toPath(), df);
+    public void persistDataset(TableIdentifier location, Dataset<Row> df) {
+        df.write()
+                .format("delta")
+                .mode("overwrite")
+                .option("overwriteSchema", true)
+                .option("path", location.toPath())
+                .save();
     }
 
     public Dataset<Row> createIncidentDomainDataframe() {
