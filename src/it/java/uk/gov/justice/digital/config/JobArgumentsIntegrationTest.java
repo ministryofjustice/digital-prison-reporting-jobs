@@ -142,6 +142,23 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
+    public void shouldThrowErrorWhenGivenInvalidIdleTimeBetweenReadsInMillis() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.IDLE_TIME_BETWEEN_READS_IN_MILLIS, "not a number");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(NumberFormatException.class, jobArguments::getIdleTimeBetweenReadsInMillis);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "1, 1", "0, 0", "12345, 12345", "0123, 123" })
+    public void shouldSetIdleTimeBetweenReadsInMillis(String input, Integer expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.IDLE_TIME_BETWEEN_READS_IN_MILLIS, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected.toString(), jobArguments.getIdleTimeBetweenReadsInMillis());
+    }
+
+    @Test
     public void shouldReturnCorrectValuesInGetConfig() {
         Map<String, String> actualArguments = validArguments.getConfig();
         assertEquals(testArguments, actualArguments);

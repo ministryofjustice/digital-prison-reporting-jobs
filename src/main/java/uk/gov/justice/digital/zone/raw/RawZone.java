@@ -23,6 +23,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 public class RawZone implements Zone {
 
     public static final String PRIMARY_KEY_NAME = "id";
+    public static final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_NAME);
     private static final Logger logger = LoggerFactory.getLogger(RawZone.class);
 
     private final String rawS3Path;
@@ -51,7 +52,7 @@ public class RawZone implements Zone {
 
         logger.debug("Applying batch to deltalake table: {}", tablePath);
         val rawDataFrame = createRawDataFrame(records);
-        storage.appendDistinct(tablePath, rawDataFrame, new SourceReference.PrimaryKey(PRIMARY_KEY_NAME));
+        storage.appendDistinct(tablePath, rawDataFrame, primaryKey);
 
         logger.debug("Append completed successfully");
 
