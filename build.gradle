@@ -44,6 +44,7 @@ ext {
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
     awsSdkVersion = '1.12.425'
     glueApiVersion = '4.0.0'
+    failSafeVersion = '3.3.2'
 }
 
 dependencies {
@@ -73,6 +74,7 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
+    implementation "dev.failsafe:failsafe:$failSafeVersion"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.

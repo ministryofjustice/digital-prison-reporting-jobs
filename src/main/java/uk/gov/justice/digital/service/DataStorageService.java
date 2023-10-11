@@ -1,6 +1,11 @@
 package uk.gov.justice.digital.service;
 
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
+import dev.failsafe.RetryPolicyBuilder;
+import dev.failsafe.function.CheckedRunnable;
 import io.delta.tables.DeltaTable;
+import jakarta.inject.Inject;
 import lombok.val;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -8,8 +13,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.delta.DeltaConcurrentModificationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -18,6 +25,8 @@ import javax.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,6 +43,14 @@ public class DataStorageService {
     private static final String TARGET = "target";
 
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
+
+    // Retry policy used on operations that are at risk of concurrent modification exceptions
+    private final RetryPolicy<Void> retryPolicy;
+
+    @Inject
+    public DataStorageService(JobArguments jobArguments) {
+        this.retryPolicy = buildRetryPolicy(jobArguments);
+    }
 
     public boolean exists(SparkSession spark, TableIdentifier tableId) {
         val exists = DeltaTable.isDeltaTable(spark, tableId.toPath());
@@ -55,13 +72,15 @@ public class DataStorageService {
 
     public void append(String tablePath, Dataset<Row> df) throws DataStorageException {
         logger.debug("Appending schema and data to " + tablePath);
-        if (tablePath != null && df != null)
-            df.write()
-                    .format("delta")
-                    .mode("append")
-                    .option("path", tablePath)
-                    .save();
-        else {
+        if (tablePath != null && df != null) {
+            doWithRetryOnConcurrentModification(() ->
+                    df.write()
+                            .format("delta")
+                            .mode("append")
+                            .option("path", tablePath)
+                            .save()
+            );
+        } else {
             val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
             logger.error(errorMessage);
             throw new DataStorageException(errorMessage);
@@ -73,10 +92,12 @@ public class DataStorageService {
             val dt = getTable(df.sparkSession(), tablePath);
             if(dt.isPresent()) {
                 val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-                dt.get().as(SOURCE)
-                        .merge(df.as(TARGET), condition )
-                        .whenNotMatched().insertAll()
-                        .execute();
+                doWithRetryOnConcurrentModification(() ->
+                        dt.get().as(SOURCE)
+                                .merge(df.as(TARGET), condition)
+                                .whenNotMatched().insertAll()
+                                .execute()
+                );
             } else {
                 append(tablePath, df);
             }
@@ -94,13 +115,15 @@ public class DataStorageService {
             if (dt.isPresent()) {
                 val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
                 logger.debug("Upsert records from {} using condition: {}", tablePath, condition);
-                dt.get().as(SOURCE)
-                        .merge(dataFrame.as(TARGET), condition)
-                        .whenMatched()
-                        .updateAll()
-                        .whenNotMatched()
-                        .insertAll()
-                        .execute();
+                doWithRetryOnConcurrentModification(() ->
+                        dt.get().as(SOURCE)
+                                .merge(dataFrame.as(TARGET), condition)
+                                .whenMatched()
+                                .updateAll()
+                                .whenNotMatched()
+                                .insertAll()
+                                .execute()
+                );
             } else {
                 logger.error("Failed to upsert table {}. Delta table is not present", tablePath);
             }
@@ -121,11 +144,13 @@ public class DataStorageService {
             if (dt.isPresent()) {
                 val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
                 logger.debug("Updating records from {} using condition: {}", tablePath, condition);
-                dt.get().as(SOURCE)
-                        .merge(dataFrame.as(TARGET), condition)
-                        .whenMatched()
-                        .updateAll()
-                        .execute();
+                doWithRetryOnConcurrentModification(() ->
+                        dt.get().as(SOURCE)
+                                .merge(dataFrame.as(TARGET), condition)
+                                .whenMatched()
+                                .updateAll()
+                                .execute()
+                );
             } else {
                 logger.error("Failed to update table {}. Delta table is not present", tablePath);
             }
@@ -146,11 +171,13 @@ public class DataStorageService {
             if (dt.isPresent()) {
                 val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
                 logger.debug("Deleting records from {} using condition: {}", tablePath, condition);
-                dt.get().as(SOURCE)
-                        .merge(dataFrame.as(TARGET), condition)
-                        .whenMatched()
-                        .delete()
-                        .execute();
+                doWithRetryOnConcurrentModification(() ->
+                        dt.get().as(SOURCE)
+                                .merge(dataFrame.as(TARGET), condition)
+                                .whenMatched()
+                                .delete()
+                                .execute()
+                );
             } else {
                 logger.error("Failed to delete table {}. Delta table is not present", tablePath);
             }
@@ -224,11 +251,12 @@ public class DataStorageService {
      */
     public void vacuum(SparkSession spark, String tablePath) throws DataStorageException {
         logger.info("Vacuuming Delta table at {}", tablePath);
-        val deltaTable = getTable(spark, tablePath);
-        deltaTable
-                .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"))
-                .vacuum();
-        updateManifest(deltaTable.get());
+        val deltaTable = getTable(spark, tablePath)
+                .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"));
+
+        doWithRetryOnConcurrentModification(deltaTable::vacuum);
+
+        updateManifest(deltaTable);
         logger.info("Finished vacuuming Delta table at {}", tablePath);
     }
 
@@ -272,11 +300,10 @@ public class DataStorageService {
 
     public void compactDeltaTable(SparkSession spark, String tablePath) throws DataStorageException {
         logger.info("Compacting table at path: {}", tablePath);
-        val deltaTable = getTable(spark, tablePath);
-        deltaTable
-                .orElseThrow(() -> new DataStorageException(format("Failed to compact table at path %s. Table does not exist", tablePath)))
-                .optimize().executeCompaction();
-        updateManifest(deltaTable.get());
+        val deltaTable = getTable(spark, tablePath)
+                .orElseThrow(() -> new DataStorageException(format("Failed to compact table at path %s. Table does not exist", tablePath)));
+        doWithRetryOnConcurrentModification(() -> deltaTable.optimize().executeCompaction());
+        updateManifest(deltaTable);
         logger.info("Finished compacting table at path: {}", tablePath);
     }
 
@@ -334,5 +361,41 @@ public class DataStorageService {
 
     }
 
+    private void doWithRetryOnConcurrentModification(CheckedRunnable runnable) {
+        Failsafe.with(retryPolicy).run(runnable);
+    }
+
+    private static RetryPolicy<Void> buildRetryPolicy(JobArguments jobArguments) {
+        long minWaitMillis = jobArguments.getDataStorageRetryMinWaitMillis();
+        long maxWaitMillis = jobArguments.getDataStorageRetryMaxWaitMillis();
+        double jitterFactor = jobArguments.getDataStorageRetryJitterFactor();
+        // You can turn off retries by setting max attempts to 1
+        int maxAttempts = jobArguments.getDataStorageRetryMaxAttempts();
+        RetryPolicyBuilder<Void> builder = RetryPolicy.builder();
+        // Specify the Throwables we will retry
+        builder.handle(DeltaConcurrentModificationException.class)
+                // Exponential backoff
+                .withBackoff(minWaitMillis, maxWaitMillis, ChronoUnit.MILLIS)
+                .withJitter(jitterFactor)
+                .withMaxAttempts(maxAttempts)
+                .onFailedAttempt(e -> {
+                    Throwable lastException = e.getLastException();
+                    int thisAttempt = e.getAttemptCount();
+                    Duration elapsedTimeTotal = e.getElapsedTime();
+                    Duration elapsedTimeSinceAttemptStarted = e.getElapsedAttemptTime();
+                    String msg = format("Failed attempt %d. Elapsed time total: %s. Elapsed time since attempt started: %s.", thisAttempt, elapsedTimeTotal, elapsedTimeSinceAttemptStarted);
+                    logger.debug(msg, lastException);
+                })
+                .onRetry(e -> logger.debug("Retrying..."))
+                .onRetriesExceeded(e -> {
+                    Throwable lastException = e.getException();
+                    int thisAttempt = e.getAttemptCount();
+                    Duration elapsedTimeTotal = e.getElapsedTime();
+                    Duration elapsedTimeSinceAttemptStarted = e.getElapsedAttemptTime();
+                    String msg = format("Retries exceeded on attempt %d. Elapsed time total: %s. Elapsed time since attempt started: %s.", thisAttempt, elapsedTimeTotal, elapsedTimeSinceAttemptStarted);
+                    logger.error(msg, lastException);
+                });
+        return builder.build();
+    }
 
 }

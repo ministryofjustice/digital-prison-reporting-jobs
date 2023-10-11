@@ -40,6 +40,12 @@ public class JobArguments {
     public static final String BATCH_DURATION_SECONDS = "dpr.batchDurationSeconds";
     public static final String KINESIS_STREAM_ARN = "dpr.kinesis.stream.arn";
     public static final String KINESIS_STARTING_POSITION = "dpr.kinesis.starting.position";
+    // See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
+    // The possible values are "latest", "trim_horizon", "earliest", or a Timestamp string in UTC format
+    // in the pattern yyyy-mm-ddTHH:MM:SSZ
+    // (where Z represents a UTC timezone offset with a +/-. For example "2023-04-04T08:00:00-04:00").
+    // We default to trim_horizon to avoid data loss
+    public static final String KINESIS_STARTING_POSITION_DEFAULT = "trim_horizon";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
@@ -47,8 +53,24 @@ public class JobArguments {
     public static final String DATA_MART_DB_NAME = "dpr.datamart.db.name";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
     public static final String MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH = "dpr.maintenance.listtable.recurseMaxDepth";
+    // The Domain layer only has a depth of 2, with tables nested under domains
+    // e.g. s3://dpr-domain-preproduction/establishment/living_unit/
+    public static final int MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH_DEFAULT = 2;
     public static final String CHECKPOINT_LOCATION = "checkpoint.location";
     public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
+    public static final int BATCH_MAX_RETRIES_DEFAULT =3;
+    public static final String DATA_STORAGE_RETRY_MAX_ATTEMPTS = "dpr.datastorage.retry.maxAttempts";
+    // You can turn off retries by setting max attempts to 1
+    public static final int DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT = 1;
+
+    public static final String DATA_STORAGE_RETRY_MIN_WAIT_MILLIS = "dpr.datastorage.retry.minWaitMillis";
+    public static final long DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT = 100L;
+
+    public static final String DATA_STORAGE_RETRY_MAX_WAIT_MILLIS = "dpr.datastorage.retry.maxWaitMillis";
+    public static final long DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT = 10000L;
+
+    public static final String DATA_STORAGE_RETRY_JITTER_FACTOR = "dpr.datastorage.retry.jitterFactor";
+    public static final double DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT = 0.25;
 
     private final Map<String, String> config;
 
@@ -99,15 +121,7 @@ public class JobArguments {
     }
 
     public String getKinesisStartingPosition() {
-        // See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-kinesis-home.html
-        // The possible values are "latest", "trim_horizon", "earliest", or a Timestamp string in UTC format
-        // in the pattern yyyy-mm-ddTHH:MM:SSZ
-        // (where Z represents a UTC timezone offset with a +/-. For example "2023-04-04T08:00:00-04:00").
-        // We default to trim_horizon to avoid data loss
-        String defaultStarting = "trim_horizon";
-        return Optional
-                .ofNullable(config.get(KINESIS_STARTING_POSITION))
-                .orElse(defaultStarting);
+        return getArgument(KINESIS_STARTING_POSITION, KINESIS_STARTING_POSITION_DEFAULT);
     }
 
     public String getKinesisStreamArn() {
@@ -167,13 +181,7 @@ public class JobArguments {
     }
 
     public int getMaintenanceListTableRecurseMaxDepth() {
-        // The Domain layer only has a depth of 2, with tables nested under domains
-        // e.g. s3://dpr-domain-preproduction/establishment/living_unit/
-        int defaultRecurseDepth = 2;
-        return Optional
-                .ofNullable(config.get(MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH))
-                .map(Integer::parseInt)
-                .orElse(defaultRecurseDepth);
+        return getArgument(MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH_DEFAULT);
     }
 
     public String getCheckpointLocation() {
@@ -181,17 +189,57 @@ public class JobArguments {
     }
 
     public int getBatchMaxRetries() {
-        int glueDefaultBatchRetries = 3;
-        return Optional
-                .ofNullable(config.get(BATCH_MAX_RETRIES))
-                .map(Integer::parseInt)
-                .orElse(glueDefaultBatchRetries);
+        return getArgument(BATCH_MAX_RETRIES, BATCH_MAX_RETRIES_DEFAULT);
     }
+
+    public int getDataStorageRetryMaxAttempts() {
+        return getArgument(DATA_STORAGE_RETRY_MAX_ATTEMPTS, DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);
+    }
+
+    public long getDataStorageRetryMinWaitMillis() {
+        return getArgument(DATA_STORAGE_RETRY_MIN_WAIT_MILLIS, DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT);
+    }
+
+    public long getDataStorageRetryMaxWaitMillis() {
+        return getArgument(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS, DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
+    }
+
+    public double getDataStorageRetryJitterFactor() {
+        return getArgument(DATA_STORAGE_RETRY_JITTER_FACTOR, DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
+    }
+
 
     private String getArgument(String argumentName) {
         return Optional
                 .ofNullable(config.get(argumentName))
                 .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
+    }
+
+    private String getArgument(String argumentName, String defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .orElse(defaultValue);
+    }
+
+    private int getArgument(String argumentName, int defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Integer::parseInt)
+                .orElse(defaultValue);
+    }
+
+    private long getArgument(String argumentName, long defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Long::parseLong)
+                .orElse(defaultValue);
+    }
+
+    private double getArgument(String argumentName, double defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Double::parseDouble)
+                .orElse(defaultValue);
     }
 
     // Where command line arguments are present Micronaut will create a CommandLinePropertySource instance which

@@ -30,7 +30,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final SparkTestHelpers helpers = new SparkTestHelpers(spark);
-    private static final DataStorageService storage = new DataStorageService();
+    private static final DataStorageService storage = new DataStorageService(new JobArguments(Collections.emptyMap()));
     private static final String hiveDatabaseName = "test_db";
 
     @TempDir
