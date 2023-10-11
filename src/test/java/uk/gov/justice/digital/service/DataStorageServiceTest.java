@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service;
 
 import io.delta.exceptions.ConcurrentAppendException;
+import io.delta.exceptions.ConcurrentDeleteReadException;
 import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaMergeMatchedActionBuilder;
 import io.delta.tables.DeltaMergeNotMatchedActionBuilder;
@@ -10,6 +11,7 @@ import lombok.val;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.delta.DeltaConcurrentModificationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -349,7 +351,7 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
-        givenVacuumThrowsFirstTime(ConcurrentAppendException.class);
+        givenVacuumThrowsFirstTime(ConcurrentDeleteReadException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
         dataStorageService.vacuum(spark, tablePath);
@@ -487,10 +489,10 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     private void givenConfiguredRetriesJobArgs(int numRetries, JobArguments mockJobArguments) {
-        when(mockJobArguments.getDataStorageRetryPolicyMaxAttempts()).thenReturn(numRetries);
-        when(mockJobArguments.getDataStorageRetryPolicyMinWaitMillis()).thenReturn(1L);
-        when(mockJobArguments.getDataStorageRetryPolicyMaxWaitMillis()).thenReturn(10L);
-        when(mockJobArguments.getDataStorageRetryPolicyJitterFactor()).thenReturn(0.1D);
+        when(mockJobArguments.getDataStorageRetryMaxAttempts()).thenReturn(numRetries);
+        when(mockJobArguments.getDataStorageRetryMinWaitMillis()).thenReturn(1L);
+        when(mockJobArguments.getDataStorageRetryMaxWaitMillis()).thenReturn(10L);
+        when(mockJobArguments.getDataStorageRetryJitterFactor()).thenReturn(0.1D);
     }
 
     private void givenMergeThrowsEveryTime(Class<? extends Throwable> toBeThrown) {

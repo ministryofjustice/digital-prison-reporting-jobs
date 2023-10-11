@@ -44,11 +44,12 @@ public class DataStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
-    private final RetryPolicy<Void> writeRetryPolicy;
+    // Retry policy used on operations that are at risk of concurrent modification exceptions
+    private final RetryPolicy<Void> retryPolicy;
 
     @Inject
     public DataStorageService(JobArguments jobArguments) {
-        this.writeRetryPolicy = buildRetryPolicy(jobArguments);
+        this.retryPolicy = buildRetryPolicy(jobArguments);
     }
 
     public boolean exists(SparkSession spark, TableIdentifier tableId) {
@@ -361,15 +362,15 @@ public class DataStorageService {
     }
 
     private void doWithRetryOnConcurrentModification(CheckedRunnable runnable) {
-        Failsafe.with(writeRetryPolicy).run(runnable);
+        Failsafe.with(retryPolicy).run(runnable);
     }
 
     private static RetryPolicy<Void> buildRetryPolicy(JobArguments jobArguments) {
-        long minWaitMillis = jobArguments.getDataStorageRetryPolicyMinWaitMillis();
-        long maxWaitMillis = jobArguments.getDataStorageRetryPolicyMaxWaitMillis();
-        double jitterFactor = jobArguments.getDataStorageRetryPolicyJitterFactor();
+        long minWaitMillis = jobArguments.getDataStorageRetryMinWaitMillis();
+        long maxWaitMillis = jobArguments.getDataStorageRetryMaxWaitMillis();
+        double jitterFactor = jobArguments.getDataStorageRetryJitterFactor();
         // You can turn off retries by setting max attempts to 1
-        int maxAttempts = jobArguments.getDataStorageRetryPolicyMaxAttempts();
+        int maxAttempts = jobArguments.getDataStorageRetryMaxAttempts();
         RetryPolicyBuilder<Void> builder = RetryPolicy.builder();
         // Specify the Throwables we will retry
         builder.handle(DeltaConcurrentModificationException.class)
@@ -387,10 +388,12 @@ public class DataStorageService {
                 })
                 .onRetry(e -> logger.debug("Retrying..."))
                 .onRetriesExceeded(e -> {
+                    Throwable lastException = e.getException();
                     int thisAttempt = e.getAttemptCount();
                     Duration elapsedTimeTotal = e.getElapsedTime();
                     Duration elapsedTimeSinceAttemptStarted = e.getElapsedAttemptTime();
-                    logger.error("Retries exceeded on attempt {}. Elapsed time total: {}. Elapsed time since attempt started: {}.", thisAttempt, elapsedTimeTotal, elapsedTimeSinceAttemptStarted);
+                    String msg = format("Retries exceeded on attempt %d. Elapsed time total: %s. Elapsed time since attempt started: %s.", thisAttempt, elapsedTimeTotal, elapsedTimeSinceAttemptStarted);
+                    logger.error(msg, lastException);
                 });
         return builder.build();
     }

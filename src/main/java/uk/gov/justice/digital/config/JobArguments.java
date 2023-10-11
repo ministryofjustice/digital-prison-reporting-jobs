@@ -59,17 +59,18 @@ public class JobArguments {
     public static final String CHECKPOINT_LOCATION = "checkpoint.location";
     public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
     public static final int BATCH_MAX_RETRIES_DEFAULT =3;
-    public static final String DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS = "dpr.datastorage.write.retrypolicy.maxAttempts";
-    public static final int DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS_DEFAULT = 1;
+    public static final String DATA_STORAGE_RETRY_MAX_ATTEMPTS = "dpr.datastorage.retry.maxAttempts";
+    // You can turn off retries by setting max attempts to 1
+    public static final int DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT = 1;
 
-    public static final String DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS = "dpr.datastorage.write.retrypolicy.minWaitMillis";
-    public static final long DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS_DEFAULT = 1000L;
+    public static final String DATA_STORAGE_RETRY_MIN_WAIT_MILLIS = "dpr.datastorage.retry.minWaitMillis";
+    public static final long DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT = 100L;
 
-    public static final String DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS = "dpr.datastorage.write.retrypolicy.maxWaitMillis";
-    public static final long DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS_DEFAULT = 10000L;
+    public static final String DATA_STORAGE_RETRY_MAX_WAIT_MILLIS = "dpr.datastorage.retry.maxWaitMillis";
+    public static final long DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT = 10000L;
 
-    public static final String DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR = "dpr.datastorage.write.retrypolicy.jitterFactor";
-    public static final double DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR_DEFAULT = 0.25;
+    public static final String DATA_STORAGE_RETRY_JITTER_FACTOR = "dpr.datastorage.retry.jitterFactor";
+    public static final double DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT = 0.25;
 
     private final Map<String, String> config;
 
@@ -191,20 +192,20 @@ public class JobArguments {
         return getArgument(BATCH_MAX_RETRIES, BATCH_MAX_RETRIES_DEFAULT);
     }
 
-    public int getDataStorageRetryPolicyMaxAttempts() {
-        return getArgument(DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS, DATA_STORAGE_RETRY_POLICY_MAX_ATTEMPTS_DEFAULT);
+    public int getDataStorageRetryMaxAttempts() {
+        return getArgument(DATA_STORAGE_RETRY_MAX_ATTEMPTS, DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);
     }
 
-    public long getDataStorageRetryPolicyMinWaitMillis() {
-        return getArgument(DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS, DATA_STORAGE_RETRY_POLICY_MIN_WAIT_MILLIS_DEFAULT);
+    public long getDataStorageRetryMinWaitMillis() {
+        return getArgument(DATA_STORAGE_RETRY_MIN_WAIT_MILLIS, DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT);
     }
 
-    public long getDataStorageRetryPolicyMaxWaitMillis() {
-        return getArgument(DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS, DATA_STORAGE_RETRY_POLICY_MAX_WAIT_MILLIS_DEFAULT);
+    public long getDataStorageRetryMaxWaitMillis() {
+        return getArgument(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS, DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
     }
 
-    public double getDataStorageRetryPolicyJitterFactor() {
-        return getArgument(DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR, DATA_STORAGE_RETRY_POLICY_JITTER_FACTOR_DEFAULT);
+    public double getDataStorageRetryJitterFactor() {
+        return getArgument(DATA_STORAGE_RETRY_JITTER_FACTOR, DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
     }
 
 
