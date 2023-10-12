@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -22,6 +23,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import javax.inject.Singleton;
 import java.util.List;
 
+import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static uk.gov.justice.digital.common.CommonDataFields.*;
@@ -82,12 +84,11 @@ public class BatchProcessor {
             val dataFrame = converter.convert(batch);
 
             getTablesInBatch(dataFrame).forEach(tableInfo -> {
+                String sourceName = tableInfo.getAs(SOURCE);
+                String tableName = tableInfo.getAs(TABLE);
                 try {
                     val dataFrameForTable = extractDataFrameForSourceTable(dataFrame, tableInfo);
                     dataFrameForTable.persist();
-
-                    String sourceName = tableInfo.getAs(SOURCE);
-                    String tableName = tableInfo.getAs(TABLE);
 
                     val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
 
@@ -114,7 +115,8 @@ public class BatchProcessor {
                     } else {
                         handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
                     }
-
+                } catch (DataStorageRetriesExhaustedException e) {
+                    handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e);
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);
@@ -125,6 +127,29 @@ public class BatchProcessor {
                     batchId,
                     System.currentTimeMillis() - startTime
             );
+        }
+    }
+
+    private void handleRetriesExhausted(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table,
+            DataStorageRetriesExhaustedException cause
+    ) {
+        String violationMessage = format("Violation - data storage service retries exceeded for %s/%s", source, table);
+        logger.warn(violationMessage, cause);
+        val destinationPath = createValidatedPath(violationsPath, source, table);
+        val violationDf = dataFrame
+                .select(col(DATA), col(METADATA))
+                .withColumn(ERROR, lit(violationMessage));
+        try {
+            storageService.append(destinationPath, violationDf);
+            storageService.updateDeltaManifestForTable(spark, destinationPath);
+        } catch (DataStorageException e) {
+            String msg = "Could not write violation data";
+            logger.error(msg, e);
+            throw new RuntimeException(msg, e);
         }
     }
     private void handleNoSchemaFound(
@@ -138,7 +163,7 @@ public class BatchProcessor {
 
         val missingSchemaRecords = dataFrame
                 .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(String.format("Schema does not exist for %s/%s", source, table)))
+                .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)))
                 .drop(OPERATION);
 
         storageService.append(destinationPath, missingSchemaRecords);

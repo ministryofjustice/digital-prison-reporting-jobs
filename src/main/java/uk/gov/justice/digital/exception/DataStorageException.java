@@ -8,6 +8,10 @@ public class DataStorageException extends Exception {
         super(errorMessage);
     }
 
+    public DataStorageException(Throwable cause) {
+        super(cause);
+    }
+
     public DataStorageException(String errorMessage, Throwable cause) {
         super(errorMessage, cause);
     }
