@@ -7,13 +7,10 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.Converter;
-import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
-import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.raw.RawZone;
@@ -23,11 +20,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import javax.inject.Singleton;
 import java.util.List;
 
-import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.lit;
-import static uk.gov.justice.digital.common.CommonDataFields.*;
-import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 /**
  * Responsible for processing batches of DMS records.
@@ -46,11 +39,9 @@ public class BatchProcessor {
     private final CuratedZoneCDC curatedZoneCDC;
     private final DomainService domainService;
     private final SourceReferenceService sourceReferenceService;
-    private final DataStorageService storageService;
-    private final String violationsPath;
+    private final ViolationService violationService;
     @Inject
     public BatchProcessor(
-            JobArguments arguments,
             RawZone rawZone,
             StructuredZoneLoad structuredZoneLoad,
             StructuredZoneCDC structuredZoneCDC,
@@ -58,7 +49,7 @@ public class BatchProcessor {
             CuratedZoneCDC curatedZoneCDC,
             DomainService domainService,
             SourceReferenceService sourceReferenceService,
-            DataStorageService storageService
+            ViolationService violationService
     ) {
         logger.info("Initializing BatchProcessorProvider");
         this.rawZone = rawZone;
@@ -68,8 +59,7 @@ public class BatchProcessor {
         this.curatedZoneCDC = curatedZoneCDC;
         this.domainService = domainService;
         this.sourceReferenceService = sourceReferenceService;
-        this.storageService = storageService;
-        this.violationsPath = arguments.getViolationsS3Path();
+        this.violationService = violationService;
         logger.info("BatchProcessorProvider initialization complete");
     }
 
@@ -113,10 +103,8 @@ public class BatchProcessor {
                                         sourceReference.getTable()
                                 );
                     } else {
-                        handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
+                        violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
                     }
-                } catch (DataStorageRetriesExhaustedException e) {
-                    handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e);
                 } catch (Exception e) {
                     logger.error("Caught unexpected exception", e);
                     throw new RuntimeException("Caught unexpected exception", e);
@@ -128,46 +116,6 @@ public class BatchProcessor {
                     System.currentTimeMillis() - startTime
             );
         }
-    }
-
-    private void handleRetriesExhausted(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table,
-            DataStorageRetriesExhaustedException cause
-    ) {
-        String violationMessage = format("Violation - data storage service retries exceeded for %s/%s", source, table);
-        logger.warn(violationMessage, cause);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
-        val violationDf = dataFrame
-                .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(violationMessage));
-        try {
-            storageService.append(destinationPath, violationDf);
-            storageService.updateDeltaManifestForTable(spark, destinationPath);
-        } catch (DataStorageException e) {
-            String msg = "Could not write violation data";
-            logger.error(msg, e);
-            throw new RuntimeException(msg, e);
-        }
-    }
-    private void handleNoSchemaFound(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table
-    ) throws DataStorageException {
-        logger.warn("Violation - No schema found for {}/{}", source, table);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
-
-        val missingSchemaRecords = dataFrame
-                .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)))
-                .drop(OPERATION);
-
-        storageService.append(destinationPath, missingSchemaRecords);
-        storageService.updateDeltaManifestForTable(spark, destinationPath);
     }
 
     private List<Row> getTablesInBatch(Dataset<Row> dataFrame) {

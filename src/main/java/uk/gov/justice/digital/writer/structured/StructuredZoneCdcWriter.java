@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.writer.Writer;
 
@@ -31,7 +32,7 @@ public class StructuredZoneCdcWriter extends Writer {
             String destinationPath,
             SourceReference.PrimaryKey primaryKey,
             Dataset<Row> validRecords
-    ) {
+    ) throws DataStorageRetriesExhaustedException {
         writeCdcRecords(spark, storage, destinationPath, primaryKey, validRecords);
     }
 

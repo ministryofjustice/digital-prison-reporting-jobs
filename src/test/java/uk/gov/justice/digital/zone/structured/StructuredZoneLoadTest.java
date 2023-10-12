@@ -15,15 +15,30 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.ViolationService;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.test.Fixtures.*;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
+import static uk.gov.justice.digital.test.Fixtures.STRUCTURED_PATH;
+import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
+import static uk.gov.justice.digital.test.Fixtures.TABLE_SOURCE;
+import static uk.gov.justice.digital.test.Fixtures.VIOLATIONS_PATH;
+import static uk.gov.justice.digital.test.Fixtures.hasNullColumns;
 import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredLoadDataset;
 import static uk.gov.justice.digital.test.ZoneFixtures.createTestDataset;
 
@@ -38,6 +53,8 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
     @Mock
     private DataStorageService mockDataStorage;
+    @Mock
+    private ViolationService mockViolationService;
 
     @Captor
     ArgumentCaptor<Dataset<Row>> dataframeCaptor;
@@ -57,7 +74,8 @@ class StructuredZoneLoadTest extends BaseSparkTest {
 
         underTest = new StructuredZoneLoad(
                 mockJobArguments,
-                mockDataStorage
+                mockDataStorage,
+                mockViolationService
         );
     }
 
@@ -97,6 +115,29 @@ class StructuredZoneLoadTest extends BaseSparkTest {
         val structuredLoadRecords = underTest.process(spark, testDataSet, mockSourceReference);
 
         assertTrue(hasNullColumns(structuredLoadRecords));
+    }
+
+    @Test
+    public void shouldWriteViolationsWhenDataStorageRetriesExhausted() throws DataStorageException {
+        givenTheSourceReferenceIsValid();
+
+        DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception("Some problem"));
+        doThrow(thrown).when(mockDataStorage).appendDistinct(any(), any(), any());
+
+        underTest.process(spark, testDataSet, mockSourceReference).collect();
+
+        verify(mockViolationService).handleRetriesExhausted(any(), any(), eq(TABLE_SOURCE), eq(TABLE_NAME), eq(thrown), eq(STRUCTURED_LOAD));
+    }
+
+    @Test
+    public void shouldReturnEmptyDataFrameWhenDataStorageRetriesExhausted() throws DataStorageException {
+        givenTheSourceReferenceIsValid();
+
+        DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception("Some problem"));
+        doThrow(thrown).when(mockDataStorage).appendDistinct(any(), any(), any());
+
+        val resultDf = underTest.process(spark, testDataSet, mockSourceReference);
+        assertTrue(resultDf.isEmpty());
     }
 
     private void givenTheSourceReferenceIsValid() {

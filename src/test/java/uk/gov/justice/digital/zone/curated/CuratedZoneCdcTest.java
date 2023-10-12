@@ -15,16 +15,31 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.ViolationService;
 
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.test.Fixtures.*;
-import static uk.gov.justice.digital.test.ZoneFixtures.*;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
+import static uk.gov.justice.digital.test.Fixtures.CURATED_PATH;
+import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
+import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
+import static uk.gov.justice.digital.test.Fixtures.TABLE_SOURCE;
+import static uk.gov.justice.digital.test.Fixtures.getAllCapturedRecords;
+import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredDeleteDataset;
+import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredIncrementalDataset;
+import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredInsertDataset;
+import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredUpdateDataset;
 
 @ExtendWith(MockitoExtension.class)
 class CuratedZoneCdcTest extends BaseSparkTest {
@@ -37,6 +52,8 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
     @Mock
     private DataStorageService mockDataStorage;
+    @Mock
+    private ViolationService mockViolationService;
 
     @Captor
     ArgumentCaptor<Dataset<Row>> dataframeCaptor;
@@ -55,7 +72,8 @@ class CuratedZoneCdcTest extends BaseSparkTest {
 
         underTest = new CuratedZoneCDC(
                 mockJobArguments,
-                mockDataStorage
+                mockDataStorage,
+                mockViolationService
         );
     }
 
@@ -122,6 +140,30 @@ class CuratedZoneCdcTest extends BaseSparkTest {
                 expectedRecords.drop(OPERATION).collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
+    }
+
+    @Test
+    public void shouldWriteViolationsWhenDataStorageRetriesExhausted() throws DataStorageException {
+        givenTheSourceReferenceIsValid();
+
+        DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception("Some problem"));
+        doThrow(thrown).when(mockDataStorage).updateRecords(any(), any(), any(), any());
+
+        val inputDf = createStructuredUpdateDataset(spark);
+        underTest.process(spark, inputDf, mockSourceReference).collect();
+        verify(mockViolationService).handleRetriesExhausted(any(), eq(inputDf), eq(TABLE_SOURCE), eq(TABLE_NAME), eq(thrown), eq(CURATED_CDC));
+    }
+
+    @Test
+    public void shouldReturnEmptyDataFrameWhenDataStorageRetriesExhausted() throws DataStorageException {
+        givenTheSourceReferenceIsValid();
+
+        DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception("Some problem"));
+        doThrow(thrown).when(mockDataStorage).updateRecords(any(), any(), any(), any());
+
+        val inputDf = createStructuredUpdateDataset(spark);
+        val resultDf = underTest.process(spark, inputDf, mockSourceReference);
+        assertTrue(resultDf.isEmpty());
     }
 
     private void givenTheSourceReferenceIsValid() {

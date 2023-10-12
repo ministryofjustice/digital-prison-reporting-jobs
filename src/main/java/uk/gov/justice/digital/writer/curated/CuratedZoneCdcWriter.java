@@ -4,6 +4,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.writer.Writer;
 
@@ -23,7 +24,7 @@ public class CuratedZoneCdcWriter extends Writer {
             String destinationPath,
             SourceReference.PrimaryKey primaryKey,
             Dataset<Row> validRecords
-    ) {
+    ) throws DataStorageRetriesExhaustedException {
         writeCdcRecords(spark, storage, destinationPath, primaryKey, validRecords);
     }
 

@@ -6,6 +6,7 @@ import dev.failsafe.RetryPolicyBuilder;
 import dev.failsafe.function.CheckedRunnable;
 import io.delta.tables.DeltaTable;
 import jakarta.inject.Inject;
+import lombok.Getter;
 import lombok.val;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,6 +48,16 @@ public class DataStorageService {
 
     // Retry policy used on operations that are at risk of concurrent modification exceptions
     private final RetryPolicy<Void> retryPolicy;
+
+    @Getter
+    public static class DataStorageContext {
+        private final String zone;
+
+        public DataStorageContext(String zone) {
+            this.zone = zone;
+        }
+
+    }
 
     @Inject
     public DataStorageService(JobArguments jobArguments) {
