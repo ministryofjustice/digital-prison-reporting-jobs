@@ -30,6 +30,14 @@ public class KinesisDataProvider {
         Map<String, String> kinesisConnectionOptions = new HashMap<>();
         kinesisConnectionOptions.put("streamARN", arguments.getKinesisStreamArn());
         kinesisConnectionOptions.put("startingPosition", arguments.getKinesisStartingPosition());
+
+        String addIdleTimeBetweenReads = arguments.addIdleTimeBetweenReads();
+        kinesisConnectionOptions.put("addIdleTimeBetweenReads", addIdleTimeBetweenReads);
+
+        if (Boolean.parseBoolean(addIdleTimeBetweenReads)) {
+            kinesisConnectionOptions.put("idleTimeBetweenReadsInMs", arguments.getIdleTimeBetweenReadsInMillis());
+        }
+
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-json-home.html
         kinesisConnectionOptions.put("classification", "json");
         kinesisConnectionOptions.put("inferSchema", "false");

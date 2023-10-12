@@ -46,6 +46,11 @@ public class JobArguments {
     // (where Z represents a UTC timezone offset with a +/-. For example "2023-04-04T08:00:00-04:00").
     // We default to trim_horizon to avoid data loss
     public static final String KINESIS_STARTING_POSITION_DEFAULT = "trim_horizon";
+    // See https://docs.aws.amazon.com/glue/latest/webapi/API_KinesisStreamingSourceOptions.html
+    // dpr.add.idle.time.between.reads defaults to false thereby causing IdleTimeBetweenReadsInMs to default to 0 ms
+    public static final String ADD_IDLE_TIME_BETWEEN_READS = "dpr.add.idle.time.between.reads";
+    // The provided value for dpr.idle.time.between.reads.millis is only applied when dpr.add.idle.time.between.reads is true
+    public static final String IDLE_TIME_BETWEEN_READS_IN_MILLIS = "dpr.idle.time.between.reads.millis";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
@@ -122,6 +127,25 @@ public class JobArguments {
 
     public String getKinesisStartingPosition() {
         return getArgument(KINESIS_STARTING_POSITION, KINESIS_STARTING_POSITION_DEFAULT);
+    }
+
+    public String addIdleTimeBetweenReads() {
+        return String.valueOf(
+                Optional.of(config.get(ADD_IDLE_TIME_BETWEEN_READS).toLowerCase())
+                        .map(Boolean::parseBoolean)
+                        .orElse(false));
+    }
+
+    public String getIdleTimeBetweenReadsInMillis() {
+        if (!Boolean.parseBoolean(addIdleTimeBetweenReads())) {
+            logger.warn(
+                    "Argument {} will not be applied when {} is omitted or set to false",
+                    IDLE_TIME_BETWEEN_READS_IN_MILLIS,
+                    ADD_IDLE_TIME_BETWEEN_READS
+            );
+        }
+
+        return String.valueOf(Integer.parseInt(getArgument(IDLE_TIME_BETWEEN_READS_IN_MILLIS)));
     }
 
     public String getKinesisStreamArn() {
