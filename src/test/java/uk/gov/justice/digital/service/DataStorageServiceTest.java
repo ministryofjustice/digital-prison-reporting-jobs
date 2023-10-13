@@ -25,6 +25,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -288,7 +289,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryUpsertRecordsAndSucceedEventually() {
+    public void shouldRetryUpsertRecordsAndSucceedEventually() throws DataStorageRetriesExhaustedException {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         stubUpsertRecords();
@@ -303,7 +304,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryUpdateRecordsAndSucceedEventually() {
+    public void shouldRetryUpdateRecordsAndSucceedEventually() throws DataStorageRetriesExhaustedException {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         stubUpdateRecords();
@@ -318,7 +319,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryDeleteRecordsAndSucceedEventually() {
+    public void shouldRetryDeleteRecordsAndSucceedEventually() throws DataStorageRetriesExhaustedException {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         stubDeleteRecords();
@@ -367,7 +368,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenSaveThrowsEveryTime(ConcurrentAppendException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
-        assertThrows(ConcurrentAppendException.class, () -> dataStorageService.append(tablePath, mockDataSet));
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> dataStorageService.append(tablePath, mockDataSet));
         verify(mockDataFrameWriter, times(retryAttempts)).save();
     }
     @Test
@@ -382,7 +383,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenMergeThrowsEveryTime(ConcurrentAppendException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
-        assertThrows(ConcurrentAppendException.class, () -> {
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.appendDistinct(tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
         });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
@@ -400,7 +401,9 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenMergeThrowsEveryTime(ConcurrentAppendException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
-        dataStorageService.upsertRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> {
+            dataStorageService.upsertRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
     }
 
@@ -416,7 +419,9 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenMergeThrowsEveryTime(ConcurrentAppendException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
-        dataStorageService.updateRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> {
+            dataStorageService.updateRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
     }
 
@@ -432,7 +437,9 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenMergeThrowsEveryTime(ConcurrentAppendException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
-        dataStorageService.deleteRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> {
+            dataStorageService.deleteRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
     }
 
@@ -446,7 +453,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenCompactThrowsEveryTime(ConcurrentAppendException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
-        assertThrows(ConcurrentAppendException.class, () -> {
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.compactDeltaTable(spark, tablePath);
         });
         verify(mockDeltaOptimize, times(retryAttempts)).executeCompaction();
@@ -462,7 +469,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         givenVacuumThrowsEveryTime(ConcurrentAppendException.class);
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
-        assertThrows(ConcurrentAppendException.class, () -> {
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.vacuum(spark, tablePath);
         });
         verify(mockDeltaTable, times(retryAttempts)).vacuum();

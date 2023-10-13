@@ -13,13 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.raw.RawZone;
@@ -53,9 +52,7 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
     @Mock
     private SourceReferenceService sourceReferenceService;
     @Mock
-    private DataStorageService storageService;
-    @Mock
-    private JobArguments arguments;
+    private ViolationService violationService;
 
     private DMS_3_4_7 converter;
 
@@ -76,7 +73,6 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
     void setUp() {
         converter = new DMS_3_4_7(spark);
         undertest = new BatchProcessor(
-                arguments,
                 rawZone,
                 structuredZoneLoad,
                 structuredZoneCDC,
@@ -84,7 +80,7 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
                 curatedZoneCDC,
                 domainService,
                 sourceReferenceService,
-                storageService
+                violationService
         );
     }
 
@@ -184,7 +180,6 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
     }
 
     private void shouldAppendViolations(int numTimes) throws DataStorageException {
-        verify(storageService, times(numTimes)).append(anyString(), any());
-        verify(storageService, times(numTimes)).updateDeltaManifestForTable(eq(spark), anyString());
+        verify(violationService, times(numTimes)).handleNoSchemaFound(eq(spark), any(), anyString(), any());
     }
 }

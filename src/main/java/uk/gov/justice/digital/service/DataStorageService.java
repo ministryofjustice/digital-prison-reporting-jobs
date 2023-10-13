@@ -20,6 +20,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import javax.inject.Singleton;
 import java.io.IOException;
@@ -108,7 +109,7 @@ public class DataStorageService {
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) {
+            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
         val dt = getTable(spark, tablePath);
 
         try {
@@ -127,6 +128,9 @@ public class DataStorageService {
             } else {
                 logger.error("Failed to upsert table {}. Delta table is not present", tablePath);
             }
+        } catch (DataStorageRetriesExhaustedException e) {
+            // We don't want to catch this particular Exception so rethrow before the next catch block
+            throw e;
         } catch (Exception e) {
             val errorMessage = String.format("Failed to upsert table %s", tablePath);
             logger.error(errorMessage, e);
@@ -137,7 +141,7 @@ public class DataStorageService {
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) {
+            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
         val dt = getTable(spark, tablePath);
 
         try {
@@ -154,6 +158,9 @@ public class DataStorageService {
             } else {
                 logger.error("Failed to update table {}. Delta table is not present", tablePath);
             }
+        } catch (DataStorageRetriesExhaustedException e) {
+            // We don't want to catch this particular Exception so rethrow before the next catch block
+            throw e;
         } catch (Exception e) {
             val errorMessage = String.format("Failed to update table %s", tablePath);
             logger.error(errorMessage, e);
@@ -164,7 +171,7 @@ public class DataStorageService {
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) {
+            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
         val dt = getTable(spark, tablePath);
 
         try {
@@ -181,6 +188,9 @@ public class DataStorageService {
             } else {
                 logger.error("Failed to delete table {}. Delta table is not present", tablePath);
             }
+        } catch (DataStorageRetriesExhaustedException e) {
+            // We don't want to catch this particular Exception so rethrow before the next catch block
+            throw e;
         } catch (Exception e) {
             val errorMessage = String.format("Failed to delete table %s", tablePath);
             logger.error(errorMessage, e);
@@ -288,7 +298,7 @@ public class DataStorageService {
     public void updateDeltaManifestForTable(SparkSession spark, String tablePath) {
         logger.info("Updating manifest for table: {}", tablePath);
 
-        val  deltaTable = getTable(spark, tablePath);
+        val deltaTable = getTable(spark, tablePath);
 
         if (deltaTable.isPresent()) updateManifest(deltaTable.get());
         else logger.warn("Unable to update manifest for table: {} Not a delta table", tablePath);
@@ -361,8 +371,12 @@ public class DataStorageService {
 
     }
 
-    private void doWithRetryOnConcurrentModification(CheckedRunnable runnable) {
-        Failsafe.with(retryPolicy).run(runnable);
+    private void doWithRetryOnConcurrentModification(CheckedRunnable runnable) throws DataStorageRetriesExhaustedException {
+        try {
+            Failsafe.with(retryPolicy).run(runnable);
+        } catch (DeltaConcurrentModificationException e) {
+            throw new DataStorageRetriesExhaustedException(e);
+        }
     }
 
     private static RetryPolicy<Void> buildRetryPolicy(JobArguments jobArguments) {
@@ -381,18 +395,20 @@ public class DataStorageService {
                 .onFailedAttempt(e -> {
                     Throwable lastException = e.getLastException();
                     int thisAttempt = e.getAttemptCount();
-                    Duration elapsedTimeTotal = e.getElapsedTime();
-                    Duration elapsedTimeSinceAttemptStarted = e.getElapsedAttemptTime();
-                    String msg = format("Failed attempt %d. Elapsed time total: %s. Elapsed time since attempt started: %s.", thisAttempt, elapsedTimeTotal, elapsedTimeSinceAttemptStarted);
+                    String msg = format("Failed attempt %,d.", thisAttempt);
                     logger.debug(msg, lastException);
                 })
-                .onRetry(e -> logger.debug("Retrying..."))
+                .onRetry(e -> {
+                    int lastAttempt = e.getAttemptCount();
+                    long elapsedTimeTotal = e.getElapsedTime().toMillis();
+                    String msg = format("Retrying after attempt %,d. Elapsed time total: %,dms.", lastAttempt, elapsedTimeTotal);
+                    logger.debug(msg);
+                })
                 .onRetriesExceeded(e -> {
                     Throwable lastException = e.getException();
                     int thisAttempt = e.getAttemptCount();
-                    Duration elapsedTimeTotal = e.getElapsedTime();
-                    Duration elapsedTimeSinceAttemptStarted = e.getElapsedAttemptTime();
-                    String msg = format("Retries exceeded on attempt %d. Elapsed time total: %s. Elapsed time since attempt started: %s.", thisAttempt, elapsedTimeTotal, elapsedTimeSinceAttemptStarted);
+                    long elapsedTimeTotal = e.getElapsedTime().toMillis();
+                    String msg = format("Retries exceeded on attempt %,d. Elapsed time total: %,dms.", thisAttempt, elapsedTimeTotal);
                     logger.error(msg, lastException);
                 });
         return builder.build();

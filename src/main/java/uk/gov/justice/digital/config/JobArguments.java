@@ -63,7 +63,7 @@ public class JobArguments {
     public static final int MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH_DEFAULT = 2;
     public static final String CHECKPOINT_LOCATION = "checkpoint.location";
     public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
-    public static final int BATCH_MAX_RETRIES_DEFAULT =3;
+    public static final int BATCH_MAX_RETRIES_DEFAULT = 3;
     public static final String DATA_STORAGE_RETRY_MAX_ATTEMPTS = "dpr.datastorage.retry.maxAttempts";
     // You can turn off retries by setting max attempts to 1
     public static final int DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT = 1;

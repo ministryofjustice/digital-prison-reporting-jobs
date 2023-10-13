@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.writer.Writer;
 import uk.gov.justice.digital.writer.structured.StructuredZoneLoadWriter;
 
@@ -23,20 +25,25 @@ public class StructuredZoneLoad extends StructuredZone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZoneLoad.class);
 
+    private final ViolationService violationService;
+
     @Inject
     public StructuredZoneLoad(
             JobArguments jobArguments,
-            DataStorageService storage
+            DataStorageService storage,
+            ViolationService violationService
     ) {
-        this(jobArguments, createWriter(storage));
+        this(jobArguments, createWriter(storage), violationService);
     }
 
     @SuppressWarnings("unused")
     private StructuredZoneLoad(
             JobArguments jobArguments,
-            Writer writer
+            Writer writer,
+            ViolationService violationService
     ) {
         super(jobArguments, writer);
+        this.violationService = violationService;
     }
 
     private static Writer createWriter(DataStorageService storage) {
@@ -45,22 +52,28 @@ public class StructuredZoneLoad extends StructuredZone {
 
     @Override
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
+        Dataset<Row> result;
         val filteredRecords = dataFrame.filter(col(OPERATION).equalTo(Load.getName()));
+        try {
+            if (filteredRecords.isEmpty()) {
+                result = spark.emptyDataFrame();
+            } else {
+                String sourceName = sourceReference.getSource();
+                String tableName = sourceReference.getTable();
 
-        if (filteredRecords.isEmpty()) {
-            return spark.emptyDataFrame();
-        } else {
-            String sourceName = sourceReference.getSource();
-            String tableName = sourceReference.getTable();
+                val startTime = System.currentTimeMillis();
 
-            val startTime = System.currentTimeMillis();
+                logger.debug("Processing records for {}/{}", sourceName, tableName);
+                result = super.process(spark, filteredRecords, sourceReference);
+                logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
 
-            logger.debug("Processing records for {}/{}", sourceName, tableName);
-            val result = super.process(spark, filteredRecords, sourceReference);
-            logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
-
-            return result;
+                return result;
+            }
+        } catch (DataStorageRetriesExhaustedException e) {
+            violationService.handleRetriesExhausted(spark, filteredRecords, sourceReference.getSource(), sourceReference.getTable(), e, ViolationService.ZoneName.STRUCTURED_LOAD);
+            result = spark.emptyDataFrame();
         }
+        return result;
     }
 
 }
