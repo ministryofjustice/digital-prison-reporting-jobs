@@ -30,6 +30,9 @@ public class ViolationService {
     private final String violationsPath;
     private final DataStorageService storageService;
 
+    /**
+     * Allows us to record where a violation occurred.
+     */
     public enum ZoneName {
         RAW("Raw"),
         STRUCTURED_LOAD("Structured Load"),
