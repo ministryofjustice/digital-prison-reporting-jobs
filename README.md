@@ -79,6 +79,7 @@ run the tests.
     TBD
 ```
 
+
 ## Contributing
 
 Please adhere to the following guidelines when making contributions to the
@@ -106,6 +107,123 @@ project.
 ### Releases
 
 - v1.0.0
+
+## DataStorageService Backoff Retry
+- `dpr.datastorage.retry.maxAttempts` - The maximum number of attempts to make, i.e. 1 means no retries, 10 means make the 1st attempt + 9 retries.
+- `dpr.datastorage.retry.minWaitMillis` - The minimum time to wait after an attempt before retrying in milliseconds, prior to jitter being applied.
+- `dpr.datastorage.retry.maxWaitMillis` - The maximum time to wait after an attempt before retrying in milliseconds, prior to jitter being applied.
+- `dpr.datastorage.retry.jitterFactor` - If greater than zero it applies some random jitter to the calculated wait time, e.g. 0.25 jitter factor will add or subtract up to 250ms from a 1 second wait time.
+
+Note that jitter can result in the wait for one iteration exceeding maxWaitMillis. The actual maximum wait is `maxWaitMillis + (maxWaitMillis * jitterFactor)`.
+
+Here are some examples settings and log outputs showing time taken (where the retried example operation takes zero time).
+
+- maxAttempts: 10
+- minWaitMillis: 100
+- maxWaitMillis: 500
+- jitterFactor: 0.25
+
+```
+Retrying after attempt 1. Elapsed time total: 200ms.
+Retrying after attempt 2. Elapsed time total: 445ms.
+Retrying after attempt 3. Elapsed time total: 874ms.
+Retrying after attempt 4. Elapsed time total: 1,374ms.
+Retrying after attempt 5. Elapsed time total: 1,925ms.
+Retrying after attempt 6. Elapsed time total: 2,374ms.
+Retrying after attempt 7. Elapsed time total: 3,045ms.
+Retrying after attempt 8. Elapsed time total: 3,575ms.
+Retrying after attempt 9. Elapsed time total: 4,205ms.
+Retries exceeded on attempt 10. Elapsed time total: 4,207ms.
+```
+
+- maxAttempts: 10
+- minWaitMillis: 100
+- maxWaitMillis: 5000
+- jitterFactor: 0.25
+
+```
+Retrying after attempt 1. Elapsed time total: 200ms.
+Retrying after attempt 2. Elapsed time total: 454ms.
+Retrying after attempt 3. Elapsed time total: 835ms.
+Retrying after attempt 4. Elapsed time total: 1,879ms.
+Retrying after attempt 5. Elapsed time total: 3,932ms.
+Retrying after attempt 6. Elapsed time total: 7,753ms.
+Retrying after attempt 7. Elapsed time total: 13,629ms.
+Retrying after attempt 8. Elapsed time total: 19,280ms.
+Retrying after attempt 9. Elapsed time total: 23,788ms.
+Retries exceeded on attempt 10. Elapsed time total: 23,790ms.
+```
+
+- maxAttempts: 10
+- minWaitMillis: 100
+- maxWaitMillis: 10000
+- jitterFactor: 0.25
+
+```
+Retrying after attempt 1. Elapsed time total: 204ms.
+Retrying after attempt 2. Elapsed time total: 442ms.
+Retrying after attempt 3. Elapsed time total: 1,013ms.
+Retrying after attempt 4. Elapsed time total: 2,060ms.
+Retrying after attempt 5. Elapsed time total: 3,948ms.
+Retrying after attempt 6. Elapsed time total: 6,641ms.
+Retrying after attempt 7. Elapsed time total: 13,488ms.
+Retrying after attempt 8. Elapsed time total: 23,605ms.
+Retrying after attempt 9. Elapsed time total: 31,772ms.
+Retries exceeded on attempt 10. Elapsed time total: 31,774ms.
+```
+
+- maxAttempts: 10
+- minWaitMillis: 500
+- maxWaitMillis: 5000
+- jitterFactor: 0.25
+
+```
+Retrying after attempt 1. Elapsed time total: 705ms.
+Retrying after attempt 2. Elapsed time total: 1,829ms.
+Retrying after attempt 3. Elapsed time total: 4,383ms.
+Retrying after attempt 4. Elapsed time total: 9,286ms.
+Retrying after attempt 5. Elapsed time total: 14,087ms.
+Retrying after attempt 6. Elapsed time total: 18,729ms.
+Retrying after attempt 7. Elapsed time total: 24,264ms.
+Retrying after attempt 8. Elapsed time total: 29,515ms.
+Retrying after attempt 9. Elapsed time total: 34,571ms.
+Retries exceeded on attempt 10. Elapsed time total: 34,573ms.
+```
+
+- maxAttempts: 10
+- minWaitMillis: 500
+- maxWaitMillis: 10000
+- jitterFactor: 0.25
+
+```
+Retrying after attempt 1. Elapsed time total: 469ms.
+Retrying after attempt 2. Elapsed time total: 1,405ms.
+Retrying after attempt 3. Elapsed time total: 3,665ms.
+Retrying after attempt 4. Elapsed time total: 8,505ms.
+Retrying after attempt 5. Elapsed time total: 18,406ms.
+Retrying after attempt 6. Elapsed time total: 28,948ms.
+Retrying after attempt 7. Elapsed time total: 41,448ms.
+Retrying after attempt 8. Elapsed time total: 50,899ms.
+Retrying after attempt 9. Elapsed time total: 60,200ms.
+Retries exceeded on attempt 10. Elapsed time total: 60,202ms.
+```
+
+- maxAttempts: 10
+- minWaitMillis: 1000
+- maxWaitMillis: 20000
+- jitterFactor: 0.25
+```
+Retrying after attempt 1. Elapsed time total: 1,121ms.
+Retrying after attempt 2. Elapsed time total: 3,296ms.
+Retrying after attempt 3. Elapsed time total: 6,489ms.
+Retrying after attempt 4. Elapsed time total: 14,194ms.
+Retrying after attempt 5. Elapsed time total: 32,057ms.
+Retrying after attempt 6. Elapsed time total: 57,081ms.
+Retrying after attempt 7. Elapsed time total: 75,936ms.
+Retrying after attempt 8. Elapsed time total: 92,927ms.
+Retrying after attempt 9. Elapsed time total: 111,546ms.
+Retries exceeded on attempt 10. Elapsed time total: 111,548ms.
+```
 
 ## TODO
 
