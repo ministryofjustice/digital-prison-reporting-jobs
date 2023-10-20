@@ -385,6 +385,7 @@ public class DataStorageService {
         double jitterFactor = jobArguments.getDataStorageRetryJitterFactor();
         // You can turn off retries by setting max attempts to 1
         int maxAttempts = jobArguments.getDataStorageRetryMaxAttempts();
+        logger.info("Retry Policy Settings: max attempts: {}, min wait: {}ms, max wait: {}ms, jitter factor: {}", maxAttempts, minWaitMillis, maxWaitMillis, jitterFactor);
         RetryPolicyBuilder<Void> builder = RetryPolicy.builder();
         // Specify the Throwables we will retry
         builder.handle(DeltaConcurrentModificationException.class)
