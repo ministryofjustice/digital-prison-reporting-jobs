@@ -70,6 +70,7 @@ public class StructuredZoneCDC extends StructuredZone {
                 logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
             }
         } catch (DataStorageRetriesExhaustedException e) {
+            logger.warn("Structured zone CDC retries exhausted", e);
             violationService.handleRetriesExhausted(spark, filteredRecords, sourceReference.getSource(), sourceReference.getTable(), e, STRUCTURED_CDC);
             result = spark.emptyDataFrame();
         }

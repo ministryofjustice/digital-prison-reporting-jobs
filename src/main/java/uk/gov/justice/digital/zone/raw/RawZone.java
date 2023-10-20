@@ -66,6 +66,7 @@ public class RawZone implements Zone {
 
             result = rawDataFrame;
         } catch (DataStorageRetriesExhaustedException e) {
+            logger.warn("Raw zone retries exhausted", e);
             violationService.handleRetriesExhausted(spark, records, rowSource, rowTable, e, ViolationService.ZoneName.RAW);
             result = spark.emptyDataFrame();
         }

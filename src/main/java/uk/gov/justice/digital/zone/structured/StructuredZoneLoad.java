@@ -70,6 +70,7 @@ public class StructuredZoneLoad extends StructuredZone {
                 return result;
             }
         } catch (DataStorageRetriesExhaustedException e) {
+            logger.warn("Structured zone load retries exhausted", e);
             violationService.handleRetriesExhausted(spark, filteredRecords, sourceReference.getSource(), sourceReference.getTable(), e, ViolationService.ZoneName.STRUCTURED_LOAD);
             result = spark.emptyDataFrame();
         }

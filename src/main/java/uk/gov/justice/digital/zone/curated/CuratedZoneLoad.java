@@ -65,6 +65,7 @@ public class CuratedZoneLoad extends CuratedZone {
                 logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
             }
         } catch (DataStorageRetriesExhaustedException e) {
+            logger.warn("Curated zone load retries exhausted", e);
             violationService.handleRetriesExhausted(spark, dataFrame, sourceReference.getSource(), sourceReference.getTable(), e, ViolationService.ZoneName.CURATED_LOAD);
             result = spark.emptyDataFrame();
         }
