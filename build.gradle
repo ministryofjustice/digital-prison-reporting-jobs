@@ -45,6 +45,7 @@ ext {
     awsSdkVersion = '1.12.425'
     glueApiVersion = '4.0.0'
     failSafeVersion = '3.3.2'
+    deequVersion = '2.0.4-spark-3.3'
 }
 
 dependencies {
@@ -75,6 +76,7 @@ dependencies {
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
     implementation "dev.failsafe:failsafe:$failSafeVersion"
+    implementation "com.amazon.deequ:deequ:$deequVersion"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.

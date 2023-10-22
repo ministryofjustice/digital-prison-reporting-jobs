@@ -19,7 +19,7 @@ import java.net.URI;
 
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Load;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 
 @Singleton
 @CommandLine.Command(name = "DataHubBatchJob")
@@ -71,12 +71,8 @@ public class DataHubBatchJob implements Runnable {
                     val source = pathParts[0];
                     val table = pathParts[1];
 
-                    val batch = sparkSession
-                            .read()
-                            .parquet(filePath)
-                            .drop("Op")
-                            .withColumn(OPERATION, lit(Load.getName()));
-                    batchProcessor.processBatch(sparkSession, source, table, batch);
+                    val dataFrame = sparkSession.read().parquet(filePath).withColumn(OPERATION, lit(Load.getName()));
+                    batchProcessor.processBatch(sparkSession, source, table, dataFrame);
 
                     logger.info("Processed file {} in {}ms", filePath, System.currentTimeMillis() - startTime);
                 }
