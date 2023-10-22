@@ -52,7 +52,9 @@ public class SparkSessionProvider {
                 .set("spark.sql.legacy.charVarcharAsString", "true")
                 // We can write dates as is since we will always be using Spark 3+. See SQLConf for context.
                 .set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
+                .set("spark.sql.parquet.datetimeRebaseModeInRead", "CORRECTED")
                 .set("spark.sql.parquet.int96RebaseModeInWrite", "CORRECTED")
+                .set("spark.sql.parquet.int96RebaseModeInRead", "CORRECTED")
                 // Standardise on UTC.
                 .set("spark.sql.session.timeZone", "UTC");
     }
