@@ -46,7 +46,7 @@ public class SparkSessionProvider {
                 .set("spark.databricks.delta.autoCompact.enabled", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
-                .set("spark.databricks.delta.properties.defaults.delta.targetFileSize", "67110000")
+                .set("spark.databricks.delta.properties.defaults.targetFileSize", "67110000")
                 .set("spark.streaming.stopGracefullyOnShutdown", "true")
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
