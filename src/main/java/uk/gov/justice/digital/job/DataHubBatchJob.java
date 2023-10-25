@@ -60,7 +60,7 @@ public class DataHubBatchJob implements Runnable {
 
             while (fileIterator.hasNext()) {
                 val filePath = fileIterator.next().getPath().toString();
-                if (!filePath.contains("awsdms_")) {
+                if (filePath.endsWith("LOAD*.parquet")) {
                     logger.info("Processing file {}", filePath);
 
                     val startTime = System.currentTimeMillis();
