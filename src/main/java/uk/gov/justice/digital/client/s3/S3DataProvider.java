@@ -22,8 +22,8 @@ public class S3DataProvider {
         Map<String, String> s3ConnectionOptions = new HashMap<>();
 
         // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-json-home.html
-        s3ConnectionOptions.put("inferSchema", "true");
-        s3ConnectionOptions.put("paths", arguments.getRawS3Path() + "*/*/*-*.parquet");
+        s3ConnectionOptions.put("isFailFast", "true");
+        s3ConnectionOptions.put("paths", "[\"" + arguments.getRawS3Path() + "*/*/*-*.parquet\"]");
         logger.info("S3 Connection Options: {}", s3ConnectionOptions);
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(s3ConnectionOptions));
         DataSource s3DataSource =  glueContext.getSource("s3", connectionOptions, "", "");
