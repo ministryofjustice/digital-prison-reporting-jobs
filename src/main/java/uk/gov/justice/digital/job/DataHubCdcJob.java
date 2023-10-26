@@ -32,7 +32,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OP
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.cdcShortOperationCodes;
 
 @Singleton
-@CommandLine.Command(name = "DataHubCDCJob")
+@CommandLine.Command(name = "DataHubCdcJob")
 public class DataHubCdcJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataHubCdcJob.class);
