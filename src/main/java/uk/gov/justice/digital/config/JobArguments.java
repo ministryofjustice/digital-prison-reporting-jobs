@@ -241,9 +241,14 @@ public class JobArguments {
 
 
     private String getArgument(String argumentName) {
-        return Optional
-                .ofNullable(config.get(argumentName))
-                .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
+        Optional<String> argument = Optional.ofNullable(config.get(argumentName));
+
+        if (!argument.isPresent()) {
+            logger.error("Argument: " + argumentName + " required but not set");
+            System.exit(1);
+        }
+
+        return argument.get();
     }
 
     private String getArgument(String argumentName, String defaultValue) {
