@@ -26,7 +26,10 @@ public class S3DataProvider {
         s3ConnectionOptions.put("paths", "[\"" + arguments.getRawS3Path() + "*/*/*-*.parquet\"]");
         logger.info("S3 Connection Options: {}", s3ConnectionOptions);
         JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(s3ConnectionOptions));
-        DataSource s3DataSource =  glueContext.getSource("s3", connectionOptions, "", "");
+
+        JsonOptions formatOptions = new JsonOptions(JavaConverters.mapAsScalaMap(new HashMap<>()));
+
+        DataSource s3DataSource =  glueContext.getSourceWithFormat("s3", connectionOptions, "", "parquet", formatOptions);
         return s3DataSource.getDataFrame();
     }
 }
