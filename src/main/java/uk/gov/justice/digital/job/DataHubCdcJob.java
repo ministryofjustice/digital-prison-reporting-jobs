@@ -80,14 +80,14 @@ public class DataHubCdcJob implements Runnable {
         logger.info("Initialising per batch processing");
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
             try {
-                val ShortOperationColumnName = "Op";
+                val shortOperationColumnName = "Op";
                 val dataFrame = batch
-                        .filter(col(ShortOperationColumnName).isin(cdcShortOperationCodes))
+                        .filter(col(shortOperationColumnName).isin(cdcShortOperationCodes))
                         .withColumn(
                                 OPERATION,
-                                when(col(ShortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Insert.getName())), lit(Insert.getName()))
-                                        .when(col(ShortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Update.getName())), lit(Update.getName()))
-                                        .when(col(ShortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Delete.getName())), lit(Delete.getName()))
+                                when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Insert.getName())), lit(Insert.getName()))
+                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Update.getName())), lit(Update.getName()))
+                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Delete.getName())), lit(Delete.getName()))
                         );
 
                 cdcProcessor.processCDC(sparkSession, dataFrame);
@@ -111,6 +111,7 @@ public class DataHubCdcJob implements Runnable {
     private JsonOptions createBatchOptions() {
         // See https://docs.aws.amazon.com/glue/latest/dg/glue-etl-scala-apis-glue-gluecontext.html#glue-etl-scala-apis-glue-gluecontext-defs-forEachBatch
         Map<String, String> batchProcessingOptions = new HashMap<>();
+        batchProcessingOptions.put("windowSize", arguments.getBatchDuration());
         batchProcessingOptions.put("checkpointLocation", arguments.getCheckpointLocation());
         batchProcessingOptions.put("batchMaxRetries", Integer.toString(arguments.getBatchMaxRetries()));
         logger.info("Batch Options: {}", batchProcessingOptions);
