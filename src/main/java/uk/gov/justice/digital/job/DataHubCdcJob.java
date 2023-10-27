@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import scala.collection.JavaConverters;
 import scala.runtime.BoxedUnit;
+import uk.gov.justice.digital.client.kinesis.KinesisDataProvider;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
@@ -41,20 +42,23 @@ public class DataHubCdcJob implements Runnable {
     private final SparkSessionProvider sparkSessionProvider;
     private final S3CdcProcessor cdcProcessor;
     private final JobProperties properties;
-    private final S3DataProvider s3DataProvider;
+//    private final S3DataProvider s3DataProvider;
+    private final KinesisDataProvider kinesisDataProvider;
 
     @Inject
     public DataHubCdcJob(
             JobArguments arguments,
             JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
-            S3DataProvider s3DataProvider,
+//            S3DataProvider s3DataProvider,
+            KinesisDataProvider kinesisDataProvider,
             S3CdcProcessor cdcProcessor
     ) {
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
-        this.s3DataProvider = s3DataProvider;
+//        this.s3DataProvider = s3DataProvider;
+        this.kinesisDataProvider = kinesisDataProvider;
         this.cdcProcessor = cdcProcessor;
     }
 
@@ -75,22 +79,26 @@ public class DataHubCdcJob implements Runnable {
         Job.init(jobName, glueContext, arguments.getConfig());
 
         logger.info("Initialising data source");
-        Dataset<Row> sourceDf = s3DataProvider.getSourceData(glueContext, arguments);
+//        Dataset<Row> sourceDf = s3DataProvider.getSourceData(glueContext, arguments);
+
+        Dataset<Row> sourceDf = kinesisDataProvider.getSourceData(glueContext, arguments);
 
         logger.info("Initialising per batch processing");
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
             try {
-                val shortOperationColumnName = "Op";
-                val dataFrame = batch
-                        .filter(col(shortOperationColumnName).isin(cdcShortOperationCodes))
-                        .withColumn(
-                                OPERATION,
-                                when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Insert.getName())), lit(Insert.getName()))
-                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Update.getName())), lit(Update.getName()))
-                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Delete.getName())), lit(Delete.getName()))
-                        );
+//                val shortOperationColumnName = "Op";
+//                val dataFrame = batch
+//                        .filter(col(shortOperationColumnName).isin(cdcShortOperationCodes))
+//                        .withColumn(
+//                                OPERATION,
+//                                when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Insert.getName())), lit(Insert.getName()))
+//                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Update.getName())), lit(Update.getName()))
+//                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Delete.getName())), lit(Delete.getName()))
+//                        );
 
-                cdcProcessor.processCDC(sparkSession, dataFrame);
+//                cdcProcessor.processCDC(sparkSession, dataFrame);
+
+                cdcProcessor.processCDC(sparkSession, batch);
             } catch (Exception e) {
                 if (e instanceof InterruptedException) {
                     logger.error("Streaming job interrupted", e);
