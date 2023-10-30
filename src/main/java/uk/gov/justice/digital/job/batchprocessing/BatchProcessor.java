@@ -93,15 +93,8 @@ public class BatchProcessor {
                         dataFrameForTable.unpersist();
 
                         curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
-                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, sourceReference);
+                        curatedZoneCDC.process(spark, structuredIncrementalDataFrame, sourceReference);
 
-                        if (!curatedCdcDataFrame.isEmpty()) domainService
-                                .refreshDomainUsingDataFrame(
-                                        spark,
-                                        curatedCdcDataFrame,
-                                        sourceReference.getSource(),
-                                        sourceReference.getTable()
-                                );
                     } else {
                         violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
                     }
