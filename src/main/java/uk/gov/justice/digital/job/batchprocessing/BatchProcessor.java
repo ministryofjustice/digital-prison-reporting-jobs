@@ -7,6 +7,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.Converter;
 import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -40,8 +41,11 @@ public class BatchProcessor {
     private final DomainService domainService;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
+
+    private final boolean domainRefreshEnabled;
     @Inject
     public BatchProcessor(
+            JobArguments jobArguments,
             RawZone rawZone,
             StructuredZoneLoad structuredZoneLoad,
             StructuredZoneCDC structuredZoneCDC,
@@ -60,6 +64,8 @@ public class BatchProcessor {
         this.domainService = domainService;
         this.sourceReferenceService = sourceReferenceService;
         this.violationService = violationService;
+        this.domainRefreshEnabled = jobArguments.isDomainRefreshEnabled();
+        logger.info("Domain Refresh enabled: " + this.domainRefreshEnabled);
         logger.info("BatchProcessorProvider initialization complete");
     }
 
@@ -95,7 +101,7 @@ public class BatchProcessor {
                         curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
                         val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, sourceReference);
 
-                        if (!curatedCdcDataFrame.isEmpty()) domainService
+                        if (domainRefreshEnabled && !curatedCdcDataFrame.isEmpty()) domainService
                                 .refreshDomainUsingDataFrame(
                                         spark,
                                         curatedCdcDataFrame,

@@ -77,6 +77,9 @@ public class JobArguments {
     public static final String DATA_STORAGE_RETRY_JITTER_FACTOR = "dpr.datastorage.retry.jitterFactor";
     public static final double DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT = 0.25;
 
+    public static final String DOMAIN_REFRESH_ENABLED = "dpr.domainrefresh.enabled";
+    public static final boolean DOMAIN_REFRESH_ENABLED_DEFAULT = true;
+
     private final Map<String, String> config;
 
     @Inject
@@ -232,6 +235,10 @@ public class JobArguments {
         return getArgument(DATA_STORAGE_RETRY_JITTER_FACTOR, DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
     }
 
+    public boolean isDomainRefreshEnabled() {
+        return getArgument(DOMAIN_REFRESH_ENABLED, DOMAIN_REFRESH_ENABLED_DEFAULT);
+    }
+
 
     private String getArgument(String argumentName) {
         return Optional
@@ -263,6 +270,13 @@ public class JobArguments {
         return Optional
                 .ofNullable(config.get(argumentName))
                 .map(Double::parseDouble)
+                .orElse(defaultValue);
+    }
+
+    private boolean getArgument(String argumentName, boolean defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Boolean::parseBoolean)
                 .orElse(defaultValue);
     }
 
