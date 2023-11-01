@@ -160,6 +160,32 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
     }
 
     @Test
+    public void shouldRefreshDomainWhenEnabled() throws Exception {
+        givenDomainRefreshEnabledSetTo(true);
+        BatchProcessor undertest = new BatchProcessor(
+                jobArguments,
+                rawZone,
+                structuredZoneLoad,
+                structuredZoneCDC,
+                curatedZoneLoad,
+                curatedZoneCDC,
+                domainService,
+                sourceReferenceService,
+                violationService
+        );
+        givenSourceReferenceIsPresent("oms_owner", "agency_internal_locations");
+
+        Dataset<Row> df = populatedDataFrame();
+
+        givenStructuredZoneLoadReturns(df);
+        givenStructuredZoneCDCReturns(df);
+        givenCuratedZoneCDCReturns(df);
+
+        undertest.processBatch(spark, converter, cdcRecordDf);
+
+        shouldCallRefreshDomain(1);
+    }
+    @Test
     public void shouldNotRefreshDomainWhenDisabled() throws Exception {
         givenDomainRefreshEnabledSetTo(false);
         BatchProcessor undertest = new BatchProcessor(
