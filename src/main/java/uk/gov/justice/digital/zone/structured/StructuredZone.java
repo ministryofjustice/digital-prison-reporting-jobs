@@ -44,8 +44,7 @@ public abstract class StructuredZone implements Zone {
     }
 
     public Dataset<Row> process(SparkSession spark, Dataset<Row> filteredRecords, SourceReference sourceReference) throws DataStorageException {
-        val sortedRecords = filteredRecords.orderBy(col(TIMESTAMP));
-        return handleSchemaFound(spark, sortedRecords, sourceReference);
+        return handleSchemaFound(spark, filteredRecords, sourceReference);
     }
 
     private Dataset<Row> handleSchemaFound(
@@ -94,7 +93,7 @@ public abstract class StructuredZone implements Zone {
             String destinationPath,
             SourceReference.PrimaryKey primaryKey
     ) throws DataStorageException {
-        val validRecords = dataFrame.filter(col(VALID).equalTo(true)).select(PARSED_DATA + ".*", OPERATION);
+        val validRecords = dataFrame.filter(col(VALID).equalTo(true)).select(PARSED_DATA + ".*", TIMESTAMP, OPERATION);
 
         if (!validRecords.isEmpty()) {
             writer.writeValidRecords(spark, destinationPath, primaryKey, validRecords);
@@ -117,7 +116,7 @@ public abstract class StructuredZone implements Zone {
         val validator = JsonValidator.createAndRegister(schema, spark, source, table);
 
         return dataFrame
-                .select(col(DATA), col(METADATA), col(OPERATION))
+                .select(col(DATA), col(METADATA), col(TIMESTAMP), col(OPERATION))
                 .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
                 .withColumn(ERROR, validator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)))
                 .withColumn(VALID, col(ERROR).equalTo(lit("")));

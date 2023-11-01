@@ -117,26 +117,98 @@ public class ZoneFixtures {
 
     // structured load records
     public static final Row structuredRecord2Load = RowFactory
-            .create(RECORD_KEY_2, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Load.getName());
+            .create(
+                    RECORD_KEY_2,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "1",
+                    Load.getName()
+            );
     public static final Row structuredRecord3Load = RowFactory
-            .create(RECORD_KEY_3, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Load.getName());
+            .create(
+                    RECORD_KEY_3,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "2",
+                    Load.getName()
+            );
     public static final Row structuredRecord1Load = RowFactory
-            .create(RECORD_KEY_1, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Load.getName());
+            .create(
+                    RECORD_KEY_1,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "3",
+                    Load.getName()
+            );
 
 
     // structured insert, update, and delete records
     public static final Row structuredRecord4Insertion = RowFactory
-            .create(RECORD_KEY_4, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Insert.getName());
+            .create(
+                    RECORD_KEY_4,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "0",
+                    Insert.getName()
+            );
     public static final Row structuredRecord5Insertion = RowFactory
-            .create(RECORD_KEY_5, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Insert.getName());
+            .create(
+                    RECORD_KEY_5,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "4",
+                    Insert.getName()
+            );
     public static final Row structuredRecord6Insertion = RowFactory
-            .create(RECORD_KEY_6, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Insert.getName());
+            .create(
+                    RECORD_KEY_6,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "5",
+                    Insert.getName()
+            );
     public static final Row structuredRecord7Update = RowFactory
-            .create(RECORD_KEY_7, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Update.getName());
+            .create(
+                    RECORD_KEY_7,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "6",
+                    Update.getName()
+            );
     public static final Row structuredRecord6Deletion = RowFactory
-            .create(RECORD_KEY_6, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Delete.getName());
+            .create(
+                    RECORD_KEY_6,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "7",
+                    Delete.getName()
+            );
     public static final Row structuredRecord5Update = RowFactory
-            .create(RECORD_KEY_5, STRING_FIELD_VALUE, null, NUMBER_FIELD_VALUE, ARRAY_FIELD_VALUE, Update.getName());
+            .create(
+                    RECORD_KEY_5,
+                    STRING_FIELD_VALUE,
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "8",
+                    Update.getName()
+            );
 
     public static Dataset<Row> createTestDataset(SparkSession spark) {
         val rawData = new ArrayList<>(Arrays.asList(
@@ -278,9 +350,9 @@ public class ZoneFixtures {
 
     public static Dataset<Row> createStructuredLoadDataset(SparkSession spark) {
         val expectedLoadData = new ArrayList<>(Arrays.asList(
+                structuredRecord1Load,
                 structuredRecord2Load,
-                structuredRecord3Load,
-                structuredRecord1Load
+                structuredRecord3Load
         ));
 
         return spark.createDataFrame(expectedLoadData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);
@@ -294,6 +366,22 @@ public class ZoneFixtures {
                 structuredRecord7Update,
                 structuredRecord6Deletion,
                 structuredRecord5Update
+        ));
+
+        return spark.createDataFrame(expectedIncrementalData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);
+    }
+
+    public static Dataset<Row> createExpectedRecordsInWriteOrder(SparkSession spark) {
+        val expectedIncrementalData = new ArrayList<>(Arrays.asList(
+                // inserts
+                structuredRecord4Insertion,
+                structuredRecord5Insertion,
+                structuredRecord6Insertion,
+                // updates
+                structuredRecord7Update,
+                structuredRecord5Update,
+                // deletes
+                structuredRecord6Deletion
         ));
 
         return spark.createDataFrame(expectedIncrementalData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);

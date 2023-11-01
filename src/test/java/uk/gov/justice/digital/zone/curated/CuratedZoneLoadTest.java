@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_LOAD;
 import static uk.gov.justice.digital.test.Fixtures.CURATED_PATH;
 import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
@@ -88,7 +89,7 @@ class CuratedZoneLoadTest extends BaseSparkTest {
         );
 
         assertIterableEquals(
-                testDataSet.drop(OPERATION).collectAsList(),
+                testDataSet.drop(OPERATION, TIMESTAMP).collectAsList(),
                 dataframeCaptor.getValue().collectAsList()
         );
     }

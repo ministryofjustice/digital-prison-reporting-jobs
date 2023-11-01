@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
@@ -40,11 +41,7 @@ import static uk.gov.justice.digital.test.Fixtures.TABLE_SOURCE;
 import static uk.gov.justice.digital.test.Fixtures.VIOLATIONS_PATH;
 import static uk.gov.justice.digital.test.Fixtures.getAllCapturedRecords;
 import static uk.gov.justice.digital.test.Fixtures.hasNullColumns;
-import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredDeleteDataset;
-import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredIncrementalDataset;
-import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredInsertDataset;
-import static uk.gov.justice.digital.test.ZoneFixtures.createStructuredUpdateDataset;
-import static uk.gov.justice.digital.test.ZoneFixtures.createTestDataset;
+import static uk.gov.justice.digital.test.ZoneFixtures.*;
 
 @ExtendWith(MockitoExtension.class)
 class StructuredZoneCdcTest extends BaseSparkTest {
@@ -87,6 +84,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
     @Test
     public void shouldHandleValidIncrementalRecords() throws DataStorageException {
         val expectedRecords = createStructuredIncrementalDataset(spark);
+        val expectedRecordsInWriteOrder = createExpectedRecordsInWriteOrder(spark);
 
         givenTheSourceReferenceIsValid();
         doNothing().when(mockDataStorage).upsertRecords(eq(spark), eq(structuredPath), dataframeCaptor.capture(), eq(primaryKey));
@@ -99,7 +97,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
         );
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION).collectAsList(),
+                expectedRecordsInWriteOrder.drop(OPERATION, TIMESTAMP).collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }
@@ -114,7 +112,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
         underTest.process(spark, testDataSet, mockSourceReference).collect();
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION).collectAsList(),
+                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }
@@ -129,7 +127,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
         underTest.process(spark, testDataSet, mockSourceReference).collect();
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION).collectAsList(),
+                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }
@@ -144,7 +142,7 @@ class StructuredZoneCdcTest extends BaseSparkTest {
         underTest.process(spark, testDataSet, mockSourceReference).collect();
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION).collectAsList(),
+                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }

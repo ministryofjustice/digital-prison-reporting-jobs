@@ -28,8 +28,6 @@ public class JobArguments {
 
     public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
     public static final String AWS_REGION = "dpr.aws.region";
-    public static final String SOURCE = "dpr.schema";
-    public static final String TABLE = "dpr.table";
     public static final String LOG_LEVEL = "dpr.log.level";
     public static final String CONTRACT_REGISTRY_NAME = "dpr.contract.registryName";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
@@ -119,14 +117,6 @@ public class JobArguments {
 
     public String getAwsRegion() {
         return getArgument(AWS_REGION);
-    }
-
-    public String getSource() {
-        return getArgument(SOURCE);
-    }
-
-    public String getTable() {
-        return getArgument(TABLE);
     }
 
     public String getAwsDynamoDBEndpointUrl() {
