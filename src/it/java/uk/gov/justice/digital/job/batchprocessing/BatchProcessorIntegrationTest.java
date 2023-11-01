@@ -181,9 +181,7 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
         givenStructuredZoneCDCReturns(df);
         givenCuratedZoneCDCReturns(df);
 
-        val inputDf = cdcRecordDf;
-
-        undertest.processBatch(spark, converter, inputDf);
+        undertest.processBatch(spark, converter, cdcRecordDf);
 
         shouldNotCallRefreshDomain();
     }
