@@ -210,6 +210,17 @@ public class ZoneFixtures {
                     Update.getName()
             );
 
+    public static final Row structuredRecord4SecondUpdate = RowFactory
+            .create(
+                    RECORD_KEY_4,
+                    "second update",
+                    null,
+                    NUMBER_FIELD_VALUE,
+                    ARRAY_FIELD_VALUE,
+                    "4",
+                    Update.getName()
+            );
+
     public static Dataset<Row> createTestDataset(SparkSession spark) {
         val rawData = new ArrayList<>(Arrays.asList(
                 record1Load,
@@ -222,6 +233,82 @@ public class ZoneFixtures {
                 record6Deletion,
                 record5Update
         ));
+
+        return spark.createDataFrame(rawData, ROW_SCHEMA);
+    }
+
+    public static Dataset<Row> createNonUniqueUnorderedTestDataset(SparkSession spark) {
+
+        val record4FirstInsertion = RowFactory.create(
+                "0",
+                RECORD_KEY_4,
+                TABLE_SOURCE,
+                TABLE_NAME,
+                Insert.getName(),
+                ROW_CONVERTER,
+                recordData4.replaceAll(STRING_FIELD_VALUE, "first insert"),
+                recordData4.replaceAll(STRING_FIELD_VALUE, "first insert"),
+                GENERIC_METADATA
+        );
+
+        val record4FirstUpdate = RowFactory.create(
+                "1",
+                RECORD_KEY_4,
+                TABLE_SOURCE,
+                TABLE_NAME,
+                Update.getName(),
+                ROW_CONVERTER,
+                recordData4.replaceAll(STRING_FIELD_VALUE, "first update"),
+                recordData4.replaceAll(STRING_FIELD_VALUE, "first update"),
+                GENERIC_METADATA
+        );
+
+        val record4Deletion = RowFactory.create(
+                "2",
+                RECORD_KEY_4,
+                TABLE_SOURCE,
+                TABLE_NAME,
+                Delete.getName(),
+                ROW_CONVERTER,
+                recordData4.replaceAll(STRING_FIELD_VALUE, "delete"),
+                recordData4.replaceAll(STRING_FIELD_VALUE, "delete"),
+                GENERIC_METADATA
+        );
+
+        val record4SecondInsertion = RowFactory.create(
+                "3",
+                RECORD_KEY_4,
+                TABLE_SOURCE,
+                TABLE_NAME,
+                Insert.getName(),
+                ROW_CONVERTER,
+                recordData4.replaceAll(STRING_FIELD_VALUE, "second insert"),
+                recordData4.replaceAll(STRING_FIELD_VALUE, "second insert"),
+                GENERIC_METADATA
+        );
+
+        val record4SecondUpdate = RowFactory.create(
+                "4",
+                RECORD_KEY_4,
+                TABLE_SOURCE,
+                TABLE_NAME,
+                Update.getName(),
+                ROW_CONVERTER,
+                recordData4.replaceAll(STRING_FIELD_VALUE, "second update"),
+                recordData4.replaceAll(STRING_FIELD_VALUE, "second update"),
+                GENERIC_METADATA
+        );
+
+        val rawData = Arrays.asList(
+                record4FirstInsertion,
+                record4FirstUpdate,
+                record4Deletion,
+                record4SecondInsertion,
+                record4SecondUpdate,
+                record6Insert
+        );
+
+        Collections.shuffle(rawData);
 
         return spark.createDataFrame(rawData, ROW_SCHEMA);
     }
@@ -361,8 +448,6 @@ public class ZoneFixtures {
     public static Dataset<Row> createStructuredIncrementalDataset(SparkSession spark) {
         val expectedIncrementalData = new ArrayList<>(Arrays.asList(
                 structuredRecord4Insertion,
-                structuredRecord5Insertion,
-                structuredRecord6Insertion,
                 structuredRecord7Update,
                 structuredRecord6Deletion,
                 structuredRecord5Update
@@ -371,17 +456,21 @@ public class ZoneFixtures {
         return spark.createDataFrame(expectedIncrementalData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);
     }
 
+    public static Dataset<Row> createExpectedUniqueMostRecentRecordsInWriteOrder(SparkSession spark) {
+        val expectedIncrementalData = Arrays.asList(
+                structuredRecord4SecondUpdate,
+                structuredRecord6Insertion
+        );
+
+        return spark.createDataFrame(expectedIncrementalData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);
+    }
+
     public static Dataset<Row> createExpectedRecordsInWriteOrder(SparkSession spark) {
         val expectedIncrementalData = new ArrayList<>(Arrays.asList(
-                // inserts
                 structuredRecord4Insertion,
-                structuredRecord5Insertion,
-                structuredRecord6Insertion,
-                // updates
                 structuredRecord7Update,
-                structuredRecord5Update,
-                // deletes
-                structuredRecord6Deletion
+                structuredRecord6Deletion,
+                structuredRecord5Update
         ));
 
         return spark.createDataFrame(expectedIncrementalData, STRUCTURED_RECORD_WITH_OPERATION_SCHEMA);

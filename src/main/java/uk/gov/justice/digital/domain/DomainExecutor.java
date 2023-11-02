@@ -269,7 +269,7 @@ public class DomainExecutor {
                 storage.endTableUpdates(spark, target);
                 break;
             case Insert:
-                storage.upsertRecords(spark, target.toPath(), dataFrame, primaryKey);
+                storage.mergeRecords(spark, target.toPath(), dataFrame, primaryKey, Collections.emptyList());
                 storage.endTableUpdates(spark, target);
                 break;
             case Update:

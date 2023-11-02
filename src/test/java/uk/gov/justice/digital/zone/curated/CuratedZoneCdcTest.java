@@ -29,8 +29,6 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
 import static uk.gov.justice.digital.test.Fixtures.CURATED_PATH;
 import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
@@ -81,9 +79,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         val expectedRecordsInWriteOrder = createExpectedRecordsInWriteOrder(spark);
 
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).upsertRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any());
-        doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).mergeRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), any(), any());
 
         assertIterableEquals(
                 expectedRecords.collectAsList(),
@@ -91,7 +87,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         );
 
         assertIterableEquals(
-                expectedRecordsInWriteOrder.drop(OPERATION, TIMESTAMP).collectAsList(),
+                expectedRecordsInWriteOrder.collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }
@@ -101,12 +97,12 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         val expectedRecords = createStructuredInsertDataset(spark);
 
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).upsertRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).mergeRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey), any());
 
         underTest.process(spark, expectedRecords, mockSourceReference).collect();
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
+                expectedRecords.collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }
@@ -116,12 +112,12 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         val expectedRecords = createStructuredUpdateDataset(spark);
 
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).updateRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).mergeRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey), any());
 
         underTest.process(spark, expectedRecords, mockSourceReference).collect();
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
+                expectedRecords.collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }
@@ -131,12 +127,12 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         val expectedRecords = createStructuredDeleteDataset(spark);
 
         givenTheSourceReferenceIsValid();
-        doNothing().when(mockDataStorage).deleteRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey));
+        doNothing().when(mockDataStorage).mergeRecords(eq(spark), eq(curatedPath), dataframeCaptor.capture(), eq(primaryKey), any());
 
         underTest.process(spark, expectedRecords, mockSourceReference).collect();
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
+                expectedRecords.collectAsList(),
                 getAllCapturedRecords(dataframeCaptor)
         );
     }
@@ -146,7 +142,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
 
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception("Some problem"));
-        doThrow(thrown).when(mockDataStorage).updateRecords(any(), any(), any(), any());
+        doThrow(thrown).when(mockDataStorage).mergeRecords(any(), any(), any(), any(), any());
 
         val inputDf = createStructuredUpdateDataset(spark);
         underTest.process(spark, inputDf, mockSourceReference).collect();
@@ -158,7 +154,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
         givenTheSourceReferenceIsValid();
 
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception("Some problem"));
-        doThrow(thrown).when(mockDataStorage).updateRecords(any(), any(), any(), any());
+        doThrow(thrown).when(mockDataStorage).mergeRecords(any(), any(), any(), any(), any());
 
         val inputDf = createStructuredUpdateDataset(spark);
         val resultDf = underTest.process(spark, inputDf, mockSourceReference);

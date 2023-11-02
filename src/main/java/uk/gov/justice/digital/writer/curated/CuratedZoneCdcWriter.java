@@ -19,13 +19,14 @@ public class CuratedZoneCdcWriter extends Writer {
         this.storage = storage;
     }
 
-    public void writeValidRecords(
+    public Dataset<Row> writeValidRecords(
             SparkSession spark,
             String destinationPath,
             SourceReference.PrimaryKey primaryKey,
             Dataset<Row> validRecords
     ) throws DataStorageRetriesExhaustedException {
         writeCdcRecords(spark, storage, destinationPath, primaryKey, validRecords);
+        return validRecords;
     }
 
     @Override

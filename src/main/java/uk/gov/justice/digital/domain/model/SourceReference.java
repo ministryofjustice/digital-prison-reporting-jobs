@@ -18,7 +18,7 @@ public class SourceReference {
 
     public static class PrimaryKey {
 
-        private Collection<String> keys;
+        public Collection<String> keys;
 
         public PrimaryKey(Collection<?> o) {
             keys = o.stream().map(x -> Objects.toString(x, null)).collect(Collectors.toList());

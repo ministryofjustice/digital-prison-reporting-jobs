@@ -14,9 +14,11 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.delta.DeltaConcurrentModificationException;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -26,7 +28,6 @@ import javax.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,6 +37,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 
 @Singleton
 public class DataStorageService {
@@ -47,6 +50,10 @@ public class DataStorageService {
 
     // Retry policy used on operations that are at risk of concurrent modification exceptions
     private final RetryPolicy<Void> retryPolicy;
+
+    private final String insertMatchCondition = createMatchExpression(Insert);
+    private final String updateMatchCondition = createMatchExpression(Update);
+    private final String deleteMatchCondition = createMatchExpression(Delete);
 
     @Inject
     public DataStorageService(JobArguments jobArguments) {
@@ -105,12 +112,14 @@ public class DataStorageService {
         }
     }
 
-    public void upsertRecords(
+    public void mergeRecords(
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
+            SourceReference.PrimaryKey primaryKey, List<String> columnsToExclude) throws DataStorageRetriesExhaustedException {
         val dt = getTable(spark, tablePath);
+
+        val expression = createMergeExpression(dataFrame, columnsToExclude);
 
         try {
             if (dt.isPresent()) {
@@ -119,10 +128,16 @@ public class DataStorageService {
                 doWithRetryOnConcurrentModification(() ->
                         dt.get().as(SOURCE)
                                 .merge(dataFrame.as(TARGET), condition)
-                                .whenMatched()
-                                .updateAll()
+                                // Multiple whenMatched clauses are evaluated in the order they are specified.
+                                // As such the Delete needs to be specified after the update
+                                .whenMatched(insertMatchCondition)
+                                .updateExpr(expression)
+                                .whenMatched(updateMatchCondition)
+                                .updateExpr(expression)
+                                .whenMatched(deleteMatchCondition)
+                                .delete()
                                 .whenNotMatched()
-                                .insertAll()
+                                .insertExpr(expression)
                                 .execute()
                 );
             } else {
@@ -413,6 +428,18 @@ public class DataStorageService {
                     logger.error(msg, lastException);
                 });
         return builder.build();
+    }
+
+    @NotNull
+    private static Map<String, String> createMergeExpression(Dataset<Row> dataFrame, List<String> columnsToExclude) {
+        return Arrays
+                .stream(dataFrame.columns())
+                .filter(column -> !columnsToExclude.contains(column))
+                .collect(Collectors.toMap(column -> SOURCE + "." + column, column -> TARGET + "." + column));
+    }
+
+    private String createMatchExpression(DMS_3_4_7.Operation operation) {
+        return String.format("%s.%s=='%s'", TARGET, OPERATION, operation.getName());
     }
 
 }

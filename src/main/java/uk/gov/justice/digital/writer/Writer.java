@@ -1,9 +1,6 @@
 package uk.gov.justice.digital.writer;
 
-import lombok.val;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
@@ -11,8 +8,8 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 
-import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.*;
+import java.util.Arrays;
+
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
@@ -20,7 +17,7 @@ public abstract class Writer {
 
     private static final Logger logger = LoggerFactory.getLogger(Writer.class);
 
-    public abstract void writeValidRecords(
+    public abstract Dataset<Row> writeValidRecords(
             SparkSession spark,
             String destinationPath,
             SourceReference.PrimaryKey primaryKey,
@@ -58,13 +55,7 @@ public abstract class Writer {
     ) throws DataStorageRetriesExhaustedException {
         logger.info("Applying {} CDC records to deltalake table: {}", validRecords.count(), destinationPath);
 
-        val inserts = validRecords.filter(col(OPERATION).equalTo(Insert.getName())).orderBy(TIMESTAMP);
-        val updates = validRecords.filter(col(OPERATION).equalTo(Update.getName())).orderBy(TIMESTAMP);
-        val deletes = validRecords.filter(col(OPERATION).equalTo(Delete.getName())).orderBy(TIMESTAMP);
-
-        storage.upsertRecords(spark, destinationPath, inserts.drop(OPERATION, TIMESTAMP), primaryKey);
-        storage.updateRecords(spark, destinationPath, updates.drop(OPERATION, TIMESTAMP), primaryKey);
-        storage.deleteRecords(spark, destinationPath, deletes.drop(OPERATION, TIMESTAMP), primaryKey);
+        storage.mergeRecords(spark, destinationPath, validRecords, primaryKey, Arrays.asList(OPERATION, TIMESTAMP));
 
         logger.info("CDC records successfully applied to table: {}", destinationPath);
         storage.updateDeltaManifestForTable(spark, destinationPath);
