@@ -2,11 +2,9 @@ package uk.gov.justice.digital.config;
 
 import io.micronaut.logging.LogLevel;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -15,8 +13,6 @@ import java.util.Collections;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.from_json;
-import static org.apache.spark.sql.types.DataTypes.StringType;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.RAW;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.RECORD_SCHEMA;
 
 public class BaseSparkTest {

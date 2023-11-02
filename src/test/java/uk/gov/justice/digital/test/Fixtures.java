@@ -74,6 +74,7 @@ public class Fixtures {
             .add(ARRAY_FIELD_KEY, new ArrayType(DataTypes.IntegerType, false), false);
 
     public static final StructType STRUCTURED_RECORD_WITH_OPERATION_SCHEMA = JSON_DATA_SCHEMA
+            .add(TIMESTAMP, DataTypes.StringType, false)
             .add(OPERATION, DataTypes.StringType, false);
 
     public static final String GENERIC_METADATA = "{}";

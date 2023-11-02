@@ -20,13 +20,14 @@ public class CuratedZoneLoadWriter extends Writer {
     }
 
     @Override
-    public void writeValidRecords(
+    public Dataset<Row> writeValidRecords(
             SparkSession spark,
             String destinationPath,
             SourceReference.PrimaryKey primaryKey,
             Dataset<Row> validRecords
     ) throws DataStorageException {
         appendDistinctRecords(spark, storage, destinationPath, primaryKey, validRecords);
+        return validRecords;
     }
 
     @Override

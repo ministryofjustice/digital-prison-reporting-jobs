@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
@@ -95,7 +96,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
         );
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION).collectAsList(),
+                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
                 dataframeCaptor.getValue().collectAsList()
         );
     }

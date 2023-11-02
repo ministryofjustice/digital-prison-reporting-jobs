@@ -1,9 +1,7 @@
 package uk.gov.justice.digital.zone.structured;
 
 import lombok.val;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +42,7 @@ public abstract class StructuredZone implements Zone {
     }
 
     public Dataset<Row> process(SparkSession spark, Dataset<Row> filteredRecords, SourceReference sourceReference) throws DataStorageException {
-        val sortedRecords = filteredRecords.orderBy(col(TIMESTAMP));
-        return handleSchemaFound(spark, sortedRecords, sourceReference);
+        return handleSchemaFound(spark, filteredRecords, sourceReference);
     }
 
     private Dataset<Row> handleSchemaFound(
@@ -94,15 +91,13 @@ public abstract class StructuredZone implements Zone {
             String destinationPath,
             SourceReference.PrimaryKey primaryKey
     ) throws DataStorageException {
-        val validRecords = dataFrame.filter(col(VALID).equalTo(true)).select(PARSED_DATA + ".*", OPERATION);
+        val validRecords = dataFrame.filter(col(VALID).equalTo(true)).select(PARSED_DATA + ".*", TIMESTAMP, OPERATION);
 
         if (!validRecords.isEmpty()) {
-            writer.writeValidRecords(spark, destinationPath, primaryKey, validRecords);
-
-            return validRecords;
+            return writer.writeValidRecords(spark, destinationPath, primaryKey, validRecords);
         } else {
             logger.warn("No valid records found");
-            return createEmptyDataFrame(validRecords);
+            return spark.createDataFrame(Collections.emptyList(), validRecords.schema());
         }
     }
 
@@ -117,17 +112,10 @@ public abstract class StructuredZone implements Zone {
         val validator = JsonValidator.createAndRegister(schema, spark, source, table);
 
         return dataFrame
-                .select(col(DATA), col(METADATA), col(OPERATION))
+                .select(col(DATA), col(METADATA), col(TIMESTAMP), col(OPERATION))
                 .withColumn(PARSED_DATA, from_json(col(DATA), schema, jsonOptions))
                 .withColumn(ERROR, validator.apply(col(DATA), to_json(col(PARSED_DATA), jsonOptions)))
                 .withColumn(VALID, col(ERROR).equalTo(lit("")));
-    }
-
-    private Dataset<Row> createEmptyDataFrame(Dataset<Row> dataFrame) {
-        return dataFrame.sparkSession().createDataFrame(
-                dataFrame.sparkSession().emptyDataFrame().javaRDD(),
-                dataFrame.schema()
-        );
     }
 
 }
