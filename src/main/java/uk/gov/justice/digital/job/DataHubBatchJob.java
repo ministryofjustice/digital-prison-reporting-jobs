@@ -1,11 +1,12 @@
 package uk.gov.justice.digital.job;
 
-import com.amazonaws.services.glue.util.Job;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -15,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -39,20 +39,16 @@ public class DataHubBatchJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DataHubBatchJob.class);
 
     private final JobArguments arguments;
-
-    private final JobProperties properties;
     private final SparkSessionProvider sparkSessionProvider;
     private final S3BatchProcessor batchProcessor;
 
     @Inject
     public DataHubBatchJob(
             JobArguments arguments,
-            JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
             S3BatchProcessor batchProcessor
     ) {
         this.arguments = arguments;
-        this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
         this.batchProcessor = batchProcessor;
     }
@@ -66,11 +62,9 @@ public class DataHubBatchJob implements Runnable {
     public void run() {
         val startTime = System.currentTimeMillis();
         logger.info("Running DataHubBatchJob");
+
         try {
-            String jobName = properties.getSparkJobName();
-            val glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
-            Job.init(jobName, glueContext, arguments.getConfig());
-            val sparkSession = glueContext.getSparkSession();
+            val sparkSession = sparkSessionProvider.getConfiguredSparkSession(arguments.getLogLevel());
             val rawS3Path = arguments.getRawS3Path();
 
             val fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
@@ -81,7 +75,7 @@ public class DataHubBatchJob implements Runnable {
             } else {
                 processFileAtATime(fileIterator, rawS3Path, sparkSession);
             }
-            Job.commit();
+
             logger.info("DataHubBatchJob completed in {}ms", System.currentTimeMillis() - startTime);
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
