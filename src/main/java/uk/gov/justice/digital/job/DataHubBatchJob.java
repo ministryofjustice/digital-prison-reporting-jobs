@@ -91,24 +91,25 @@ public class DataHubBatchJob implements Runnable {
         logger.info("Recursively enumerating load files");
         while (fileIterator.hasNext()) {
             val filePath = fileIterator.next().getPath().toUri().toString();
-            if (filePath.startsWith("LOAD") && filePath.endsWith(".parquet")) {
-                logger.info("Will process file {}", filePath);
+            if (filePath.endsWith(".parquet")) {
                 val pathParts = filePath
                         .substring(rawS3Path.length(), filePath.lastIndexOf("/"))
                         .split("/");
                 val source = pathParts[0];
                 val table = pathParts[1];
-                val key = new ImmutablePair<>(source, table);
-                List<String> pathsSoFar;
-                if(pathsByTable.containsKey(key)) {
-                    pathsSoFar = pathsByTable.get(key);
-                } else {
-                    pathsSoFar = new ArrayList<>();
-                    pathsByTable.put(key, pathsSoFar);
+                val fileName = pathParts[2];
+                if (fileName.startsWith("LOAD")) {
+                    logger.info("Will process file {}", filePath);
+                    val key = new ImmutablePair<>(source, table);
+                    List<String> pathsSoFar;
+                    if (pathsByTable.containsKey(key)) {
+                        pathsSoFar = pathsByTable.get(key);
+                    } else {
+                        pathsSoFar = new ArrayList<>();
+                        pathsByTable.put(key, pathsSoFar);
+                    }
+                    pathsSoFar.add(filePath);
                 }
-                pathsSoFar.add(filePath);
-            } else {
-                logger.info("Will skip file {}", filePath);
             }
         }
         logger.info("Finished recursively enumerating load files in {}ms", System.currentTimeMillis() - listPathsStartTime);
