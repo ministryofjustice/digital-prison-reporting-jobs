@@ -38,7 +38,8 @@ public class ViolationService {
         STRUCTURED_LOAD("Structured Load"),
         STRUCTURED_CDC("Structured CDC"),
         CURATED_LOAD("Curated Load"),
-        CURATED_CDC("Curated CDC");
+        CURATED_CDC("Curated CDC"),
+        CDC("CDC");
 
         private final String name;
 

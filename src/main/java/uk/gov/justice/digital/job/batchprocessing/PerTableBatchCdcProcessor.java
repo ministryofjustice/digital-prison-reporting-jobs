@@ -36,6 +36,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OP
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.SOURCE;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TABLE;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CDC;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 
@@ -72,7 +73,7 @@ public class PerTableBatchCdcProcessor {
                 structured.applyUpdates(spark, latestCDCRecordsByPK, sourceReference);
                 curated.applyUpdates(spark, latestCDCRecordsByPK, sourceReference);
             } catch (DataStorageRetriesExhaustedException e) {
-                violationService.handleRetriesExhausted(spark, dataFrameForTable, sourceReference.getSource(), sourceReference.getTable(), e, STRUCTURED_CDC);
+                violationService.handleRetriesExhausted(spark, dataFrameForTable, sourceReference.getSource(), sourceReference.getTable(), e, CDC);
             }
         } else {
             writeInvalid(dataFrameForTable, sourceReference, spark);

@@ -92,8 +92,8 @@ public class DataHubBatchJob implements Runnable {
         while (fileIterator.hasNext()) {
             Path path = fileIterator.next().getPath();
             val fileName = path.getName();
+            val filePath = path.toUri().toString();
             if (fileName.startsWith("LOAD") && fileName.endsWith(".parquet")) {
-                val filePath = path.toUri().toString();
                 val pathParts = filePath
                         .substring(rawS3Path.length())
                         .split("/");
@@ -108,9 +108,9 @@ public class DataHubBatchJob implements Runnable {
                     pathsByTable.put(key, pathsSoFar);
                 }
                 pathsSoFar.add(filePath);
-                logger.info("Will process file {} for {}.{}", fileName, source, table);
+                logger.debug("Will process file {} for {}.{}", filePath, source, table);
             } else {
-                logger.info("Will skip file {}", fileName);
+                logger.debug("Will skip file {}", filePath);
             }
         }
         logger.info("Finished recursively enumerating load files in {}ms", System.currentTimeMillis() - listPathsStartTime);
