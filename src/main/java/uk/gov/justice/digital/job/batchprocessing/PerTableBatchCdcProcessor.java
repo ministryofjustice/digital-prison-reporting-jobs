@@ -16,7 +16,9 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
+import uk.gov.justice.digital.service.CuratedCDCService;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.StructuredCDCService;
 import uk.gov.justice.digital.service.ViolationService;
 
 import java.util.Arrays;
@@ -45,37 +47,32 @@ public class PerTableBatchCdcProcessor {
     private final JobArguments jobArguments;
     private final ViolationService violationService;
     private final DataStorageService storage;
+    private final StructuredCDCService structured;
+    private final CuratedCDCService curated;
 
     @Inject
     public PerTableBatchCdcProcessor(
             JobArguments jobArguments,
             ViolationService violationService,
-            DataStorageService storage) {
+            DataStorageService storage,
+            StructuredCDCService structured,
+            CuratedCDCService curated) {
         this.jobArguments = jobArguments;
         this.violationService = violationService;
         this.storage = storage;
+        this.structured = structured;
+        this.curated = curated;
     }
 
     public void processTable(SparkSession spark, Dataset<Row> dataFrameForTable, SourceReference sourceReference) throws DataStorageException {
-        String sourceName = sourceReference.getSource();
-        String tableName = sourceReference.getTable();
-
         val primaryKey = sourceReference.getPrimaryKey();
         if (dataFrameIsValid(dataFrameForTable, sourceReference)) {
             val latestCDCRecordsByPK = latestRecords(dataFrameForTable.drop(SOURCE, TABLE), primaryKey);
-            val structuredTablePath = createValidatedPath(jobArguments.getStructuredS3Path(), sourceName, tableName);
             try {
-                storage.mergeRecords(spark, structuredTablePath, latestCDCRecordsByPK, primaryKey, Arrays.asList(OPERATION, TIMESTAMP));
-                storage.updateDeltaManifestForTable(spark, structuredTablePath);
+                structured.applyUpdates(spark, latestCDCRecordsByPK, sourceReference);
+                curated.applyUpdates(spark, latestCDCRecordsByPK, sourceReference);
             } catch (DataStorageRetriesExhaustedException e) {
                 violationService.handleRetriesExhausted(spark, dataFrameForTable, sourceReference.getSource(), sourceReference.getTable(), e, STRUCTURED_CDC);
-            }
-            val curatedTablePath = createValidatedPath(jobArguments.getCuratedS3Path(), sourceName, tableName);
-            try {
-                storage.mergeRecords(spark, curatedTablePath, latestCDCRecordsByPK, primaryKey, Arrays.asList(OPERATION, TIMESTAMP));
-                storage.updateDeltaManifestForTable(spark, curatedTablePath);
-            } catch (DataStorageRetriesExhaustedException e) {
-                violationService.handleRetriesExhausted(spark, dataFrameForTable, sourceReference.getSource(), sourceReference.getTable(), e, CURATED_CDC);
             }
         } else {
             writeInvalid(dataFrameForTable, sourceReference, spark);

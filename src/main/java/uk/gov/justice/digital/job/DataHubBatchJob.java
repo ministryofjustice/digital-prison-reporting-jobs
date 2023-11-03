@@ -67,7 +67,7 @@ public class DataHubBatchJob implements Runnable {
             val sparkSession = sparkSessionProvider.getConfiguredSparkSession(arguments.getLogLevel());
             val rawS3Path = arguments.getRawS3Path();
 
-            val fileSystem = FileSystem.get(URI.create(rawS3Path), new Configuration());
+            val fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
             val fileIterator = fileSystem.listFiles(new Path(rawS3Path), true);
 
             if(arguments.isBatchProcessByTable()) {
