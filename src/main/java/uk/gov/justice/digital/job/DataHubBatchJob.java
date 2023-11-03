@@ -4,9 +4,14 @@ import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -15,11 +20,17 @@ import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Load;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
+import scala.collection.JavaConverters;
 
 @Singleton
 @CommandLine.Command(name = "DataHubBatchJob")
@@ -49,6 +60,7 @@ public class DataHubBatchJob implements Runnable {
 
     @Override
     public void run() {
+        val startTime = System.currentTimeMillis();
         logger.info("Running DataHubBatchJob");
 
         try {
@@ -58,31 +70,74 @@ public class DataHubBatchJob implements Runnable {
             val fileSystem = FileSystem.get(URI.create(rawS3Path), new Configuration());
             val fileIterator = fileSystem.listFiles(new Path(rawS3Path), true);
 
-            while (fileIterator.hasNext()) {
-                val filePath = fileIterator.next().getPath().toString();
-                if (filePath.endsWith("LOAD*.parquet")) {
-                    logger.info("Processing file {}", filePath);
-
-                    val startTime = System.currentTimeMillis();
-                    val pathParts = filePath
-                            .substring(rawS3Path.length(), filePath.lastIndexOf("/"))
-                            .split("/");
-
-                    val source = pathParts[0];
-                    val table = pathParts[1];
-
-                    val dataFrame = sparkSession.read().parquet(filePath).withColumn(OPERATION, lit(Load.getName()));
-                    batchProcessor.processBatch(sparkSession, source, table, dataFrame);
-
-                    logger.info("Processed file {} in {}ms", filePath, System.currentTimeMillis() - startTime);
-                }
+            if(arguments.isBatchProcessByTable()) {
+                processByTable(fileIterator, rawS3Path, sparkSession);
+            } else {
+                processFileAtATime(fileIterator, rawS3Path, sparkSession);
             }
 
-            logger.info("DataHubBatchJob completed");
+            logger.info("DataHubBatchJob completed in {}ms", System.currentTimeMillis() - startTime);
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
             System.exit(1);
         }
 
+    }
+
+    private void processByTable(RemoteIterator<LocatedFileStatus> fileIterator, String rawS3Path, SparkSession sparkSession) throws IOException {
+        Map<ImmutablePair<String, String>, List<String>> pathsByTable = new HashMap<>();
+        while (fileIterator.hasNext()) {
+            val filePath = fileIterator.next().getPath().toString();
+            if (filePath.endsWith("LOAD*.parquet")) {
+                logger.info("Will process file {}", filePath);
+                val pathParts = filePath
+                        .substring(rawS3Path.length(), filePath.lastIndexOf("/"))
+                        .split("/");
+                val source = pathParts[0];
+                val table = pathParts[1];
+                val key = new ImmutablePair<>(source, table);
+                List<String> pathsSoFar;
+                if(pathsByTable.containsKey(key)) {
+                    pathsSoFar = pathsByTable.get(key);
+                } else {
+                    pathsSoFar = new ArrayList<>();
+                    pathsByTable.put(key, pathsSoFar);
+                }
+                pathsSoFar.add(filePath);
+            }
+        }
+
+        for (val entry: pathsByTable.entrySet()) {
+            val startTime = System.currentTimeMillis();
+            val source = entry.getKey().getLeft();
+            val table = entry.getKey().getRight();
+            logger.info("Processing table {}.{}", source, table);
+            val filePaths = JavaConverters.asScalaIteratorConverter(entry.getValue().iterator()).asScala().toSeq();
+            val dataFrame = sparkSession.read().parquet(filePaths).withColumn(OPERATION, lit(Load.getName()));
+            batchProcessor.processBatch(sparkSession, source, table, dataFrame);
+            logger.info("Processed table {}.{} in {}ms", source, table, System.currentTimeMillis() - startTime);
+        }
+    }
+
+    private void processFileAtATime(RemoteIterator<LocatedFileStatus> fileIterator, String rawS3Path, SparkSession sparkSession) throws IOException {
+        while (fileIterator.hasNext()) {
+            val filePath = fileIterator.next().getPath().toString();
+            if (filePath.endsWith("LOAD*.parquet")) {
+                val startTime = System.currentTimeMillis();
+                logger.info("Processing file {}", filePath);
+
+                val pathParts = filePath
+                        .substring(rawS3Path.length(), filePath.lastIndexOf("/"))
+                        .split("/");
+
+                val source = pathParts[0];
+                val table = pathParts[1];
+
+                val dataFrame = sparkSession.read().parquet(filePath).withColumn(OPERATION, lit(Load.getName()));
+                batchProcessor.processBatch(sparkSession, source, table, dataFrame);
+
+                logger.info("Processed file {} in {}ms", filePath, System.currentTimeMillis() - startTime);
+            }
+        }
     }
 }
