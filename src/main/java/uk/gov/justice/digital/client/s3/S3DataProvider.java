@@ -21,7 +21,8 @@ public class S3DataProvider {
         logger.info("Initialising S3 data source");
         Map<String, String> s3ConnectionOptions = new HashMap<>();
 
-        // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-json-home.html
+        // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-s3-home.html
+        // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-parquet-home.html
         s3ConnectionOptions.put("isFailFast", "true");
         s3ConnectionOptions.put("paths", "[\"" + arguments.getRawS3Path() + "*/*/*-*.parquet\"]");
         logger.info("S3 Connection Options: {}", s3ConnectionOptions);
