@@ -85,10 +85,13 @@ public class DataHubBatchJob implements Runnable {
     }
 
     private void processByTable(RemoteIterator<LocatedFileStatus> fileIterator, String rawS3Path, SparkSession sparkSession) throws IOException {
+        logger.info("Processing Raw {} by table", rawS3Path);
         Map<ImmutablePair<String, String>, List<String>> pathsByTable = new HashMap<>();
+        val listPathsStartTime = System.currentTimeMillis();
+        logger.info("Recursively enumerating load files");
         while (fileIterator.hasNext()) {
             val filePath = fileIterator.next().getPath().toString();
-            if (filePath.endsWith("LOAD*.parquet")) {
+            if (filePath.startsWith("LOAD") && filePath.endsWith(".parquet")) {
                 logger.info("Will process file {}", filePath);
                 val pathParts = filePath
                         .substring(rawS3Path.length(), filePath.lastIndexOf("/"))
@@ -106,6 +109,7 @@ public class DataHubBatchJob implements Runnable {
                 pathsSoFar.add(filePath);
             }
         }
+        logger.info("Finished recursively enumerating load files in {}ms", System.currentTimeMillis() - listPathsStartTime);
 
         for (val entry: pathsByTable.entrySet()) {
             val startTime = System.currentTimeMillis();
@@ -117,9 +121,11 @@ public class DataHubBatchJob implements Runnable {
             batchProcessor.processBatch(sparkSession, source, table, dataFrame);
             logger.info("Processed table {}.{} in {}ms", source, table, System.currentTimeMillis() - startTime);
         }
+        logger.info("Finished processing Raw {} by table", rawS3Path);
     }
 
     private void processFileAtATime(RemoteIterator<LocatedFileStatus> fileIterator, String rawS3Path, SparkSession sparkSession) throws IOException {
+        logger.info("Processing Raw {} a file at a time", rawS3Path);
         while (fileIterator.hasNext()) {
             val filePath = fileIterator.next().getPath().toString();
             if (filePath.endsWith("LOAD*.parquet")) {
@@ -139,5 +145,6 @@ public class DataHubBatchJob implements Runnable {
                 logger.info("Processed file {} in {}ms", filePath, System.currentTimeMillis() - startTime);
             }
         }
+        logger.info("Finished processing Raw {} a file at a time", rawS3Path);
     }
 }

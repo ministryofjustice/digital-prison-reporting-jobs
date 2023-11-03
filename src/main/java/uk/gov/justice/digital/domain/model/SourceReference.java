@@ -18,6 +18,7 @@ public class SourceReference {
 
     public static class PrimaryKey {
 
+        // FIXME getter with defensive copy
         public Collection<String> keys;
 
         public PrimaryKey(Collection<?> o) {

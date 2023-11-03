@@ -19,15 +19,19 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
-import uk.gov.justice.digital.job.batchprocessing.S3CdcProcessor;
+import uk.gov.justice.digital.job.batchprocessing.CdcMicroBatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.spark.sql.functions.*;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.when;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Delete;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Insert;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Update;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.cdcShortOperationCodes;
 
@@ -40,7 +44,7 @@ public class DataHubCdcJob implements Runnable {
     private final JobArguments arguments;
     private final JobProperties properties;
     private final SparkSessionProvider sparkSessionProvider;
-    private final S3CdcProcessor cdcProcessor;
+    private final CdcMicroBatchProcessor cdcProcessor;
     private final S3DataProvider s3DataProvider;
 
     @Inject
@@ -49,7 +53,7 @@ public class DataHubCdcJob implements Runnable {
             JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
             S3DataProvider s3DataProvider,
-            S3CdcProcessor cdcProcessor
+            CdcMicroBatchProcessor cdcProcessor
     ) {
         logger.info("Initializing DataHubCdcJob");
         this.arguments = arguments;
@@ -81,18 +85,9 @@ public class DataHubCdcJob implements Runnable {
 
         logger.info("Initialising per batch processing");
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {
+            logger.info("Processing batch " + batchId);
             try {
-                val shortOperationColumnName = "Op";
-                val dataFrame = batch
-                        .filter(col(shortOperationColumnName).isin(cdcShortOperationCodes))
-                        .withColumn(
-                                OPERATION,
-                                when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Insert.getName())), lit(Insert.getName()))
-                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Update.getName())), lit(Update.getName()))
-                                        .when(col(shortOperationColumnName).equalTo(lit(DMS_3_4_7.ShortOperationCode.Delete.getName())), lit(Delete.getName()))
-                        );
-
-                cdcProcessor.processCDC(sparkSession, dataFrame);
+                cdcProcessor.processCDC(sparkSession, batch);
             } catch (Exception e) {
                 if (e instanceof InterruptedException) {
                     logger.error("Streaming job interrupted", e);
