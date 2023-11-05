@@ -1,12 +1,12 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.25
+  reporting: ministryofjustice/hmpps-reporting@dev:719864b232e0b253bf90070e89d9c7584347c05f
   slack: circleci/slack@4.12.5  
 
 workflows:
   checkout-build-publish:
-    jobs:
+    jobs:    
       - reporting/gradle_owasp_check:
           notify_slack: false
           context:
@@ -18,6 +18,8 @@ workflows:
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
+          quality_gate: false
+          sonar_command: sonar
           sync_args: "--exclude '*' --include '*-all*jar'"
           deploy_script: true
           deploy_to_test: true # Deploy to Test Environment
