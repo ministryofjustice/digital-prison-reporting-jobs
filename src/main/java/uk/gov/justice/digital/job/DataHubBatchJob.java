@@ -73,13 +73,10 @@ public class DataHubBatchJob implements Runnable {
             val sparkSession = glueContext.getSparkSession();
             val rawS3Path = arguments.getRawS3Path();
 
-            val fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
-            val fileIterator = fileSystem.listFiles(new Path(rawS3Path), true);
-
             if(arguments.isBatchProcessByTable()) {
-                processByTable(fileIterator, rawS3Path, sparkSession);
+                processByTable(rawS3Path, sparkSession);
             } else {
-                processFileAtATime(fileIterator, rawS3Path, sparkSession);
+                processFileAtATime(rawS3Path, sparkSession);
             }
             Job.commit();
             logger.info("DataHubBatchJob completed in {}ms", System.currentTimeMillis() - startTime);
@@ -90,8 +87,10 @@ public class DataHubBatchJob implements Runnable {
 
     }
 
-    private void processByTable(RemoteIterator<LocatedFileStatus> fileIterator, String rawS3Path, SparkSession sparkSession) throws IOException {
+    private void processByTable(String rawS3Path, SparkSession sparkSession) throws IOException {
         logger.info("Processing Raw {} by table", rawS3Path);
+        val fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
+        val fileIterator = fileSystem.listFiles(new Path(rawS3Path), true);
         Map<ImmutablePair<String, String>, List<String>> pathsByTable = new HashMap<>();
         val listPathsStartTime = System.currentTimeMillis();
         logger.info("Recursively enumerating load files");
@@ -105,6 +104,7 @@ public class DataHubBatchJob implements Runnable {
                         .split("/");
                 val source = pathParts[0];
                 val table = pathParts[1];
+                logger.info("Processing file {} for {}.{}", filePath, source, table);
                 val key = new ImmutablePair<>(source, table);
                 List<String> pathsSoFar;
                 if (pathsByTable.containsKey(key)) {
@@ -114,7 +114,6 @@ public class DataHubBatchJob implements Runnable {
                     pathsByTable.put(key, pathsSoFar);
                 }
                 pathsSoFar.add(filePath);
-                logger.debug("Will process file {} for {}.{}", filePath, source, table);
             } else {
                 logger.debug("Will skip file {}", filePath);
             }
@@ -134,11 +133,15 @@ public class DataHubBatchJob implements Runnable {
         logger.info("Finished processing Raw {} by table", rawS3Path);
     }
 
-    private void processFileAtATime(RemoteIterator<LocatedFileStatus> fileIterator, String rawS3Path, SparkSession sparkSession) throws IOException {
+    private void processFileAtATime(String rawS3Path, SparkSession sparkSession) throws IOException {
         logger.info("Processing Raw {} a file at a time", rawS3Path);
+        val fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
+        val fileIterator = fileSystem.listFiles(new Path(rawS3Path), true);
         while (fileIterator.hasNext()) {
-            val filePath = fileIterator.next().getPath().toString();
-            if (filePath.endsWith("LOAD*.parquet")) {
+            Path path = fileIterator.next().getPath();
+            val fileName = path.getName();
+            val filePath = path.toUri().toString();
+            if (fileName.startsWith("LOAD") && fileName.endsWith(".parquet")) {
                 val startTime = System.currentTimeMillis();
                 logger.info("Processing file {}", filePath);
 
@@ -153,6 +156,8 @@ public class DataHubBatchJob implements Runnable {
                 batchProcessor.processBatch(sparkSession, source, table, dataFrame);
 
                 logger.info("Processed file {} in {}ms", filePath, System.currentTimeMillis() - startTime);
+            } else {
+                logger.debug("Will skip file {}", filePath);
             }
         }
         logger.info("Finished processing Raw {} a file at a time", rawS3Path);
