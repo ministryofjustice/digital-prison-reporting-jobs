@@ -81,7 +81,7 @@ public class DataHubCdcJob implements Runnable {
         Job.init(jobName, glueContext, arguments.getConfig());
 
         logger.info("Initialising data source");
-        Dataset<Row> sourceDf = s3DataProvider.getSourceData(glueContext, arguments);
+        Dataset<Row> sourceDf = s3DataProvider.getSourceData(sparkSession, arguments);
 
         logger.info("Initialising per batch processing");
         glueContext.forEachBatch(sourceDf, (batch, batchId) -> {

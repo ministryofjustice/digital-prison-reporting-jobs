@@ -6,6 +6,7 @@ import com.amazonaws.services.glue.util.JsonOptions;
 import jakarta.inject.Singleton;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
@@ -19,7 +20,26 @@ public class S3DataProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(S3DataProvider.class);
 
-    public Dataset<Row> getSourceData(GlueContext glueContext, JobArguments arguments) {
+    public Dataset<Row> getSourceData(SparkSession sparkSession, JobArguments arguments) {
+        String path = fileGlob(arguments);
+        logger.info("Initialising S3 data source with path " + path);
+        return sparkSession
+                .readStream()
+                .parquet(path);
+    }
+
+    String fileGlob(JobArguments arguments) {
+        String rawS3Path = arguments.getRawS3Path();
+        String prefix;
+        if(rawS3Path.endsWith("/")) {
+            prefix = rawS3Path;
+        } else {
+            prefix = rawS3Path + "/";
+        }
+        return prefix + "*/*/*-*.parquet";
+    }
+
+    public Dataset<Row> getSourceDataGlue(GlueContext glueContext, JobArguments arguments) {
         logger.info("Initialising S3 data source");
         Map<String, String> s3ConnectionOptions = new HashMap<>();
 
