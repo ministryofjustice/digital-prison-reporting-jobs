@@ -31,13 +31,13 @@ import java.net.URISyntaxException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 
@@ -46,6 +46,9 @@ public class DataStorageService {
 
     private static final String SOURCE = "source";
     private static final String TARGET = "target";
+
+    // columns excluded from inserts/updates during CDC upsert/merge
+    private static final List<String> cdcUpsertColumnsToExclude = Collections.singletonList(OPERATION);
 
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
@@ -190,8 +193,7 @@ public class DataStorageService {
             String tablePath,
             Dataset<Row> dataFrame,
             SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        List<String> columnsToExclude = Arrays.asList(OPERATION, TIMESTAMP);
-        mergeRecordsRobust(spark, tablePath, dataFrame, primaryKey, columnsToExclude);
+        mergeRecordsRobust(spark, tablePath, dataFrame, primaryKey, cdcUpsertColumnsToExclude);
         updateDeltaManifestForTable(spark, tablePath);
     }
 
