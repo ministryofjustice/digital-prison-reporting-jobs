@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.zone.structured;
+package uk.gov.justice.digital.zone.curated;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -14,16 +14,17 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 @Singleton
-public class StructuredZoneLoadS3 {
+public class CuratedZoneLoadS3 {
+
     private final ZoneLoad internalZoneLoad;
 
     @Inject
-    public StructuredZoneLoadS3(
+    public CuratedZoneLoadS3(
             JobArguments jobArguments,
             DataStorageService storage,
             ViolationService violationService
     ) {
-        this.internalZoneLoad = new ZoneLoad(storage, violationService, jobArguments.getStructuredS3Path(), ViolationService.ZoneName.STRUCTURED_LOAD);
+        this.internalZoneLoad = new ZoneLoad(storage, violationService, jobArguments.getCuratedS3Path(), ViolationService.ZoneName.CURATED_LOAD);
     }
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
         return internalZoneLoad.process(spark, dataFrame, sourceReference);

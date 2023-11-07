@@ -48,7 +48,7 @@ public class DataStorageService {
     private static final String TARGET = "target";
 
     // columns excluded from inserts/updates during CDC upsert/merge
-    private static final List<String> cdcUpsertColumnsToExclude = Collections.singletonList(OPERATION);
+    private static final List<String> rawColumnsToExclude = Collections.singletonList(OPERATION);
 
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
@@ -114,6 +114,20 @@ public class DataStorageService {
                 append(tablePath, df);
             }
         }
+    }
+
+    public void appendDistinctRecords(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String destinationPath,
+            SourceReference.PrimaryKey primaryKey
+    ) throws DataStorageException {
+        logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), destinationPath);
+        // TODO use field
+        appendDistinct(destinationPath, dataFrame.drop(OPERATION), primaryKey);
+
+        logger.info("Append completed successfully to table: {}", destinationPath);
+        updateDeltaManifestForTable(spark, destinationPath);
     }
 
     public void mergeRecords(
@@ -193,7 +207,7 @@ public class DataStorageService {
             String tablePath,
             Dataset<Row> dataFrame,
             SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        mergeRecordsRobust(spark, tablePath, dataFrame, primaryKey, cdcUpsertColumnsToExclude);
+        mergeRecordsRobust(spark, tablePath, dataFrame, primaryKey, rawColumnsToExclude);
         updateDeltaManifestForTable(spark, tablePath);
     }
 

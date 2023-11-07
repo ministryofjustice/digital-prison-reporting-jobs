@@ -5,14 +5,20 @@ import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import static org.apache.spark.sql.functions.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
 
 import javax.inject.Singleton;
+
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Insert;
 
 /**
  * Responsible for processing batches of DMS records.
@@ -25,14 +31,14 @@ public class S3BatchProcessor {
     private static final Logger logger = LoggerFactory.getLogger(S3BatchProcessor.class);
 
     private final StructuredZoneLoadS3 structuredZoneLoad;
-    private final CuratedZoneLoad curatedZoneLoad;
+    private final CuratedZoneLoadS3 curatedZoneLoad;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
 
     @Inject
     public S3BatchProcessor(
             StructuredZoneLoadS3 structuredZoneLoad,
-            CuratedZoneLoad curatedZoneLoad,
+            CuratedZoneLoadS3 curatedZoneLoad,
             SourceReferenceService sourceReferenceService,
             ViolationService violationService
     ) {
@@ -50,15 +56,11 @@ public class S3BatchProcessor {
         val startTime = System.currentTimeMillis();
         dataFrame.persist();
         try {
-            val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
-
-            if (optionalSourceReference.isPresent()) {
-                val sourceReference = optionalSourceReference.get();
-                val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrame, sourceReference);
+            withValidations(spark, sourceName, tableName, dataFrame, (validatedDf, sourceReference) -> {
+                val transformedDf = dataFrame.transform(S3BatchProcessor::loadDataTransform);
+                val structuredLoadDataFrame = structuredZoneLoad.process(spark, transformedDf, sourceReference);
                 curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
-            } else {
-                violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
-            }
+            });
         } catch (Exception e) {
             logger.error("Caught unexpected exception", e);
             throw new RuntimeException("Caught unexpected exception", e);
@@ -71,5 +73,33 @@ public class S3BatchProcessor {
                 System.currentTimeMillis() - startTime
         );
     }
+
+    private static Dataset<Row> loadDataTransform(Dataset<Row> dataFrame) {
+        return dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
+    }
+
+    @FunctionalInterface
+    private interface ValidatedDataframeHandler {
+        void apply(Dataset<Row> validDf, SourceReference sourceReference) throws DataStorageException;
+    }
+
+    private void withValidations(SparkSession spark, String sourceName, String tableName, Dataset<Row> dataFrame, ValidatedDataframeHandler validatedDfHandler) throws DataStorageException {
+        val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
+
+        if (optionalSourceReference.isPresent()) {
+            val sourceReference = optionalSourceReference.get();
+            if (violationService.dataFrameSchemaIsValid(dataFrame, sourceReference)) {
+                validatedDfHandler.apply(dataFrame, sourceReference);
+            } else {
+                val source = sourceReference.getSource();
+                val table = sourceReference.getTable();
+                violationService.handleInvalidSchema(spark, dataFrame, source, table);
+            }
+        } else {
+            violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
+        }
+    }
+
+
 
 }

@@ -5,22 +5,29 @@ import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import javax.inject.Singleton;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.lit;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.DATA;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.METADATA;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 @Singleton
 public class ViolationService {
@@ -103,5 +110,57 @@ public class ViolationService {
 
         storageService.append(destinationPath, missingSchemaRecords);
         storageService.updateDeltaManifestForTable(spark, destinationPath);
+    }
+
+    public void handleInvalidSchema(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table
+    ) throws DataStorageException {
+        val errorPrefix = String.format("Record does not match schema %s/%s: ", source, table);
+        val validationFailedViolationPath = createValidatedPath(violationsPath, source, table);
+        // Write invalid records where schema validation failed
+        val invalidRecords = dataFrame.withColumn(ERROR, concat(lit(errorPrefix), lit(col(ERROR))));
+
+        logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
+        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), validationFailedViolationPath);
+                     storageService.append(validationFailedViolationPath, invalidRecords.drop(OPERATION, TIMESTAMP));
+
+        logger.info("Append completed successfully");
+                     storageService.updateDeltaManifestForTable(spark, validationFailedViolationPath);
+    }
+
+    public boolean dataFrameSchemaIsValid(Dataset<Row> dataFrame, SourceReference sourceReference) {
+        val schemaFields = sourceReference.getSchema().fields();
+
+        val dataFields = Arrays
+                .stream(dataFrame.schema().fields())
+                .collect(Collectors.toMap(StructField::name, StructField::dataType));
+
+        val requiredFields = Arrays.stream(schemaFields)
+                .filter(field -> !field.nullable())
+                .collect(Collectors.toList());
+
+        val missingRequiredFields = requiredFields
+                .stream()
+                .filter(field -> dataFields.get(field.name()) == null)
+                .collect(Collectors.toList());
+
+        val invalidRequiredFields = requiredFields
+                .stream()
+                .filter(field -> dataFields.get(field.name()) != field.dataType())
+                .collect(Collectors.toList());
+
+        val nullableFields = Arrays.stream(schemaFields)
+                .filter(StructField::nullable)
+                .collect(Collectors.toList());
+
+        val invalidNullableFields = nullableFields
+                .stream()
+                .filter(field -> dataFields.get(field.name()) != field.dataType())
+                .collect(Collectors.toList());
+
+        return (missingRequiredFields.isEmpty() || invalidRequiredFields.isEmpty() || invalidNullableFields.isEmpty());
     }
 }
