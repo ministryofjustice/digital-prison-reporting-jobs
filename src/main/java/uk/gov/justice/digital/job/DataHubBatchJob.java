@@ -10,7 +10,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -28,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.spark.sql.functions.*;
+import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Load;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
 import scala.collection.JavaConverters;
@@ -65,30 +68,53 @@ public class DataHubBatchJob implements Runnable {
     @Override
     public void run() {
         val startTime = System.currentTimeMillis();
-        logger.info("Running DataHubBatchJob");
-        try {
-            String jobName = properties.getSparkJobName();
-            val glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
-            Job.init(jobName, glueContext, arguments.getConfig());
-            val sparkSession = glueContext.getSparkSession();
-            val rawS3Path = arguments.getRawS3Path();
 
-            if(arguments.isBatchProcessByTable()) {
-                processByTable(rawS3Path, sparkSession);
+        logger.info("Running DataHubBatchJob");
+        val rawS3Path = arguments.getRawS3Path();
+        try {
+            boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
+            if(runLocal) {
+                logger.info("Running locally");
+                SparkConf sparkConf = new SparkConf().setAppName("DataHubBatchJob local").setMaster("local[*]");
+                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
+                processByTable(rawS3Path, spark);
             } else {
-                processFileAtATime(rawS3Path, sparkSession);
+                logger.info("Running in Glue");
+                String jobName = properties.getSparkJobName();
+                val glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
+                Job.init(jobName, glueContext, arguments.getConfig());
+                SparkSession spark = glueContext.getSparkSession();
+                processByTable(rawS3Path, spark);
+                Job.commit();
             }
-            Job.commit();
-            logger.info("DataHubBatchJob completed in {}ms", System.currentTimeMillis() - startTime);
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
             System.exit(1);
         }
-
+        logger.info("DataHubBatchJob completed in {}ms", System.currentTimeMillis() - startTime);
     }
 
     private void processByTable(String rawS3Path, SparkSession sparkSession) throws IOException {
+        val startTime = System.currentTimeMillis();
         logger.info("Processing Raw {} by table", rawS3Path);
+        Map<ImmutablePair<String, String>, List<String>> pathsByTable = discoverFilesToLoad(rawS3Path, sparkSession);
+
+        for (val entry: pathsByTable.entrySet()) {
+            val tableStartTime = System.currentTimeMillis();
+            val source = entry.getKey().getLeft();
+            val table = entry.getKey().getRight();
+            logger.info("Processing table {}.{}", source, table);
+            val filePaths = JavaConverters.asScalaIteratorConverter(entry.getValue().iterator()).asScala().toSeq();
+            val dataFrame = sparkSession.read().parquet(filePaths);
+            logger.info("Schema for {}.{}: \n{}", source, table, dataFrame.schema().treeString());
+            batchProcessor.processBatch(sparkSession, source, table, dataFrame);
+            logger.info("Processed table {}.{} in {}ms", source, table, System.currentTimeMillis() - tableStartTime);
+        }
+        logger.info("Finished processing Raw {} by table in {}ms", rawS3Path, System.currentTimeMillis() - startTime);
+    }
+
+    @NotNull
+    private static Map<ImmutablePair<String, String>, List<String>> discoverFilesToLoad(String rawS3Path, SparkSession sparkSession) throws IOException {
         val fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
         val fileIterator = fileSystem.listFiles(new Path(rawS3Path), true);
         Map<ImmutablePair<String, String>, List<String>> pathsByTable = new HashMap<>();
@@ -119,47 +145,6 @@ public class DataHubBatchJob implements Runnable {
             }
         }
         logger.info("Finished recursively enumerating load files in {}ms", System.currentTimeMillis() - listPathsStartTime);
-
-        for (val entry: pathsByTable.entrySet()) {
-            val startTime = System.currentTimeMillis();
-            val source = entry.getKey().getLeft();
-            val table = entry.getKey().getRight();
-            logger.info("Processing table {}.{}", source, table);
-            val filePaths = JavaConverters.asScalaIteratorConverter(entry.getValue().iterator()).asScala().toSeq();
-            val dataFrame = sparkSession.read().parquet(filePaths).withColumn(OPERATION, lit(Load.getName()));
-            batchProcessor.processBatch(sparkSession, source, table, dataFrame);
-            logger.info("Processed table {}.{} in {}ms", source, table, System.currentTimeMillis() - startTime);
-        }
-        logger.info("Finished processing Raw {} by table", rawS3Path);
-    }
-
-    private void processFileAtATime(String rawS3Path, SparkSession sparkSession) throws IOException {
-        logger.info("Processing Raw {} a file at a time", rawS3Path);
-        val fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
-        val fileIterator = fileSystem.listFiles(new Path(rawS3Path), true);
-        while (fileIterator.hasNext()) {
-            Path path = fileIterator.next().getPath();
-            val fileName = path.getName();
-            val filePath = path.toUri().toString();
-            if (fileName.startsWith("LOAD") && fileName.endsWith(".parquet")) {
-                val startTime = System.currentTimeMillis();
-                logger.info("Processing file {}", filePath);
-
-                val pathParts = filePath
-                        .substring(rawS3Path.length(), filePath.lastIndexOf("/"))
-                        .split("/");
-
-                val source = pathParts[0];
-                val table = pathParts[1];
-
-                val dataFrame = sparkSession.read().parquet(filePath).withColumn(OPERATION, lit(Load.getName()));
-                batchProcessor.processBatch(sparkSession, source, table, dataFrame);
-
-                logger.info("Processed file {} in {}ms", filePath, System.currentTimeMillis() - startTime);
-            } else {
-                logger.debug("Will skip file {}", filePath);
-            }
-        }
-        logger.info("Finished processing Raw {} a file at a time", rawS3Path);
+        return pathsByTable;
     }
 }

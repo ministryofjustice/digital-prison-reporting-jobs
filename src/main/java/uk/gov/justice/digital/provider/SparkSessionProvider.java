@@ -39,7 +39,7 @@ public class SparkSessionProvider {
         return getConfiguredSparkSession(new SparkConf(), logLevel);
     }
 
-    private static void configureSparkConf(SparkConf sparkConf) {
+    public static void configureSparkConf(SparkConf sparkConf) {
         // We set the overall default timezone to UTC before then configuring the spark session to also use UTC.
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.UTC));
         sparkConf

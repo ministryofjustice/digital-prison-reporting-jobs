@@ -1,58 +1,44 @@
 package uk.gov.justice.digital.client.s3;
 
-import com.amazonaws.services.glue.DataSource;
-import com.amazonaws.services.glue.GlueContext;
-import com.amazonaws.services.glue.util.JsonOptions;
+import com.google.common.annotations.VisibleForTesting;
 import jakarta.inject.Singleton;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
 
-import java.util.HashMap;
-import java.util.Map;
+import static java.lang.String.format;
+import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 
+/**
+ * Responsible for providing a streaming Dataset of database change files from S3.
+ * The files are processed in creation timestamp order.
+ */
 @Singleton
 public class S3DataProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(S3DataProvider.class);
 
-    public Dataset<Row> getSourceData(SparkSession sparkSession, JobArguments arguments) {
-        String path = fileGlob(arguments);
-        logger.info("Initialising S3 data source with path " + path);
+    public Dataset<Row> getSourceData(SparkSession sparkSession, JobArguments arguments, String schemaName, String tableName) {
+        String tablePath = tablePath(arguments, schemaName, tableName);
+        String fileGlobPath = tablePath + "/*.parquet";
+        // Infer schema
+        StructType schema = sparkSession.read().parquet(tablePath).schema();
+        logger.info("Schema for {}.{}: \n{}", schemaName, tableName, schema.treeString());
+        logger.info("Initialising S3 data source for {}/{} with path {}", schemaName, tableName, fileGlobPath);
         return sparkSession
                 .readStream()
-                .parquet(path);
+                .schema(schema)
+                .parquet(fileGlobPath);
     }
 
-    String fileGlob(JobArguments arguments) {
+    @VisibleForTesting
+    static String tablePath(JobArguments arguments, String source, String table) {
         String rawS3Path = arguments.getRawS3Path();
-        String prefix;
-        if(rawS3Path.endsWith("/")) {
-            prefix = rawS3Path;
-        } else {
-            prefix = rawS3Path + "/";
-        }
-        return prefix + "*/*/*-*.parquet";
-    }
-
-    public Dataset<Row> getSourceDataGlue(GlueContext glueContext, JobArguments arguments) {
-        logger.info("Initialising S3 data source");
-        Map<String, String> s3ConnectionOptions = new HashMap<>();
-
-        // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect-s3-home.html
-        // https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-format-parquet-home.html
-        s3ConnectionOptions.put("isFailFast", "true");
-        s3ConnectionOptions.put("paths", "[\"" + arguments.getRawS3Path() + "*/*/*-*.parquet\"]");
-        logger.info("S3 Connection Options: {}", s3ConnectionOptions);
-        JsonOptions connectionOptions = new JsonOptions(JavaConverters.mapAsScalaMap(s3ConnectionOptions));
-
-        JsonOptions formatOptions = new JsonOptions(JavaConverters.mapAsScalaMap(new HashMap<>()));
-
-        DataSource s3DataSource =  glueContext.getSourceWithFormat("s3", connectionOptions, "", "parquet", formatOptions);
-        return s3DataSource.getDataFrame();
+        String prefix = ensureEndsWithSlash(rawS3Path);
+        return prefix + format("%s/%s/", source, table);
     }
 }

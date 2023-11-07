@@ -22,5 +22,13 @@ public class ResourcePath {
         }
     }
 
+    public static String ensureEndsWithSlash(String originalString) {
+        if (originalString.endsWith("/")) {
+            return originalString;
+        } else {
+            return originalString + "/";
+        }
+    }
+
     private ResourcePath() { }
 }

@@ -80,9 +80,6 @@ public class JobArguments {
     public static final String DOMAIN_REFRESH_ENABLED = "dpr.domainrefresh.enabled";
     public static final boolean DOMAIN_REFRESH_ENABLED_DEFAULT = true;
 
-    public static final String BATCH_PROCESS_BY_TABLE = "dpr.batch.process.bytable";
-    public static final boolean BATCH_PROCESS_BY_TABLE_DEFAULT = true;
-
     private final Map<String, String> config;
 
     @Inject
@@ -242,20 +239,10 @@ public class JobArguments {
         return getArgument(DOMAIN_REFRESH_ENABLED, DOMAIN_REFRESH_ENABLED_DEFAULT);
     }
 
-    public boolean isBatchProcessByTable() {
-        return getArgument(BATCH_PROCESS_BY_TABLE, BATCH_PROCESS_BY_TABLE_DEFAULT);
-    }
-
-
     private String getArgument(String argumentName) {
-        Optional<String> argument = Optional.ofNullable(config.get(argumentName));
-
-        if (!argument.isPresent()) {
-            logger.error("Argument: " + argumentName + " required but not set");
-            System.exit(1);
-        }
-
-        return argument.get();
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
     }
 
     private String getArgument(String argumentName, String defaultValue) {

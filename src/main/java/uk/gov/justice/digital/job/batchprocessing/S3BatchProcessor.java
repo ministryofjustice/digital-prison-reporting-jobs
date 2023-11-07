@@ -48,16 +48,13 @@ public class S3BatchProcessor {
         logger.info("Processing records {}/{}", sourceName, tableName);
 
         val startTime = System.currentTimeMillis();
+        dataFrame.persist();
         try {
-            dataFrame.persist();
             val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
 
             if (optionalSourceReference.isPresent()) {
                 val sourceReference = optionalSourceReference.get();
                 val structuredLoadDataFrame = structuredZoneLoad.process(spark, dataFrame, sourceReference);
-
-                dataFrame.unpersist();
-
                 curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
             } else {
                 violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
@@ -66,6 +63,7 @@ public class S3BatchProcessor {
             logger.error("Caught unexpected exception", e);
             throw new RuntimeException("Caught unexpected exception", e);
         }
+        dataFrame.unpersist();
 
         logger.info("Processed records {}/{} in {}ms",
                 sourceName,

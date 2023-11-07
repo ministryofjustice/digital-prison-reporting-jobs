@@ -41,7 +41,7 @@ public class DMS_3_4_7 implements Converter<Dataset<Row>, Dataset<Row>> {
         public static final String TIMESTAMP = "_timestamp";
         public static final String KEY = "_key";
         public static final String DATA_TYPE = "_datatype";
-        public static final String OPERATION = "_operation";
+        public static final String OPERATION = "Op";
         public static final String SOURCE = "_source";
         public static final String TABLE = "_table";
         public static final String TRANSACTION_ID = "_txnid";

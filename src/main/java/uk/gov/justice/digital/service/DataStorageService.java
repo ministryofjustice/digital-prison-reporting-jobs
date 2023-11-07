@@ -37,7 +37,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 
 @Singleton
@@ -150,6 +151,48 @@ public class DataStorageService {
             val errorMessage = String.format("Failed to upsert table %s", tablePath);
             logger.error(errorMessage, e);
         }
+    }
+
+    public void mergeRecordsRobust(
+            SparkSession spark,
+            String tablePath,
+            Dataset<Row> dataFrame,
+            SourceReference.PrimaryKey primaryKey,
+            List<String> columnsToExclude) throws DataStorageRetriesExhaustedException {
+        val dt = DeltaTable
+                .createIfNotExists(spark)
+                .addColumns(dataFrame.schema())
+                .location(tablePath)
+                .execute();
+
+        val expression = createMergeExpression(dataFrame, columnsToExclude);
+        val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+        logger.debug("Upsert records from {} using condition: {}", tablePath, condition);
+        doWithRetryOnConcurrentModification(() ->
+                dt.as(SOURCE)
+                        .merge(dataFrame.as(TARGET), condition)
+                        // Multiple whenMatched clauses are evaluated in the order they are specified.
+                        // As such the Delete needs to be specified after the update
+                        .whenMatched(insertMatchCondition)
+                        .updateExpr(expression)
+                        .whenMatched(updateMatchCondition)
+                        .updateExpr(expression)
+                        .whenMatched(deleteMatchCondition)
+                        .delete()
+                        .whenNotMatched()
+                        .insertExpr(expression)
+                        .execute()
+        );
+    }
+
+    public void writeCdc(
+            SparkSession spark,
+            String tablePath,
+            Dataset<Row> dataFrame,
+            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
+        List<String> columnsToExclude = Arrays.asList(OPERATION, TIMESTAMP);
+        mergeRecordsRobust(spark, tablePath, dataFrame, primaryKey, columnsToExclude);
+        updateDeltaManifestForTable(spark, tablePath);
     }
 
     public void updateRecords(
@@ -438,7 +481,7 @@ public class DataStorageService {
                 .collect(Collectors.toMap(column -> SOURCE + "." + column, column -> TARGET + "." + column));
     }
 
-    private String createMatchExpression(DMS_3_4_7.Operation operation) {
+    private String createMatchExpression(DMS_3_4_7.ShortOperationCode operation) {
         return String.format("%s.%s=='%s'", TARGET, OPERATION, operation.getName());
     }
 

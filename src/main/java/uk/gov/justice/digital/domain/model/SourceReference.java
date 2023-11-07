@@ -18,8 +18,7 @@ public class SourceReference {
 
     public static class PrimaryKey {
 
-        // FIXME getter with defensive copy
-        public Collection<String> keys;
+        private final Collection<String> keys;
 
         public PrimaryKey(Collection<?> o) {
             keys = o.stream().map(x -> Objects.toString(x, null)).collect(Collectors.toList());
@@ -33,6 +32,10 @@ public class SourceReference {
             return keys.stream()
                     .map(s -> source + "." + s + " = " + target + "." + s)
                     .collect(Collectors.joining(" and "));
+        }
+
+        public Collection<String> getKeyColumnNames() {
+            return Collections.unmodifiableCollection(keys);
         }
 
         @Override

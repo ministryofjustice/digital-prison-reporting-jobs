@@ -47,6 +47,7 @@ public class SourceReferenceService {
         sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", new SourceReference.PrimaryKey("INTERNAL_LOCATION_ID"), getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
     }
 
+    // FIXME: source has 2 meanings in SourceReference service. Provide "OMS_OWNER" to getSourceReference as source and it gives you back "nomis" as source...
     public Optional<SourceReference> getSourceReference(String source, String table) {
         val key = generateKey(source, table);
 
