@@ -158,7 +158,7 @@ public class DataHubCdcJob implements Runnable {
 
     private void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId, String structuredTablePath, String curatedTablePath) {
         val batchStartTime = System.currentTimeMillis();
-        logger.info("Processing batch {}", batchId);
+        logger.info("Processing batch {} for {}.{}", batchId, sourceReference.getSource(), sourceReference.getTable());
         val primaryKey = sourceReference.getPrimaryKey();
         val latestCDCRecordsByPK = latestRecords(df, primaryKey);
         try {
@@ -167,7 +167,7 @@ public class DataHubCdcJob implements Runnable {
         } catch (DataStorageRetriesExhaustedException e) {
             violationService.handleRetriesExhausted(spark, df, sourceReference.getSource(), sourceReference.getTable(), e, CDC);
         }
-        logger.info("Batch processing for batch {} took {}ms", batchId, System.currentTimeMillis() - batchStartTime);
+        logger.info("Processing batch {} {}.{} took {}ms", batchId, sourceReference.getSource(), sourceReference.getTable(), System.currentTimeMillis() - batchStartTime);
     }
 
     private String cdcTablePath(String zoneRootPath, SourceReference sourceReference) {

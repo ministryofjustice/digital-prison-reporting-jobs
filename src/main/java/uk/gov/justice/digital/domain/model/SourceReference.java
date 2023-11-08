@@ -30,6 +30,7 @@ public class SourceReference {
 
         public String getSparkCondition(final String source, final String target) {
             return keys.stream()
+                    // TODO: I don't think toLowerCase is necessary
                     .map(String::toLowerCase)
                     .map(s -> source + "." + s + " = " + target + "." + s)
                     .collect(Collectors.joining(" and "));
