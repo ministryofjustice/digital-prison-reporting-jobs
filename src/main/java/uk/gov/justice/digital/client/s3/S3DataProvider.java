@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.client.s3;
 
 import com.google.common.annotations.VisibleForTesting;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -20,11 +21,19 @@ import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 @Singleton
 public class S3DataProvider {
 
+    private final JobArguments arguments;
+
     private static final Logger logger = LoggerFactory.getLogger(S3DataProvider.class);
+
+    @Inject
+    public S3DataProvider(JobArguments arguments) {
+        this.arguments = arguments;
+    }
 
     public Dataset<Row> getSourceData(SparkSession sparkSession, JobArguments arguments, String schemaName, String tableName) {
         String tablePath = tablePath(arguments, schemaName, tableName);
-        String fileGlobPath = tablePath + "/*.parquet";
+        String fileGlobPath = tablePath + arguments.getCdcFileGlobPattern();
+        logger.info("File glob path for {}.{}: {}", schemaName, tableName, fileGlobPath);
         // Infer schema
         StructType schema = sparkSession.read().parquet(tablePath).schema();
         logger.info("Schema for {}.{}: \n{}", schemaName, tableName, schema.treeString());

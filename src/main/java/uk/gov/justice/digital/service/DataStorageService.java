@@ -46,10 +46,6 @@ public class DataStorageService {
 
     private static final String SOURCE = "source";
     private static final String TARGET = "target";
-
-    // columns excluded from inserts/updates during CDC upsert/merge
-    private static final List<String> rawColumnsToExclude = Collections.singletonList(OPERATION);
-
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     // Retry policy used on operations that are at risk of concurrent modification exceptions
@@ -123,8 +119,7 @@ public class DataStorageService {
             SourceReference.PrimaryKey primaryKey
     ) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), destinationPath);
-        // TODO use field
-        appendDistinct(destinationPath, dataFrame.drop(OPERATION), primaryKey);
+        appendDistinct(destinationPath, dataFrame, primaryKey);
 
         logger.info("Append completed successfully to table: {}", destinationPath);
         updateDeltaManifestForTable(spark, destinationPath);
@@ -170,21 +165,20 @@ public class DataStorageService {
         }
     }
 
-    public void mergeRecordsRobust(
+    public void mergeRecordsCdc(
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey,
-            List<String> columnsToExclude) throws DataStorageRetriesExhaustedException {
+            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
         val dt = DeltaTable
                 .createIfNotExists(spark)
                 .addColumns(dataFrame.schema())
                 .location(tablePath)
                 .execute();
 
-        val expression = createMergeExpression(dataFrame, columnsToExclude);
+        val expression = createMergeExpression(dataFrame, Collections.emptyList());
         val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-        logger.debug("Upsert records from {} using condition: {}", tablePath, condition);
+        logger.info("Upsert records from {} using condition: {}", tablePath, condition);
         doWithRetryOnConcurrentModification(() ->
                 dt.as(SOURCE)
                         .merge(dataFrame.as(TARGET), condition)
@@ -207,7 +201,7 @@ public class DataStorageService {
             String tablePath,
             Dataset<Row> dataFrame,
             SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        mergeRecordsRobust(spark, tablePath, dataFrame, primaryKey, rawColumnsToExclude);
+        mergeRecordsCdc(spark, tablePath, dataFrame, primaryKey);
         updateDeltaManifestForTable(spark, tablePath);
     }
 

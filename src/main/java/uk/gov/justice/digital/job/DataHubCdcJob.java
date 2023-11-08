@@ -47,8 +47,6 @@ import static org.apache.spark.sql.functions.unix_timestamp;
 import static org.apache.spark.sql.types.DataTypes.TimestampType;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.SOURCE;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TABLE;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.CDC;
 
@@ -146,7 +144,8 @@ public class DataHubCdcJob implements Runnable {
         val curatedTablePath = format("%s%s/%s", ensureEndsWithSlash(arguments.getCuratedS3Path()), outputSourceName, outputTableName);
         try {
             String queryName = format("Datahub CDC %s.%s", inputSchemaName, inputTableName);
-            logger.info("Initialising query {}", queryName);
+            String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
+            logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
             sourceDf
                     .writeStream()
                     .queryName(queryName)
@@ -154,7 +153,7 @@ public class DataHubCdcJob implements Runnable {
                     .foreachBatch((df, batchId) -> {
                         logger.info("Processing batch {}", batchId);
                         val batchStartTime = System.currentTimeMillis();
-                        val latestCDCRecordsByPK = latestRecords(df.drop(SOURCE, TABLE), primaryKey);
+                        val latestCDCRecordsByPK = latestRecords(df, primaryKey);
                         try {
                             storage.writeCdc(spark, structuredTablePath, latestCDCRecordsByPK, primaryKey);
                             storage.writeCdc(spark, curatedTablePath, latestCDCRecordsByPK, primaryKey);
@@ -164,7 +163,7 @@ public class DataHubCdcJob implements Runnable {
                         logger.info("Batch processing for batch {} took {}ms", batchId, System.currentTimeMillis() - batchStartTime);
                     })
                     .outputMode("update")
-                    .option("checkpointLocation", ensureEndsWithSlash(arguments.getCheckpointLocation()) + queryName)
+                    .option("checkpointLocation", queryCheckpointPath)
                     .start();
             logger.info("Started query {}", queryName);
         } catch (TimeoutException e) {

@@ -51,6 +51,30 @@ ensuring that your job class has a main method that can be executed.
 > **Note** - On AWS Glue the job class can be specified using the `--class`
 > parameter and the script can then be left blank.
 
+
+## Run app main methods locally
+
+Set the following CLI arguments, e.g. in your Intellij run configuration.
+```
+--checkpoint.location ./.job-checkpoints/
+--dpr.curated.s3.path "s3a://dpr-dms-curated-zone-development/"
+--dpr.structured.s3.path s3a://dpr-dms-structured-zone-development/
+--dpr.violations.s3.path s3a://dpr-dms-violation-development/
+--dpr.aws.dynamodb.endpointUrl "https://dynamodb.eu-west-2.amazonaws.com"
+--dpr.aws.kinesis.endpointUrl "https://kinesis.eu-west-2.amazonaws.com"
+--dpr.aws.region eu-west-2
+--dpr.datamart.db.name datamart
+--dpr.domain.catalog.db domain
+--dpr.domain.registry dpr-domain-registry-development
+--dpr.domain.target.path s3://dpr-dms-domain-development
+--dpr.kinesis.reader.batchDurationSeconds 30
+--dpr.kinesis.reader.streamName dpr-kinesis-ingestor-development
+--dpr.log.level INFO
+--dpr.raw.s3.path s3a://dpr-dms-raw-zone-development/
+--dpr.redshift.secrets.name dpr-redshift-secret-development
+--dpr.contract.registryName dpr-glue-registry-avro-development
+```
+
 ## Testing
 
 > **Note** - test coverage reports are enabled by default and after running the
