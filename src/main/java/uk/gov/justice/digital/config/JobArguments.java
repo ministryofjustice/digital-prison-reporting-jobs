@@ -239,6 +239,7 @@ public class JobArguments {
         return getArgument(DOMAIN_REFRESH_ENABLED, DOMAIN_REFRESH_ENABLED_DEFAULT);
     }
 
+
     private String getArgument(String argumentName) {
         return Optional
                 .ofNullable(config.get(argumentName))

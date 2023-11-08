@@ -101,14 +101,14 @@ public class DataHubBatchJob implements Runnable {
 
         for (val entry: pathsByTable.entrySet()) {
             val tableStartTime = System.currentTimeMillis();
-            val source = entry.getKey().getLeft();
+            val schema = entry.getKey().getLeft();
             val table = entry.getKey().getRight();
-            logger.info("Processing table {}.{}", source, table);
+            logger.info("Processing table {}.{}", schema, table);
             val filePaths = JavaConverters.asScalaIteratorConverter(entry.getValue().iterator()).asScala().toSeq();
             val dataFrame = sparkSession.read().parquet(filePaths);
-            logger.info("Schema for {}.{}: \n{}", source, table, dataFrame.schema().treeString());
-            batchProcessor.processBatch(sparkSession, source, table, dataFrame);
-            logger.info("Processed table {}.{} in {}ms", source, table, System.currentTimeMillis() - tableStartTime);
+            logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
+            batchProcessor.processBatch(sparkSession, schema, table, dataFrame);
+            logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
         }
         logger.info("Finished processing Raw {} by table in {}ms", rawS3Path, System.currentTimeMillis() - startTime);
     }
@@ -128,10 +128,10 @@ public class DataHubBatchJob implements Runnable {
                 val pathParts = filePath
                         .substring(rawS3Path.length())
                         .split("/");
-                val source = pathParts[0];
+                val schema = pathParts[0];
                 val table = pathParts[1];
-                logger.info("Processing file {} for {}.{}", filePath, source, table);
-                val key = new ImmutablePair<>(source, table);
+                logger.info("Processing file {} for {}.{}", filePath, schema, table);
+                val key = new ImmutablePair<>(schema, table);
                 List<String> pathsSoFar;
                 if (pathsByTable.containsKey(key)) {
                     pathsSoFar = pathsByTable.get(key);

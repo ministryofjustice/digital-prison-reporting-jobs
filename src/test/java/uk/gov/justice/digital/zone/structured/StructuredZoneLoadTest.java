@@ -96,7 +96,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
         );
 
         assertIterableEquals(
-                expectedRecords.drop(OPERATION, TIMESTAMP).collectAsList(),
+                expectedRecords.drop(OPERATION).collectAsList(),
                 dataframeCaptor.getValue().collectAsList()
         );
     }

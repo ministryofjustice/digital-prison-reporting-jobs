@@ -158,6 +158,22 @@ class JobArgumentsIntegrationTest {
         assertEquals(expected.toString(), jobArguments.getIdleTimeBetweenReadsInMillis());
     }
 
+    @ParameterizedTest
+    @CsvSource({ "false, false", "False, false", "FALSE, false", "true, true", "True, true", "TRUE, true" })
+    public void shouldSetDomainRefreshEnabled(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DOMAIN_REFRESH_ENABLED, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.isDomainRefreshEnabled());
+    }
+
+    @Test
+    public void shouldDefaultDomainRefreshEnabledToTrue() {
+        HashMap<String, String> args = cloneTestArguments();
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertTrue(jobArguments.isDomainRefreshEnabled());
+    }
+
     @Test
     public void shouldReturnCorrectValuesInGetConfig() {
         Map<String, String> actualArguments = validArguments.getConfig();
