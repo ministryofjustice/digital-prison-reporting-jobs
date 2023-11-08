@@ -56,7 +56,7 @@ ensuring that your job class has a main method that can be executed.
 
 Set the following CLI arguments, e.g. in your Intellij run configuration.
 ```
---checkpoint.location ./.job-checkpoints/
+--checkpoint.location ./.checkpoints/
 --dpr.curated.s3.path "s3a://dpr-dms-curated-zone-development/"
 --dpr.structured.s3.path s3a://dpr-dms-structured-zone-development/
 --dpr.violations.s3.path s3a://dpr-dms-violation-development/

@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.rank;
+import static org.apache.spark.sql.functions.row_number;
 import static org.apache.spark.sql.functions.unix_timestamp;
 import static org.apache.spark.sql.types.DataTypes.TimestampType;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
@@ -212,9 +212,9 @@ public class DataHubCdcJob implements Runnable {
                 );
 
         return df
-                .withColumn("rank", rank().over(window))
-                .where("rank = 1")
-                .drop("rank");
+                .withColumn("row_number", row_number().over(window))
+                .where("row_number = 1")
+                .drop("row_number");
     }
 
     @VisibleForTesting
