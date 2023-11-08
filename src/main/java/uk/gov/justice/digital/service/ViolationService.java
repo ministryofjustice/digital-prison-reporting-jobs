@@ -6,6 +6,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
@@ -131,11 +132,11 @@ public class ViolationService {
                      storageService.updateDeltaManifestForTable(spark, validationFailedViolationPath);
     }
 
-    public boolean dataFrameSchemaIsValid(Dataset<Row> dataFrame, SourceReference sourceReference) {
+    public boolean dataFrameSchemaIsValid(StructType schema, SourceReference sourceReference) {
         val schemaFields = sourceReference.getSchema().fields();
 
         val dataFields = Arrays
-                .stream(dataFrame.schema().fields())
+                .stream(schema.fields())
                 .collect(Collectors.toMap(StructField::name, StructField::dataType));
 
         val requiredFields = Arrays.stream(schemaFields)

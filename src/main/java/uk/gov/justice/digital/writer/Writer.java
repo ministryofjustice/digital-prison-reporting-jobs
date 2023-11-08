@@ -39,7 +39,7 @@ public abstract class Writer {
             Dataset<Row> validRecords
     ) throws DataStorageException {
         logger.info("Appending {} records to deltalake table: {}", validRecords.count(), destinationPath);
-        storage.appendDistinct(destinationPath, validRecords.drop(OPERATION), primaryKey);
+        storage.appendDistinct(destinationPath, validRecords.drop(OPERATION, TIMESTAMP), primaryKey);
 
         logger.info("Append completed successfully to table: {}", destinationPath);
         storage.updateDeltaManifestForTable(spark, destinationPath);

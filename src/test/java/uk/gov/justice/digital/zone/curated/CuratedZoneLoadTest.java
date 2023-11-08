@@ -89,7 +89,7 @@ class CuratedZoneLoadTest extends BaseSparkTest {
         );
 
         assertIterableEquals(
-                testDataSet.drop(OPERATION).collectAsList(),
+                testDataSet.drop(OPERATION, TIMESTAMP).collectAsList(),
                 dataframeCaptor.getValue().collectAsList()
         );
     }

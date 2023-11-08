@@ -88,7 +88,7 @@ public class S3BatchProcessor {
 
         if (optionalSourceReference.isPresent()) {
             val sourceReference = optionalSourceReference.get();
-            if (violationService.dataFrameSchemaIsValid(dataFrame, sourceReference)) {
+            if (violationService.dataFrameSchemaIsValid(dataFrame.schema(), sourceReference)) {
                 validatedDfHandler.apply(dataFrame, sourceReference);
             } else {
                 val source = sourceReference.getSource();

@@ -7,15 +7,14 @@ import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
@@ -29,11 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Load;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
-import scala.collection.JavaConverters;
 
 @Singleton
 @CommandLine.Command(name = "DataHubBatchJob")
@@ -42,7 +37,6 @@ public class DataHubBatchJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(DataHubBatchJob.class);
 
     private final JobArguments arguments;
-
     private final JobProperties properties;
     private final SparkSessionProvider sparkSessionProvider;
     private final S3BatchProcessor batchProcessor;
@@ -96,7 +90,7 @@ public class DataHubBatchJob implements Runnable {
 
     private void processByTable(String rawS3Path, SparkSession sparkSession) throws IOException {
         val startTime = System.currentTimeMillis();
-        logger.info("Processing Raw {} by table", rawS3Path);
+        logger.info("Processing Raw {} table by table", rawS3Path);
         Map<ImmutablePair<String, String>, List<String>> pathsByTable = discoverFilesToLoad(rawS3Path, sparkSession);
 
         for (val entry: pathsByTable.entrySet()) {
@@ -110,7 +104,7 @@ public class DataHubBatchJob implements Runnable {
             batchProcessor.processBatch(sparkSession, schema, table, dataFrame);
             logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
         }
-        logger.info("Finished processing Raw {} by table in {}ms", rawS3Path, System.currentTimeMillis() - startTime);
+        logger.info("Finished processing Raw {} table by table in {}ms", rawS3Path, System.currentTimeMillis() - startTime);
     }
 
     @NotNull
@@ -124,7 +118,8 @@ public class DataHubBatchJob implements Runnable {
             Path path = fileIterator.next().getPath();
             val fileName = path.getName();
             val filePath = path.toUri().toString();
-            if (fileName.startsWith("LOAD") && fileName.endsWith(".parquet")) {
+            boolean isLoadFile = fileName.startsWith("LOAD") && fileName.endsWith(".parquet");
+            if (isLoadFile) {
                 val pathParts = filePath
                         .substring(rawS3Path.length())
                         .split("/");

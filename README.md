@@ -66,7 +66,7 @@ Set the following CLI arguments, e.g. in your Intellij run configuration.
 --dpr.datamart.db.name datamart
 --dpr.domain.catalog.db domain
 --dpr.domain.registry dpr-domain-registry-development
---dpr.domain.target.path s3://dpr-dms-domain-development
+--dpr.domain.target.path s3a://dpr-dms-domain-development
 --dpr.kinesis.reader.batchDurationSeconds 30
 --dpr.kinesis.reader.streamName dpr-kinesis-ingestor-development
 --dpr.log.level INFO

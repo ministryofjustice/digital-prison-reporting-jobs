@@ -33,11 +33,10 @@ public class S3DataProvider {
     public Dataset<Row> getSourceData(SparkSession sparkSession, JobArguments arguments, String schemaName, String tableName) {
         String tablePath = tablePath(arguments, schemaName, tableName);
         String fileGlobPath = tablePath + arguments.getCdcFileGlobPattern();
-        logger.info("File glob path for {}.{}: {}", schemaName, tableName, fileGlobPath);
         // Infer schema
         StructType schema = sparkSession.read().parquet(tablePath).schema();
         logger.info("Schema for {}.{}: \n{}", schemaName, tableName, schema.treeString());
-        logger.info("Initialising S3 data source for {}/{} with path {}", schemaName, tableName, fileGlobPath);
+        logger.info("Initialising S3 data source for {}.{} with file glob path {}", schemaName, tableName, fileGlobPath);
         return sparkSession
                 .readStream()
                 .schema(schema)

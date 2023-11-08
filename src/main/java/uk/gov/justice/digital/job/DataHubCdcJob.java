@@ -15,8 +15,6 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.streaming.StreamingQueryException;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,11 +32,9 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
@@ -129,38 +125,26 @@ public class DataHubCdcJob implements Runnable {
     }
 
     public void processTable(String inputSchemaName, String inputTableName, SourceReference sourceReference, SparkSession spark) {
-        String outputSourceName = sourceReference.getSource();
-        String outputTableName = sourceReference.getTable();
-        logger.info("Initialising data source for {}/{}", outputSourceName, outputTableName);
         Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, arguments, inputSchemaName, inputTableName);
-        if(!schemaIsValid(sourceDf.schema(), sourceReference)) {
-            logger.error("Schema for {}/{} is not valid\n{}", outputSourceName, outputTableName, sourceDf.schema().treeString());
-            throw new RuntimeException(format("Schema for %s.%s is not valid %s", outputSourceName, outputTableName, sourceDf.schema().catalogString()));
+        if(!violationService.dataFrameSchemaIsValid(sourceDf.schema(), sourceReference)) {
+            logger.error("Schema for {}/{} is not valid\n{}", inputSchemaName, inputTableName, sourceDf.schema().treeString());
+            throw new RuntimeException(format("Schema for %s.%s is not valid %s", inputSchemaName, inputTableName, sourceDf.schema().catalogString()));
         }
-        logger.info("Initialising per batch processing for {}/{}", outputSourceName, outputTableName);
+        logger.info("Initialising per batch processing for {}/{}", inputSchemaName, inputTableName);
 
-        val primaryKey = sourceReference.getPrimaryKey();
-        val structuredTablePath = format("%s%s/%s", ensureEndsWithSlash(arguments.getStructuredS3Path()), outputSourceName, outputTableName);
-        val curatedTablePath = format("%s%s/%s", ensureEndsWithSlash(arguments.getCuratedS3Path()), outputSourceName, outputTableName);
+        val structuredTablePath = cdcTablePath(arguments.getStructuredS3Path(), sourceReference);
+        val curatedTablePath = cdcTablePath(arguments.getCuratedS3Path(), sourceReference);
+        String queryName = format("Datahub CDC %s.%s", inputSchemaName, inputTableName);
+        String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
+        logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
+
         try {
-            String queryName = format("Datahub CDC %s.%s", inputSchemaName, inputTableName);
-            String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
-            logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
             sourceDf
                     .writeStream()
                     .queryName(queryName)
                     .format("delta")
                     .foreachBatch((df, batchId) -> {
-                        logger.info("Processing batch {}", batchId);
-                        val batchStartTime = System.currentTimeMillis();
-                        val latestCDCRecordsByPK = latestRecords(df, primaryKey);
-                        try {
-                            storage.writeCdc(spark, structuredTablePath, latestCDCRecordsByPK, primaryKey);
-                            storage.writeCdc(spark, curatedTablePath, latestCDCRecordsByPK, primaryKey);
-                        } catch (DataStorageRetriesExhaustedException e) {
-                            violationService.handleRetriesExhausted(spark, sourceDf, sourceReference.getSource(), sourceReference.getTable(), e, CDC);
-                        }
-                        logger.info("Batch processing for batch {} took {}ms", batchId, System.currentTimeMillis() - batchStartTime);
+                        processBatch(sourceReference, spark, df, batchId, structuredTablePath, curatedTablePath);
                     })
                     .outputMode("update")
                     .option("checkpointLocation", queryCheckpointPath)
@@ -172,9 +156,27 @@ public class DataHubCdcJob implements Runnable {
         }
     }
 
+    private void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId, String structuredTablePath, String curatedTablePath) {
+        val batchStartTime = System.currentTimeMillis();
+        logger.info("Processing batch {}", batchId);
+        val primaryKey = sourceReference.getPrimaryKey();
+        val latestCDCRecordsByPK = latestRecords(df, primaryKey);
+        try {
+            storage.writeCdc(spark, structuredTablePath, latestCDCRecordsByPK, primaryKey);
+            storage.writeCdc(spark, curatedTablePath, latestCDCRecordsByPK, primaryKey);
+        } catch (DataStorageRetriesExhaustedException e) {
+            violationService.handleRetriesExhausted(spark, df, sourceReference.getSource(), sourceReference.getTable(), e, CDC);
+        }
+        logger.info("Batch processing for batch {} took {}ms", batchId, System.currentTimeMillis() - batchStartTime);
+    }
+
+    private String cdcTablePath(String zoneRootPath, SourceReference sourceReference) {
+        return format("%s%s/%s", ensureEndsWithSlash(zoneRootPath), sourceReference.getSource(), sourceReference.getTable());
+    }
+
     @NotNull
     private static List<ImmutablePair<String, String>> discoverTablesToProcess() {
-        // TODO Discover the tables from S3 or fix the SourceReferenceService
+        // TODO Discover the tables from S3 or fix the broken SourceReferenceService
         List<ImmutablePair<String, String>> tablesToProcess = new ArrayList<>();
         tablesToProcess.add(new ImmutablePair<>("OMS_OWNER", "AGENCY_INTERNAL_LOCATIONS"));
         tablesToProcess.add(new ImmutablePair<>("OMS_OWNER", "AGENCY_LOCATIONS"));
@@ -201,53 +203,15 @@ public class DataHubCdcJob implements Runnable {
                 .asScalaIteratorConverter(primaryKey.getKeyColumnNames().stream().map(functions::col).iterator())
                 .asScala()
                 .toSeq();
-        val window = Window.partitionBy(primaryKeys)
-                .orderBy(
-                        unix_timestamp(
-                                col(TIMESTAMP),
-                                // for timestamp format see https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.S3.html#CHAP_Target.S3.Configuring
-                                // todo check if we need to do anything timezone related
-                                "yyyy-MM-dd HH:mm:ss.SSSSSS"
-                        ).cast(TimestampType).desc()
-                );
+        val window = Window
+                .partitionBy(primaryKeys)
+                // for timestamp format see https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.S3.html#CHAP_Target.S3.Configuring
+                // todo check if we need to do anything timezone related
+                .orderBy(unix_timestamp(col(TIMESTAMP), "yyyy-MM-dd HH:mm:ss.SSSSSS").cast(TimestampType).desc());
 
         return df
                 .withColumn("row_number", row_number().over(window))
                 .where("row_number = 1")
                 .drop("row_number");
-    }
-
-    @VisibleForTesting
-    static boolean schemaIsValid(StructType schema, SourceReference sourceReference) {
-        val schemaFields = sourceReference.getSchema().fields();
-
-        val dataFields = Arrays
-                .stream(schema.fields())
-                .collect(Collectors.toMap(StructField::name, StructField::dataType));
-
-        val requiredFields = Arrays.stream(schemaFields)
-                .filter(field -> !field.nullable())
-                .collect(Collectors.toList());
-
-        val missingRequiredFields = requiredFields
-                .stream()
-                .filter(field -> dataFields.get(field.name()) == null)
-                .collect(Collectors.toList());
-
-        val invalidRequiredFields = requiredFields
-                .stream()
-                .filter(field -> dataFields.get(field.name()) != field.dataType())
-                .collect(Collectors.toList());
-
-        val nullableFields = Arrays.stream(schemaFields)
-                .filter(StructField::nullable)
-                .collect(Collectors.toList());
-
-        val invalidNullableFields = nullableFields
-                .stream()
-                .filter(field -> dataFields.get(field.name()) != field.dataType())
-                .collect(Collectors.toList());
-
-        return (missingRequiredFields.isEmpty() || invalidRequiredFields.isEmpty() || invalidNullableFields.isEmpty());
     }
 }
