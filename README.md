@@ -57,11 +57,11 @@ ensuring that your job class has a main method that can be executed.
 Set the following CLI arguments, e.g. in your Intellij run configuration.
 ```
 --checkpoint.location ./.checkpoints/
---dpr.curated.s3.path "s3a://dpr-dms-curated-zone-development/"
+--dpr.curated.s3.path s3a://dpr-dms-curated-zone-development/
 --dpr.structured.s3.path s3a://dpr-dms-structured-zone-development/
 --dpr.violations.s3.path s3a://dpr-dms-violation-development/
---dpr.aws.dynamodb.endpointUrl "https://dynamodb.eu-west-2.amazonaws.com"
---dpr.aws.kinesis.endpointUrl "https://kinesis.eu-west-2.amazonaws.com"
+--dpr.aws.dynamodb.endpointUrl https://dynamodb.eu-west-2.amazonaws.com
+--dpr.aws.kinesis.endpointUrl https://kinesis.eu-west-2.amazonaws.com
 --dpr.aws.region eu-west-2
 --dpr.datamart.db.name datamart
 --dpr.domain.catalog.db domain

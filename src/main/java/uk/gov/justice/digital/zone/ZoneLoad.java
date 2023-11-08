@@ -13,6 +13,7 @@ import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 
+import static java.lang.String.format;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 public class ZoneLoad {
@@ -43,14 +44,14 @@ public class ZoneLoad {
             String sourceName = sourceReference.getSource();
             String tableName = sourceReference.getTable();
 
-            logger.debug("Processing records for {}/{}", sourceName, tableName);
+            logger.debug("Processing records for {} {}/{}", zoneName.toString(), sourceName, tableName);
             val tablePath = createValidatedPath(zoneRootPath, sourceReference.getSource(), sourceReference.getTable());
 
             storage.appendDistinctRecords(spark, dataFrame, tablePath, sourceReference.getPrimaryKey());
             result = dataFrame;
-            logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
+            logger.debug("Processed batch for {} {}/{} in {}ms", zoneName, sourceName, tableName, System.currentTimeMillis() - startTime);
         } catch (DataStorageRetriesExhaustedException e) {
-            logger.warn("Curated zone load retries exhausted", e);
+            logger.warn(format("%s zone load retries exhausted", zoneName), e);
             violationService.handleRetriesExhausted(spark, dataFrame, sourceReference.getSource(), sourceReference.getTable(), e, zoneName);
             result = spark.emptyDataFrame();
         }
