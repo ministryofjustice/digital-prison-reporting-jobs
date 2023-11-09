@@ -30,8 +30,8 @@ public class DomainExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
 
-    private static final String LeftDataFrame = "left";
-    private static final String RightDataFrame = "right";
+    private static final String LEFT_DATA_FRAME = "left";
+    private static final String RIGHT_DATA_FRAME = "right";
 
     private static final List<String> fullRefreshOperations = Arrays.asList("insert", "update", "sync");
 
@@ -401,8 +401,8 @@ public class DomainExecutor {
                         val referenceSourceColumnName = columnMapping.getColumnName();
 
                         return functions
-                                .col(LeftDataFrame + "." + adjoiningTableColumnName)
-                                .equalTo(functions.col(RightDataFrame + "." + referenceSourceColumnName));
+                                .col(LEFT_DATA_FRAME + "." + adjoiningTableColumnName)
+                                .equalTo(functions.col(RIGHT_DATA_FRAME + "." + referenceSourceColumnName));
                     }
             ).reduce(Column::and);
 
@@ -413,9 +413,9 @@ public class DomainExecutor {
                 return adjoiningDataFrame;
             } else {
                 return optionalJoinExpression.map(joinExpression -> adjoiningDataFrame
-                        .as(LeftDataFrame)
-                        .join(referenceDataFrame.as(RightDataFrame), joinExpression)
-                        .select(LeftDataFrame + ".*", RightDataFrame + "." + OPERATION, RightDataFrame + "." + TIMESTAMP)
+                        .as(LEFT_DATA_FRAME)
+                        .join(referenceDataFrame.as(RIGHT_DATA_FRAME), joinExpression)
+                        .select(LEFT_DATA_FRAME + ".*", RIGHT_DATA_FRAME + "." + OPERATION, RIGHT_DATA_FRAME + "." + TIMESTAMP)
                 ).orElse(spark.emptyDataFrame());
             }
         }
