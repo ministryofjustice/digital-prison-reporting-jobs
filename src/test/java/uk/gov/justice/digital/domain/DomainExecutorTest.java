@@ -32,6 +32,9 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Insert;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 class DomainExecutorTest extends BaseSparkTest {
 
@@ -369,7 +372,17 @@ class DomainExecutorTest extends BaseSparkTest {
         val result = executor.getAdjoiningDataFrame(spark, sourceMapping, createReferenceDataFrame());
 
         assertIterableEquals(
-                Collections.singletonList(RowFactory.create("table_id", "column_1_value", 20, false, "row_2_column_4_value")),
+                Collections.singletonList(
+                                RowFactory.create(
+                                        "table_id",
+                                        "column_1_value",
+                                        20,
+                                        false,
+                                        "row_2_column_4_value",
+                                        Insert.getName(),
+                                        0L
+                                )
+                        ),
                 result.collectAsList()
         );
     }
@@ -416,14 +429,19 @@ class DomainExecutorTest extends BaseSparkTest {
                 .add("id", DataTypes.StringType)
                 .add("table_1_column_1", DataTypes.StringType)
                 .add("table_1_column_2", DataTypes.IntegerType)
-                .add("table_1_column_3", DataTypes.BooleanType);
+                .add("table_1_column_3", DataTypes.BooleanType)
+                .add(OPERATION, DataTypes.StringType)
+                .add(TIMESTAMP, DataTypes.LongType);
 
         val id = "table_id";
         val column1Value = "column_1_value";
         val column2Value = 20;
         val column3Value = false;
+        val operation = Insert.getName();
+        val timestamp = 0L;
 
-        val rows = Collections.singletonList(RowFactory.create(id, column1Value, column2Value, column3Value));
+        val rows = Collections
+                .singletonList(RowFactory.create(id, column1Value, column2Value, column3Value, operation, timestamp));
 
         return spark.createDataFrame(rows, tableSchema);
     }

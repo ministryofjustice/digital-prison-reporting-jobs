@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.google.common.collect.ImmutableList;
 import jakarta.inject.Inject;
 import lombok.val;
 import org.apache.spark.sql.functions;
@@ -27,9 +26,9 @@ import java.util.*;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Load;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.getOperation;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.cdcOperations;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 @Singleton
 public class DomainService {
@@ -68,58 +67,61 @@ public class DomainService {
         val domainDefinitionsForSource = filterDomainDefinitionsForSource(domainDefinitions, sourceTable);
         logger.debug("Found {} domains with source table {}", domainDefinitionsForSource.size(), sourceTable);
 
-        if (domainDefinitionsForSource.isEmpty()) {
+        val filteredDataframe = dataFrame.filter(functions.col(OPERATION).isin(cdcOperations));
+
+        if (domainDefinitionsForSource.isEmpty() || filteredDataframe.isEmpty()) {
             // log and proceed when no domain is found for the table
             logger.warn("No domain definition found for table: " + sourceTable);
         } else {
             domainDefinitionsForSource.forEach(domainDefinition ->
-                    dataFrame.collectAsList()
-                            .forEach(row -> refreshDomainUsingCDCRecord(spark, domainDefinition, row, sourceTable))
+                    refreshDomainUsingCDCRecord(spark, domainDefinition, filteredDataframe, sourceTable)
             );
         }
     }
 
-    private void refreshDomainUsingCDCRecord(SparkSession spark, DomainDefinition domainDefinition, Row row, String referenceTableName) {
-        String unvalidatedOperation = row.getAs(OPERATION);
+    private void refreshDomainUsingCDCRecord(SparkSession spark, DomainDefinition domainDefinition, Dataset<Row> dataframe, String referenceTableName) {
         val domainName = domainDefinition.getName();
-        val optionalOperation = getOperation(unvalidatedOperation);
-        val cdcOperations = optionalOperation.filter(operation -> operation != Load); // discard load records
+        val referenceDataframe = lowerCaseColumnNames(dataframe);
+        val tableDefinitions = getTableDefinitionsRelatedToTable(domainDefinition, referenceTableName);
 
-        cdcOperations.ifPresent(operation -> {
-            val referenceDataframe = lowerCaseColumnNames(spark, row);
+        tableDefinitions.forEach(tableDefinition -> {
+                    try {
+                        String tableName = tableDefinition.getName();
+                        val sourceToRecordMap = buildSourceToRecordsMap(spark, referenceDataframe, tableDefinition, referenceTableName);
 
-            domainDefinition.getTables().stream().filter(table ->
-                    table.getTransform().getSources().stream().anyMatch(source -> source.equalsIgnoreCase(referenceTableName))
-            ).forEach(tableDefinition -> {
+                        logger.debug("Applying transform for CDC record of table " + tableName);
                         val tableTransform = tableDefinition.getTransform();
-                        val violations = tableDefinition.getViolations();
+                        val transformedDataFrame = executor.applyTransform(spark, sourceToRecordMap, tableTransform)
+                                .orderBy(TIMESTAMP);
 
-                        try {
-                            String tableName = tableDefinition.getName();
-                            val sourceToRecordMap = buildSourceToRecordsMap(spark, referenceDataframe, tableDefinition, referenceTableName);
+                        logger.debug("Applying violations for CDC record of table " + tableName);
+                        executor.applyViolations(spark, transformedDataFrame, tableDefinition.getViolations());
 
-                            logger.debug("Applying transform for CDC record of table " + tableName);
-                            val transformedDataFrame = executor.applyTransform(spark, sourceToRecordMap, tableTransform);
-                            logger.debug("Transformed record " + transformedDataFrame);
-
-                            logger.debug("Applying violations for CDC record of table " + tableName);
-                            executor.applyViolations(spark, transformedDataFrame, violations);
-
-                            logger.debug("Saving transformed CDC record of table " + tableName);
-                            executor.applyDomain(spark, transformedDataFrame, domainName, tableDefinition, operation);
-                        } catch (Exception e) {
-                            logger.warn(
-                                    "Failed to incrementally {} domain {}_{} given record {}",
-                                    operation,
-                                    domainName,
-                                    tableDefinition.getName(),
-                                    referenceTableName,
-                                    e
-                            );
-                        }
+                        logger.debug("Saving transformed CDC record of table " + tableName);
+                        executor.applyDomain(spark, transformedDataFrame, domainName, tableDefinition);
+                    } catch (Exception e) {
+                        logger.error(
+                                "Failed to incrementally refresh domain {}_{} given record {}",
+                                domainName,
+                                tableDefinition.getName(),
+                                referenceTableName,
+                                e
+                        );
                     }
-            );
-        });
+                }
+        );
+    }
+
+    @NotNull
+    private static List<TableDefinition> getTableDefinitionsRelatedToTable(DomainDefinition domainDefinition, String tableName) {
+        return domainDefinition.getTables()
+                .stream()
+                .filter(table ->
+                        table.getTransform()
+                                .getSources()
+                                .stream()
+                                .anyMatch(source -> source.equalsIgnoreCase(tableName))
+                ).collect(Collectors.toList());
     }
 
     private void runInternal(
@@ -274,10 +276,9 @@ public class DomainService {
                 .findFirst();
     }
 
-    private static Dataset<Row> lowerCaseColumnNames(SparkSession spark, Row row) {
-        val dataFrame = spark.createDataFrame(new ArrayList<>(ImmutableList.of(row)), row.schema());
-        return dataFrame.select(
-                Arrays.stream(dataFrame.columns())
+    private static Dataset<Row> lowerCaseColumnNames(Dataset<Row> dataframe) {
+        return dataframe.select(
+                Arrays.stream(dataframe.columns())
                         .map(column -> functions.col(column).as(column.toLowerCase()))
                         .toArray(Column[]::new)
         );

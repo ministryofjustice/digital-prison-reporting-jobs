@@ -3,21 +3,15 @@ package uk.gov.justice.digital.domain;
 
 import lombok.val;
 import lombok.var;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.execution.ExplainMode;
-import org.apache.spark.sql.types.DataTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.common.SourceMapping;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.*;
 import uk.gov.justice.digital.domain.model.TableDefinition.TransformDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition.ViolationDefinition;
-import uk.gov.justice.digital.domain.model.TableIdentifier;
-import uk.gov.justice.digital.domain.model.TableTuple;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DomainExecutorException;
 import uk.gov.justice.digital.exception.DomainSchemaException;
@@ -27,12 +21,17 @@ import uk.gov.justice.digital.service.DomainSchemaService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
-import java.util.stream.Collectors;
+
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 @Singleton
 public class DomainExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(DomainExecutor.class);
+
+    private static final String LeftDataFrame = "left";
+    private static final String RightDataFrame = "right";
 
     private static final List<String> fullRefreshOperations = Arrays.asList("insert", "update", "sync");
 
@@ -248,13 +247,12 @@ public class DomainExecutor {
             SparkSession spark,
             Dataset<Row> dataFrame,
             String domainName,
-            TableDefinition tableDefinition,
-            DMS_3_4_7.Operation operation
+            TableDefinition tableDefinition
     ) throws DataStorageException {
         val primaryKeyName = tableDefinition.getPrimaryKey();
         val domainTableName = tableDefinition.getName();
 
-        logger.debug("Writing {} record: {} with primary key {}", operation.getName(), domainName, primaryKeyName);
+        logger.debug("Writing records: {} with primary key {}", domainName, primaryKeyName);
 
         TableIdentifier target = new TableIdentifier(
                 targetRootPath,
@@ -263,22 +261,8 @@ public class DomainExecutor {
                 domainTableName
         );
         val primaryKey = new SourceReference.PrimaryKey(primaryKeyName);
-        switch (operation) {
-            case Delete:
-                storage.deleteRecords(spark, target.toPath(), dataFrame, primaryKey);
-                storage.endTableUpdates(spark, target);
-                break;
-            case Insert:
-                storage.mergeRecords(spark, target.toPath(), dataFrame, primaryKey, Collections.emptyList());
-                storage.endTableUpdates(spark, target);
-                break;
-            case Update:
-                storage.updateRecords(spark, target.toPath(), dataFrame, primaryKey);
-                storage.endTableUpdates(spark, target);
-                break;
-            default:
-                break;
-        }
+        storage.mergeRecords(spark, target.toPath(), dataFrame, primaryKey, Arrays.asList(OPERATION, TIMESTAMP));
+        storage.endTableUpdates(spark, target);
     }
 
     private Dataset<Row> validateSQLAndExecute(SparkSession spark, String query) {
@@ -407,53 +391,34 @@ public class DomainExecutor {
         val adjoiningSourceName = sourceMapping.getDestinationTable();
         val tableTuple = new TableTuple(adjoiningSourceName);
         val tableIdentifier = new TableIdentifier(sourceRootPath, hiveDatabaseName, tableTuple.getSchema(), tableTuple.getTable());
-
         val columnMappings = sourceMapping.getColumnMap();
-        val columnTypes = new HashMap<String, String>();
-        Arrays.stream(referenceDataFrame.schema().fields()).forEach(field -> columnTypes.put(field.name(), field.dataType().typeName()));
 
         if (columnMappings.isEmpty()) {
             return spark.emptyDataFrame();
         } else {
-            val conjunctiveOperator = sourceMapping.getTableAliases().isEmpty()? " and " : " or ";
-            // Create a filter expression using the column names and values from the reference dataFrame
-            val filterExpression = columnMappings.keySet().stream().map(columnMapping -> {
+            Optional<Column> optionalJoinExpression = columnMappings.keySet().stream().map(columnMapping -> {
                         val adjoiningTableColumnName = columnMappings.get(columnMapping).getColumnName();
                         val referenceSourceColumnName = columnMapping.getColumnName();
-                        val columnTypeName = columnTypes.getOrDefault(referenceSourceColumnName, DataTypes.NullType.typeName());
 
-                        if (isNumericType(columnTypeName) || columnTypeName.equalsIgnoreCase(DataTypes.BooleanType.typeName())) {
-                            val columnValue = referenceDataFrame.first().getAs(referenceSourceColumnName);
-                            return adjoiningTableColumnName + " = " + columnValue;
-                        } else {
-                            String columnValue = referenceDataFrame.first().getAs(referenceSourceColumnName);
-                            // Adding quotes to non-numeric and non-boolean column values
-                            return adjoiningTableColumnName + " = '" + columnValue + "'";
-                        }
+                        return functions
+                                .col(LeftDataFrame + "." + adjoiningTableColumnName)
+                                .equalTo(functions.col(RightDataFrame + "." + referenceSourceColumnName));
                     }
-            ).collect(Collectors.joining(conjunctiveOperator));
-
-            logger.debug("Adjoining dataframe {} selection expression: {}", adjoiningSourceName, filterExpression);
+            ).reduce(Column::and);
 
             val adjoiningDataFrame = storage.get(spark, tableIdentifier);
-            // Filter rows in source dataFrame using the filter expression
+            // Filter rows in source dataFrame using the join expression
             if (adjoiningDataFrame.isEmpty()) {
                 logger.warn("Adjoining dataFrame from path {} is empty", tableIdentifier.toPath());
                 return adjoiningDataFrame;
             } else {
-                return adjoiningDataFrame.where(filterExpression);
+                return optionalJoinExpression.map(joinExpression -> adjoiningDataFrame
+                        .as(LeftDataFrame)
+                        .join(referenceDataFrame.as(RightDataFrame), joinExpression)
+                        .select(LeftDataFrame + ".*", RightDataFrame + "." + OPERATION, RightDataFrame + "." + TIMESTAMP)
+                ).orElse(spark.emptyDataFrame());
             }
         }
-    }
-
-    private static boolean isNumericType(String columnTypeName) {
-        return columnTypeName.equalsIgnoreCase(DataTypes.LongType.typeName()) ||
-                columnTypeName.equalsIgnoreCase(DataTypes.ShortType.typeName()) ||
-                columnTypeName.equalsIgnoreCase(DataTypes.IntegerType.typeName()) ||
-                columnTypeName.equalsIgnoreCase(DataTypes.FloatType.typeName()) ||
-                columnTypeName.equalsIgnoreCase(DataTypes.DoubleType.typeName()) ||
-                columnTypeName.equalsIgnoreCase(DataTypes.ByteType.typeName()) ||
-                columnTypeName.equalsIgnoreCase(DataTypes.createDecimalType().typeName());
     }
 
     private boolean schemaContains(Dataset<Row> dataFrame, String field) {

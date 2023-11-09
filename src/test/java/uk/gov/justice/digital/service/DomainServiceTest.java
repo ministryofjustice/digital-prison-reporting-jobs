@@ -25,7 +25,6 @@ import uk.gov.justice.digital.domain.model.DomainDefinition;
 import uk.gov.justice.digital.domain.model.TableDefinition;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -85,27 +84,17 @@ public class DomainServiceTest extends BaseSparkTest {
         val domainDefinition = createDomainDefinition();
         val domainDefinitions = Collections.singletonList(domainDefinition);
 
-        val transformedDataFrame1 = createTransformedDataFrame("1");
-        val transformedDataFrame2 = createTransformedDataFrame("2");
-        val transformedDataFrame3 = createTransformedDataFrame("3");
+        val transformedDataFrame1 = createTransformedDataFrame("1", operation, 0L);
+        val transformedDataFrame2 = createTransformedDataFrame("2", operation, 2L);
+        val transformedDataFrame3 = createTransformedDataFrame("3", operation, 1L);
 
-        val transformedDataFrames = new ArrayList<Dataset<Row>>();
-        transformedDataFrames.add(transformedDataFrame1);
-        transformedDataFrames.add(transformedDataFrame2);
-        transformedDataFrames.add(transformedDataFrame3);
+        val transformedDataFrames = transformedDataFrame1.unionAll(transformedDataFrame2).unionAll(transformedDataFrame3);
 
-        val expectedCapturedRecords = transformedDataFrames
-                .stream()
-                .flatMap(df -> df.collectAsList().stream())
-                .collect(Collectors.toList());
+        val expectedCapturedRecords = transformedDataFrames.orderBy(TIMESTAMP).collectAsList();
 
         when(mockDomainDefinitionClient.getDomainDefinitions()).thenReturn(domainDefinitions);
         when(mockDomainExecutor.applyTransform(eq(spark), any(), any()))
-                .thenReturn(
-                        transformedDataFrame1,
-                        transformedDataFrame2,
-                        transformedDataFrame3
-                );
+                .thenReturn(transformedDataFrames);
 
         doNothing()
                 .when(mockDomainExecutor)
@@ -113,8 +102,7 @@ public class DomainServiceTest extends BaseSparkTest {
                         eq(spark),
                         dataframeCaptor.capture(),
                         eq(domainName),
-                        eq(domainDefinition.getTables().get(0)),
-                        eq(operation)
+                        eq(domainDefinition.getTables().get(0))
                 );
 
         underTest.refreshDomainUsingDataFrame(spark, recordsToInsert, source, relevantDomainTableName);
@@ -179,13 +167,15 @@ public class DomainServiceTest extends BaseSparkTest {
         when(mockDomainDefinitionClient.getDomainDefinition(domainName, relevantDomainTableName)).thenReturn(mockDomainDefinition);
     }
 
-    private Dataset<Row> createTransformedDataFrame(String id) {
+    private Dataset<Row> createTransformedDataFrame(String id, DMS_3_4_7.Operation operation, Long timestamp) {
         val tableSchema = new StructType()
                 .add("id", DataTypes.StringType)
-                .add("description", DataTypes.StringType);
+                .add("description", DataTypes.StringType)
+                .add(OPERATION, DataTypes.StringType)
+                .add(TIMESTAMP, DataTypes.LongType);
 
         val records = new ArrayList<Row>();
-        records.add(RowFactory.create(id, "some description 1"));
+        records.add(RowFactory.create(id, "some description 1", operation.getName(), timestamp));
 
         return spark.createDataFrame(records, tableSchema);
     }
@@ -196,12 +186,13 @@ public class DomainServiceTest extends BaseSparkTest {
                 .add("description", DataTypes.StringType)
                 .add("column_1", DataTypes.StringType)
                 .add("column_2", DataTypes.StringType)
-                .add(OPERATION, DataTypes.StringType);
+                .add(OPERATION, DataTypes.StringType)
+                .add(TIMESTAMP, DataTypes.LongType);
 
         val records = new ArrayList<Row>();
-        records.add(RowFactory.create("1", "description 1", "column_1_1", "column_2_1", operation.getName()));
-        records.add(RowFactory.create("2", "description 2", "column_1_2", "column_2_2", operation.getName()));
-        records.add(RowFactory.create("3", "description 3", "column_1_3", "column_2_3", operation.getName()));
+        records.add(RowFactory.create("1", "description 1", "column_1_1", "column_2_1", operation.getName(), 0L));
+        records.add(RowFactory.create("2", "description 2", "column_1_2", "column_2_2", operation.getName(), 2L));
+        records.add(RowFactory.create("3", "description 3", "column_1_3", "column_2_3", operation.getName(), 1L));
 
         return spark.createDataFrame(records, tableSchema);
     }
