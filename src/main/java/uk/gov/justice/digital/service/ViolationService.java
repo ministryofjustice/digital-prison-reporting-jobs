@@ -128,21 +128,23 @@ public class ViolationService {
 
         logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
         logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), validationFailedViolationPath);
-                     storageService.append(validationFailedViolationPath, invalidRecords.drop(OPERATION, TIMESTAMP));
+        storageService.append(validationFailedViolationPath, invalidRecords.drop(OPERATION, TIMESTAMP));
 
         logger.info("Append completed successfully");
-                     storageService.updateDeltaManifestForTable(spark, validationFailedViolationPath);
+        storageService.updateDeltaManifestForTable(spark, validationFailedViolationPath);
     }
 
     public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
         val maybeValidRows = validateRows(dataFrame, sourceReference);
         val validRows = maybeValidRows.filter("valid = true").drop("valid");
         val invalidRows = maybeValidRows.filter("valid = false").drop("valid");
-        try {
-            handleInvalidSchema(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable());
-        } catch (DataStorageException e) {
-            logger.error("Failed to write invalid rows");
-            throw new RuntimeException(e);
+        if(!invalidRows.isEmpty()) {
+            try {
+                handleInvalidSchema(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable());
+            } catch (DataStorageException e) {
+                logger.error("Failed to write invalid rows");
+                throw new RuntimeException(e);
+            }
         }
         return validRows;
     }
