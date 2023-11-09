@@ -196,6 +196,10 @@ public class DataHubCdcJob implements Runnable {
 
     @VisibleForTesting
     static Dataset<Row> latestRecords(Dataset<Row> df, SourceReference.PrimaryKey primaryKey) {
+        // FIXME: (In the Test environment at least) we sometimes see 2 records come through with the exact same timestamp,
+        //  e.g. an insert and an update in a CDC file. It stands to reason that we might lose one of the changes but
+        //  when this happens when processing the full load with the CDC app I have seen the PK totally missing in structured and curated.
+        //  Not sure if the issue is here or maybe in the DataStorageService merge.
         val primaryKeys = JavaConverters
                 .asScalaIteratorConverter(primaryKey.getKeyColumnNames().stream().map(functions::col).iterator())
                 .asScala()
@@ -203,7 +207,6 @@ public class DataHubCdcJob implements Runnable {
         val window = Window
                 .partitionBy(primaryKeys)
                 // for timestamp format see https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.S3.html#CHAP_Target.S3.Configuring
-                // todo check if we need to do anything timezone related
                 .orderBy(unix_timestamp(col(TIMESTAMP), "yyyy-MM-dd HH:mm:ss.SSSSSS").cast(TimestampType).desc());
 
         return df
