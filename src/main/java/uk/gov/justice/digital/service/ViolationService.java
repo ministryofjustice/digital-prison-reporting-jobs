@@ -124,7 +124,7 @@ public class ViolationService {
         val errorPrefix = String.format("Record does not match schema %s/%s: ", source, table);
         val validationFailedViolationPath = createValidatedPath(violationsPath, source, table);
         // Write invalid records where schema validation failed
-        val invalidRecords = dataFrame.withColumn(ERROR, concat(lit(errorPrefix), lit(col(ERROR))));
+        val invalidRecords = dataFrame.withColumn(ERROR, lit(errorPrefix));
 
         logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
         logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), validationFailedViolationPath);
