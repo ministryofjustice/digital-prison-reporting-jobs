@@ -2,9 +2,11 @@ package uk.gov.justice.digital.service;
 
 import jakarta.inject.Inject;
 import lombok.val;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
@@ -132,36 +134,35 @@ public class ViolationService {
                      storageService.updateDeltaManifestForTable(spark, validationFailedViolationPath);
     }
 
-    public boolean dataFrameSchemaIsValid(StructType schema, SourceReference sourceReference) {
+    public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
+        val maybeValidRows = validateRows(dataFrame, sourceReference);
+        val validRows = maybeValidRows.filter("valid = true").drop("valid");
+        val invalidRows = maybeValidRows.filter("valid = false").drop("valid");
+        try {
+            handleInvalidSchema(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable());
+        } catch (DataStorageException e) {
+            logger.error("Failed to write invalid rows");
+            throw new RuntimeException(e);
+        }
+        return validRows;
+    }
+
+    private Dataset<Row> validateRows(Dataset<Row> df, SourceReference sourceReference) {
         val schemaFields = sourceReference.getSchema().fields();
 
-        val dataFields = Arrays
-                .stream(schema.fields())
-                .collect(Collectors.toMap(StructField::name, StructField::dataType));
+        return df.withColumn(
+                "valid",
+                allRequiredColumnsAreNotNull(schemaFields)
+        );
+    }
 
-        val requiredFields = Arrays.stream(schemaFields)
+    private static Column allRequiredColumnsAreNotNull(StructField[] schemaFields) {
+        return Arrays.stream(schemaFields)
                 .filter(field -> !field.nullable())
-                .collect(Collectors.toList());
-
-        val missingRequiredFields = requiredFields
-                .stream()
-                .filter(field -> dataFields.get(field.name()) == null)
-                .collect(Collectors.toList());
-
-        val invalidRequiredFields = requiredFields
-                .stream()
-                .filter(field -> dataFields.get(field.name()) != field.dataType())
-                .collect(Collectors.toList());
-
-        val nullableFields = Arrays.stream(schemaFields)
-                .filter(StructField::nullable)
-                .collect(Collectors.toList());
-
-        val invalidNullableFields = nullableFields
-                .stream()
-                .filter(field -> dataFields.get(field.name()) != field.dataType())
-                .collect(Collectors.toList());
-
-        return (missingRequiredFields.isEmpty() || invalidRequiredFields.isEmpty() || invalidNullableFields.isEmpty());
+                .map(StructField::name)
+                .map(functions::col)
+                .map(Column::isNotNull)
+                .reduce(Column::and)
+                .orElse(lit(true));
     }
 }

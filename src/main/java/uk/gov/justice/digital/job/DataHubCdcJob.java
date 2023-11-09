@@ -126,10 +126,6 @@ public class DataHubCdcJob implements Runnable {
 
     public void processTable(String inputSchemaName, String inputTableName, SourceReference sourceReference, SparkSession spark) {
         Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, arguments, inputSchemaName, inputTableName);
-        if(!violationService.dataFrameSchemaIsValid(sourceDf.schema(), sourceReference)) {
-            logger.error("Schema for {}/{} is not valid\n{}", inputSchemaName, inputTableName, sourceDf.schema().treeString());
-            throw new RuntimeException(format("Schema for %s.%s is not valid %s", inputSchemaName, inputTableName, sourceDf.schema().catalogString()));
-        }
         logger.info("Initialising per batch processing for {}/{}", inputSchemaName, inputTableName);
 
         val structuredTablePath = cdcTablePath(arguments.getStructuredS3Path(), sourceReference);
@@ -159,13 +155,14 @@ public class DataHubCdcJob implements Runnable {
     private void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId, String structuredTablePath, String curatedTablePath) {
         val batchStartTime = System.currentTimeMillis();
         logger.info("Processing batch {} for {}.{}", batchId, sourceReference.getSource(), sourceReference.getTable());
+        val validRows = violationService.handleValidation(spark, df, sourceReference);
         val primaryKey = sourceReference.getPrimaryKey();
-        val latestCDCRecordsByPK = latestRecords(df, primaryKey);
+        val latestCDCRecordsByPK = latestRecords(validRows, primaryKey);
         try {
             storage.writeCdc(spark, structuredTablePath, latestCDCRecordsByPK, primaryKey);
             storage.writeCdc(spark, curatedTablePath, latestCDCRecordsByPK, primaryKey);
         } catch (DataStorageRetriesExhaustedException e) {
-            violationService.handleRetriesExhausted(spark, df, sourceReference.getSource(), sourceReference.getTable(), e, CDC);
+            violationService.handleRetriesExhausted(spark, latestCDCRecordsByPK, sourceReference.getSource(), sourceReference.getTable(), e, CDC);
         }
         logger.info("Processing batch {} {}.{} took {}ms", batchId, sourceReference.getSource(), sourceReference.getTable(), System.currentTimeMillis() - batchStartTime);
     }

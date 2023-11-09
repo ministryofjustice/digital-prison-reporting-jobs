@@ -5,7 +5,6 @@ import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import static org.apache.spark.sql.functions.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
@@ -17,6 +16,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
 
 import javax.inject.Singleton;
 
+import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Insert;
 
@@ -88,13 +88,8 @@ public class S3BatchProcessor {
 
         if (optionalSourceReference.isPresent()) {
             val sourceReference = optionalSourceReference.get();
-            if (violationService.dataFrameSchemaIsValid(dataFrame.schema(), sourceReference)) {
-                validatedDfHandler.apply(dataFrame, sourceReference);
-            } else {
-                val source = sourceReference.getSource();
-                val table = sourceReference.getTable();
-                violationService.handleInvalidSchema(spark, dataFrame, source, table);
-            }
+            val validRows = violationService.handleValidation(spark, dataFrame, sourceReference);
+            validatedDfHandler.apply(validRows, sourceReference);
         } else {
             violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
         }
