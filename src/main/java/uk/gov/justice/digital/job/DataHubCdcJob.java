@@ -197,9 +197,7 @@ public class DataHubCdcJob implements Runnable {
     @VisibleForTesting
     static Dataset<Row> latestRecords(Dataset<Row> df, SourceReference.PrimaryKey primaryKey) {
         // FIXME: (In the Test environment at least) we sometimes see 2 records come through with the exact same timestamp,
-        //  e.g. an insert and an update in a CDC file. It stands to reason that we might lose one of the changes but
-        //  when this happens when processing the full load with the CDC app I have seen the PK totally missing in structured and curated.
-        //  Not sure if the issue is here or maybe in the DataStorageService merge.
+        //  e.g. an insert and an update in a CDC file. How to handle this?
         val primaryKeys = JavaConverters
                 .asScalaIteratorConverter(primaryKey.getKeyColumnNames().stream().map(functions::col).iterator())
                 .asScala()
