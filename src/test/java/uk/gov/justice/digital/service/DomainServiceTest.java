@@ -93,7 +93,7 @@ public class DomainServiceTest extends BaseSparkTest {
         val expectedCapturedRecords = transformedDataFrames.orderBy(TIMESTAMP).collectAsList();
 
         when(mockDomainDefinitionClient.getDomainDefinitions()).thenReturn(domainDefinitions);
-        when(mockDomainExecutor.applyTransform(eq(spark), any(), any()))
+        when(mockDomainExecutor.applyTransform(eq(spark), any(), any(), any()))
                 .thenReturn(transformedDataFrames);
 
         doNothing()

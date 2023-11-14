@@ -208,8 +208,12 @@ public class DomainExecutor {
         return sourceDataframe;
     }
 
-    public Dataset<Row> applyTransform(SparkSession spark, Map<String, Dataset<Row>> dfs, TransformDefinition transform)
-            throws DomainExecutorException {
+    public Dataset<Row> applyTransform(
+            SparkSession spark,
+            Map<String, Dataset<Row>> dfs,
+            TransformDefinition transform,
+            Set<SourceMapping> sourceMappings
+    ) throws DomainExecutorException {
         List<String> sources = new ArrayList<>();
         String view = transform.getViewText().toLowerCase();
         try {
@@ -225,9 +229,23 @@ public class DomainExecutor {
                     sourceDf.createOrReplaceTempView(src);
                     logger.info("Added view '" + src + "'");
                     sources.add(src);
-                    if (schemaContains(sourceDf, "_operation") &&
-                            schemaContains(sourceDf, "_timestamp")) {
-                        view = view.replace(" from ", ", " + src + "._operation, " + src + "._timestamp from ");
+                    if (schemaContains(sourceDf, OPERATION) && schemaContains(sourceDf, TIMESTAMP)) {
+                        val optionalSourceAlias = sourceMappings
+                                .stream()
+                                .flatMap(sourceMapping ->
+                                        sourceMapping
+                                                .getTableAliases()
+                                                .entrySet()
+                                                .stream()
+                                                .filter(entry -> entry.getValue().equalsIgnoreCase(source.toLowerCase()))
+                                                .map(Map.Entry::getKey)
+                                ).findFirst();
+                        if (optionalSourceAlias.isPresent()) {
+                            val srcAlias = optionalSourceAlias.get().toLowerCase().replace(".", "__");
+                            view = view.replace(" from ", ", " + srcAlias + "." + OPERATION + " as " + OPERATION + ", " + srcAlias + "." + TIMESTAMP + " as " + TIMESTAMP + " from ");
+                        } else {
+                            view = view.replace(" from ", ", " + src + "." + OPERATION + ", " + src + "." + TIMESTAMP + " from ");
+                        }
                     }
                 }
                 logger.info(view);
@@ -316,7 +334,7 @@ public class DomainExecutor {
 
 
             logger.info("'" + table.getName() + "' has " + refs.size() + " references to tables...");
-            Dataset<Row> transformedDataFrame = applyTransform(spark, refs, table.getTransform());
+            Dataset<Row> transformedDataFrame = applyTransform(spark, refs, table.getTransform(), Collections.emptySet());
 
             logger.info("Apply Violations for " + table.getName() + "...");
             // Process Violations - we now have a subset
@@ -392,11 +410,16 @@ public class DomainExecutor {
         val tableTuple = new TableTuple(adjoiningSourceName);
         val tableIdentifier = new TableIdentifier(sourceRootPath, hiveDatabaseName, tableTuple.getSchema(), tableTuple.getTable());
         val columnMappings = sourceMapping.getColumnMap();
+        val tableAliases = sourceMapping.getTableAliases();
+        val tableHasAliases = tableAliases.containsValue(adjoiningSourceName) ||
+                tableAliases.containsValue(sourceMapping.getSourceTable());
 
         if (columnMappings.isEmpty()) {
+            logger.warn("Column mappings is empty");
             return spark.emptyDataFrame();
         } else {
-            Optional<Column> optionalJoinExpression = columnMappings.keySet().stream().map(columnMapping -> {
+            logger.warn("Getting adjoining dataframe " + adjoiningSourceName);
+            val expressions = columnMappings.keySet().stream().map(columnMapping -> {
                         val adjoiningTableColumnName = columnMappings.get(columnMapping).getColumnName();
                         val referenceSourceColumnName = columnMapping.getColumnName();
 
@@ -404,7 +427,11 @@ public class DomainExecutor {
                                 .col(LEFT_DATA_FRAME + "." + adjoiningTableColumnName)
                                 .equalTo(functions.col(RIGHT_DATA_FRAME + "." + referenceSourceColumnName));
                     }
-            ).reduce(Column::and);
+            );
+
+            Optional<Column> optionalJoinExpression = tableHasAliases ?
+                    expressions.reduce(Column::or) :
+                    expressions.reduce(Column::and);
 
             val adjoiningDataFrame = storage.get(spark, tableIdentifier);
             // Filter rows in source dataFrame using the join expression
@@ -412,11 +439,17 @@ public class DomainExecutor {
                 logger.warn("Adjoining dataFrame from path {} is empty", tableIdentifier.toPath());
                 return adjoiningDataFrame;
             } else {
-                return optionalJoinExpression.map(joinExpression -> adjoiningDataFrame
-                        .as(LEFT_DATA_FRAME)
-                        .join(referenceDataFrame.as(RIGHT_DATA_FRAME), joinExpression)
-                        .select(LEFT_DATA_FRAME + ".*", RIGHT_DATA_FRAME + "." + OPERATION, RIGHT_DATA_FRAME + "." + TIMESTAMP)
-                ).orElse(spark.emptyDataFrame());
+                if (optionalJoinExpression.isPresent()) {
+                    Column joinExpressions = optionalJoinExpression.get();
+                    logger.debug("Join expressions " + joinExpressions);
+                    return adjoiningDataFrame
+                            .as(LEFT_DATA_FRAME)
+                            .join(referenceDataFrame.as(RIGHT_DATA_FRAME), joinExpressions)
+                            .select(LEFT_DATA_FRAME + ".*");
+                } else {
+                    logger.warn("Join expression is empty");
+                    return spark.emptyDataFrame();
+                }
             }
         }
     }

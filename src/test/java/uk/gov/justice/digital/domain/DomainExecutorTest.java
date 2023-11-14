@@ -90,7 +90,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform(), Collections.emptySet());
             assertEquals(transformedDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
         }
     }
@@ -102,7 +102,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform(), Collections.emptySet());
             val postViolationsDataFrame = executor.applyViolations(spark, transformedDataFrame, table.getViolations());
             assertEquals(postViolationsDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
         }
@@ -117,7 +117,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val refs = Collections.singletonMap("source.table", helpers.getOffenders(tmp));
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, refs, table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, refs, table.getTransform(), Collections.emptySet());
             val postViolationsDataFrame = executor.applyViolations(spark, transformedDataFrame, table.getViolations());
             assertEquals(postViolationsDataFrame.schema(), helpers.createViolationsDomainDataframe().schema());
         }
@@ -131,7 +131,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform(), Collections.emptySet());
             val postViolationsDataFrame = executor.applyViolations(spark, transformedDataFrame, table.getViolations());
             val postMappingsDataFrame = executor.applyMappings(postViolationsDataFrame, table.getMapping());
             assertEquals(postMappingsDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
@@ -259,7 +259,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
         assertThrows(
                 DomainExecutorException.class,
-                () -> executor.applyTransform(spark, inputs, transform)
+                () -> executor.applyTransform(spark, inputs, transform, Collections.emptySet())
         );
     }
 
@@ -274,7 +274,7 @@ class DomainExecutorTest extends BaseSparkTest {
         transform.setSources(Collections.singletonList("source.table"));
         transform.setViewText("this is bad sql and should fail");
 
-        assertNull(executor.applyTransform(spark, inputs, transform));
+        assertNull(executor.applyTransform(spark, inputs, transform, Collections.emptySet()));
     }
 
     @Test
@@ -372,17 +372,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val result = executor.getAdjoiningDataFrame(spark, sourceMapping, createReferenceDataFrame());
 
         assertIterableEquals(
-                Collections.singletonList(
-                                RowFactory.create(
-                                        "table_id",
-                                        "column_1_value",
-                                        20,
-                                        false,
-                                        "row_2_column_4_value",
-                                        Insert.getName(),
-                                        0L
-                                )
-                        ),
+                Collections.singletonList(RowFactory.create("table_id", "column_1_value", 20, false, "row_2_column_4_value")),
                 result.collectAsList()
         );
     }

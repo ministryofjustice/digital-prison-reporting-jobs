@@ -87,11 +87,14 @@ public class DomainService {
         tableDefinitions.forEach(tableDefinition -> {
                     try {
                         String tableName = tableDefinition.getName();
-                        val sourceToRecordMap = buildSourceToRecordsMap(spark, referenceDataframe, tableDefinition, referenceTableName);
+                        val viewText = tableDefinition.getTransform().getViewText().replaceAll("\\n", " ");
+                        val sourceMappings = ViewTextProcessor.buildAllSourceMappings(tableDefinition.getTransform().getSources(), viewText);
+
+                        val sourceToRecordMap = buildSourceToRecordsMap(spark, referenceDataframe, tableDefinition, referenceTableName, sourceMappings);
 
                         logger.debug("Applying transform for CDC record of table " + tableName);
                         val tableTransform = tableDefinition.getTransform();
-                        val transformedDataFrame = executor.applyTransform(spark, sourceToRecordMap, tableTransform)
+                        val transformedDataFrame = executor.applyTransform(spark, sourceToRecordMap, tableTransform, sourceMappings)
                                 .orderBy(TIMESTAMP);
 
                         logger.debug("Applying violations for CDC record of table " + tableName);
@@ -200,13 +203,11 @@ public class DomainService {
             SparkSession spark,
             Dataset<Row> referenceDataFrame,
             TableDefinition tableDefinition,
-            String referenceTableName
+            String referenceTableName,
+            Set<SourceMapping> sourceMappings
     ) {
         val sourceToRecordMap = new HashMap<String, Dataset<Row>>();
         val sourcesWithoutRecords = new HashSet<String>();
-
-        val viewText = tableDefinition.getTransform().getViewText().replaceAll("\\n", " ");
-        val sourceMappings = ViewTextProcessor.buildAllSourceMappings(tableDefinition.getTransform().getSources(), viewText);
 
         tableDefinition.getTransform().getSources().forEach(source -> {
                     if (source.equalsIgnoreCase(referenceTableName)) {
@@ -249,9 +250,8 @@ public class DomainService {
                                 sourceToRecordMap.containsKey(sourceMapping.getSourceTable()))
                         .findFirst()
                         .ifPresent(sourceMapping -> {
-                            val reverseMapping = sourceMapping.withSourceColumnsUpperCased();
                             val referenceDataFrame = sourceToRecordMap.get(sourceMapping.getSourceTable());
-                            val adjoiningDataFrame = executor.getAdjoiningDataFrame(spark, reverseMapping, referenceDataFrame);
+                            val adjoiningDataFrame = executor.getAdjoiningDataFrame(spark, sourceMapping, referenceDataFrame);
                             if (adjoiningDataFrame.isEmpty()) {
                                 logger.warn("Failed to retrieve dataFrame for {} using already retrieved source {}", source, sourceMapping.getSourceTable());
                             } else {
