@@ -38,8 +38,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Update;
 
 @Singleton
 public class DataStorageService {
@@ -194,15 +196,6 @@ public class DataStorageService {
                         .insertExpr(expression)
                         .execute()
         );
-    }
-
-    public void writeCdc(
-            SparkSession spark,
-            String tablePath,
-            Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        mergeRecordsCdc(spark, tablePath, dataFrame, primaryKey);
-        updateDeltaManifestForTable(spark, tablePath);
     }
 
     public void updateRecords(

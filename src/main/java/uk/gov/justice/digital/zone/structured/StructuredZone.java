@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.job.udf.JsonValidator;
+import uk.gov.justice.digital.job.udfs.JsonValidator;
 import uk.gov.justice.digital.writer.Writer;
 import uk.gov.justice.digital.zone.Zone;
 

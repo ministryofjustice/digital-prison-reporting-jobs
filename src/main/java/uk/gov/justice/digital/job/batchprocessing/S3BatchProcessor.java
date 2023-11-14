@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
@@ -34,14 +35,16 @@ public class S3BatchProcessor {
     private final CuratedZoneLoadS3 curatedZoneLoad;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
+    private final ValidationService validationService;
 
     @Inject
     public S3BatchProcessor(
             StructuredZoneLoadS3 structuredZoneLoad,
             CuratedZoneLoadS3 curatedZoneLoad,
             SourceReferenceService sourceReferenceService,
-            ViolationService violationService
-    ) {
+            ViolationService violationService,
+            ValidationService validationService) {
+        this.validationService = validationService;
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
@@ -57,7 +60,7 @@ public class S3BatchProcessor {
         dataFrame.persist();
         try {
             withValidations(spark, sourceName, tableName, dataFrame, (validatedDf, sourceReference) -> {
-                val transformedDf = dataFrame.transform(S3BatchProcessor::loadDataTransform);
+                val transformedDf = dataFrame.transform(S3BatchProcessor::loadDataFilter);
                 val structuredLoadDataFrame = structuredZoneLoad.process(spark, transformedDf, sourceReference);
                 curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
             });
@@ -74,7 +77,7 @@ public class S3BatchProcessor {
         );
     }
 
-    private static Dataset<Row> loadDataTransform(Dataset<Row> dataFrame) {
+    private static Dataset<Row> loadDataFilter(Dataset<Row> dataFrame) {
         return dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
     }
 
@@ -88,7 +91,7 @@ public class S3BatchProcessor {
 
         if (optionalSourceReference.isPresent()) {
             val sourceReference = optionalSourceReference.get();
-            val validRows = violationService.handleValidation(spark, dataFrame, sourceReference);
+            val validRows = validationService.handleValidation(spark, dataFrame, sourceReference);
             validatedDfHandler.apply(validRows, sourceReference);
         } else {
             violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);

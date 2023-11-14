@@ -9,6 +9,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import scala.collection.JavaConverters;
+import scala.collection.Seq;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 
 import java.io.IOException;
@@ -92,6 +94,10 @@ public class SparkTestHelpers {
         StructType schema = DataTypes.createStructType(fields);
         return spark.read().schema(schema).json(
                 spark.emptyDataset(Encoders.STRING()));
+    }
+
+    public static <T> Seq<T> convertListToSeq(List<T> inputList) {
+        return JavaConverters.asScalaIteratorConverter(inputList.iterator()).asScala().toSeq();
     }
 
     private Dataset<Row> loadParquetDataframe(final String resource, final String filename) {
