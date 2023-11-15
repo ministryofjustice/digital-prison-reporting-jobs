@@ -32,6 +32,8 @@ public class TableStreamingQuery {
     private final String inputTableName;
     private final SourceReference sourceReference;
 
+    private StreamingQuery query;
+
     public TableStreamingQuery(
             JobArguments arguments,
             S3DataProvider dataProvider,
@@ -63,7 +65,7 @@ public class TableStreamingQuery {
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
         Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, inputSchemaName, inputTableName);
         try {
-            StreamingQuery query = sourceDf
+            query = sourceDf
                     .writeStream()
                     .queryName(queryName)
                     .format("delta")
@@ -79,5 +81,9 @@ public class TableStreamingQuery {
             logger.error("Encountered TimeoutException when running streaming query start", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public void stopQuery() throws TimeoutException {
+        query.stop();
     }
 }

@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job.cdc;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.streaming.StreamingQueryException;
 import org.apache.spark.sql.streaming.StreamingQueryManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,9 +16,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,8 +65,6 @@ class DataHubCdcJobTest {
         when(tableStreamingQueryProvider.provide("source2", "table2")).thenReturn(table2StreamingQuery);
         when(tableStreamingQueryProvider.provide("source3", "table3")).thenReturn(table3StreamingQuery);
 
-        when(spark.streams()).thenReturn(streamingQueryManager);
-
         underTest.runJob(spark);
 
         verify(table1StreamingQuery, times(1)).runQuery(spark);
@@ -83,22 +77,6 @@ class DataHubCdcJobTest {
         when(tableDiscovery.discoverTablesToProcess()).thenReturn(Collections.emptyList());
 
         underTest.runJob(spark);
-    }
-
-    @Test
-    public void shouldReThrowForStreamingQueryException() throws StreamingQueryException {
-        when(tableDiscovery.discoverTablesToProcess()).thenReturn(tablesToProcess);
-
-        when(tableStreamingQueryProvider.provide("source1", "table1")).thenReturn(table1StreamingQuery);
-        when(tableStreamingQueryProvider.provide("source2", "table2")).thenReturn(table2StreamingQuery);
-        when(tableStreamingQueryProvider.provide("source3", "table3")).thenReturn(table3StreamingQuery);
-
-        when(spark.streams()).thenReturn(streamingQueryManager);
-        doThrow(new StreamingQueryException("", "", new Exception(), "", ""))
-                .when(streamingQueryManager)
-                .awaitAnyTermination();
-
-        assertThrows(RuntimeException.class, () -> underTest.runJob(spark));
     }
 
 }

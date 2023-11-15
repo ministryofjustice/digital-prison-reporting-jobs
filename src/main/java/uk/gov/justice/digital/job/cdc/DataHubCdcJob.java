@@ -18,6 +18,7 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
@@ -63,6 +64,7 @@ public class DataHubCdcJob implements Runnable {
             SparkConf sparkConf = new SparkConf().setAppName("DataHubCdcJob local").setMaster("local[*]");
             SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
             runJob(spark);
+            waitUntilQueryTerminates(spark);
         } else {
             logger.info("Running in Glue");
             String jobName = properties.getSparkJobName();
@@ -70,6 +72,7 @@ public class DataHubCdcJob implements Runnable {
             SparkSession spark = glueContext.getSparkSession();
             Job.init(jobName, glueContext, arguments.getConfig());
             runJob(spark);
+            waitUntilQueryTerminates(spark);
             Job.commit();
         }
     }
@@ -78,9 +81,10 @@ public class DataHubCdcJob implements Runnable {
      * The main entry point for starting a streaming application to process all micro-batches continuously for all tables.
      */
     @VisibleForTesting
-    void runJob(SparkSession spark) {
+    List<TableStreamingQuery> runJob(SparkSession spark) {
         logger.info("Initialising Job");
         List<ImmutablePair<String, String>> tablesToProcess = tableDiscovery.discoverTablesToProcess();
+        List<TableStreamingQuery> streamingQueries = new ArrayList<>();
 
         if(!tablesToProcess.isEmpty()) {
             tablesToProcess.forEach(tableDetails -> {
@@ -88,16 +92,21 @@ public class DataHubCdcJob implements Runnable {
                 String inputTableName = tableDetails.getRight();
                 TableStreamingQuery streamingQuery = tableStreamingQueryProvider.provide(inputSchemaName, inputTableName);
                 streamingQuery.runQuery(spark);
+                streamingQueries.add(streamingQuery);
             });
-            try {
-                spark.streams().awaitAnyTermination();
-            } catch (StreamingQueryException e) {
-                logger.error("A streaming query terminated with an Exception", e);
-                throw new RuntimeException(e);
-            }
         } else {
             logger.warn("No tables to process");
         }
         logger.info("Job finished");
+        return streamingQueries;
+    }
+
+    private void waitUntilQueryTerminates(SparkSession spark) {
+        try {
+            spark.streams().awaitAnyTermination();
+        } catch (StreamingQueryException e) {
+            logger.error("A streaming query terminated with an Exception", e);
+            throw new RuntimeException(e);
+        }
     }
 }
