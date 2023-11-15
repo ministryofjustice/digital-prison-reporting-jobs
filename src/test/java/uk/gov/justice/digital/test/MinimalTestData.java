@@ -18,8 +18,11 @@ import java.util.List;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 public class MinimalTestData {
+    public static final String PRIMARY_KEY_COLUMN = "pk";
+    public static final String DATA_COLUMN = "data";
 
-    public static final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey("pk");
+    public static final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN);
+
 
     public static final StructType testDataSchema = new StructType(new StructField[]{
             new StructField("pk", DataTypes.StringType, true, Metadata.empty()),

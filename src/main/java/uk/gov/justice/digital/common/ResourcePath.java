@@ -25,7 +25,7 @@ public class ResourcePath {
     }
 
     public static String tablePath(String rootPath, String source, String table) {
-        return format("%s%s/%s/", ensureEndsWithSlash(rootPath), source, table);
+        return format("%s%s/%s", ensureEndsWithSlash(rootPath), source, table);
     }
 
     public static String ensureEndsWithSlash(String originalString) {

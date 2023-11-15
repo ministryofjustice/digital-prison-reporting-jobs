@@ -48,13 +48,13 @@ class ResourcePathTest {
     @Test
     public void tablePathRootHasNoSlash() {
         String result = tablePath("s3://root", "source", "table");
-        assertEquals("s3://root/source/table/", result);
+        assertEquals("s3://root/source/table", result);
     }
 
     @Test
     public void tablePathRootHasSlash() {
         String result = tablePath("s3://root/", "source", "table");
-        assertEquals("s3://root/source/table/", result);
+        assertEquals("s3://root/source/table", result);
     }
 
 }

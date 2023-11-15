@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,7 +21,7 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,6 +54,9 @@ class TableStreamingQueryTest extends BaseSparkTest {
     @Mock
     private SourceReference sourceReference;
 
+    @TempDir
+    private Path testRoot;
+
     private TableStreamingQuery underTest;
 
     private MemoryStream<Row> inputStream;
@@ -71,17 +75,17 @@ class TableStreamingQueryTest extends BaseSparkTest {
 
     @Test
     public void runQueryShouldDelegateProcessingToBatchProcessor() throws IOException {
-        givenSourceReference();
+        givenASourceReference();
         givenJobArguments();
-        givenInputStream();
+        givenAnInputStream();
 
         whenDataIsAddedToTheInputStream();
-        whenTheQueryRuns();
+        whenTheStreamingQueryRuns();
 
         thenProcessingIsDelegatedToBatchProcessor();
     }
 
-    private void whenTheQueryRuns() {
+    private void whenTheStreamingQueryRuns() {
         StreamingQuery streamingQuery = underTest.runQuery(spark);
         streamingQuery.processAllAvailable();
     }
@@ -106,21 +110,21 @@ class TableStreamingQueryTest extends BaseSparkTest {
         assertTrue(result.containsAll(testData));
     }
 
-    private void givenInputStream() {
+    private void givenAnInputStream() {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
         when(dataProvider.getSourceData(any(), eq(inputSchemaName), eq(inputTableName))).thenReturn(streamingDataframe);
     }
 
-    private void givenJobArguments() throws IOException {
-        String checkpointPath = Files.createTempDirectory("testing").toAbsolutePath().toString();
+    private void givenJobArguments() {
+        String checkpointPath = testRoot.toAbsolutePath().toString();
         when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
         when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
         when(arguments.getCheckpointLocation()).thenReturn(checkpointPath);
     }
 
-    private void givenSourceReference() {
+    private void givenASourceReference() {
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
     }

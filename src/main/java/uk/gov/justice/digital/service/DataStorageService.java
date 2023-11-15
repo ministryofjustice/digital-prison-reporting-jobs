@@ -56,6 +56,7 @@ public class DataStorageService {
     private final String insertMatchCondition = createMatchExpression(Insert);
     private final String updateMatchCondition = createMatchExpression(Update);
     private final String deleteMatchCondition = createMatchExpression(Delete);
+    private final String notDeleteMatchCondition = String.format("%s.%s<>'%s'", TARGET, OPERATION, Delete.getName());
 
     @Inject
     public DataStorageService(JobArguments jobArguments) {
@@ -192,7 +193,8 @@ public class DataStorageService {
                         .updateExpr(expression)
                         .whenMatched(deleteMatchCondition)
                         .delete()
-                        .whenNotMatched()
+                        // If the PKs don't match then insert anything that isn't a delete
+                        .whenNotMatched(notDeleteMatchCondition)
                         .insertExpr(expression)
                         .execute()
         );

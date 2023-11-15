@@ -46,7 +46,9 @@ public class CdcBatchProcessor {
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId, String structuredTablePath, String curatedTablePath) {
         val batchStartTime = System.currentTimeMillis();
-        logger.info("Processing batch {} for {}.{}", batchId, sourceReference.getSource(), sourceReference.getTable());
+        String source = sourceReference.getSource();
+        String table = sourceReference.getTable();
+        logger.info("Processing batch {} for {}.{}", batchId, source, table);
         val primaryKey = sourceReference.getPrimaryKey();
 
         val validRows = validationService.handleValidation(spark, df, sourceReference);
@@ -57,9 +59,9 @@ public class CdcBatchProcessor {
             // Manifests are only required for the curated Zone
             storage.updateDeltaManifestForTable(spark, curatedTablePath);
         } catch (DataStorageRetriesExhaustedException e) {
-            violationService.handleRetriesExhausted(spark, latestCDCRecordsByPK, sourceReference.getSource(), sourceReference.getTable(), e, CDC);
+            violationService.handleRetriesExhausted(spark, latestCDCRecordsByPK, source, table, e, CDC);
         }
-        logger.info("Processing batch {} {}.{} took {}ms", batchId, sourceReference.getSource(), sourceReference.getTable(), System.currentTimeMillis() - batchStartTime);
+        logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
     }
 
     @VisibleForTesting
