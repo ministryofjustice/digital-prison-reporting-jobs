@@ -328,8 +328,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(mockDataSet.columns()).thenReturn(new String[0]);
 
         stubDeltaTableCreateIfNotExists();
-        stubMergeRecords();
-
+        stubMergeRecordsCdc();
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
@@ -422,7 +421,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(mockDataSet.columns()).thenReturn(new String[0]);
 
         stubDeltaTableCreateIfNotExists();
-        stubMergeRecords();
+        stubMergeRecordsCdc();
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
@@ -559,6 +558,17 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(mockDeltaMergeBuilder.whenMatched(anyString())).thenReturn(mockDeltaMergeMatchedActionBuilder);
         when(mockDeltaMergeMatchedActionBuilder.delete()).thenReturn(mockDeltaMergeBuilder);
         when(mockDeltaMergeBuilder.whenNotMatched()).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
+        when(mockDeltaMergeNotMatchedActionBuilder.insertExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
+    }
+
+    private void stubMergeRecordsCdc() {
+        when(mockDeltaTable.as(anyString())).thenReturn(mockDeltaTable);
+        when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenMatched(anyString())).thenReturn(mockDeltaMergeMatchedActionBuilder);
+        when(mockDeltaMergeMatchedActionBuilder.updateExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenMatched(anyString())).thenReturn(mockDeltaMergeMatchedActionBuilder);
+        when(mockDeltaMergeMatchedActionBuilder.delete()).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenNotMatched(anyString())).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
         when(mockDeltaMergeNotMatchedActionBuilder.insertExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
     }
 
