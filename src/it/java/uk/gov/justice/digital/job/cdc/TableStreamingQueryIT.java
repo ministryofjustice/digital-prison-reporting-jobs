@@ -9,43 +9,29 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import scala.Option;
 import scala.collection.Seq;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import static java.lang.String.format;
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.lit;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT;
-import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
-import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
-import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 /**
@@ -56,16 +42,7 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
  * can be received in a single batch or across multiple batches.
  */
 @ExtendWith(MockitoExtension.class)
-public class TableStreamingQueryIT extends BaseSparkTest {
-
-    private static final int pk1 = 1;
-    private static final int pk2 = 2;
-    private static final int pk3 = 3;
-    private static final int pk4 = 4;
-    private static final int pk5 = 5;
-
-    private static final String inputSchemaName = "my-schema";
-    private static final String inputTableName = "my-table";
+public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private JobArguments arguments;
     @Mock
@@ -73,34 +50,27 @@ public class TableStreamingQueryIT extends BaseSparkTest {
     @Mock
     private SourceReference sourceReference;
 
-
     private TableStreamingQuery underTest;
 
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
 
-    @TempDir
-    private Path testRoot;
-    private String structuredPath;
-    private String curatedPath;
-    private String violationsPath;
-    private String checkpointPath;
+
 
     @BeforeEach
     public void setUp() {
         givenPathsAreConfigured();
-        givenRetrySettingsAreConfigured();
-        givenDependenciesAreInjected();
-
+        givenRetrySettingsAreConfigured(arguments);
+        givenTableStreamingQueryDependenciesAreInjected();
         givenASourceReference();
-        givenAnInputStream();
 
-        whenTheStreamingQueryRuns();
+        givenAnInputStream();
+        givenTheStreamingQueryRuns();
     }
 
     @AfterEach
     public void tearDown() throws TimeoutException {
-        stopStreamingQuery();
+        streamingQuery.stop();
     }
 
     @Test
@@ -112,9 +82,9 @@ public class TableStreamingQueryIT extends BaseSparkTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenCuratedAndStructuredContainForPK("data1", pk1);
-        thenCuratedAndStructuredContainForPK("data2", pk2);
-        thenCuratedAndStructuredContainForPK("data3", pk3);
+        thenStructuredAndCuratedContainForPK("data1", pk1);
+        thenStructuredAndCuratedContainForPK("data2", pk2);
+        thenStructuredAndCuratedContainForPK("data3", pk3);
     }
 
     @Test
@@ -126,9 +96,9 @@ public class TableStreamingQueryIT extends BaseSparkTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenCuratedAndStructuredContainForPK("data1a", pk1);
-        thenCuratedAndStructuredContainForPK("data2a", pk2);
-        thenCuratedAndStructuredContainForPK("data3a", pk3);
+        thenStructuredAndCuratedContainForPK("data1a", pk1);
+        thenStructuredAndCuratedContainForPK("data2a", pk2);
+        thenStructuredAndCuratedContainForPK("data3a", pk3);
 
         whenUpdateOccursForPK(pk1, "data1b", "2023-11-13 10:01:01.000000");
         whenUpdateOccursForPK(pk2, "data2b", "2023-11-13 10:01:01.000000");
@@ -136,8 +106,8 @@ public class TableStreamingQueryIT extends BaseSparkTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenCuratedAndStructuredContainForPK("data1b", pk1);
-        thenCuratedAndStructuredContainForPK("data2b", pk2);
+        thenStructuredAndCuratedContainForPK("data1b", pk1);
+        thenStructuredAndCuratedContainForPK("data2b", pk2);
         thenCuratedAndStructuredDoNotContainPK(pk3);
     }
 
@@ -165,9 +135,9 @@ public class TableStreamingQueryIT extends BaseSparkTest {
         whenTheNextBatchIsProcessed();
 
         thenCuratedAndStructuredDoNotContainPK(pk1);
-        thenCuratedAndStructuredContainForPK("data2c", pk2);
+        thenStructuredAndCuratedContainForPK("data2c", pk2);
         thenCuratedAndStructuredDoNotContainPK(pk3);
-        thenCuratedAndStructuredContainForPK("data4b", pk4);
+        thenStructuredAndCuratedContainForPK("data4b", pk4);
     }
     @Test
     public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() {
@@ -175,19 +145,19 @@ public class TableStreamingQueryIT extends BaseSparkTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenCuratedAndStructuredContainForPK("data1", pk1);
+        thenStructuredAndCuratedContainForPK("data1", pk1);
 
         whenUpdateOccursForPK(pk1, "data2", "2023-11-13 10:02:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenCuratedAndStructuredContainForPK("data2", pk1);
+        thenStructuredAndCuratedContainForPK("data2", pk1);
 
         whenUpdateOccursForPK(pk1, "data3", "2023-11-13 10:03:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenCuratedAndStructuredContainForPK("data3", pk1);
+        thenStructuredAndCuratedContainForPK("data3", pk1);
 
         whenDeleteOccursForPK(pk1, "2023-11-13 10:04:00.000000");
 
@@ -203,7 +173,7 @@ public class TableStreamingQueryIT extends BaseSparkTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenCuratedAndStructuredContainForPK("data1", pk1);
+        thenStructuredAndCuratedContainForPK("data1", pk1);
         thenCuratedAndStructuredDoNotContainPK(pk2);
 
     }
@@ -219,15 +189,7 @@ public class TableStreamingQueryIT extends BaseSparkTest {
         when(arguments.getCheckpointLocation()).thenReturn(checkpointPath);
     }
 
-    private void givenRetrySettingsAreConfigured() {
-        when(arguments.getDataStorageRetryMinWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT);
-        when(arguments.getDataStorageRetryMaxWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
-        when(arguments.getDataStorageRetryMaxAttempts()).thenReturn(DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);
-        when(arguments.getDataStorageRetryJitterFactor()).thenReturn(DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
-    }
-
-    private void givenDependenciesAreInjected() {
-        // Manually creating dependencies because Micronaut test injection is not working
+    private void givenTableStreamingQueryDependenciesAreInjected() {
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);
         ValidationService validationService = new ValidationService(violationService);
@@ -249,12 +211,8 @@ public class TableStreamingQueryIT extends BaseSparkTest {
         when(sourceReference.getSchema()).thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
     }
 
-    private void whenTheStreamingQueryRuns() {
+    private void givenTheStreamingQueryRuns() {
         streamingQuery = underTest.runQuery(spark);
-    }
-
-    private void stopStreamingQuery() throws TimeoutException {
-        streamingQuery.stop();
     }
 
     private void whenTheNextBatchIsProcessed() {
@@ -285,45 +243,5 @@ public class TableStreamingQueryIT extends BaseSparkTest {
     private void whenDataIsAddedToTheInputStream(List<Row> inputData) {
         Seq<Row> input = convertListToSeq(inputData);
         inputStream.addData(input);
-    }
-
-    private void thenCuratedAndStructuredContainForPK(String data, int primaryKey) {
-        thenZoneContainsForPK(structuredPath, data, primaryKey);
-        thenZoneContainsForPK(curatedPath, data, primaryKey);
-    }
-
-    private void thenZoneContainsForPK(String zonePath, String data, int primaryKey) {
-        String tablePath = format("%s%s/%s",
-                ensureEndsWithSlash(zonePath), sourceReference.getSource(), sourceReference.getTable()
-        );
-
-        Dataset<Row> df = spark.read().format("delta").load(tablePath);
-        List<Row> result = df
-                .select(DATA_COLUMN)
-                .where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
-                .collectAsList();
-
-        List<Row> expected = Collections.singletonList(RowFactory.create(data));
-        assertEquals(expected.size(), result.size());
-        assertTrue(result.containsAll(expected));
-    }
-
-    private void thenCuratedAndStructuredDoNotContainPK(int primaryKey) {
-        thenZoneDoesNotContainPK(structuredPath, primaryKey);
-        thenZoneDoesNotContainPK(curatedPath, primaryKey);
-    }
-
-    private void thenZoneDoesNotContainPK(String zonePath, int primaryKey) {
-        String tablePath = format("%s%s/%s",
-                ensureEndsWithSlash(zonePath), sourceReference.getSource(), sourceReference.getTable()
-        );
-
-        Dataset<Row> df = spark.read().format("delta").load(tablePath);
-        List<Row> result = df
-                .select(DATA_COLUMN)
-                .where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
-                .collectAsList();
-
-        assertEquals(0, result.size());
     }
 }

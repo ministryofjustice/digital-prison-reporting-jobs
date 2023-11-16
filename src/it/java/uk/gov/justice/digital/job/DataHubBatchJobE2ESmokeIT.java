@@ -35,16 +35,15 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
-
     @Mock
     private JobArguments arguments;
     @Mock
     private SourceReferenceService sourceReferenceService;
     private DataHubBatchJob underTest;
     @BeforeEach
-    public void setUp() throws IOException {
+    public void setUp() {
         givenPathsAreConfigured(arguments);
-        givenPathsExist();
+        givenGlobPatternIsConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
@@ -69,16 +68,16 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenCuratedAndStructuredForTableContainForPK(agencyInternalLocationsTable, "1", 1);
-        thenCuratedAndStructuredForTableContainForPK(agencyLocationsTable, "1", 1);
-        thenCuratedAndStructuredForTableContainForPK(movementReasonsTable, "1", 1);
-        thenCuratedAndStructuredForTableContainForPK(offenderBookingsTable, "1", 1);
-        thenCuratedAndStructuredForTableContainForPK(offenderExternalMovementsTable, "1", 1);
-        thenCuratedAndStructuredForTableContainForPK(offendersTable, "1", 1);
+        thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1", 1);
+        thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1", 1);
+        thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "1", 1);
+        thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "1", 1);
+        thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "1", 1);
+        thenStructuredAndCuratedForTableContainForPK(offendersTable, "1", 1);
     }
 
     private void whenTheJobRuns() throws IOException {
-        underTest.runJob(rawPath, spark);
+        underTest.runJob(spark);
     }
 
     private void givenDependenciesAreInjected() {
@@ -95,16 +94,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor);
     }
 
-    protected void givenPathsAreConfigured(JobArguments arguments) {
-        rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
-        structuredPath = testRoot.resolve("structured").toAbsolutePath().toString();
-        curatedPath = testRoot.resolve("curated").toAbsolutePath().toString();
-        violationsPath = testRoot.resolve("violations").toAbsolutePath().toString();
-        checkpointPath = testRoot.resolve("checkpoints").toAbsolutePath().toString();
-        when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
-        when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
-        when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
-        // Pattern for data written by Spark in tests instead of by DMS
+    private void givenGlobPatternIsConfigured() {
+        // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("part-*parquet");
     }
 }

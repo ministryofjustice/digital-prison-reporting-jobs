@@ -35,7 +35,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 @ExtendWith(MockitoExtension.class)
 class DataHubBatchJobTest {
     private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
-    private static final String rawS3Path = "s3://raw/path";
+    private static final String rawPath = "s3://raw/path";
     private static final Map<ImmutablePair<String, String>, List<String>> discoveredPathsByTable;
 
     static {
@@ -73,10 +73,11 @@ class DataHubBatchJobTest {
 
     @Test
     public void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() throws IOException {
+        stubRawPath();
         stubDataframeRead();
         stubDiscoveredTablePaths();
 
-        underTest.runJob(rawS3Path, spark);
+        underTest.runJob(spark);
 
         verify(batchProcessor, times(1)).processBatch(any(), eq("s1"), eq("t1"), any());
         verify(batchProcessor, times(1)).processBatch(any(), eq("s2"), eq("t2"), any());
@@ -85,16 +86,21 @@ class DataHubBatchJobTest {
 
     @Test
     public void shouldThrowForNoTables() throws IOException {
+        stubRawPath();
         stubEmptyDiscoveredTablePaths();
-        assertThrows(RuntimeException.class, () -> underTest.runJob(rawS3Path, spark));
+        assertThrows(RuntimeException.class, () -> underTest.runJob(spark));
+    }
+
+    private void stubRawPath() {
+        when(arguments.getRawS3Path()).thenReturn(rawPath);
     }
 
     private void stubDiscoveredTablePaths() throws IOException {
-        when(tableDiscoveryService.discoverBatchFilesToLoad(rawS3Path, spark)).thenReturn(discoveredPathsByTable);
+        when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(discoveredPathsByTable);
     }
 
     private void stubEmptyDiscoveredTablePaths() throws IOException {
-        when(tableDiscoveryService.discoverBatchFilesToLoad(rawS3Path, spark)).thenReturn(Collections.emptyMap());
+        when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(Collections.emptyMap());
     }
 
     private void stubDataframeRead() {

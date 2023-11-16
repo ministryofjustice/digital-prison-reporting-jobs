@@ -64,21 +64,20 @@ public class DataHubBatchJob implements Runnable {
         val startTime = System.currentTimeMillis();
 
         logger.info("Running DataHubBatchJob");
-        val rawS3Path = arguments.getRawS3Path();
         try {
             boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
             if(runLocal) {
                 logger.info("Running locally");
                 SparkConf sparkConf = new SparkConf().setAppName("DataHubBatchJob local").setMaster("local[*]");
                 SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
-                runJob(rawS3Path, spark);
+                runJob(spark);
             } else {
                 logger.info("Running in Glue");
                 String jobName = properties.getSparkJobName();
                 val glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
                 Job.init(jobName, glueContext, arguments.getConfig());
                 SparkSession spark = glueContext.getSparkSession();
-                runJob(rawS3Path, spark);
+                runJob(spark);
                 Job.commit();
             }
         } catch (Exception e) {
@@ -92,8 +91,9 @@ public class DataHubBatchJob implements Runnable {
      * The main entry point for starting a batch job to process raw data for all tables.
      */
     @VisibleForTesting
-    void runJob(String rawPath, SparkSession sparkSession) throws IOException {
+    void runJob(SparkSession sparkSession) throws IOException {
         val startTime = System.currentTimeMillis();
+        String rawPath = arguments.getRawS3Path();
         logger.info("Processing Raw {} table by table", rawPath);
         Map<ImmutablePair<String, String>, List<String>> pathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(rawPath, sparkSession);
         if(pathsByTable.isEmpty()) {

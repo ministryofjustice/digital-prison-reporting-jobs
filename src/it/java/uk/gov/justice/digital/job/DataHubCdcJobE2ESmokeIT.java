@@ -22,6 +22,8 @@ import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -51,7 +53,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     @BeforeEach
     public void setUp() throws IOException {
         givenPathsAreConfigured(arguments);
-        givenPathsExist();
+        givenGlobPatternIsConfigured();
+        givenCheckpointsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
@@ -96,14 +99,14 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         whenInsertOccursForTableAndPK(offenderExternalMovementsTable, 3, "3a", "2023-11-13 10:01:00.000000");
         whenInsertOccursForTableAndPK(offendersTable, 3, "3a", "2023-11-13 10:01:00.000000");
 
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(agencyInternalLocationsTable, "1b", 1));
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(agencyLocationsTable, "1b", 1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1b", 1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1b", 1));
 
-        thenEventually(() -> thenCuratedAndStructuredForTableDoNotContainPK(movementReasonsTable, 2));
-        thenEventually(() -> thenCuratedAndStructuredForTableDoNotContainPK(offenderBookingsTable, 2));
+        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(movementReasonsTable, 2));
+        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(offenderBookingsTable, 2));
 
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(offenderExternalMovementsTable, "3a", 3));
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(offendersTable, "3a", 3));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "3a", 3));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offendersTable, "3a", 3));
     }
 
     private void whenTheJobRuns() {
@@ -126,28 +129,24 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }
 
-    protected void givenPathsAreConfigured(JobArguments arguments) {
-        rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
-        structuredPath = testRoot.resolve("structured").toAbsolutePath().toString();
-        curatedPath = testRoot.resolve("curated").toAbsolutePath().toString();
-        violationsPath = testRoot.resolve("violations").toAbsolutePath().toString();
+    private void givenCheckpointsAreConfigured() throws IOException {
         checkpointPath = testRoot.resolve("checkpoints").toAbsolutePath().toString();
-        when(arguments.getRawS3Path()).thenReturn(rawPath);
-        when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
-        when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
-        when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
         when(arguments.getCheckpointLocation()).thenReturn(checkpointPath);
-        // Pattern for data written by Spark in tests instead of by DMS
+        Files.createDirectories(Paths.get(checkpointPath));
+    }
+
+    private void givenGlobPatternIsConfigured() {
+        // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getCdcFileGlobPattern()).thenReturn("*.parquet");
     }
 
     private void thenEventuallyCuratedAndStructuredHaveDataForPK(String data, int primaryKey) throws Throwable {
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(agencyInternalLocationsTable, data, primaryKey));
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(agencyLocationsTable, data, primaryKey));
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(movementReasonsTable, data, primaryKey));
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(offenderExternalMovementsTable, data, primaryKey));
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(offenderBookingsTable, data, primaryKey));
-        thenEventually(() -> thenCuratedAndStructuredForTableContainForPK(offendersTable, data, primaryKey));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, data, primaryKey));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, data, primaryKey));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, data, primaryKey));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, data, primaryKey));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, data, primaryKey));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offendersTable, data, primaryKey));
     }
 
     @FunctionalInterface

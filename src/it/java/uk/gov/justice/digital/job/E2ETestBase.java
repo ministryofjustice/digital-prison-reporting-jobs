@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SaveMode;
@@ -10,15 +9,11 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,10 +23,8 @@ import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_JITT
 import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT;
-import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
-import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 
 public class E2ETestBase extends BaseSparkTest {
 
@@ -52,28 +45,15 @@ public class E2ETestBase extends BaseSparkTest {
 
     protected String checkpointPath;
 
-    protected void givenPathsExist() throws IOException {
-        createTableDirectories(rawPath);
-        createTableDirectories(structuredPath);
-        createTableDirectories(curatedPath);
-        Files.createDirectories(Paths.get(violationsPath));
-        Files.createDirectories(Paths.get(checkpointPath));
-    }
-
-    protected void createTableDirectories(String rootPath) throws IOException {
-        Files.createDirectories(Paths.get(rootPath).resolve(inputSchemaName).resolve(agencyInternalLocationsTable));
-        Files.createDirectories(Paths.get(rootPath).resolve(inputSchemaName).resolve(agencyLocationsTable));
-        Files.createDirectories(Paths.get(rootPath).resolve(inputSchemaName).resolve(offenderBookingsTable));
-        Files.createDirectories(Paths.get(rootPath).resolve(inputSchemaName).resolve(movementReasonsTable));
-        Files.createDirectories(Paths.get(rootPath).resolve(inputSchemaName).resolve(offenderExternalMovementsTable));
-        Files.createDirectories(Paths.get(rootPath).resolve(inputSchemaName).resolve(offendersTable));
-    }
-
-    protected void givenRetrySettingsAreConfigured(JobArguments arguments) {
-        when(arguments.getDataStorageRetryMinWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT);
-        when(arguments.getDataStorageRetryMaxWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
-        when(arguments.getDataStorageRetryMaxAttempts()).thenReturn(DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);
-        when(arguments.getDataStorageRetryJitterFactor()).thenReturn(DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
+    protected void givenPathsAreConfigured(JobArguments arguments) {
+        rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
+        structuredPath = testRoot.resolve("structured").toAbsolutePath().toString();
+        curatedPath = testRoot.resolve("curated").toAbsolutePath().toString();
+        violationsPath = testRoot.resolve("violations").toAbsolutePath().toString();
+        when(arguments.getRawS3Path()).thenReturn(rawPath);
+        when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
+        when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
+        when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
     }
 
     protected void givenASourceReferenceFor(String inputTableName, SourceReferenceService sourceReferenceService) {
@@ -124,40 +104,12 @@ public class E2ETestBase extends BaseSparkTest {
         whenDataIsAddedToRawForTable(table, input);
     }
 
-    protected void thenCuratedAndStructuredForTableContainForPK(String table, String data, int primaryKey) {
-        String structuredTablePath = Paths.get(structuredPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
-        String curatedTablePath = Paths.get(curatedPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
-        assertDeltaTableContainsForPK(structuredTablePath, data, primaryKey);
-        assertDeltaTableContainsForPK(curatedTablePath, data, primaryKey);
+    protected void thenStructuredAndCuratedForTableContainForPK(String table, String data, int primaryKey) {
+        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
     }
 
-    protected void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
-        Dataset<Row> df = spark.read().format("delta").load(tablePath);
-        List<Row> result = df
-                .select(DATA_COLUMN)
-                .where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
-                .collectAsList();
-
-        List<Row> expected = Collections.singletonList(RowFactory.create(data));
-        assertEquals(expected.size(), result.size());
-        assertTrue(result.containsAll(expected));
-    }
-
-    protected void thenCuratedAndStructuredForTableDoNotContainPK(String table, int primaryKey) {
-        String structuredTablePath = Paths.get(structuredPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
-        String curatedTablePath = Paths.get(curatedPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
-        assertDeltaTableDoesNotContainPK(structuredTablePath, primaryKey);
-        assertDeltaTableDoesNotContainPK(curatedTablePath, primaryKey);
-    }
-
-    protected void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {
-        Dataset<Row> df = spark.read().format("delta").load(tablePath);
-        List<Row> result = df
-                .select(DATA_COLUMN)
-                .where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
-                .collectAsList();
-
-        assertEquals(0, result.size());
+    protected void thenStructuredAndCuratedForTableDoNotContainPK(String table, int primaryKey) {
+        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
     }
 
 }
