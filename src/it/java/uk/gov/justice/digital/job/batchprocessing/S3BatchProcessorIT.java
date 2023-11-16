@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job.batchprocessing;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +25,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
 class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
@@ -47,10 +47,10 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldWriteInsertsToStructuredAndCurated() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
-                RowFactory.create(pk1, "2023-11-13 10:50:00.123456", "I", "data1"),
-                RowFactory.create(pk2, "2023-11-13 10:50:00.123456", "I", "data2"),
-                RowFactory.create(pk3, "2023-11-13 10:50:00.123456", "U", "data3"),
-                RowFactory.create(pk4, "2023-11-13 10:50:00.123456", "D", "data4")
+                createRow(pk1, "2023-11-13 10:50:00.123456", "I", "data1"),
+                createRow(pk2, "2023-11-13 10:50:00.123456", "I", "data2"),
+                createRow(pk3, "2023-11-13 10:50:00.123456", "U", "data3"),
+                createRow(pk4, "2023-11-13 10:50:00.123456", "D", "data4")
         ), TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
 
         underTest.processBatch(spark, inputSchemaName, inputTableName, input);
@@ -65,9 +65,9 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldWriteNullsToViolationsForNonNullableColumns() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
-                RowFactory.create(pk1, "2023-11-13 10:50:00.123456", "I", "data1"),
-                RowFactory.create(pk2, null, "I", "data2"),
-                RowFactory.create(pk3, "2023-11-13 10:50:00.123456", "I", "data3")
+                createRow(pk1, "2023-11-13 10:50:00.123456", "I", "data1"),
+                createRow(pk2, null, "I", "data2"),
+                createRow(pk3, "2023-11-13 10:50:00.123456", "I", "data3")
         ), TEST_DATA_SCHEMA);
         underTest.processBatch(spark, inputSchemaName, inputTableName, input);
 

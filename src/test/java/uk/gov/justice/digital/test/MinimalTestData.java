@@ -104,4 +104,8 @@ public class MinimalTestData {
         latestRows.add(RowFactory.create("3", "2023-11-13 10:49:28.123458", "I", "3c"));
         return latestRows;
     }
+
+     public static Row createRow(int pk, String timestamp, String operation, String data) {
+        return RowFactory.create(Integer.toString(pk), timestamp, operation, data);
+     }
 }
