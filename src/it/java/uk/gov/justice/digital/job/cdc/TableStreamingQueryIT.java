@@ -44,7 +44,7 @@ import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MIN_
 import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
-import static uk.gov.justice.digital.test.MinimalTestData.primaryKey;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
@@ -245,7 +245,7 @@ public class TableStreamingQueryIT extends BaseSparkTest {
     private void givenASourceReference() {
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
-        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
     }
 

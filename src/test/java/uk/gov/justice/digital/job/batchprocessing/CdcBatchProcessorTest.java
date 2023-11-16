@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkDfSameTimestamp;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimestampLatest;
-import static uk.gov.justice.digital.test.MinimalTestData.primaryKey;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,7 +62,7 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     public void setUp() {
         underTest = new CdcBatchProcessor(mockViolationService, mockValidationService, mockDataStorageService);
 
-        when(mockSourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
     }
@@ -83,7 +83,7 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId, structuredTablePath, curatedTablePath);
 
-        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(structuredTablePath), argumentCaptor.capture(), eq(primaryKey));
+        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(structuredTablePath), argumentCaptor.capture(), eq(PRIMARY_KEY));
 
         List<Row> expected = rowPerPk.collectAsList();
         List<Row> result = argumentCaptor.getValue().collectAsList();
@@ -98,7 +98,7 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId, structuredTablePath, curatedTablePath);
 
-        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(curatedTablePath), argumentCaptor.capture(), eq(primaryKey));
+        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(curatedTablePath), argumentCaptor.capture(), eq(PRIMARY_KEY));
         verify(mockDataStorageService, times(1)).updateDeltaManifestForTable(any(), eq(curatedTablePath));
 
         List<Row> expected = rowPerPk.collectAsList();
@@ -116,8 +116,8 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId, structuredTablePath, curatedTablePath);
 
-        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(structuredTablePath), structuredArgumentCaptor.capture(), eq(primaryKey));
-        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(curatedTablePath), curatedArgumentCaptor.capture(), eq(primaryKey));
+        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(structuredTablePath), structuredArgumentCaptor.capture(), eq(PRIMARY_KEY));
+        verify(mockDataStorageService, times(1)).mergeRecordsCdc(any(), eq(curatedTablePath), curatedArgumentCaptor.capture(), eq(PRIMARY_KEY));
         verify(mockDataStorageService, times(1)).updateDeltaManifestForTable(any(), eq(curatedTablePath));
 
         List<Row> expected = manyRowsPerPkSameTimestampLatest();
@@ -140,7 +140,7 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId, structuredTablePath, curatedTablePath);
 
-        verify(mockViolationService, times(1)).handleRetriesExhausted(
+        verify(mockViolationService, times(1)).handleRetriesExhaustedS3(
                 any(), argumentCaptor.capture(), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.CDC)
         );
 

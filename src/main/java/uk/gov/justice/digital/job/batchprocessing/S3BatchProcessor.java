@@ -56,9 +56,8 @@ public class S3BatchProcessor {
         dataFrame.persist();
         try {
             withValidations(spark, sourceName, tableName, dataFrame, (validatedDf, sourceReference) -> {
-                val transformedDf = dataFrame.transform(S3BatchProcessor::loadDataFilter);
-                val structuredLoadDataFrame = structuredZoneLoad.process(spark, transformedDf, sourceReference);
-                curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
+                val structuredLoadDf = structuredZoneLoad.process(spark, validatedDf, sourceReference);
+                curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
             });
         } catch (Exception e) {
             logger.error("Caught unexpected exception", e);
@@ -73,10 +72,6 @@ public class S3BatchProcessor {
         );
     }
 
-    private static Dataset<Row> loadDataFilter(Dataset<Row> dataFrame) {
-        return dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
-    }
-
     @FunctionalInterface
     private interface ValidatedDataframeHandler {
         void apply(Dataset<Row> validDf, SourceReference sourceReference) throws DataStorageException;
@@ -84,7 +79,8 @@ public class S3BatchProcessor {
 
     private void withValidations(SparkSession spark, String sourceName, String tableName, Dataset<Row> dataFrame, ValidatedDataframeHandler validatedDfHandler) throws DataStorageException {
         val sourceReference = sourceReferenceService.getSourceReferenceOrThrow(sourceName, tableName);
-        val validRows = validationService.handleValidation(spark, dataFrame, sourceReference);
+        val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
+        val validRows = validationService.handleValidation(spark, filteredDf, sourceReference);
         validatedDfHandler.apply(validRows, sourceReference);
     }
 

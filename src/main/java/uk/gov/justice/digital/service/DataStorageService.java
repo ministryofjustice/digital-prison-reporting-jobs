@@ -114,20 +114,6 @@ public class DataStorageService {
             }
         }
     }
-
-    public void appendDistinctRecords(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String destinationPath,
-            SourceReference.PrimaryKey primaryKey
-    ) throws DataStorageException {
-        logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), destinationPath);
-        appendDistinct(destinationPath, dataFrame, primaryKey);
-
-        logger.info("Append completed successfully to table: {}", destinationPath);
-        updateDeltaManifestForTable(spark, destinationPath);
-    }
-
     public void mergeRecords(
             SparkSession spark,
             String tablePath,

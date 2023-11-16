@@ -21,7 +21,7 @@ public class MinimalTestData {
     public static final String PRIMARY_KEY_COLUMN = "pk";
     public static final String DATA_COLUMN = "data";
 
-    public static final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN);
+    public static final SourceReference.PrimaryKey PRIMARY_KEY = new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN);
 
 
     public static final StructType TEST_DATA_SCHEMA = new StructType(new StructField[]{
@@ -39,6 +39,15 @@ public class MinimalTestData {
     });
 
     public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
+
+    public static Dataset<Row> inserts(SparkSession spark) {
+        List<Row> input = new ArrayList<>();
+        input.add(RowFactory.create("1", "2023-11-13 10:50:00.123456", "I", "1"));
+        input.add(RowFactory.create("2", "2023-11-13 10:50:00.123456", "I", "2"));
+        input.add(RowFactory.create("3", "2023-11-13 10:50:00.123456", "I", "3"));
+
+        return spark.createDataFrame(input, TEST_DATA_SCHEMA);
+    }
     public static Dataset<Row> rowPerPkDfSameTimestamp(SparkSession spark) {
         List<Row> input = new ArrayList<>();
         input.add(RowFactory.create("1", "2023-11-13 10:49:28.123456", "I", "1a"));
