@@ -26,8 +26,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.test.MinimalTestData.testDataSchema;
-import static uk.gov.justice.digital.test.MinimalTestData.testDataSchemaNonNullableColumns;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -50,14 +50,14 @@ class ValidationServiceTest extends BaseSparkTest {
                 RowFactory.create("3", null, "I", "2a"),
                 RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "2a")
         );
-        inputDf = spark.createDataFrame(input, testDataSchema);
+        inputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
     }
 
     @BeforeEach
     public void setUp() {
         underTest = new ValidationService(violationService);
 
-        when(sourceReference.getSchema()).thenReturn(testDataSchemaNonNullableColumns);
+        when(sourceReference.getSchema()).thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
     }
 
     @Test

@@ -59,7 +59,7 @@ public class CdcBatchProcessor {
             // Manifests are only required for the curated Zone
             storage.updateDeltaManifestForTable(spark, curatedTablePath);
         } catch (DataStorageRetriesExhaustedException e) {
-            violationService.handleRetriesExhausted(spark, latestCDCRecordsByPK, source, table, e, CDC);
+            violationService.handleRetriesExhaustedS3(spark, latestCDCRecordsByPK, source, table, e, CDC);
         }
         logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
     }

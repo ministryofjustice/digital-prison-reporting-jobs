@@ -88,6 +88,30 @@ public class ViolationService {
         }
     }
 
+    // todo test
+    public void handleRetriesExhaustedS3(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table,
+            DataStorageRetriesExhaustedException cause,
+            ZoneName zoneName
+    ) {
+        String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
+        logger.warn(violationMessage, cause);
+        val destinationPath = createValidatedPath(violationsPath, source, table);
+        val violationDf = dataFrame.withColumn(ERROR, lit(violationMessage));
+        try {
+            storageService.append(destinationPath, violationDf);
+            storageService.updateDeltaManifestForTable(spark, destinationPath);
+        } catch (DataStorageException e) {
+            String msg = "Could not write violation data";
+            logger.error(msg, e);
+            // This is a serious problem because we could lose data if we don't stop here
+            throw new RuntimeException(msg, e);
+        }
+    }
+
     public void handleNoSchemaFound(
             SparkSession spark,
             Dataset<Row> dataFrame,
@@ -101,6 +125,23 @@ public class ViolationService {
                 .select(col(DATA), col(METADATA))
                 .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)))
                 .drop(OPERATION);
+
+        storageService.append(destinationPath, missingSchemaRecords);
+        storageService.updateDeltaManifestForTable(spark, destinationPath);
+    }
+
+    //todo test
+    public void handleNoSchemaFoundS3(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table
+    ) throws DataStorageException {
+        String violationMsg = format("Schema does not exist for %s/%s", source, table);
+        logger.warn(violationMsg);
+        val destinationPath = createValidatedPath(violationsPath, source, table);
+
+        val missingSchemaRecords = dataFrame.withColumn(ERROR, lit(violationMsg));
 
         storageService.append(destinationPath, missingSchemaRecords);
         storageService.updateDeltaManifestForTable(spark, destinationPath);

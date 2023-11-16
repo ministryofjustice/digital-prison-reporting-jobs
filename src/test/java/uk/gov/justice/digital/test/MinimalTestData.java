@@ -24,21 +24,21 @@ public class MinimalTestData {
     public static final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN);
 
 
-    public static final StructType testDataSchema = new StructType(new StructField[]{
+    public static final StructType TEST_DATA_SCHEMA = new StructType(new StructField[]{
             new StructField("pk", DataTypes.StringType, true, Metadata.empty()),
             new StructField(TIMESTAMP, DataTypes.StringType, true, Metadata.empty()),
             new StructField("Op", DataTypes.StringType, true, Metadata.empty()),
             new StructField("data", DataTypes.StringType, true, Metadata.empty()),
     });
 
-    public static final StructType testDataSchemaNonNullableColumns = new StructType(new StructField[]{
+    public static final StructType TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS = new StructType(new StructField[]{
             new StructField("pk", DataTypes.StringType, false, Metadata.empty()),
             new StructField(TIMESTAMP, DataTypes.StringType, false, Metadata.empty()),
             new StructField("Op", DataTypes.StringType, false, Metadata.empty()),
             new StructField("data", DataTypes.StringType, true, Metadata.empty()),
     });
 
-    public static Encoder<Row> encoder = RowEncoder.apply(testDataSchema);
+    public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
     public static Dataset<Row> rowPerPkDfSameTimestamp(SparkSession spark) {
         List<Row> input = new ArrayList<>();
         input.add(RowFactory.create("1", "2023-11-13 10:49:28.123456", "I", "1a"));
@@ -47,7 +47,7 @@ public class MinimalTestData {
         input.add(RowFactory.create("4", "2023-11-13 10:49:28.123456", "U", "4a"));
         input.add(RowFactory.create("5", "2023-11-13 10:49:28.123456", "D", "5a"));
 
-        return spark.createDataFrame(input, testDataSchema);
+        return spark.createDataFrame(input, TEST_DATA_SCHEMA);
     }
 
     public static Dataset<Row> manyRowsPerPkDfSameTimestamp(SparkSession spark) {
@@ -62,7 +62,7 @@ public class MinimalTestData {
         input.add(RowFactory.create("3", "2023-11-13 10:49:29.000000", "D", "3b"));
         input.add(RowFactory.create("3", "2023-11-13 10:49:30.000000", "I", "3c"));
 
-        return spark.createDataFrame(input, testDataSchema);
+        return spark.createDataFrame(input, TEST_DATA_SCHEMA);
     }
 
     public static List<Row> manyRowsPerPkSameTimestampLatest() {
@@ -85,7 +85,7 @@ public class MinimalTestData {
         input.add(RowFactory.create("3", "2023-11-13 10:49:28.123457", "D", "3b"));
         input.add(RowFactory.create("3", "2023-11-13 10:49:28.123458", "I", "3c"));
 
-        return spark.createDataFrame(input, testDataSchema);
+        return spark.createDataFrame(input, TEST_DATA_SCHEMA);
     }
 
     public static List<Row> manyRowsPerPkSameTimestampToMicroSecondAccuracyLatest() {

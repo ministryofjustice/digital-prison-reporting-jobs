@@ -45,7 +45,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.MinimalTestData.primaryKey;
-import static uk.gov.justice.digital.test.MinimalTestData.testDataSchemaNonNullableColumns;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 /**
@@ -246,7 +246,7 @@ public class TableStreamingQueryIT extends BaseSparkTest {
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
-        when(sourceReference.getSchema()).thenReturn(testDataSchemaNonNullableColumns);
+        when(sourceReference.getSchema()).thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
     }
 
     private void whenTheStreamingQueryRuns() {

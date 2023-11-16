@@ -52,7 +52,7 @@ public class ZoneLoad {
             logger.debug("Processed batch for {} {}/{} in {}ms", zoneName, sourceName, tableName, System.currentTimeMillis() - startTime);
         } catch (DataStorageRetriesExhaustedException e) {
             logger.warn(format("%s zone load retries exhausted", zoneName), e);
-            violationService.handleRetriesExhausted(spark, dataFrame, sourceReference.getSource(), sourceReference.getTable(), e, zoneName);
+            violationService.handleRetriesExhaustedS3(spark, dataFrame, sourceReference.getSource(), sourceReference.getTable(), e, zoneName);
             result = spark.emptyDataFrame();
         }
         return result;

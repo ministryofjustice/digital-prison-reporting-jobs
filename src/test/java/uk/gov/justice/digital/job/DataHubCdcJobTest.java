@@ -1,8 +1,7 @@
-package uk.gov.justice.digital.job.cdc;
+package uk.gov.justice.digital.job;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.streaming.StreamingQueryManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,7 +9,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
+import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.service.TableDiscoveryService;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,11 +39,9 @@ class DataHubCdcJobTest {
     @Mock
     private TableStreamingQueryProvider tableStreamingQueryProvider;
     @Mock
-    private TableDiscovery tableDiscovery;
+    private TableDiscoveryService tableDiscoveryService;
     @Mock
     private SparkSession spark;
-    @Mock
-    private StreamingQueryManager streamingQueryManager;
     @Mock
     private TableStreamingQuery table1StreamingQuery;
     @Mock
@@ -53,13 +53,13 @@ class DataHubCdcJobTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new DataHubCdcJob(arguments, properties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscovery);
+        underTest = new DataHubCdcJob(arguments, properties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }
 
     @Test
     public void shouldRunAQueryPerTable() {
 
-        when(tableDiscovery.discoverTablesToProcess()).thenReturn(tablesToProcess);
+        when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
         when(tableStreamingQueryProvider.provide("source1", "table1")).thenReturn(table1StreamingQuery);
         when(tableStreamingQueryProvider.provide("source2", "table2")).thenReturn(table2StreamingQuery);
@@ -74,7 +74,7 @@ class DataHubCdcJobTest {
 
     @Test
     public void shouldNotThrowForNoTables() {
-        when(tableDiscovery.discoverTablesToProcess()).thenReturn(Collections.emptyList());
+        when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(Collections.emptyList());
 
         underTest.runJob(spark);
     }

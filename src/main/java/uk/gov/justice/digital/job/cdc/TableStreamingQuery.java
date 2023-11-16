@@ -51,7 +51,7 @@ public class TableStreamingQuery {
     }
 
 
-    StreamingQuery runQuery(SparkSession spark) {
+    public StreamingQuery runQuery(SparkSession spark) {
         logger.info("Initialising per batch processing for {}/{}", inputSchemaName, inputTableName);
         // Set up various Strings we require
         String destinationSource = sourceReference.getSource();

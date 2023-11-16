@@ -191,6 +191,22 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
+    public void shouldSetBatchLoadFileGlobPattern() {
+        HashMap<String, String> args = cloneTestArguments();
+        String expected = "some-pattern";
+        args.put(JobArguments.BATCH_LOAD_FILE_GLOB_PATTERN, expected);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.getBatchLoadFileGlobPattern());
+    }
+
+    @Test
+    public void shouldDefaultBatchLoadFileGlobPattern() {
+        HashMap<String, String> args = cloneTestArguments();
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(JobArguments.BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT, jobArguments.getBatchLoadFileGlobPattern());
+    }
+
+    @Test
     public void shouldReturnCorrectValuesInGetConfig() {
         Map<String, String> actualArguments = validArguments.getConfig();
         assertEquals(testArguments, actualArguments);

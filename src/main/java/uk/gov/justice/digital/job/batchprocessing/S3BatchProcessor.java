@@ -11,7 +11,6 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
 
@@ -34,7 +33,6 @@ public class S3BatchProcessor {
     private final StructuredZoneLoadS3 structuredZoneLoad;
     private final CuratedZoneLoadS3 curatedZoneLoad;
     private final SourceReferenceService sourceReferenceService;
-    private final ViolationService violationService;
     private final ValidationService validationService;
 
     @Inject
@@ -42,14 +40,12 @@ public class S3BatchProcessor {
             StructuredZoneLoadS3 structuredZoneLoad,
             CuratedZoneLoadS3 curatedZoneLoad,
             SourceReferenceService sourceReferenceService,
-            ViolationService violationService,
             ValidationService validationService) {
         this.validationService = validationService;
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
         this.sourceReferenceService = sourceReferenceService;
-        this.violationService = violationService;
         logger.info("S3BatchProcessor initialization complete");
     }
 
@@ -87,15 +83,9 @@ public class S3BatchProcessor {
     }
 
     private void withValidations(SparkSession spark, String sourceName, String tableName, Dataset<Row> dataFrame, ValidatedDataframeHandler validatedDfHandler) throws DataStorageException {
-        val optionalSourceReference = sourceReferenceService.getSourceReference(sourceName, tableName);
-
-        if (optionalSourceReference.isPresent()) {
-            val sourceReference = optionalSourceReference.get();
-            val validRows = validationService.handleValidation(spark, dataFrame, sourceReference);
-            validatedDfHandler.apply(validRows, sourceReference);
-        } else {
-            violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
-        }
+        val sourceReference = sourceReferenceService.getSourceReferenceOrThrow(sourceName, tableName);
+        val validRows = validationService.handleValidation(spark, dataFrame, sourceReference);
+        validatedDfHandler.apply(validRows, sourceReference);
     }
 
 

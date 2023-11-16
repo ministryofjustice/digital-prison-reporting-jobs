@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.job.cdc;
+package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.Job;
@@ -15,8 +15,11 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
+import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.service.TableDiscoveryService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +36,7 @@ public class DataHubCdcJob implements Runnable {
     private final JobProperties properties;
     private final SparkSessionProvider sparkSessionProvider;
     private final TableStreamingQueryProvider tableStreamingQueryProvider;
-    private final TableDiscovery tableDiscovery;
+    private final TableDiscoveryService tableDiscoveryService;
 
     @Inject
     public DataHubCdcJob(
@@ -41,13 +44,13 @@ public class DataHubCdcJob implements Runnable {
             JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
             TableStreamingQueryProvider tableStreamingQueryProvider,
-            TableDiscovery tableDiscovery) {
+            TableDiscoveryService tableDiscoveryService) {
         logger.info("Initializing DataHubCdcJob");
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
         this.tableStreamingQueryProvider = tableStreamingQueryProvider;
-        this.tableDiscovery = tableDiscovery;
+        this.tableDiscoveryService = tableDiscoveryService;
         logger.info("DataHubCdcJob initialization complete");
     }
 
@@ -83,7 +86,7 @@ public class DataHubCdcJob implements Runnable {
     @VisibleForTesting
     List<TableStreamingQuery> runJob(SparkSession spark) {
         logger.info("Initialising Job");
-        List<ImmutablePair<String, String>> tablesToProcess = tableDiscovery.discoverTablesToProcess();
+        List<ImmutablePair<String, String>> tablesToProcess = tableDiscoveryService.discoverTablesToProcess();
         List<TableStreamingQuery> streamingQueries = new ArrayList<>();
 
         if(!tablesToProcess.isEmpty()) {
