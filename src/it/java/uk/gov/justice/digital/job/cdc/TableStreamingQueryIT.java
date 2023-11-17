@@ -22,6 +22,7 @@ import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -30,7 +31,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
@@ -176,6 +179,21 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedContainForPK("data1", pk1);
         thenCuratedAndStructuredDoNotContainPK(pk2);
 
+    }
+
+    @Test
+    public void shouldWriteNullsToViolationsForNonNullableColumns() {
+        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:01:00.000000");
+        whenInsertOccursForPK(pk2, "data2", null);
+        whenInsertOccursForPK(pk3, "data3", "2023-11-13 10:01:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data1", pk1);
+        thenStructuredAndCuratedContainForPK("data3", pk3);
+
+        thenViolationsContainsForPK("data2", pk2);
+        thenCuratedAndStructuredDoNotContainPK(pk2);
     }
 
     private void givenPathsAreConfigured() {

@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.RAW;
+import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
 class ViolationServiceTest extends BaseSparkTest {
@@ -52,6 +53,21 @@ class ViolationServiceTest extends BaseSparkTest {
     public void handleRetriesExhaustedShouldThrowIfWriteFails() throws DataStorageException {
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
         assertThrows(RuntimeException.class, () -> underTest.handleRetriesExhausted(spark, testInputDataframe(), "source", "table", mockCause, RAW));
+    }
+
+    @Test
+    public void handleRetriesExhaustedS3ShouldWriteViolations() throws DataStorageException {
+        Dataset<Row> inputDf = inserts(spark);
+        underTest.handleRetriesExhaustedS3(spark, inputDf, "source", "table", mockCause, RAW);
+        verify(mockDataStorage).append(any(), any());
+        verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
+    }
+
+    @Test
+    public void handleRetriesExhaustedS3ShouldThrowIfWriteFails() throws DataStorageException {
+        Dataset<Row> inputDf = inserts(spark);
+        doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
+        assertThrows(RuntimeException.class, () -> underTest.handleRetriesExhaustedS3(spark, inputDf, "source", "table", mockCause, RAW));
     }
 
     @Test

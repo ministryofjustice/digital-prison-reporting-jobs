@@ -88,7 +88,7 @@ public class ViolationService {
         }
     }
 
-    // todo test
+    // TODO: rename once old code is removed
     public void handleRetriesExhaustedS3(
             SparkSession spark,
             Dataset<Row> dataFrame,
@@ -125,23 +125,6 @@ public class ViolationService {
                 .select(col(DATA), col(METADATA))
                 .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)))
                 .drop(OPERATION);
-
-        storageService.append(destinationPath, missingSchemaRecords);
-        storageService.updateDeltaManifestForTable(spark, destinationPath);
-    }
-
-    //todo test
-    public void handleNoSchemaFoundS3(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table
-    ) throws DataStorageException {
-        String violationMsg = format("Schema does not exist for %s/%s", source, table);
-        logger.warn(violationMsg);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
-
-        val missingSchemaRecords = dataFrame.withColumn(ERROR, lit(violationMsg));
 
         storageService.append(destinationPath, missingSchemaRecords);
         storageService.updateDeltaManifestForTable(spark, destinationPath);
