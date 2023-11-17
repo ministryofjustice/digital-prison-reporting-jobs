@@ -18,8 +18,7 @@ public class SparkSessionProvider {
         SparkSessionProvider.configureSparkConf(sparkConf);
         SparkContext spark = new SparkContext(sparkConf);
         spark.setLogLevel(logLevel.name().toUpperCase());
-        GlueContext glueContext = new GlueContext(spark);
-        return glueContext;
+        return new GlueContext(spark);
     }
 
     public SparkSession getConfiguredSparkSession(SparkConf sparkConf, LogLevel logLevel) {

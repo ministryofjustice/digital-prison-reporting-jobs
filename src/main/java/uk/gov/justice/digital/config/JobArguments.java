@@ -79,10 +79,6 @@ public class JobArguments {
 
     public static final String DOMAIN_REFRESH_ENABLED = "dpr.domainrefresh.enabled";
     public static final boolean DOMAIN_REFRESH_ENABLED_DEFAULT = true;
-    public static final String CDC_FILE_GLOB_PATTERN = "dpr.cdc.fileglobpattern";
-    // You might set this to '*-*.parquet' to only process CDC files or '*.parquet' to process load and CDC files
-    public static final String CDC_FILE_GLOB_PATTERN_DEFAULT = "*-*.parquet";
-
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN = "dpr.batch.load.fileglobpattern";
     // You might set this to '*-*.parquet' to only process CDC files or '*.parquet' to process load and CDC files
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT = "LOAD*parquet";
@@ -244,10 +240,6 @@ public class JobArguments {
 
     public boolean isDomainRefreshEnabled() {
         return getArgument(DOMAIN_REFRESH_ENABLED, DOMAIN_REFRESH_ENABLED_DEFAULT);
-    }
-
-    public String getCdcFileGlobPattern() {
-        return getArgument(CDC_FILE_GLOB_PATTERN, CDC_FILE_GLOB_PATTERN_DEFAULT);
     }
 
     public String getBatchLoadFileGlobPattern() {

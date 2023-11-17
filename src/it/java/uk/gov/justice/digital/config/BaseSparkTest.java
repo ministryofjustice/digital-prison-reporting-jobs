@@ -85,7 +85,7 @@ public class BaseSparkTest {
 				.select("jsonData.*");
 	}
 
-	protected void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
+	public static void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
 		Dataset<Row> df = spark.read().format("delta").load(tablePath);
 		List<Row> result = df
 				.select(DATA_COLUMN)
@@ -96,31 +96,31 @@ public class BaseSparkTest {
 		assertEquals(expected.size(), result.size());
 		assertTrue(result.containsAll(expected));
 	}
-    protected static void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {
-        Dataset<Row> df = spark.read().format("delta").load(tablePath);
-        List<Row> result = df
-                .select(DATA_COLUMN)
-                .where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
-                .collectAsList();
 
-        assertEquals(0, result.size());
-    }
+	public static void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {
+		Dataset<Row> df = spark.read().format("delta").load(tablePath);
+		List<Row> result = df
+				.select(DATA_COLUMN)
+				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
+				.collectAsList();
+		assertEquals(0, result.size());
+	}
 
-	protected void assertStructuredAndCuratedForTableContainForPK(String structuredPath, String curatedPath, String schemaName, String tableName, String data, int primaryKey) {
+	public static void assertStructuredAndCuratedForTableContainForPK(String structuredPath, String curatedPath, String schemaName, String tableName, String data, int primaryKey) {
 		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		assertDeltaTableContainsForPK(structuredTablePath, data, primaryKey);
 		assertDeltaTableContainsForPK(curatedTablePath, data, primaryKey);
 	}
 
-	protected void assertStructuredAndCuratedForTableDoNotContainPK(String structuredPath, String curatedPath, String schemaName, String tableName, int primaryKey) {
+	public static void assertStructuredAndCuratedForTableDoNotContainPK(String structuredPath, String curatedPath, String schemaName, String tableName, int primaryKey) {
 		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		assertDeltaTableDoesNotContainPK(structuredTablePath, primaryKey);
 		assertDeltaTableDoesNotContainPK(curatedTablePath, primaryKey);
 	}
 
-	protected void givenRetrySettingsAreConfigured(JobArguments arguments) {
+	public static void givenRetrySettingsAreConfigured(JobArguments arguments) {
 		when(arguments.getDataStorageRetryMinWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT);
 		when(arguments.getDataStorageRetryMaxWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
 		when(arguments.getDataStorageRetryMaxAttempts()).thenReturn(DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);

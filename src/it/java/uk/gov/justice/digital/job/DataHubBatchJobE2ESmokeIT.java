@@ -58,10 +58,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     public void shouldRunTheJobEndToEndApplyingSomeCDCMessages() throws IOException {
         List<Row> initialDataEveryTable = Arrays.asList(
                 RowFactory.create("1", "2023-11-13 10:00:00.000000", "I", "1"),
-                RowFactory.create("2", "2023-11-13 10:00:00.000000", "I", "2"),
-                RowFactory.create("3", "2023-11-13 10:00:00.000000", "I", "3"),
-                RowFactory.create("4", "2023-11-13 10:00:00.000000", "I", "4"),
-                RowFactory.create("5", "2023-11-13 10:00:00.000000", "I", "5")
+                RowFactory.create("2", "2023-11-13 10:00:00.000000", "I", "2")
         );
 
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);
@@ -74,6 +71,13 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "1", 1);
         thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "1", 1);
         thenStructuredAndCuratedForTableContainForPK(offendersTable, "1", 1);
+
+        thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "2", 2);
+        thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "2", 2);
+        thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "2", 2);
+        thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "2", 2);
+        thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "2", 2);
+        thenStructuredAndCuratedForTableContainForPK(offendersTable, "2", 2);
     }
 
     private void whenTheJobRuns() throws IOException {
