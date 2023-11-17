@@ -61,12 +61,12 @@ public class StructuredZoneCdcWriter extends Writer {
 
     private static Dataset<Row> getMostRecentUniqueRecords(SparkSession spark, SourceReference.PrimaryKey primaryKey, Dataset<Row> validRecords) {
         val primaryKeys = JavaConverters
-                .asScalaIteratorConverter(primaryKey.keys.stream().map(functions::col).iterator())
+                .asScalaIteratorConverter(primaryKey.getKeyColumnNames().stream().map(functions::col).iterator())
                 .asScala()
                 .toSeq();
 
         val mostRecentColumnExpressions = Arrays.stream(validRecords.columns())
-                .filter(column -> !primaryKey.keys.contains(column))
+                .filter(column -> !primaryKey.getKeyColumnNames().contains(column))
                 .map(column -> last(column).as(column));
 
         val mostRecentColumnExpressionsAsScalaSeq = JavaConverters

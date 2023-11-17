@@ -4,6 +4,7 @@ import lombok.val;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
 class ResourcePathTest {
 
@@ -42,6 +43,18 @@ class ResourcePathTest {
     public void shouldThrowIllegalArgumentExceptionIfPathCannotBeValidated() {
         String[] elements = { "\foo", "\nbar" };
         assertThrows(IllegalArgumentException.class, () -> ResourcePath.createValidatedPath(elements));
+    }
+
+    @Test
+    public void tablePathRootHasNoSlash() {
+        String result = tablePath("s3://root", "source", "table");
+        assertEquals("s3://root/source/table", result);
+    }
+
+    @Test
+    public void tablePathRootHasSlash() {
+        String result = tablePath("s3://root/", "source", "table");
+        assertEquals("s3://root/source/table", result);
     }
 
 }

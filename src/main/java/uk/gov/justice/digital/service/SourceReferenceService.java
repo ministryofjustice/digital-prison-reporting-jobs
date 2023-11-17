@@ -17,8 +17,15 @@ import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Scanner;
 import java.util.stream.Collectors;
+
+import static java.lang.String.format;
 
 @Singleton
 public class SourceReferenceService {
@@ -47,6 +54,7 @@ public class SourceReferenceService {
         sources.put("oms_owner.agency_internal_locations", new SourceReference("SYSTEM.AGENCY_INTERNAL_LOCATIONS", "nomis", "agency_internal_locations", new SourceReference.PrimaryKey("INTERNAL_LOCATION_ID"), getSchemaFromResource("/schemas/oms_owner.agency_internal_locations.schema.json")));
     }
 
+    // FIXME: source has 2 meanings in SourceReference service. Provide "OMS_OWNER" to getSourceReference as source and it gives you back "nomis" as source...
     public Optional<SourceReference> getSourceReference(String source, String table) {
         val key = generateKey(source, table);
 
@@ -60,6 +68,11 @@ public class SourceReferenceService {
             logger.warn("No SourceReference found in registry for {} - falling back to hardcoded resources", key);
             return Optional.ofNullable(sources.get(generateKey(source, table)));
         }
+    }
+
+    public SourceReference getSourceReferenceOrThrow(String inputSchemaName, String inputTableName) {
+        Optional<SourceReference> maybeSourceRef = getSourceReference(inputSchemaName, inputTableName);
+        return maybeSourceRef.orElseThrow(() -> new RuntimeException(format("No schema found for %s/%s", inputSchemaName, inputTableName)));
     }
 
     private static StructType getSchemaFromResource(String resource) {

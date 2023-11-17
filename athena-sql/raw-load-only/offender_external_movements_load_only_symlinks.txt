@@ -1,0 +1,1 @@
+s3://dpr-dms-raw-zone-development/OMS_OWNER/OFFENDER_EXTERNAL_MOVEMENTS/LOAD*.parquet

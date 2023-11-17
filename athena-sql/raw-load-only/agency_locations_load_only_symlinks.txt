@@ -1,0 +1,1 @@
+s3://dpr-dms-raw-zone-development/OMS_OWNER/AGENCY_LOCATIONS/LOAD*.parquet

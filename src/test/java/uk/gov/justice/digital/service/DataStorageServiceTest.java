@@ -7,6 +7,7 @@ import io.delta.tables.DeltaMergeMatchedActionBuilder;
 import io.delta.tables.DeltaMergeNotMatchedActionBuilder;
 import io.delta.tables.DeltaOptimizeBuilder;
 import io.delta.tables.DeltaTable;
+import io.delta.tables.DeltaTableBuilder;
 import lombok.val;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -56,6 +57,8 @@ class DataStorageServiceTest extends BaseSparkTest {
 
     @Mock
     private DeltaTable mockDeltaTable;
+    @Mock
+    private DeltaTableBuilder mockDeltaTableBuilder;
 
     @Mock
     private DeltaOptimizeBuilder mockDeltaOptimize;
@@ -320,6 +323,23 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
+    public void shouldRetryMergeRecordsCdcAndSucceedEventually() throws DataStorageRetriesExhaustedException {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        when(mockDataSet.columns()).thenReturn(new String[0]);
+
+        stubDeltaTableCreateIfNotExists();
+        stubMergeRecordsCdc();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(3, mockJobArguments);
+        givenMergeThrowsFirstTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        dataStorageService.mergeRecordsCdc(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+        verify(mockDeltaMergeBuilder, times(2)).execute();
+    }
+
+    @Test
     public void shouldRetryCompactAndSucceedEventually() throws DataStorageException {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
@@ -390,6 +410,26 @@ class DataStorageServiceTest extends BaseSparkTest {
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.mergeRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"), Collections.emptyList());
+        });
+        verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
+    }
+
+    @Test
+    public void shouldRetryMergeRecordsCdcAndFailEventually() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 5;
+        when(mockDataSet.columns()).thenReturn(new String[0]);
+
+        stubDeltaTableCreateIfNotExists();
+        stubMergeRecordsCdc();
+
+        givenDeltaTableExists();
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        givenMergeThrowsEveryTime(ConcurrentAppendException.class);
+
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        assertThrows(DataStorageRetriesExhaustedException.class, () -> {
+            dataStorageService.mergeRecordsCdc(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
         });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
     }
@@ -519,6 +559,24 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(mockDeltaMergeMatchedActionBuilder.delete()).thenReturn(mockDeltaMergeBuilder);
         when(mockDeltaMergeBuilder.whenNotMatched()).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
         when(mockDeltaMergeNotMatchedActionBuilder.insertExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
+    }
+
+    private void stubMergeRecordsCdc() {
+        when(mockDeltaTable.as(anyString())).thenReturn(mockDeltaTable);
+        when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenMatched(anyString())).thenReturn(mockDeltaMergeMatchedActionBuilder);
+        when(mockDeltaMergeMatchedActionBuilder.updateExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenMatched(anyString())).thenReturn(mockDeltaMergeMatchedActionBuilder);
+        when(mockDeltaMergeMatchedActionBuilder.delete()).thenReturn(mockDeltaMergeBuilder);
+        when(mockDeltaMergeBuilder.whenNotMatched(anyString())).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
+        when(mockDeltaMergeNotMatchedActionBuilder.insertExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
+    }
+
+    private void stubDeltaTableCreateIfNotExists() {
+        when(DeltaTable.createIfNotExists(any())).thenReturn(mockDeltaTableBuilder);
+        when(mockDeltaTableBuilder.addColumns(any())).thenReturn(mockDeltaTableBuilder);
+        when(mockDeltaTableBuilder.location(any())).thenReturn(mockDeltaTableBuilder);
+        when(mockDeltaTableBuilder.execute()).thenReturn(mockDeltaTable);
     }
 
     private void stubUpdateRecords() {

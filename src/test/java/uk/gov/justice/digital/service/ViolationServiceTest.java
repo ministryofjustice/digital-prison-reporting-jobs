@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.RAW;
+import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
 class ViolationServiceTest extends BaseSparkTest {
@@ -55,6 +56,21 @@ class ViolationServiceTest extends BaseSparkTest {
     }
 
     @Test
+    public void handleRetriesExhaustedS3ShouldWriteViolations() throws DataStorageException {
+        Dataset<Row> inputDf = inserts(spark);
+        underTest.handleRetriesExhaustedS3(spark, inputDf, "source", "table", mockCause, RAW);
+        verify(mockDataStorage).append(any(), any());
+        verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
+    }
+
+    @Test
+    public void handleRetriesExhaustedS3ShouldThrowIfWriteFails() throws DataStorageException {
+        Dataset<Row> inputDf = inserts(spark);
+        doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
+        assertThrows(RuntimeException.class, () -> underTest.handleRetriesExhaustedS3(spark, inputDf, "source", "table", mockCause, RAW));
+    }
+
+    @Test
     public void handleNoSchemaFoundShouldWriteViolations() throws DataStorageException {
         underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table");
         verify(mockDataStorage).append(any(), any());
@@ -65,6 +81,19 @@ class ViolationServiceTest extends BaseSparkTest {
     public void handleNoSchemaFoundShouldThrowIfWriteFails() throws DataStorageException {
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
         assertThrows(DataStorageException.class, () -> underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table"));
+    }
+
+    @Test
+    public void handleInvalidSchemaShouldWriteViolations() throws DataStorageException {
+        underTest.handleInvalidSchema(spark, testInputDataframe(), "source", "table");
+        verify(mockDataStorage).append(any(), any());
+        verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
+    }
+
+    @Test
+    public void handleInvalidSchemaShouldThrowIfWriteFails() throws DataStorageException {
+        doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
+        assertThrows(DataStorageException.class, () -> underTest.handleInvalidSchema(spark, testInputDataframe(), "source", "table"));
     }
 
     private Dataset<Row> testInputDataframe() {

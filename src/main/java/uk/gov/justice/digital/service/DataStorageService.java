@@ -31,21 +31,23 @@ import java.net.URISyntaxException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.*;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Update;
 
 @Singleton
 public class DataStorageService {
 
     private static final String SOURCE = "source";
     private static final String TARGET = "target";
-
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
 
     // Retry policy used on operations that are at risk of concurrent modification exceptions
@@ -54,6 +56,7 @@ public class DataStorageService {
     private final String insertMatchCondition = createMatchExpression(Insert);
     private final String updateMatchCondition = createMatchExpression(Update);
     private final String deleteMatchCondition = createMatchExpression(Delete);
+    private final String notDeleteMatchCondition = String.format("%s.%s<>'%s'", TARGET, OPERATION, Delete.getName());
 
     @Inject
     public DataStorageService(JobArguments jobArguments) {
@@ -111,7 +114,6 @@ public class DataStorageService {
             }
         }
     }
-
     public void mergeRecords(
             SparkSession spark,
             String tablePath,
@@ -150,6 +152,38 @@ public class DataStorageService {
             val errorMessage = String.format("Failed to upsert table %s", tablePath);
             logger.error(errorMessage, e);
         }
+    }
+
+    public void mergeRecordsCdc(
+            SparkSession spark,
+            String tablePath,
+            Dataset<Row> dataFrame,
+            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
+        val dt = DeltaTable
+                .createIfNotExists(spark)
+                .addColumns(dataFrame.schema())
+                .location(tablePath)
+                .execute();
+
+        val expression = createMergeExpression(dataFrame, Collections.emptyList());
+        val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+        logger.info("Upsert records from {} using condition: {}", tablePath, condition);
+        doWithRetryOnConcurrentModification(() ->
+                dt.as(SOURCE)
+                        .merge(dataFrame.as(TARGET), condition)
+                        // Multiple whenMatched clauses are evaluated in the order they are specified.
+                        // As such the Delete needs to be specified after the update
+                        .whenMatched(insertMatchCondition)
+                        .updateExpr(expression)
+                        .whenMatched(updateMatchCondition)
+                        .updateExpr(expression)
+                        .whenMatched(deleteMatchCondition)
+                        .delete()
+                        // If the PKs don't match then insert anything that isn't a delete
+                        .whenNotMatched(notDeleteMatchCondition)
+                        .insertExpr(expression)
+                        .execute()
+        );
     }
 
     public void updateRecords(
@@ -438,7 +472,7 @@ public class DataStorageService {
                 .collect(Collectors.toMap(column -> SOURCE + "." + column, column -> TARGET + "." + column));
     }
 
-    private String createMatchExpression(DMS_3_4_7.Operation operation) {
+    private String createMatchExpression(DMS_3_4_7.ShortOperationCode operation) {
         return String.format("%s.%s=='%s'", TARGET, OPERATION, operation.getName());
     }
 

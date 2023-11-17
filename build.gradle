@@ -40,9 +40,9 @@ ext {
     micronautVersion = '3.8.7'
     mockitoVersion = '4.11.0'
     sparkVersion = '3.3.0'
-    hadoopVersion = '3.3.1' // was hadoopVersion = '3.3.3' downgraded for Glue 4.0
+    hadoopVersion = '3.3.3' // Glue 4.0 uses hadoopVersion = '3.3.3'
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
-    awsSdkVersion = '1.12.425'
+    awsSdkVersion = '1.11.1026'
     glueApiVersion = '4.0.0'
     failSafeVersion = '3.3.2'
 }
@@ -53,11 +53,9 @@ dependencies {
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
     compileOnly "org.apache.hadoop:hadoop-aws:$hadoopVersion"
-    compileOnly "com.amazonaws:amazon-kinesis-client:$awsKinesisVersion" // transitively brings in java-sdk-core
     compileOnly "com.amazonaws:AWSGlueETL:$glueApiVersion"
 
-    implementation "com.amazonaws:aws-java-sdk-secretsmanager:$awsSdkVersion" // transitively brings in java-sdk-core
-    implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion" // transitively brings in java-sdk-core
+    implementation "com.amazonaws:aws-java-sdk-bundle:$awsSdkVersion"
     implementation "org.apache.spark:spark-avro_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
@@ -162,8 +160,15 @@ jacocoTestReport {
     }
 }
 
+// core-site.xml is excluded as it is only used for convenience when running main methods that need specific hadoop configuration locally
+
+jar {
+    exclude 'core-site.xml'
+}
+
 shadowJar {
     zip64 true
+    exclude 'core-site.xml'
 }
 
 micronaut {

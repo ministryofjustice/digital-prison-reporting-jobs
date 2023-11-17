@@ -4,16 +4,29 @@ import io.micronaut.logging.LogLevel;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 
+import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.List;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.from_json;
+import static org.apache.spark.sql.functions.lit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.RECORD_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
 public class BaseSparkTest {
 
@@ -70,6 +83,48 @@ public class BaseSparkTest {
 						)
 				)
 				.select("jsonData.*");
+	}
+
+	protected void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
+		Dataset<Row> df = spark.read().format("delta").load(tablePath);
+		List<Row> result = df
+				.select(DATA_COLUMN)
+				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
+				.collectAsList();
+
+		List<Row> expected = Collections.singletonList(RowFactory.create(data));
+		assertEquals(expected.size(), result.size());
+		assertTrue(result.containsAll(expected));
+	}
+    protected static void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {
+        Dataset<Row> df = spark.read().format("delta").load(tablePath);
+        List<Row> result = df
+                .select(DATA_COLUMN)
+                .where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
+                .collectAsList();
+
+        assertEquals(0, result.size());
+    }
+
+	protected void assertStructuredAndCuratedForTableContainForPK(String structuredPath, String curatedPath, String schemaName, String tableName, String data, int primaryKey) {
+		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
+		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
+		assertDeltaTableContainsForPK(structuredTablePath, data, primaryKey);
+		assertDeltaTableContainsForPK(curatedTablePath, data, primaryKey);
+	}
+
+	protected void assertStructuredAndCuratedForTableDoNotContainPK(String structuredPath, String curatedPath, String schemaName, String tableName, int primaryKey) {
+		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
+		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
+		assertDeltaTableDoesNotContainPK(structuredTablePath, primaryKey);
+		assertDeltaTableDoesNotContainPK(curatedTablePath, primaryKey);
+	}
+
+	protected void givenRetrySettingsAreConfigured(JobArguments arguments) {
+		when(arguments.getDataStorageRetryMinWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT);
+		when(arguments.getDataStorageRetryMaxWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
+		when(arguments.getDataStorageRetryMaxAttempts()).thenReturn(DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);
+		when(arguments.getDataStorageRetryJitterFactor()).thenReturn(DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
 	}
 
 }

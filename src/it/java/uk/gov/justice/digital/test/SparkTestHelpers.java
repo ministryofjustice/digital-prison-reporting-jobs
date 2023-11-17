@@ -10,6 +10,8 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import scala.collection.JavaConverters;
+import scala.collection.Seq;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 
@@ -23,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+// FIXME: this is duplicated from test
 public class SparkTestHelpers {
 
     public static final String OFFENDERS_SAMPLE_PARQUET_PATH = "/sample/events/nomis/offenders/offenders.parquet";
@@ -144,6 +147,10 @@ public class SparkTestHelpers {
         val f = Paths.get(filename).toFile();
         FileUtils.copyInputStreamToFile(System.class.getResourceAsStream(resource), f);
         return Paths.get(f.getAbsolutePath());
+    }
+
+    public static <T> Seq<T> convertListToSeq(List<T> inputList) {
+        return JavaConverters.asScalaIteratorConverter(inputList.iterator()).asScala().toSeq();
     }
 
 }

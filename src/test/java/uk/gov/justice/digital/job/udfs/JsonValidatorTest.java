@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.job.udf;
+package uk.gov.justice.digital.job.udfs;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
