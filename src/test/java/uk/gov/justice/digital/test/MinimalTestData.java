@@ -15,6 +15,7 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 public class MinimalTestData {
@@ -25,17 +26,17 @@ public class MinimalTestData {
 
 
     public static final StructType TEST_DATA_SCHEMA = new StructType(new StructField[]{
-            new StructField("pk", DataTypes.StringType, true, Metadata.empty()),
+            new StructField(PRIMARY_KEY_COLUMN, DataTypes.StringType, true, Metadata.empty()),
             new StructField(TIMESTAMP, DataTypes.StringType, true, Metadata.empty()),
-            new StructField("Op", DataTypes.StringType, true, Metadata.empty()),
-            new StructField("data", DataTypes.StringType, true, Metadata.empty()),
+            new StructField(OPERATION, DataTypes.StringType, true, Metadata.empty()),
+            new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
     });
 
     public static final StructType TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS = new StructType(new StructField[]{
-            new StructField("pk", DataTypes.StringType, false, Metadata.empty()),
+            new StructField(PRIMARY_KEY_COLUMN, DataTypes.StringType, false, Metadata.empty()),
             new StructField(TIMESTAMP, DataTypes.StringType, false, Metadata.empty()),
-            new StructField("Op", DataTypes.StringType, false, Metadata.empty()),
-            new StructField("data", DataTypes.StringType, true, Metadata.empty()),
+            new StructField(OPERATION, DataTypes.StringType, false, Metadata.empty()),
+            new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
     });
 
     public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
