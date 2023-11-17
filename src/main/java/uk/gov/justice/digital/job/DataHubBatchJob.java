@@ -88,7 +88,7 @@ public class DataHubBatchJob implements Runnable {
     }
 
     /**
-     * The main entry point for starting a batch job to process raw data for all tables.
+     * The main entry point for testing a batch job to process raw data for all tables.
      */
     @VisibleForTesting
     void runJob(SparkSession sparkSession) throws IOException {
