@@ -1,8 +1,5 @@
 package uk.gov.justice.digital.common;
 
-import lombok.val;
-
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -39,14 +36,6 @@ public class SourceMapping {
 
     public Map<ColumnMapping, ColumnMapping> getColumnMap() {
         return columnMap;
-    }
-
-    public SourceMapping withSourceColumnsUpperCased() {
-        val upperCasedSourceColumnMap = new HashMap<ColumnMapping, ColumnMapping>();
-        for (Map.Entry<ColumnMapping, ColumnMapping> entry : columnMap.entrySet()) {
-            upperCasedSourceColumnMap.put(entry.getKey().upperCaseColumnName(), entry.getValue());
-        }
-        return new SourceMapping(sourceTable, destinationTable, tableAliases, upperCasedSourceColumnMap);
     }
 
     public static SourceMapping create(

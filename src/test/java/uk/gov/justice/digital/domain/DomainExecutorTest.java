@@ -32,6 +32,9 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.Operation.Insert;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
+import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 class DomainExecutorTest extends BaseSparkTest {
 
@@ -87,7 +90,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform(), Collections.emptySet());
             assertEquals(transformedDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
         }
     }
@@ -99,7 +102,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform(), Collections.emptySet());
             val postViolationsDataFrame = executor.applyViolations(spark, transformedDataFrame, table.getViolations());
             assertEquals(postViolationsDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
         }
@@ -114,7 +117,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val refs = Collections.singletonMap("source.table", helpers.getOffenders(tmp));
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, refs, table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, refs, table.getTransform(), Collections.emptySet());
             val postViolationsDataFrame = executor.applyViolations(spark, transformedDataFrame, table.getViolations());
             assertEquals(postViolationsDataFrame.schema(), helpers.createViolationsDomainDataframe().schema());
         }
@@ -128,7 +131,7 @@ class DomainExecutorTest extends BaseSparkTest {
         val executor = createExecutor(SAMPLE_EVENTS_PATH, domainTargetPath(), storage, testSchemaService);
 
         for (val table : domainDefinition.getTables()) {
-            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform());
+            val transformedDataFrame = executor.applyTransform(spark, getOffenderRefs(), table.getTransform(), Collections.emptySet());
             val postViolationsDataFrame = executor.applyViolations(spark, transformedDataFrame, table.getViolations());
             val postMappingsDataFrame = executor.applyMappings(postViolationsDataFrame, table.getMapping());
             assertEquals(postMappingsDataFrame.schema(), helpers.createIncidentDomainDataframe().schema());
@@ -256,7 +259,7 @@ class DomainExecutorTest extends BaseSparkTest {
 
         assertThrows(
                 DomainExecutorException.class,
-                () -> executor.applyTransform(spark, inputs, transform)
+                () -> executor.applyTransform(spark, inputs, transform, Collections.emptySet())
         );
     }
 
@@ -271,7 +274,7 @@ class DomainExecutorTest extends BaseSparkTest {
         transform.setSources(Collections.singletonList("source.table"));
         transform.setViewText("this is bad sql and should fail");
 
-        assertNull(executor.applyTransform(spark, inputs, transform));
+        assertNull(executor.applyTransform(spark, inputs, transform, Collections.emptySet()));
     }
 
     @Test
@@ -416,14 +419,19 @@ class DomainExecutorTest extends BaseSparkTest {
                 .add("id", DataTypes.StringType)
                 .add("table_1_column_1", DataTypes.StringType)
                 .add("table_1_column_2", DataTypes.IntegerType)
-                .add("table_1_column_3", DataTypes.BooleanType);
+                .add("table_1_column_3", DataTypes.BooleanType)
+                .add(OPERATION, DataTypes.StringType)
+                .add(TIMESTAMP, DataTypes.LongType);
 
         val id = "table_id";
         val column1Value = "column_1_value";
         val column2Value = 20;
         val column3Value = false;
+        val operation = Insert.getName();
+        val timestamp = 0L;
 
-        val rows = Collections.singletonList(RowFactory.create(id, column1Value, column2Value, column3Value));
+        val rows = Collections
+                .singletonList(RowFactory.create(id, column1Value, column2Value, column3Value, operation, timestamp));
 
         return spark.createDataFrame(rows, tableSchema);
     }

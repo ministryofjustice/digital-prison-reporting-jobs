@@ -185,7 +185,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
         );
         transform.setSources(Collections.singletonList(transformSource));
 
-        val result1 = executor.applyTransform(spark, Collections.singletonMap(transformSource, inputs), transform);
+        val result1 = executor.applyTransform(spark, Collections.singletonMap(transformSource, inputs), transform, Collections.emptySet());
 
         assertEquals(inputs.count(), result1.count());
         assertFalse(areEqual(inputs, result1));
@@ -195,7 +195,7 @@ class DomainExecutorIntegrationTest extends BaseSparkTest {
                         "from source.table a"
         );
 
-        val result2 = executor.applyTransform(spark, Collections.singletonMap(transformSource, inputs), transform);
+        val result2 = executor.applyTransform(spark, Collections.singletonMap(transformSource, inputs), transform, Collections.emptySet());
 
         assertEquals(inputs.count(), result2.count());
         assertFalse(areEqual(inputs, result2));
