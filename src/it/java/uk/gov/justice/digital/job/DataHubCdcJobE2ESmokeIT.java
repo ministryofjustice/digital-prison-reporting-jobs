@@ -87,7 +87,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     public void shouldRunTheJobEndToEndApplyingSomeCDCMessages() throws Throwable {
         List<Row> initialDataEveryTable = Arrays.asList(
                 createRow(pk1, "2023-11-13 10:00:00.000000", "I", "1a"),
-                createRow(pk1, "2023-11-13 10:00:00.000000", "I", "2a")
+                createRow(pk2, "2023-11-13 10:00:00.000000", "I", "2a")
         );
 
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);
