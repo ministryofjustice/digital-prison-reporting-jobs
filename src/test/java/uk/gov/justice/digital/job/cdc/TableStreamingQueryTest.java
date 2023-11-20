@@ -20,7 +20,6 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -74,8 +73,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
     }
 
     @Test
-    public void runQueryShouldDelegateProcessingToBatchProcessor() throws IOException {
-        givenASourceReference();
+    public void runQueryShouldDelegateProcessingToBatchProcessor() {
         givenJobArguments();
         givenAnInputStream();
 
@@ -117,13 +115,6 @@ class TableStreamingQueryTest extends BaseSparkTest {
 
     private void givenJobArguments() {
         String checkpointPath = testRoot.toAbsolutePath().toString();
-        when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
-        when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
         when(arguments.getCheckpointLocation()).thenReturn(checkpointPath);
-    }
-
-    private void givenASourceReference() {
-        when(sourceReference.getSource()).thenReturn(inputSchemaName);
-        when(sourceReference.getTable()).thenReturn(inputTableName);
     }
 }
