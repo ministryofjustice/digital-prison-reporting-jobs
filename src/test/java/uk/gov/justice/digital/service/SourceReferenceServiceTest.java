@@ -64,6 +64,27 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
+    public void getSourceReferenceOrThrowShouldThrowWhereItDoesNotExist() {
+        when(client.getSchema("source.schema")).thenReturn(Optional.empty());
+        assertThrows(RuntimeException.class, () -> {
+            underTest.getSourceReferenceOrThrow("oms_owner", "offenders");
+        });
+    }
+
+    @Test
+    public void getSourceReferenceOrThrowShouldReturnReferenceWhereItExists() {
+        val schemaId = UUID.randomUUID().toString();
+        val schemaResponse = new GlueSchemaResponse(
+                schemaId,
+                getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT)
+        );
+        when(client.getSchema("oms_owner.offenders")).thenReturn(Optional.of(schemaResponse));
+
+        val result = underTest.getSourceReferenceOrThrow("oms_owner", "offenders");
+        assertEquals(schemaId, result.getKey());
+    }
+
+    @Test
     public void shouldReturnReferenceFromClientWhereItExists() {
         val schemaId = UUID.randomUUID().toString();
         val schemaResponse = new GlueSchemaResponse(

@@ -9,11 +9,17 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -172,6 +178,22 @@ class JobArgumentsIntegrationTest {
         HashMap<String, String> args = cloneTestArguments();
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertTrue(jobArguments.isDomainRefreshEnabled());
+    }
+
+    @Test
+    public void shouldSetBatchLoadFileGlobPattern() {
+        HashMap<String, String> args = cloneTestArguments();
+        String expected = "some-pattern";
+        args.put(JobArguments.BATCH_LOAD_FILE_GLOB_PATTERN, expected);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.getBatchLoadFileGlobPattern());
+    }
+
+    @Test
+    public void shouldDefaultBatchLoadFileGlobPattern() {
+        HashMap<String, String> args = cloneTestArguments();
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(JobArguments.BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT, jobArguments.getBatchLoadFileGlobPattern());
     }
 
     @Test

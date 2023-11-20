@@ -17,8 +17,15 @@ import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Scanner;
 import java.util.stream.Collectors;
+
+import static java.lang.String.format;
 
 @Singleton
 public class SourceReferenceService {
@@ -60,6 +67,11 @@ public class SourceReferenceService {
             logger.warn("No SourceReference found in registry for {} - falling back to hardcoded resources", key);
             return Optional.ofNullable(sources.get(generateKey(source, table)));
         }
+    }
+
+    public SourceReference getSourceReferenceOrThrow(String inputSchemaName, String inputTableName) {
+        Optional<SourceReference> maybeSourceRef = getSourceReference(inputSchemaName, inputTableName);
+        return maybeSourceRef.orElseThrow(() -> new RuntimeException(format("No schema found for %s/%s", inputSchemaName, inputTableName)));
     }
 
     private static StructType getSchemaFromResource(String resource) {

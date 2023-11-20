@@ -6,7 +6,7 @@ import java.util.Optional;
 @Singleton
 public class JobProperties {
 
-    private static final String SPARK_JOB_NAME_PROPERTY = "spark.glue.JOB_NAME";
+    public static final String SPARK_JOB_NAME_PROPERTY = "spark.glue.JOB_NAME";
 
     public String getSparkJobName() {
         return Optional

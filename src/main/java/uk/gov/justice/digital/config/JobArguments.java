@@ -79,6 +79,8 @@ public class JobArguments {
 
     public static final String DOMAIN_REFRESH_ENABLED = "dpr.domainrefresh.enabled";
     public static final boolean DOMAIN_REFRESH_ENABLED_DEFAULT = true;
+    public static final String BATCH_LOAD_FILE_GLOB_PATTERN = "dpr.batch.load.fileglobpattern";
+    public static final String BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT = "LOAD*parquet";
 
     private final Map<String, String> config;
 
@@ -239,6 +241,9 @@ public class JobArguments {
         return getArgument(DOMAIN_REFRESH_ENABLED, DOMAIN_REFRESH_ENABLED_DEFAULT);
     }
 
+    public String getBatchLoadFileGlobPattern() {
+        return getArgument(BATCH_LOAD_FILE_GLOB_PATTERN, BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT);
+    }
 
     private String getArgument(String argumentName) {
         return Optional
