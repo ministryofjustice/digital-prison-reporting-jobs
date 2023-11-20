@@ -34,9 +34,11 @@ import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.
+ * This test is fairly slow to run so additional in depth test cases should be added elsewhere.
  * Differences to real app runs are:
  * * Using the same minimal test schema for all tables.
  * * Mocking some classes including JobArguments, SourceReferenceService, SourceReference.
@@ -45,6 +47,9 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
+    private final int pk1 = 1;
+    private final int pk2 = 2;
+    private final int pk3 = 3;
     @Mock
     private JobArguments arguments;
     @Mock
@@ -81,34 +86,34 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     @Test
     public void shouldRunTheJobEndToEndApplyingSomeCDCMessages() throws Throwable {
         List<Row> initialDataEveryTable = Arrays.asList(
-                RowFactory.create("1", "2023-11-13 10:00:00.000000", "I", "1a"),
-                RowFactory.create("2", "2023-11-13 10:00:00.000000", "I", "2a")
+                createRow(pk1, "2023-11-13 10:00:00.000000", "I", "1a"),
+                createRow(pk1, "2023-11-13 10:00:00.000000", "I", "2a")
         );
 
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);
 
         whenTheJobRuns();
 
-        thenEventuallyCuratedAndStructuredHaveDataForPK("1a", 1);
-        thenEventuallyCuratedAndStructuredHaveDataForPK("2a", 2);
+        thenEventuallyCuratedAndStructuredHaveDataForPK("1a", pk1);
+        thenEventuallyCuratedAndStructuredHaveDataForPK("2a", pk2);
 
-        whenUpdateOccursForTableAndPK(agencyInternalLocationsTable, 1, "1b", "2023-11-13 10:01:00.000000");
-        whenUpdateOccursForTableAndPK(agencyLocationsTable, 1, "1b", "2023-11-13 10:01:00.000000");
+        whenUpdateOccursForTableAndPK(agencyInternalLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
+        whenUpdateOccursForTableAndPK(agencyLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
 
-        whenDeleteOccursForTableAndPK(movementReasonsTable, 2, "2023-11-13 10:01:00.000000");
-        whenDeleteOccursForTableAndPK(offenderBookingsTable, 2, "2023-11-13 10:01:00.000000");
+        whenDeleteOccursForTableAndPK(movementReasonsTable, pk2, "2023-11-13 10:01:00.000000");
+        whenDeleteOccursForTableAndPK(offenderBookingsTable, pk2, "2023-11-13 10:01:00.000000");
 
-        whenInsertOccursForTableAndPK(offenderExternalMovementsTable, 3, "3a", "2023-11-13 10:01:00.000000");
-        whenInsertOccursForTableAndPK(offendersTable, 3, "3a", "2023-11-13 10:01:00.000000");
+        whenInsertOccursForTableAndPK(offenderExternalMovementsTable, pk3, "3a", "2023-11-13 10:01:00.000000");
+        whenInsertOccursForTableAndPK(offendersTable, pk3, "3a", "2023-11-13 10:01:00.000000");
 
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1b", 1));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1b", 1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1b", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1b", pk1));
 
-        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(movementReasonsTable, 2));
-        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(offenderBookingsTable, 2));
+        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(movementReasonsTable, pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(offenderBookingsTable, pk2));
 
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "3a", 3));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offendersTable, "3a", 3));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "3a", pk3));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offendersTable, "3a", pk3));
     }
 
     private void whenTheJobRuns() {

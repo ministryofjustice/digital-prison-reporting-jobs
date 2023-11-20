@@ -56,8 +56,6 @@ public class TableStreamingQuery {
         String queryName = format("Datahub CDC %s.%s", inputSchemaName, inputTableName);
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
-        // Run the actual logic to create and start the Spark structured streaming query,
-        // delegating processing of each batch
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
         Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, inputSchemaName, inputTableName);
         try {
