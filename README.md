@@ -54,7 +54,7 @@ ensuring that your job class has a main method that can be executed.
 
 ## Run app main methods locally
 
-Set the following CLI arguments, e.g. in your Intellij run configuration.
+Authenticate your AWS account and then set the following CLI arguments, e.g. in your Intellij run configuration.
 ```
 --checkpoint.location ./.checkpoints/
 --dpr.curated.s3.path s3a://dpr-dms-curated-zone-development/

@@ -181,6 +181,22 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
+    public void shouldSetCdcFileGlobPattern() {
+        HashMap<String, String> args = cloneTestArguments();
+        String expected = "*some-pattern";
+        args.put(JobArguments.CDC_FILE_GLOB_PATTERN, expected);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.getCdcFileGlobPattern());
+    }
+
+    @Test
+    public void shouldDefaultCdcFileGlobPattern() {
+        HashMap<String, String> args = cloneTestArguments();
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT, jobArguments.getCdcFileGlobPattern());
+    }
+
+    @Test
     public void shouldSetBatchLoadFileGlobPattern() {
         HashMap<String, String> args = cloneTestArguments();
         String expected = "some-pattern";
