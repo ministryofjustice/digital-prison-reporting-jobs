@@ -81,7 +81,7 @@ public class DataHubCdcJob implements Runnable {
     }
 
     /**
-     * The main entry point for starting a streaming application to process all micro-batches continuously for all tables.
+     * The main entry point for testing a streaming application to process all micro-batches continuously for all tables.
      */
     @VisibleForTesting
     List<TableStreamingQuery> runJob(SparkSession spark) {

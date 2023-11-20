@@ -17,8 +17,8 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
 import javax.inject.Singleton;
 
 import static org.apache.spark.sql.functions.col;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 
 /**
  * Responsible for processing batches of DMS records.

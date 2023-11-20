@@ -18,7 +18,7 @@ import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
 /**
- * Encapsulates logic for processing a stream of batches of CDC events for a single table.
+ * Encapsulates logic for processing a stream of micro-batches of CDC events for a single table.
  * You can test behaviour across multiple batches by testing against this class.
  */
 public class TableStreamingQuery {
@@ -61,7 +61,8 @@ public class TableStreamingQuery {
         String queryName = format("Datahub CDC %s.%s", inputSchemaName, inputTableName);
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
-        // Run the actual logic
+        // Run the actual logic to create and start the Spark structured streaming query,
+        // delegating processing of each batch
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
         Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, inputSchemaName, inputTableName);
         try {

@@ -15,8 +15,8 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import java.util.ArrayList;
 import java.util.List;
 
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 public class MinimalTestData {
     public static final String PRIMARY_KEY_COLUMN = "pk";
