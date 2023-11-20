@@ -20,6 +20,8 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
+import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -124,7 +126,9 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);
         ValidationService validationService = new ValidationService(violationService);
-        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(violationService, validationService, storageService);
+        CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
+        StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
+        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone);
         TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(arguments, s3DataProvider, batchProcessor, sourceReferenceService);
         underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }

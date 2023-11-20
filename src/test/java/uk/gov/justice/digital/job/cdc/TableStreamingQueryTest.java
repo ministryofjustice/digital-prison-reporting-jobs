@@ -101,9 +101,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
                         eq(sourceReference),
                         eq(spark),
                         argumentCaptor.capture(),
-                        any(),
-                        eq(structuredPath + "/my-schema/my-table"),
-                        eq(curatedPath + "/my-schema/my-table")
+                        any()
                 );
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(testData.size(), result.size());

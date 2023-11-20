@@ -21,6 +21,8 @@ import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
+import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
+import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -211,7 +213,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);
         ValidationService validationService = new ValidationService(violationService);
-        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(violationService, validationService, storageService);
+        CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
+        StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
+        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone);
         underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, inputSchemaName, inputTableName, sourceReference);
     }
 

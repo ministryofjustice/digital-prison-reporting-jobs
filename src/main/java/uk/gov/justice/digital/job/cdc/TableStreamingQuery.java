@@ -15,7 +15,6 @@ import java.util.concurrent.TimeoutException;
 
 import static java.lang.String.format;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
-import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
 /**
  * Encapsulates logic for processing a stream of micro-batches of CDC events for a single table.
@@ -53,11 +52,7 @@ public class TableStreamingQuery {
 
     public StreamingQuery runQuery(SparkSession spark) {
         logger.info("Initialising per batch processing for {}/{}", inputSchemaName, inputTableName);
-        // Set up various Strings we require
-        String destinationSource = sourceReference.getSource();
-        String destinationTable = sourceReference.getTable();
-        String structuredTablePath = tablePath(arguments.getStructuredS3Path(), destinationSource, destinationTable);
-        String curatedTablePath = tablePath(arguments.getCuratedS3Path(), destinationSource, destinationTable);
+
         String queryName = format("Datahub CDC %s.%s", inputSchemaName, inputTableName);
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
@@ -71,7 +66,7 @@ public class TableStreamingQuery {
                     .queryName(queryName)
                     .format("delta")
                     .foreachBatch((df, batchId) -> {
-                        batchProcessor.processBatch(sourceReference, spark, df, batchId, structuredTablePath, curatedTablePath);
+                        batchProcessor.processBatch(sourceReference, spark, df, batchId);
                     })
                     .outputMode("update")
                     .option("checkpointLocation", queryCheckpointPath)

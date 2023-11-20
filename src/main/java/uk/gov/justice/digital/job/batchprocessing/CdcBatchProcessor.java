@@ -13,15 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
-import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
+import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.row_number;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.CDC;
 
 /**
  * Encapsulates logic for processing a single micro-batch of CDC events for a single table.
@@ -30,37 +28,31 @@ import static uk.gov.justice.digital.service.ViolationService.ZoneName.CDC;
 @Singleton
 public class CdcBatchProcessor {
     private static final Logger logger = LoggerFactory.getLogger(CdcBatchProcessor.class);
-    private final ViolationService violationService;
     private final ValidationService validationService;
-    private final DataStorageService storage;
+    private final StructuredZoneCDCS3 structuredZone;
+    private final CuratedZoneCDCS3 curatedZone;
 
     @Inject
     public CdcBatchProcessor(
-            ViolationService violationService,
             ValidationService validationService,
-            DataStorageService storage) {
-        this.violationService = violationService;
+            StructuredZoneCDCS3 structuredZone,
+            CuratedZoneCDCS3 curatedZone) {
         this.validationService = validationService;
-        this.storage = storage;
+        this.structuredZone = structuredZone;
+        this.curatedZone = curatedZone;
     }
 
-    public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId, String structuredTablePath, String curatedTablePath) {
+    public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
         val batchStartTime = System.currentTimeMillis();
         String source = sourceReference.getSource();
         String table = sourceReference.getTable();
         logger.info("Processing batch {} for {}.{}", batchId, source, table);
-        val primaryKey = sourceReference.getPrimaryKey();
 
         val validRows = validationService.handleValidation(spark, df, sourceReference);
-        val latestCDCRecordsByPK = latestRecords(validRows, primaryKey);
-        try {
-            storage.mergeRecordsCdc(spark, structuredTablePath, latestCDCRecordsByPK, primaryKey);
-            storage.mergeRecordsCdc(spark, curatedTablePath, latestCDCRecordsByPK, primaryKey);
-            // Manifests are only required for the curated Zone
-            storage.updateDeltaManifestForTable(spark, curatedTablePath);
-        } catch (DataStorageRetriesExhaustedException e) {
-            violationService.handleRetriesExhaustedS3(spark, latestCDCRecordsByPK, source, table, e, CDC);
-        }
+        val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
+
+        structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
+        curatedZone.process(spark, latestCDCRecordsByPK, sourceReference);
         logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
     }
 
