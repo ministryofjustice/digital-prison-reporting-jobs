@@ -35,9 +35,8 @@ public class TableDiscoveryService {
 
     private static final Logger logger = LoggerFactory.getLogger(TableDiscoveryService.class);
 
-    // TODO: DPR2-217 Primitive types for now. Consider using domain class for discovered tables/paths?
     public List<ImmutablePair<String, String>> discoverTablesToProcess() {
-        // TODO: DPR2-217 Discover the tables from S3 or fix the broken SourceReferenceService.
+        // Tables are initially hardcoded but will be configurable/discovered as part of DPR2-217
         List<ImmutablePair<String, String>> tablesToProcess = new ArrayList<>();
         tablesToProcess.add(new ImmutablePair<>("OMS_OWNER", "AGENCY_INTERNAL_LOCATIONS"));
         tablesToProcess.add(new ImmutablePair<>("OMS_OWNER", "AGENCY_LOCATIONS"));

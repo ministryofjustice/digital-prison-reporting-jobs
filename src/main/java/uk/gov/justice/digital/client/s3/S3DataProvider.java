@@ -32,8 +32,7 @@ public class S3DataProvider {
     public Dataset<Row> getSourceData(SparkSession sparkSession, String schemaName, String tableName) {
         String tablePath = tablePath(arguments.getRawS3Path(), schemaName, tableName);
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getBatchLoadFileGlobPattern();
-        // Infer schema
-        // FIXME If there is no data for a table then the job will fail because Spark will be unable to infer schema
+        // Infer schema. Note: If there is no data for a table then the job will fail because Spark will be unable to infer schema
         StructType schema = sparkSession.read().parquet(tablePath).schema();
         logger.info("Schema for {}.{}: \n{}", schemaName, tableName, schema.treeString());
         logger.info("Initialising S3 data source for {}.{} with file glob path {}", schemaName, tableName, fileGlobPath);

@@ -88,7 +88,6 @@ public class ViolationService {
         }
     }
 
-    // TODO: rename once old code is removed
     public void handleRetriesExhaustedS3(
             SparkSession spark,
             Dataset<Row> dataFrame,
