@@ -69,27 +69,6 @@ public class DMS_3_4_7 implements Converter<Dataset<Row>, Dataset<Row>> {
 
         public static final Object[] cdcOperations = { Insert.getName(), Update.getName(), Delete.getName() };
     }
-
-    public enum ShortOperationCode {
-        Insert("I"),
-        Update("U"),
-        Delete("D");
-
-        private final String name;
-
-        ShortOperationCode(String name) { this.name = name; }
-
-        public String getName() {
-            return name;
-        }
-
-        public static Optional<ShortOperationCode> getOperation(String operation) {
-            return Arrays.stream(values()).filter(it -> it.name().equalsIgnoreCase(operation)).findAny();
-        }
-
-        public static final Object[] cdcShortOperationCodes = { Insert.getName(), Update.getName(), Delete.getName() };
-    }
-
     public static final StructType RECORD_SCHEMA =
             new StructType()
                     .add(DATA, StringType, IS_NULLABLE) // Data varies per table, so we leave parsing to the StructuredZone.

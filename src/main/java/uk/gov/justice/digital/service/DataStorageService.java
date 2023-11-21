@@ -17,8 +17,8 @@ import org.apache.spark.sql.delta.DeltaConcurrentModificationException;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -38,10 +38,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Delete;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Insert;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ShortOperationCode.Update;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 
 @Singleton
 public class DataStorageService {
@@ -472,7 +472,7 @@ public class DataStorageService {
                 .collect(Collectors.toMap(column -> SOURCE + "." + column, column -> TARGET + "." + column));
     }
 
-    private String createMatchExpression(DMS_3_4_7.ShortOperationCode operation) {
+    private String createMatchExpression(CommonDataFields.ShortOperationCode operation) {
         return String.format("%s.%s=='%s'", TARGET, OPERATION, operation.getName());
     }
 

@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job.batchprocessing;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
 class S3BatchProcessorTest extends BaseSparkTest {
@@ -37,13 +41,13 @@ class S3BatchProcessorTest extends BaseSparkTest {
     private static final String table = "table";
     private static final String source = "source";
     private static final List<Row> inputRows = Arrays.asList(
-            RowFactory.create("1", "2023-11-13 10:00:00.000000", "I", "1"),
-            RowFactory.create("2", "2023-11-13 10:00:00.000000", "I", "2"),
-            RowFactory.create("3", "2023-11-13 10:00:00.000000", "I", "3")
+            createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
+            createRow(2, "2023-11-13 10:00:00.000000", Insert, "2"),
+            createRow(3, "2023-11-13 10:00:00.000000", Insert, "3")
     );
     private static final List<Row> validatedRows = Arrays.asList(
-            RowFactory.create("1", "2023-11-13 10:00:00.000000", "I", "1"),
-            RowFactory.create("2", "2023-11-13 10:00:00.000000", "I", "2")
+            createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
+            createRow(2, "2023-11-13 10:00:00.000000", Insert, "2")
     );
 
     private static Dataset<Row> inputDf;
@@ -110,8 +114,8 @@ class S3BatchProcessorTest extends BaseSparkTest {
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         Dataset<Row> mixedOperations = validatedDf
-                .unionAll(validatedDf.withColumn("Op", lit("U")))
-                .unionAll(validatedDf.withColumn("Op", lit("D")));
+                .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
+                .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));
 
         when(validationService.handleValidation(any(), any(), eq(sourceReference))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
