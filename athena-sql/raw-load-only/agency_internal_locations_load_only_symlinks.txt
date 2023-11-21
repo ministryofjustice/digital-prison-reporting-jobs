@@ -1,1 +1,1 @@
-s3://dpr-dms-raw-zone-development/OMS_OWNER/AGENCY_INTERNAL_LOCATIONS/LOAD*.parquet
+s3://dpr-raw-zone-test/nomis/agency_internal_locations/LOAD*.parquet

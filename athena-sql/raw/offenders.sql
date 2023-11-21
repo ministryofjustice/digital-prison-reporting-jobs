@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE `dms_raw`.`oms_owner_offenders`
+CREATE EXTERNAL TABLE `raw`.`nomis_offenders`
 (
     `Op`                            string COMMENT '',
     `_timestamp`                    string COMMENT '',
@@ -57,6 +57,6 @@ CREATE EXTERNAL TABLE `dms_raw`.`oms_owner_offenders`
         OUTPUTFORMAT
             'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
     LOCATION
-        's3://dpr-dms-raw-zone-development/OMS_OWNER/OFFENDERS/'
+        's3://dpr-raw-zone-test/nomis/offenders/'
     TBLPROPERTIES (
         'classification' = 'parquet')

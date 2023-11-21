@@ -1,1 +1,1 @@
-s3://dpr-dms-raw-zone-development/OMS_OWNER/OFFENDERS/LOAD*.parquet
+s3://dpr-raw-zone-test/nomis/offenders/LOAD*.parquet

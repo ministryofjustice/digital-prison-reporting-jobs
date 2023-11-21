@@ -1,1 +1,1 @@
-s3://dpr-dms-raw-zone-development/OMS_OWNER/MOVEMENT_REASONS/LOAD*.parquet
+s3://dpr-raw-zone-test/nomis/movement_reasons/LOAD*.parquet

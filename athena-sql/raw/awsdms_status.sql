@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE `dms_raw`.`awsdms_status`
+CREATE EXTERNAL TABLE `raw`.`awsdms_status`
 (
     `Op`                       string COMMENT '',
     `_timestamp`               string COMMENT '',
@@ -22,6 +22,6 @@ CREATE EXTERNAL TABLE `dms_raw`.`awsdms_status`
         OUTPUTFORMAT
             'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
     LOCATION
-        's3://dpr-dms-raw-zone-development/awsdms_status/'
+        's3://dpr-raw-zone-test/awsdms_status/'
     TBLPROPERTIES (
         'classification' = 'parquet')

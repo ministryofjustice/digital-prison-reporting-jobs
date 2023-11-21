@@ -1,4 +1,4 @@
-CREATE EXTERNAL TABLE `dms_raw`.`oms_owner_agency_locations_load_only`
+CREATE EXTERNAL TABLE `raw`.`nomis_agency_locations_load_only`
 (
     `Op`                            string COMMENT '',
     `_timestamp`                    string COMMENT '',
@@ -56,6 +56,6 @@ CREATE EXTERNAL TABLE `dms_raw`.`oms_owner_agency_locations_load_only`
         OUTPUTFORMAT
             'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
-        's3://dpr-dms-raw-zone-development/OMS_OWNER/AGENCY_LOCATIONS/_symlink_format_load_only_manifest'
+        's3://dpr-raw-zone-test/nomis/agency_locations/_symlink_format_load_only_manifest'
     TBLPROPERTIES (
         'classification' = 'parquet')
