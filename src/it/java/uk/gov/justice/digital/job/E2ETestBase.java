@@ -25,13 +25,13 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 public class E2ETestBase extends BaseSparkTest {
 
-    protected static final String inputSchemaName = "OMS_OWNER";
-    protected static final String agencyInternalLocationsTable = "AGENCY_INTERNAL_LOCATIONS";
-    protected static final String agencyLocationsTable = "AGENCY_LOCATIONS";
-    protected static final String movementReasonsTable = "MOVEMENT_REASONS";
-    protected static final String offenderBookingsTable = "OFFENDER_BOOKINGS";
-    protected static final String offenderExternalMovementsTable = "OFFENDER_EXTERNAL_MOVEMENTS";
-    protected static final String offendersTable = "OFFENDERS";
+    protected static final String inputSchemaName = "nomis";
+    protected static final String agencyInternalLocationsTable = "agency_internal_locations";
+    protected static final String agencyLocationsTable = "agency_locations";
+    protected static final String movementReasonsTable = "movement_reasons";
+    protected static final String offenderBookingsTable = "offender_bookings";
+    protected static final String offenderExternalMovementsTable = "offender_external_movements";
+    protected static final String offendersTable = "offenders";
 
     @TempDir
     protected Path testRoot;
