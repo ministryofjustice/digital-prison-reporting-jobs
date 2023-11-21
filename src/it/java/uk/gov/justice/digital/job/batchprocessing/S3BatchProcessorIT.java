@@ -22,6 +22,9 @@ import java.util.Arrays;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
@@ -47,10 +50,10 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldWriteInsertsToStructuredAndCurated() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
-                createRow(pk1, "2023-11-13 10:50:00.123456", "I", "data1"),
-                createRow(pk2, "2023-11-13 10:50:00.123456", "I", "data2"),
-                createRow(pk3, "2023-11-13 10:50:00.123456", "U", "data3"),
-                createRow(pk4, "2023-11-13 10:50:00.123456", "D", "data4")
+                createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
+                createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2"),
+                createRow(pk3, "2023-11-13 10:50:00.123456", Update, "data3"),
+                createRow(pk4, "2023-11-13 10:50:00.123456", Delete, "data4")
         ), TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
 
         underTest.processBatch(spark, inputSchemaName, inputTableName, input);
@@ -65,9 +68,9 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldWriteNullsToViolationsForNonNullableColumns() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
-                createRow(pk1, "2023-11-13 10:50:00.123456", "I", "data1"),
-                createRow(pk2, null, "I", "data2"),
-                createRow(pk3, "2023-11-13 10:50:00.123456", "I", "data3")
+                createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
+                createRow(pk2, null, Insert, "data2"),
+                createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA);
         underTest.processBatch(spark, inputSchemaName, inputTableName, input);
 

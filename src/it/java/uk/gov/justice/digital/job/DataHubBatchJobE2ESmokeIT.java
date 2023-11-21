@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.
@@ -57,8 +58,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     @Test
     public void shouldRunTheJobEndToEndApplyingSomeCDCMessages() throws IOException {
         List<Row> initialDataEveryTable = Arrays.asList(
-                RowFactory.create("1", "2023-11-13 10:00:00.000000", "I", "1"),
-                RowFactory.create("2", "2023-11-13 10:00:00.000000", "I", "2")
+                createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
+                createRow(2, "2023-11-13 10:00:00.000000", Insert, "2")
         );
 
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);

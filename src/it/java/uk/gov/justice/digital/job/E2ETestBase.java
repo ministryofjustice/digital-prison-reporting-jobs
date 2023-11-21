@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SaveMode;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
@@ -14,17 +13,15 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 public class E2ETestBase extends BaseSparkTest {
 
@@ -85,21 +82,21 @@ public class E2ETestBase extends BaseSparkTest {
 
     protected void whenInsertOccursForTableAndPK(String table, int primaryKey, String data, String timestamp) {
         List<Row> input = Collections.singletonList(
-                RowFactory.create(Integer.toString(primaryKey), timestamp, "I", data)
+                createRow(primaryKey, timestamp, Insert, data)
         );
         whenDataIsAddedToRawForTable(table, input);
     }
 
     protected void whenUpdateOccursForTableAndPK(String table, int primaryKey, String data, String timestamp) {
         List<Row> input = Collections.singletonList(
-                RowFactory.create(Integer.toString(primaryKey), timestamp, "U", data)
+                createRow(primaryKey, timestamp, Update, data)
         );
         whenDataIsAddedToRawForTable(table, input);
     }
 
     protected void whenDeleteOccursForTableAndPK(String table, int primaryKey, String timestamp) {
         List<Row> input = Collections.singletonList(
-                RowFactory.create(Integer.toString(primaryKey), timestamp, "D", null)
+                createRow(primaryKey, timestamp, Delete, null)
         );
         whenDataIsAddedToRawForTable(table, input);
     }

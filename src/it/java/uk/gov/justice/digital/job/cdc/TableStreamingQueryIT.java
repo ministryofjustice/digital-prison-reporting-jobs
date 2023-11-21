@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job.cdc;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.execution.streaming.MemoryStream;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.junit.jupiter.api.AfterEach;
@@ -31,8 +30,12 @@ import java.util.concurrent.TimeoutException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
@@ -240,21 +243,21 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     private void whenInsertOccursForPK(int primaryKey, String data, String timestamp) {
         List<Row> input = Collections.singletonList(
-                RowFactory.create(Integer.toString(primaryKey), timestamp, "I", data)
+                createRow(primaryKey, timestamp, Insert, data)
         );
         whenDataIsAddedToTheInputStream(input);
     }
 
     private void whenUpdateOccursForPK(int primaryKey, String data, String timestamp) {
         List<Row> input = Collections.singletonList(
-                RowFactory.create(Integer.toString(primaryKey), timestamp, "U", data)
+                createRow(primaryKey, timestamp, Update, data)
         );
         whenDataIsAddedToTheInputStream(input);
     }
 
     private void whenDeleteOccursForPK(int primaryKey, String timestamp) {
         List<Row> input = Collections.singletonList(
-                RowFactory.create(Integer.toString(primaryKey), timestamp, "D", null)
+                createRow(primaryKey, timestamp, Delete, null)
         );
         whenDataIsAddedToTheInputStream(input);
     }

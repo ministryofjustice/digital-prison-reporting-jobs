@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +33,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 /**
@@ -86,8 +86,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     @Test
     public void shouldRunTheJobEndToEndApplyingSomeCDCMessages() throws Throwable {
         List<Row> initialDataEveryTable = Arrays.asList(
-                createRow(pk1, "2023-11-13 10:00:00.000000", "I", "1a"),
-                createRow(pk2, "2023-11-13 10:00:00.000000", "I", "2a")
+                createRow(pk1, "2023-11-13 10:00:00.000000", Insert, "1a"),
+                createRow(pk2, "2023-11-13 10:00:00.000000", Insert, "2a")
         );
 
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);
