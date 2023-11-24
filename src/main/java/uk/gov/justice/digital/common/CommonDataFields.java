@@ -1,5 +1,8 @@
 package uk.gov.justice.digital.common;
 
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructType;
+
 public class CommonDataFields {
 
     // The operation column added by DMS. See ShortOperationCode below.
@@ -27,4 +30,10 @@ public class CommonDataFields {
     }
 
     private CommonDataFields() {}
+
+    public static StructType withMetadataFields(StructType schema) {
+        return schema
+                .add(DataTypes.createStructField(OPERATION, DataTypes.StringType, false))
+                .add(DataTypes.createStructField(TIMESTAMP, DataTypes.StringType, false));
+    }
 }

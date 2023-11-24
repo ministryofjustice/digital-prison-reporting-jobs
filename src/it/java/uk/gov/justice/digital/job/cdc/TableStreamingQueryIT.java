@@ -216,14 +216,14 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
         StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone);
-        underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, inputSchemaName, inputTableName, sourceReference);
+        underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
     }
 
     private void givenAnInputStream() {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
-        when(dataProvider.getSourceData(any(), eq(inputSchemaName), eq(inputTableName))).thenReturn(streamingDataframe);
+        when(dataProvider.getSourceData(any(), eq(sourceReference))).thenReturn(streamingDataframe);
     }
 
     private void givenASourceReference() {

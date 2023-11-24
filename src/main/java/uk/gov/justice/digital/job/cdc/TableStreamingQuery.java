@@ -27,8 +27,6 @@ public class TableStreamingQuery {
     private final JobArguments arguments;
     private final S3DataProvider s3DataProvider;
     private final CdcBatchProcessor batchProcessor;
-    private final String inputSchemaName;
-    private final String inputTableName;
     private final SourceReference sourceReference;
 
     private StreamingQuery query;
@@ -37,27 +35,24 @@ public class TableStreamingQuery {
             JobArguments arguments,
             S3DataProvider dataProvider,
             CdcBatchProcessor batchProcessor,
-            String inputSchemaName,
-            String inputTableName,
             SourceReference sourceReference
     ) {
         this.arguments = arguments;
         this.s3DataProvider = dataProvider;
         this.batchProcessor = batchProcessor;
-        this.inputSchemaName = inputSchemaName;
-        this.inputTableName = inputTableName;
         this.sourceReference = sourceReference;
     }
 
 
     public StreamingQuery runQuery(SparkSession spark) {
-        logger.info("Initialising per batch processing for {}/{}", inputSchemaName, inputTableName);
 
-        String queryName = format("Datahub CDC %s.%s", inputSchemaName, inputTableName);
+        logger.info("Initialising per batch processing for {}/{}", sourceReference.getSource(), sourceReference.getTable());
+
+        String queryName = format("Datahub CDC %s.%s", sourceReference.getSource(), sourceReference.getTable());
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
-        Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, inputSchemaName, inputTableName);
+        Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, sourceReference);
         try {
             query = sourceDf
                     .writeStream()
