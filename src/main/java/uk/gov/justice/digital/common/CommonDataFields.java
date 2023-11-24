@@ -31,6 +31,7 @@ public class CommonDataFields {
 
     private CommonDataFields() {}
 
+    // TODO: unit test
     public static StructType withMetadataFields(StructType schema) {
         return schema
                 .add(DataTypes.createStructField(OPERATION, DataTypes.StringType, false))
