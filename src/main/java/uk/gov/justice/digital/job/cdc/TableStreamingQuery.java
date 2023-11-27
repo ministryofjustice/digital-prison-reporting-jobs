@@ -52,7 +52,7 @@ public class TableStreamingQuery {
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
-        Dataset<Row> sourceDf = s3DataProvider.getSourceData(spark, sourceReference);
+        Dataset<Row> sourceDf = s3DataProvider.getSourceDataStreaming(spark, sourceReference);
         try {
             query = sourceDf
                     .writeStream()

@@ -12,7 +12,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
@@ -58,8 +57,6 @@ class S3BatchProcessorTest extends BaseSparkTest {
     @Mock
     private CuratedZoneLoadS3 curatedZoneLoad;
     @Mock
-    private SourceReferenceService sourceReferenceService;
-    @Mock
     private SourceReference sourceReference;
     @Mock
     private ValidationService validationService;
@@ -74,8 +71,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new S3BatchProcessor(structuredZoneLoad, curatedZoneLoad, sourceReferenceService, validationService);
-        when(sourceReferenceService.getSourceReferenceOrThrow(source, table)).thenReturn(sourceReference);
+        underTest = new S3BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
     }
 
     @Test
@@ -85,7 +81,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
         when(validationService.handleValidation(any(), any(), eq(sourceReference))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
-        underTest.processBatch(spark, source, table, inputDf);
+        underTest.processBatch(spark, sourceReference, inputDf);
 
         verify(structuredZoneLoad, times(1)).process(any(), argumentCaptor.capture(), eq(sourceReference));
         List<Row> result = argumentCaptor.getValue().collectAsList();
@@ -101,7 +97,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
         when(validationService.handleValidation(any(), any(), eq(sourceReference))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
-        underTest.processBatch(spark, source, table, inputDf);
+        underTest.processBatch(spark, sourceReference, inputDf);
 
         verify(curatedZoneLoad, times(1)).process(any(), argumentCaptor.capture(), eq(sourceReference));
         List<Row> result = argumentCaptor.getValue().collectAsList();
@@ -121,7 +117,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
 
-        underTest.processBatch(spark, source, table, mixedOperations);
+        underTest.processBatch(spark, sourceReference, mixedOperations);
 
         verify(validationService, times(1)).handleValidation(any(), argumentCaptor.capture(), eq(sourceReference));
         List<Row> result = argumentCaptor.getValue().collectAsList();

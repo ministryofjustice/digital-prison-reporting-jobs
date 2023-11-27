@@ -223,7 +223,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
-        when(dataProvider.getSourceData(any(), eq(sourceReference))).thenReturn(streamingDataframe);
+        when(dataProvider.getSourceDataStreaming(any(), eq(sourceReference))).thenReturn(streamingDataframe);
     }
 
     private void givenASourceReference() {

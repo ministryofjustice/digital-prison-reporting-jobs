@@ -2,14 +2,18 @@ package uk.gov.justice.digital.client.s3;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
+
+import java.util.List;
 
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
@@ -31,7 +35,7 @@ public class S3DataProvider {
         this.arguments = arguments;
     }
 
-    public Dataset<Row> getSourceData(SparkSession sparkSession, SourceReference sourceReference) {
+    public Dataset<Row> getSourceDataStreaming(SparkSession sparkSession, SourceReference sourceReference) {
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
@@ -44,5 +48,15 @@ public class S3DataProvider {
                 .readStream()
                 .schema(schema)
                 .parquet(fileGlobPath);
+    }
+
+    public Dataset<Row> getSourceDataBatch(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) {
+        StructType schema = withMetadataFields(sourceReference.getSchema());
+        val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
+        logger.info("Schema for {}.{}: \n{}", sourceReference.getSource(), sourceReference.getTable(), schema.treeString());
+        return sparkSession
+                .read()
+                .schema(schema)
+                .parquet(scalaFilePaths);
     }
 }

@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -10,11 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import scala.collection.Seq;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 
 @ExtendWith(MockitoExtension.class)
 class DataHubBatchJobTest {
@@ -57,9 +58,15 @@ class DataHubBatchJobTest {
     @Mock
     private S3BatchProcessor batchProcessor;
     @Mock
-    private SparkSession spark;
+    private S3DataProvider dataProvider;
     @Mock
-    private DataFrameReader dataFrameReader;
+    private SourceReferenceService sourceReferenceService;
+    @Mock
+    private SourceReference sourceReference1;
+    @Mock
+    private SourceReference sourceReference2;
+    @Mock
+    private SparkSession spark;
     @Mock
     private Dataset<Row> dataFrame;
 
@@ -68,20 +75,23 @@ class DataHubBatchJobTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor);
+        underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor, dataProvider, sourceReferenceService);
     }
 
     @Test
     public void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() throws IOException {
         stubRawPath();
-        stubDataframeRead();
+        stubReadData();
         stubDiscoveredTablePaths();
+        stubSourceReference();
 
         underTest.runJob(spark);
 
-        verify(batchProcessor, times(1)).processBatch(any(), eq("s1"), eq("t1"), any());
-        verify(batchProcessor, times(1)).processBatch(any(), eq("s2"), eq("t2"), any());
-        verify(batchProcessor, times(0)).processBatch(any(), eq("s3"), eq("t3"), any());
+        // Should process table 1 and table 2...
+        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
+        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
+        // and no other tables...
+        verify(batchProcessor, times(2)).processBatch(any(), any(), any());
     }
 
     @Test
@@ -103,10 +113,14 @@ class DataHubBatchJobTest {
         when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(Collections.emptyMap());
     }
 
-    private void stubDataframeRead() {
-        when(spark.read()).thenReturn(dataFrameReader);
-        when(dataFrameReader.parquet(any(Seq.class))).thenReturn(dataFrame);
-        when(dataFrame.schema()).thenReturn(TEST_DATA_SCHEMA);
+    private void stubReadData() {
+        when(dataProvider.getSourceDataBatch(any(), any(), any())).thenReturn(dataFrame);
+        when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+    }
+
+    private void stubSourceReference() {
+        when(sourceReferenceService.getSourceReferenceOrThrow(eq("s1"), eq("t1"))).thenReturn(sourceReference1);
+        when(sourceReferenceService.getSourceReferenceOrThrow(eq("s2"), eq("t2"))).thenReturn(sourceReference2);
     }
 
 }
