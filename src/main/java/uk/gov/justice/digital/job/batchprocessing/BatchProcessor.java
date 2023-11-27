@@ -7,9 +7,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.Converter;
-import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
@@ -38,20 +36,16 @@ public class BatchProcessor {
     private final StructuredZoneCDC structuredZoneCDC;
     private final CuratedZoneLoad curatedZoneLoad;
     private final CuratedZoneCDC curatedZoneCDC;
-    private final DomainService domainService;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
 
-    private final boolean domainRefreshEnabled;
     @Inject
     public BatchProcessor(
-            JobArguments jobArguments,
             RawZone rawZone,
             StructuredZoneLoad structuredZoneLoad,
             StructuredZoneCDC structuredZoneCDC,
             CuratedZoneLoad curatedZoneLoad,
             CuratedZoneCDC curatedZoneCDC,
-            DomainService domainService,
             SourceReferenceService sourceReferenceService,
             ViolationService violationService
     ) {
@@ -61,11 +55,8 @@ public class BatchProcessor {
         this.structuredZoneCDC = structuredZoneCDC;
         this.curatedZoneLoad = curatedZoneLoad;
         this.curatedZoneCDC = curatedZoneCDC;
-        this.domainService = domainService;
         this.sourceReferenceService = sourceReferenceService;
         this.violationService = violationService;
-        this.domainRefreshEnabled = jobArguments.isDomainRefreshEnabled();
-        logger.info("Domain Refresh enabled: " + this.domainRefreshEnabled);
         logger.info("BatchProcessorProvider initialization complete");
     }
 
@@ -99,15 +90,7 @@ public class BatchProcessor {
                         dataFrameForTable.unpersist();
 
                         curatedZoneLoad.process(spark, structuredLoadDataFrame, sourceReference);
-                        val curatedCdcDataFrame = curatedZoneCDC.process(spark, structuredIncrementalDataFrame, sourceReference);
-
-                        if (domainRefreshEnabled && !curatedCdcDataFrame.isEmpty()) domainService
-                                .refreshDomainUsingDataFrame(
-                                        spark,
-                                        curatedCdcDataFrame,
-                                        sourceReference.getSource(),
-                                        sourceReference.getTable()
-                                );
+                        curatedZoneCDC.process(spark, structuredIncrementalDataFrame, sourceReference);
                     } else {
                         violationService.handleNoSchemaFound(spark, dataFrame, sourceName, tableName);
                     }

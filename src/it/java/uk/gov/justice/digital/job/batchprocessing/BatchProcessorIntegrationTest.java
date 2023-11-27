@@ -16,11 +16,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.converter.dms.DMS_3_4_7;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.service.DomainService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
@@ -54,13 +52,9 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
     @Mock
     private CuratedZoneCDC curatedZoneCDC;
     @Mock
-    private DomainService domainService;
-    @Mock
     private SourceReferenceService sourceReferenceService;
     @Mock
     private ViolationService violationService;
-    @Mock
-    private JobArguments jobArguments;
 
     private DMS_3_4_7 converter;
 
@@ -82,15 +76,12 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
 
     @Test
     public void shouldProcessABatchContainingALoadRecord() throws Exception {
-        givenDomainRefreshEnabledSetTo(true);
         BatchProcessor undertest = new BatchProcessor(
-                jobArguments,
                 rawZone,
                 structuredZoneLoad,
                 structuredZoneCDC,
                 curatedZoneLoad,
                 curatedZoneCDC,
-                domainService,
                 sourceReferenceService,
                 violationService
         );
@@ -112,20 +103,16 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
         shouldProcessStructuredZoneCDC(expectedZoneIterations);
         shouldProcessCuratedZoneLoad(expectedZoneIterations);
         shouldProcessCuratedZoneCDC(expectedZoneIterations);
-        shouldNotCallRefreshDomain();
     }
 
     @Test
     public void shouldProcessABatchContainingMixedData() throws Exception {
-        givenDomainRefreshEnabledSetTo(true);
         BatchProcessor undertest = new BatchProcessor(
-                jobArguments,
                 rawZone,
                 structuredZoneLoad,
                 structuredZoneCDC,
                 curatedZoneLoad,
                 curatedZoneCDC,
-                domainService,
                 sourceReferenceService,
                 violationService
         );
@@ -154,62 +141,8 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
         shouldProcessStructuredZoneCDC(expectedZoneIterations);
         shouldProcessCuratedZoneLoad(expectedZoneIterations);
         shouldProcessCuratedZoneCDC(expectedZoneIterations);
-        shouldCallRefreshDomain(expectedZoneIterations);
 
         shouldAppendViolations(expectedViolations);
-    }
-
-    @Test
-    public void shouldRefreshDomainWhenEnabled() throws Exception {
-        givenDomainRefreshEnabledSetTo(true);
-        BatchProcessor undertest = new BatchProcessor(
-                jobArguments,
-                rawZone,
-                structuredZoneLoad,
-                structuredZoneCDC,
-                curatedZoneLoad,
-                curatedZoneCDC,
-                domainService,
-                sourceReferenceService,
-                violationService
-        );
-        givenSourceReferenceIsPresent("oms_owner", "agency_internal_locations");
-
-        Dataset<Row> df = populatedDataFrame();
-
-        givenStructuredZoneLoadReturns(df);
-        givenStructuredZoneCDCReturns(df);
-        givenCuratedZoneCDCReturns(df);
-
-        undertest.processBatch(spark, converter, cdcRecordDf);
-
-        shouldCallRefreshDomain(1);
-    }
-    @Test
-    public void shouldNotRefreshDomainWhenDisabled() throws Exception {
-        givenDomainRefreshEnabledSetTo(false);
-        BatchProcessor undertest = new BatchProcessor(
-                jobArguments,
-                rawZone,
-                structuredZoneLoad,
-                structuredZoneCDC,
-                curatedZoneLoad,
-                curatedZoneCDC,
-                domainService,
-                sourceReferenceService,
-                violationService
-        );
-        givenSourceReferenceIsPresent("oms_owner", "agency_internal_locations");
-
-        Dataset<Row> df = populatedDataFrame();
-
-        givenStructuredZoneLoadReturns(df);
-        givenStructuredZoneCDCReturns(df);
-        givenCuratedZoneCDCReturns(df);
-
-        undertest.processBatch(spark, converter, cdcRecordDf);
-
-        shouldNotCallRefreshDomain();
     }
 
     private void givenSourceReferenceIsPresent(String source, String table) {
@@ -238,10 +171,6 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
         when(curatedZoneCDC.process(eq(spark), any(), any())).thenReturn(df);
     }
 
-    private void givenDomainRefreshEnabledSetTo(boolean flag) {
-        when(jobArguments.isDomainRefreshEnabled()).thenReturn(flag);
-    }
-
     private void shouldProcessRawZone(int numTimes) throws DataStorageException {
         verify(rawZone, times(numTimes)).process(eq(spark), any(), any());
     }
@@ -264,14 +193,6 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
 
     private void shouldAppendViolations(int numTimes) throws DataStorageException {
         verify(violationService, times(numTimes)).handleNoSchemaFound(eq(spark), any(), anyString(), any());
-    }
-
-    private void shouldCallRefreshDomain(int numTimes) {
-        verify(domainService, times(numTimes)).refreshDomainUsingDataFrame(eq(spark), any(), anyString(), anyString());
-    }
-
-    private void shouldNotCallRefreshDomain() {
-        verify(domainService, times(0)).refreshDomainUsingDataFrame(any(), any(), anyString(), anyString());
     }
 
     private Dataset<Row> populatedDataFrame() {

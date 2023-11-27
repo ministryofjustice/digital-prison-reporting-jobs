@@ -54,8 +54,6 @@ public class JobArguments {
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
-    public static final String REDSHIFT_SECRETS_NAME = "dpr.redshift.secrets.name";
-    public static final String DATA_MART_DB_NAME = "dpr.datamart.db.name";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
     public static final String MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH = "dpr.maintenance.listtable.recurseMaxDepth";
     // The Domain layer only has a depth of 2, with tables nested under domains
@@ -77,8 +75,6 @@ public class JobArguments {
     public static final String DATA_STORAGE_RETRY_JITTER_FACTOR = "dpr.datastorage.retry.jitterFactor";
     public static final double DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT = 0.25;
 
-    public static final String DOMAIN_REFRESH_ENABLED = "dpr.domainrefresh.enabled";
-    public static final boolean DOMAIN_REFRESH_ENABLED_DEFAULT = true;
     public static final String CDC_FILE_GLOB_PATTERN = "dpr.cdc.fileglobpattern";
     // You might set this to '*-*.parquet' to only process CDC files or '*.parquet' to process load and CDC files
     public static final String CDC_FILE_GLOB_PATTERN_DEFAULT = "*-*.parquet";
@@ -205,10 +201,6 @@ public class JobArguments {
         return getArgument(CONTRACT_REGISTRY_NAME);
     }
 
-    public String getRedshiftSecretsName() { return getArgument(REDSHIFT_SECRETS_NAME); }
-
-    public String getDataMartDbName() { return getArgument(DATA_MART_DB_NAME); }
-
     public String getMaintenanceTablesRootPath() {
         return getArgument(MAINTENANCE_TABLES_ROOT_PATH);
     }
@@ -239,10 +231,6 @@ public class JobArguments {
 
     public double getDataStorageRetryJitterFactor() {
         return getArgument(DATA_STORAGE_RETRY_JITTER_FACTOR, DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
-    }
-
-    public boolean isDomainRefreshEnabled() {
-        return getArgument(DOMAIN_REFRESH_ENABLED, DOMAIN_REFRESH_ENABLED_DEFAULT);
     }
 
     public String getCdcFileGlobPattern() {
@@ -283,13 +271,6 @@ public class JobArguments {
         return Optional
                 .ofNullable(config.get(argumentName))
                 .map(Double::parseDouble)
-                .orElse(defaultValue);
-    }
-
-    private boolean getArgument(String argumentName, boolean defaultValue) {
-        return Optional
-                .ofNullable(config.get(argumentName))
-                .map(Boolean::parseBoolean)
                 .orElse(defaultValue);
     }
 

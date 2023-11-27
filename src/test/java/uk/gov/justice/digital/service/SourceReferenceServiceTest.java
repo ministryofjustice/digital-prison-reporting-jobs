@@ -11,14 +11,16 @@ import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.*;
 import static uk.gov.justice.digital.test.ResourceLoader.getResource;
+import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
 public class SourceReferenceServiceTest {
@@ -164,5 +166,38 @@ public class SourceReferenceServiceTest {
         pk = new SourceReference.PrimaryKey(Arrays.asList("key1", "key2"));
         assertEquals("source.key1 = target.key1 and source.key2 = target.key2", pk.getSparkCondition("source", "target"));
 
+    }
+
+    @Test
+    public void shouldReturnAListOfAllSourceReferences() {
+        List<GlueSchemaResponse> expectedSchemas = new ArrayList<>();
+
+        IntStream.range(0, 3).forEach(index -> {
+                    String schemaId = String.valueOf(index);
+                    String avroString = getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT);
+                    val schemaResponse = new GlueSchemaResponse(schemaId, avroString);
+                    expectedSchemas.add(schemaResponse);
+                }
+        );
+
+        when(client.getAllSchemas()).thenReturn(expectedSchemas);
+
+        List<SourceReference> result = underTest.getAllSourceReferences();
+
+        List<String> actualIds = result
+                .stream()
+                .map(SourceReference::getKey)
+                .collect(Collectors.toList());
+
+        List<String> expectedIds = expectedSchemas.stream().map(GlueSchemaResponse::getId).collect(Collectors.toList());
+
+        assertThat(actualIds, containsTheSameElementsInOrderAs(expectedIds));
+    }
+
+    @Test
+    public void shouldReturnAnEmptyListWhenNoSchemaIsFound() {
+        when(client.getAllSchemas()).thenReturn(Collections.emptyList());
+
+        assertThat((Collection<SourceReference>) underTest.getAllSourceReferences(), is(empty()));
     }
 }

@@ -9,6 +9,9 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
+import org.jetbrains.annotations.NotNull;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import uk.gov.justice.digital.domain.model.TableIdentifier;
@@ -18,6 +21,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.hamcrest.Matchers.contains;
 
 public class SparkTestHelpers {
 
@@ -98,6 +104,11 @@ public class SparkTestHelpers {
 
     public static <T> Seq<T> convertListToSeq(List<T> inputList) {
         return JavaConverters.asScalaIteratorConverter(inputList.iterator()).asScala().toSeq();
+    }
+
+    @NotNull
+    public static <T> Matcher<Iterable<? extends T>> containsTheSameElementsInOrderAs(List<T> expectedItems) {
+        return contains(expectedItems.stream().map(Matchers::equalTo).collect(Collectors.toList()));
     }
 
     private Dataset<Row> loadParquetDataframe(final String resource, final String filename) {
