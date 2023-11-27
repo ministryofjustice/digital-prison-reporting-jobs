@@ -2,24 +2,15 @@ package uk.gov.justice.digital.client.s3;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import org.apache.avro.Schema;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.avro.SchemaConverters;
-import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
-import java.io.File;
-import java.io.IOException;
-
-import static java.lang.String.format;
-import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
-import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;

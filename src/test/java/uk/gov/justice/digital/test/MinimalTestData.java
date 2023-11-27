@@ -21,7 +21,6 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
-import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 
 public class MinimalTestData {
     public static final String PRIMARY_KEY_COLUMN = "pk";
@@ -39,13 +38,15 @@ public class MinimalTestData {
 
     public static final StructType SCHEMA_WITHOUT_METADATA_FIELDS = new StructType(new StructField[]{
             new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()),
+            new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
+    });
+
+    public static final StructType TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS = new StructType(new StructField[]{
+            new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()),
             new StructField(TIMESTAMP, DataTypes.StringType, false, Metadata.empty()),
             new StructField(OPERATION, DataTypes.StringType, false, Metadata.empty()),
             new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
     });
-
-    public static final StructType TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS = withMetadataFields(SCHEMA_WITHOUT_METADATA_FIELDS);
-
     public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
 
     public static Dataset<Row> inserts(SparkSession spark) {
