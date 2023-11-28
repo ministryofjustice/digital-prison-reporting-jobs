@@ -10,7 +10,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -19,8 +18,6 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
 
 import java.util.Arrays;
 
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
@@ -35,7 +32,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private JobArguments arguments;
     @Mock
-    private SourceReferenceService sourceReferenceService;
+    private SourceReference sourceReference;
 
     private S3BatchProcessor underTest;
 
@@ -44,7 +41,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenS3BatchProcessorDependenciesAreInjected();
-        givenASourceReferenceIsRetrieved();
+        givenASourceReference();
     }
 
     @Test
@@ -56,7 +53,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk4, "2023-11-13 10:50:00.123456", Delete, "data4")
         ), TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
 
-        underTest.processBatch(spark, inputSchemaName, inputTableName, input);
+        underTest.processBatch(spark, sourceReference, input);
 
         thenStructuredAndCuratedContainForPK("data1", pk1);
         thenStructuredAndCuratedContainForPK("data2", pk2);
@@ -72,7 +69,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA);
-        underTest.processBatch(spark, inputSchemaName, inputTableName, input);
+        underTest.processBatch(spark, sourceReference, input);
 
         thenStructuredAndCuratedContainForPK("data1", pk1);
         thenStructuredAndCuratedContainForPK("data3", pk3);
@@ -87,7 +84,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);
         CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);
-        underTest = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, sourceReferenceService, validationService);
+        underTest = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, validationService);
     }
 
     private void givenPathsAreConfigured() {
@@ -99,9 +96,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
     }
 
-    private void givenASourceReferenceIsRetrieved() {
-        SourceReference sourceReference = mock(SourceReference.class);
-        when(sourceReferenceService.getSourceReferenceOrThrow(eq(inputSchemaName), eq(S3BatchProcessorIT.inputTableName))).thenReturn(sourceReference);
+    private void givenASourceReference() {
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(S3BatchProcessorIT.inputTableName);
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);

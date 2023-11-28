@@ -31,6 +31,6 @@ public class TableStreamingQueryProvider {
 
     public TableStreamingQuery provide(String inputSchemaName, String inputTableName) {
         SourceReference sourceReference = sourceReferenceService.getSourceReferenceOrThrow(inputSchemaName, inputTableName);
-        return new TableStreamingQuery(arguments, s3DataProvider, batchProcessor, inputSchemaName, inputTableName, sourceReference);
+        return new TableStreamingQuery(arguments, s3DataProvider, batchProcessor, sourceReference);
     }
 }

@@ -36,13 +36,17 @@ public class MinimalTestData {
             new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
     });
 
+    public static final StructType SCHEMA_WITHOUT_METADATA_FIELDS = new StructType(new StructField[]{
+            new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()),
+            new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
+    });
+
     public static final StructType TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS = new StructType(new StructField[]{
             new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()),
             new StructField(TIMESTAMP, DataTypes.StringType, false, Metadata.empty()),
             new StructField(OPERATION, DataTypes.StringType, false, Metadata.empty()),
             new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
     });
-
     public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
 
     public static Dataset<Row> inserts(SparkSession spark) {

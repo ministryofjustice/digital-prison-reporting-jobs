@@ -2,14 +2,20 @@ package uk.gov.justice.digital.client.s3;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.domain.model.SourceReference;
 
+import java.util.List;
+
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
@@ -29,16 +35,28 @@ public class S3DataProvider {
         this.arguments = arguments;
     }
 
-    public Dataset<Row> getSourceData(SparkSession sparkSession, String schemaName, String tableName) {
-        String tablePath = tablePath(arguments.getRawS3Path(), schemaName, tableName);
+    public Dataset<Row> getSourceDataStreaming(SparkSession sparkSession, SourceReference sourceReference) {
+        String sourceName = sourceReference.getSource();
+        String tableName = sourceReference.getTable();
+        String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
+
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
-        // Infer schema. Note: If there is no data for a table then the job will fail because Spark will be unable to infer schema
-        StructType schema = sparkSession.read().parquet(tablePath).schema();
-        logger.info("Schema for {}.{}: \n{}", schemaName, tableName, schema.treeString());
-        logger.info("Initialising S3 data source for {}.{} with file glob path {}", schemaName, tableName, fileGlobPath);
+        StructType schema = withMetadataFields(sourceReference.getSchema());
+        logger.info("Schema for {}.{}: \n{}", sourceName, tableName, schema.treeString());
+        logger.info("Initialising S3 data source for {}.{} with file glob path {}", sourceName, tableName, fileGlobPath);
         return sparkSession
                 .readStream()
                 .schema(schema)
                 .parquet(fileGlobPath);
+    }
+
+    public Dataset<Row> getSourceDataBatch(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) {
+        StructType schema = withMetadataFields(sourceReference.getSchema());
+        val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
+        logger.info("Schema for {}.{}: \n{}", sourceReference.getSource(), sourceReference.getTable(), schema.treeString());
+        return sparkSession
+                .read()
+                .schema(schema)
+                .parquet(scalaFilePaths);
     }
 }

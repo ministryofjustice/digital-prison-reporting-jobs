@@ -8,8 +8,6 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
@@ -32,33 +30,32 @@ public class S3BatchProcessor {
 
     private final StructuredZoneLoadS3 structuredZoneLoad;
     private final CuratedZoneLoadS3 curatedZoneLoad;
-    private final SourceReferenceService sourceReferenceService;
     private final ValidationService validationService;
 
     @Inject
     public S3BatchProcessor(
             StructuredZoneLoadS3 structuredZoneLoad,
             CuratedZoneLoadS3 curatedZoneLoad,
-            SourceReferenceService sourceReferenceService,
             ValidationService validationService) {
         this.validationService = validationService;
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
-        this.sourceReferenceService = sourceReferenceService;
         logger.info("S3BatchProcessor initialization complete");
     }
 
-    public void processBatch(SparkSession spark, String sourceName, String tableName, Dataset<Row> dataFrame) {
+    public void processBatch(SparkSession spark, SourceReference sourceReference, Dataset<Row> dataFrame) {
+        String sourceName = sourceReference.getSource();
+        String tableName = sourceReference.getTable();
         logger.info("Processing records {}/{}", sourceName, tableName);
 
         val startTime = System.currentTimeMillis();
         dataFrame.persist();
         try {
-            withValidations(spark, sourceName, tableName, dataFrame, (validatedDf, sourceReference) -> {
-                val structuredLoadDf = structuredZoneLoad.process(spark, validatedDf, sourceReference);
-                curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
-            });
+            val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
+            val validRows = validationService.handleValidation(spark, filteredDf, sourceReference);
+            val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
+            curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
         } catch (Exception e) {
             logger.error("Caught unexpected exception", e);
             throw new RuntimeException("Caught unexpected exception", e);
@@ -71,19 +68,4 @@ public class S3BatchProcessor {
                 System.currentTimeMillis() - startTime
         );
     }
-
-    @FunctionalInterface
-    private interface ValidatedDataframeHandler {
-        void apply(Dataset<Row> validDf, SourceReference sourceReference) throws DataStorageException;
-    }
-
-    private void withValidations(SparkSession spark, String sourceName, String tableName, Dataset<Row> dataFrame, ValidatedDataframeHandler validatedDfHandler) throws DataStorageException {
-        val sourceReference = sourceReferenceService.getSourceReferenceOrThrow(sourceName, tableName);
-        val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
-        val validRows = validationService.handleValidation(spark, filteredDf, sourceReference);
-        validatedDfHandler.apply(validRows, sourceReference);
-    }
-
-
-
 }

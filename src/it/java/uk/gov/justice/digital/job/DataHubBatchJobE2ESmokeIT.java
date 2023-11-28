@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
@@ -95,8 +96,9 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);
         CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);
-        S3BatchProcessor batchProcessor = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, sourceReferenceService, validationService);
-        underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor);
+        S3BatchProcessor batchProcessor = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, validationService);
+        S3DataProvider dataProvider = new S3DataProvider(arguments);
+        underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor, dataProvider, sourceReferenceService);
     }
 
     private void givenGlobPatternIsConfigured() {

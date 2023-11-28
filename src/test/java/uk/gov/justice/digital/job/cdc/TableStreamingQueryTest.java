@@ -36,12 +36,6 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 @ExtendWith(MockitoExtension.class)
 class TableStreamingQueryTest extends BaseSparkTest {
-
-    private static final String inputSchemaName = "my-schema";
-    private static final String inputTableName = "my-table";
-    private static final String structuredPath = "/structured/path";
-    private static final String curatedPath = "/curated/path";
-
     private static List<Row> testData;
     private static Seq<Row> testDataSeq;
     @Mock
@@ -68,7 +62,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, inputSchemaName, inputTableName, sourceReference);
+        underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
 
     }
 
@@ -110,7 +104,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
-        when(dataProvider.getSourceData(any(), eq(inputSchemaName), eq(inputTableName))).thenReturn(streamingDataframe);
+        when(dataProvider.getSourceDataStreaming(any(), eq(sourceReference))).thenReturn(streamingDataframe);
     }
 
     private void givenJobArguments() {

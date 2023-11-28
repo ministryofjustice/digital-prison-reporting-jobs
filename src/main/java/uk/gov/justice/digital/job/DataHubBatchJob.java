@@ -12,18 +12,19 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import scala.collection.JavaConverters;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 
@@ -38,6 +39,8 @@ public class DataHubBatchJob implements Runnable {
     private final SparkSessionProvider sparkSessionProvider;
     private final TableDiscoveryService tableDiscoveryService;
     private final S3BatchProcessor batchProcessor;
+    private final S3DataProvider dataProvider;
+    private final SourceReferenceService sourceReferenceService;
 
     @Inject
     public DataHubBatchJob(
@@ -45,13 +48,16 @@ public class DataHubBatchJob implements Runnable {
             JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
             TableDiscoveryService tableDiscoveryService,
-            S3BatchProcessor batchProcessor
-    ) {
+            S3BatchProcessor batchProcessor,
+            S3DataProvider dataProvider,
+            SourceReferenceService sourceReferenceService) {
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
         this.tableDiscoveryService = tableDiscoveryService;
         this.batchProcessor = batchProcessor;
+        this.dataProvider = dataProvider;
+        this.sourceReferenceService = sourceReferenceService;
     }
 
     public static void main(String[] args) {
@@ -106,11 +112,12 @@ public class DataHubBatchJob implements Runnable {
             val schema = entry.getKey().getLeft();
             val table = entry.getKey().getRight();
             logger.info("Processing table {}.{}", schema, table);
-            val filePaths = JavaConverters.asScalaIteratorConverter(entry.getValue().iterator()).asScala().toSeq();
-            if(filePaths.nonEmpty()) {
-                val dataFrame = sparkSession.read().parquet(filePaths);
+            val filePaths = entry.getValue();
+            if(!filePaths.isEmpty()) {
+                SourceReference sourceReference = sourceReferenceService.getSourceReferenceOrThrow(schema, table);
+                val dataFrame = dataProvider.getSourceDataBatch(sparkSession, sourceReference, filePaths);
                 logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
-                batchProcessor.processBatch(sparkSession, schema, table, dataFrame);
+                batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
                 logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
             } else {
                 logger.warn("No paths found for table {}.{}", schema, table);
