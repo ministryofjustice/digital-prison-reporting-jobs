@@ -1,9 +1,11 @@
 package uk.gov.justice.digital.service;
 
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.GlueHiveTableClient;
+import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -22,9 +24,6 @@ public class HiveSchemaService {
 
     private static final Logger logger = LoggerFactory.getLogger(HiveSchemaService.class);
 
-    public static final String STRUCTURED_DATABASE = "structured";
-    public static final String CURATED_DATABASE = "curated";
-    public static final String PRISONS_DATABASE = "prisons";
     private static final String TABLE_NAME_PATTERN = "^[a-z_0-9]*$";
     private static final Pattern tableNameRegex = Pattern.compile(TABLE_NAME_PATTERN);
 
@@ -65,11 +64,18 @@ public class HiveSchemaService {
                 validateTableName(hiveTableName);
                 StructType schema = sourceReference.getSchema();
 
+                String rawArchivePath = createValidatedPath(jobArguments.getRawArchiveS3Path(), sourceName, tableName);
+                StructType rawSchema = schema
+                        .add(CommonDataFields.OPERATION, DataTypes.StringType, false)
+                        .add(CommonDataFields.TIMESTAMP, DataTypes.StringType, false);
+
+                replaceTableParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema);
+
                 String structuredPath = createValidatedPath(jobArguments.getStructuredS3Path(), sourceName, tableName);
-                replaceTableParquetInputTables(STRUCTURED_DATABASE, hiveTableName, structuredPath, schema);
+                replaceTableParquetInputTables(jobArguments.getStructuredDatabase(), hiveTableName, structuredPath, schema);
 
                 String curatedPath = createValidatedPath(jobArguments.getCuratedS3Path(), sourceName, tableName);
-                replaceTableParquetInputTables(CURATED_DATABASE, hiveTableName, curatedPath, schema);
+                replaceTableParquetInputTables(jobArguments.getCuratedDatabase(), hiveTableName, curatedPath, schema);
 
                 replaceSymlinkInputTables(hiveTableName, curatedPath, schema);
             } catch (Exception e) {
@@ -88,8 +94,9 @@ public class HiveSchemaService {
     }
 
     private void replaceSymlinkInputTables(String tableName, String curatedPath, StructType schema) {
-        glueHiveTableClient.deleteTable(PRISONS_DATABASE, tableName);
-        glueHiveTableClient.createTableWithSymlink(PRISONS_DATABASE, tableName, curatedPath, schema);
+        String prisonsDatabase = jobArguments.getPrisonsDatabase();
+        glueHiveTableClient.deleteTable(prisonsDatabase, tableName);
+        glueHiveTableClient.createTableWithSymlink(prisonsDatabase, tableName, curatedPath, schema);
     }
 
     private void validateTableName(String tableName) throws HiveSchemaServiceException {

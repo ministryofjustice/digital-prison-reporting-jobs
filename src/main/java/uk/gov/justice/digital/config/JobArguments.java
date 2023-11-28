@@ -52,8 +52,13 @@ public class JobArguments {
     // The provided value for dpr.idle.time.between.reads.millis is only applied when dpr.add.idle.time.between.reads is true
     public static final String IDLE_TIME_BETWEEN_READS_IN_MILLIS = "dpr.idle.time.between.reads.millis";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
+    public static final String RAW_ARCHIVE_S3_PATH = "dpr.raw.archive.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
+    public static final String RAW_ARCHIVE_DATABASE = "dpr.raw_archive.database";
+    public static final String STRUCTURED_DATABASE = "dpr.structured.database";
+    public static final String CURATED_DATABASE = "dpr.curated.database";
+    public static final String PRISONS_DATABASE = "dpr.prisons.database";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
     public static final String MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH = "dpr.maintenance.listtable.recurseMaxDepth";
     // The Domain layer only has a depth of 2, with tables nested under domains
@@ -161,12 +166,32 @@ public class JobArguments {
         return getArgument(RAW_S3_PATH);
     }
 
+    public String getRawArchiveS3Path() {
+        return getArgument(RAW_ARCHIVE_S3_PATH);
+    }
+
     public String getStructuredS3Path() {
         return getArgument(STRUCTURED_S3_PATH);
     }
 
     public String getViolationsS3Path() {
         return getArgument(VIOLATIONS_S3_PATH);
+    }
+
+    public String getRawArchiveDatabase() {
+        return getArgument(RAW_ARCHIVE_DATABASE);
+    }
+
+    public String getStructuredDatabase() {
+        return getArgument(STRUCTURED_DATABASE);
+    }
+
+    public String getCuratedDatabase() {
+        return getArgument(CURATED_DATABASE);
+    }
+
+    public String getPrisonsDatabase() {
+        return getArgument(PRISONS_DATABASE);
     }
 
     public String getCuratedS3Path() {

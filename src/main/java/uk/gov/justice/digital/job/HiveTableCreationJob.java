@@ -7,11 +7,9 @@ import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.service.HiveSchemaService;
 
 import javax.inject.Inject;
-
 import java.util.Set;
 
 import static picocli.CommandLine.Command;
-import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 
 /**
  * Job that replaces Hive tables using the schemas available in the schema registry.

@@ -26,7 +26,6 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.service.HiveSchemaService.*;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
 
@@ -51,8 +50,13 @@ public class HiveSchemaServiceTest {
 
     private HiveSchemaService underTest;
 
+    private static final String RAW_ARCHIVE_BUCKET = "s3://raw-archive";
     private static final String STRUCTURED_ZONE_BUCKET = "s3://structured-zone";
     private static final String CURATED_ZONE_BUCKET = "s3://curated-zone";
+    private static final String RAW_ARCHIVE_DATABASE = "raw_archive";
+    private static final String STRUCTURED_DATABASE = "structured";
+    private static final String CURATED_DATABASE = "curated";
+    private static final String PRISONS_DATABASE = "prisons";
 
     private static final String SCHEMA_NAME = "test_schema";
     private static final String TABLE = "test_table";
@@ -83,9 +87,11 @@ public class HiveSchemaServiceTest {
         sourceReferences.add(createSourceRef(1));
 
         List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
+        expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedDeleteDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedDeleteDatabaseArgs.add(CURATED_DATABASE);
         expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
+        expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedDeleteDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedDeleteDatabaseArgs.add(CURATED_DATABASE);
         expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
@@ -93,16 +99,20 @@ public class HiveSchemaServiceTest {
         List<String> expectedDeleteTableArgs = createExpectedTableArgs(Stream.of(0, 0, 0, 1, 1, 1));
 
         List<String> expectedCreateParquetDatabaseArgs = new ArrayList<>();
+        expectedCreateParquetDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedCreateParquetDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateParquetDatabaseArgs.add(CURATED_DATABASE);
+        expectedCreateParquetDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedCreateParquetDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateParquetDatabaseArgs.add(CURATED_DATABASE);
 
         List<String> expectedCreateParquetTableArgs = createExpectedTableArgs(Stream.of(0, 0, 1, 1));
 
         List<String> expectedCreateParquetPathArgs = new ArrayList<>();
+        expectedCreateParquetPathArgs.add(createPath(RAW_ARCHIVE_BUCKET, 0));
         expectedCreateParquetPathArgs.add(createPath(STRUCTURED_ZONE_BUCKET, 0));
         expectedCreateParquetPathArgs.add(createPath(CURATED_ZONE_BUCKET, 0));
+        expectedCreateParquetPathArgs.add(createPath(RAW_ARCHIVE_BUCKET, 1));
         expectedCreateParquetPathArgs.add(createPath(STRUCTURED_ZONE_BUCKET, 1));
         expectedCreateParquetPathArgs.add(createPath(CURATED_ZONE_BUCKET, 1));
 
@@ -121,10 +131,10 @@ public class HiveSchemaServiceTest {
 
         assertThat((Collection<String>) underTest.replaceTables(), is(empty()));
 
-        verify(mockGlueHiveTableClient, times(6))
+        verify(mockGlueHiveTableClient, times(8))
                 .deleteTable(deleteDatabaseArgCaptor.capture(), deleteTableArgCaptor.capture());
 
-        verify(mockGlueHiveTableClient, times(4))
+        verify(mockGlueHiveTableClient, times(6))
                 .createParquetTable(
                         createParquetDatabaseArgCaptor.capture(),
                         createParquetTableArgCaptor.capture(),
@@ -188,8 +198,14 @@ public class HiveSchemaServiceTest {
     }
 
     private void mockJobArgumentCalls() {
+        when(mockJobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_BUCKET);
         when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_ZONE_BUCKET);
         when(mockJobArguments.getCuratedS3Path()).thenReturn(CURATED_ZONE_BUCKET);
+
+        when(mockJobArguments.getRawArchiveDatabase());
+        when(mockJobArguments.getStructuredDatabase());
+        when(mockJobArguments.getCuratedDatabase());
+        when(mockJobArguments.getPrisonsDatabase());
     }
 
 }
