@@ -19,7 +19,7 @@ public class GlueSchemaClient {
 
     private final AWSGlue glueClient;
     private final String contractRegistryName;
-    // Glue schema registry allows a maximum of 1000 schema versions per registry.
+    // Glue schema registry allows a maximum of 1000 schema versions per registry. However, only 100 can be retrieved per sdk request
     // https://docs.aws.amazon.com/glue/latest/dg/schema-registry.html#schema-registry-quotas
     private static final int MAX_SCHEMA_RESULTS = 100;
 

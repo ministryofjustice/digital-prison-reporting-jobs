@@ -25,6 +25,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
@@ -40,13 +41,13 @@ public class HiveSchemaServiceTest {
     private GlueHiveTableClient mockGlueHiveTableClient;
 
     @Captor
-    ArgumentCaptor<String> deleteDatabaseArgCaptor, createParquetDatabaseArgCaptor, createSymlinkDatabaseArgCaptor;
+    ArgumentCaptor<String> deleteDatabaseArgCaptor, createArchiveDatabaseArgCaptor, createParquetDatabaseArgCaptor, createSymlinkDatabaseArgCaptor;
 
     @Captor
-    ArgumentCaptor<String> deleteTableArgCaptor, createParquetTableArgCaptor, createSymlinkTableArgCaptor;
+    ArgumentCaptor<String> deleteTableArgCaptor, createArchiveTableArgCaptor, createParquetTableArgCaptor, createSymlinkTableArgCaptor;
 
     @Captor
-    ArgumentCaptor<String> createParquetPathArgCaptor, createSymlinkPathArgCaptor;
+    ArgumentCaptor<String> createParquetPathArgCaptor, createArchivePathArgCaptor, createSymlinkPathArgCaptor;
 
     private HiveSchemaService underTest;
 
@@ -96,23 +97,29 @@ public class HiveSchemaServiceTest {
         expectedDeleteDatabaseArgs.add(CURATED_DATABASE);
         expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
 
-        List<String> expectedDeleteTableArgs = createExpectedTableArgs(Stream.of(0, 0, 0, 1, 1, 1));
+        List<String> expectedDeleteTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 0, 0, 1, 1, 1, 1));
+
+        List<String> expectedCreateArchiveDatabaseArgs = new ArrayList<>();
+        expectedCreateArchiveDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
+        expectedCreateArchiveDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
 
         List<String> expectedCreateParquetDatabaseArgs = new ArrayList<>();
-        expectedCreateParquetDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedCreateParquetDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateParquetDatabaseArgs.add(CURATED_DATABASE);
-        expectedCreateParquetDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedCreateParquetDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateParquetDatabaseArgs.add(CURATED_DATABASE);
 
-        List<String> expectedCreateParquetTableArgs = createExpectedTableArgs(Stream.of(0, 0, 1, 1));
+        List<String> expectedCreateArchiveTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 1));
+
+        List<String> expectedCreateParquetTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 1, 1));
+
+        List<String> expectedCreateArchivePathArgs = new ArrayList<>();
+        expectedCreateArchivePathArgs.add(createPath(RAW_ARCHIVE_BUCKET, 0));
+        expectedCreateArchivePathArgs.add(createPath(RAW_ARCHIVE_BUCKET, 1));
 
         List<String> expectedCreateParquetPathArgs = new ArrayList<>();
-        expectedCreateParquetPathArgs.add(createPath(RAW_ARCHIVE_BUCKET, 0));
         expectedCreateParquetPathArgs.add(createPath(STRUCTURED_ZONE_BUCKET, 0));
         expectedCreateParquetPathArgs.add(createPath(CURATED_ZONE_BUCKET, 0));
-        expectedCreateParquetPathArgs.add(createPath(RAW_ARCHIVE_BUCKET, 1));
         expectedCreateParquetPathArgs.add(createPath(STRUCTURED_ZONE_BUCKET, 1));
         expectedCreateParquetPathArgs.add(createPath(CURATED_ZONE_BUCKET, 1));
 
@@ -120,7 +127,7 @@ public class HiveSchemaServiceTest {
         expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
 
-        List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgs(Stream.of(0, 1));
+        List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 1));
 
         List<String> expectedCreateSymlinkPathArgs = new ArrayList<>();
         expectedCreateSymlinkPathArgs.add(createPath(CURATED_ZONE_BUCKET, 0));
@@ -131,10 +138,33 @@ public class HiveSchemaServiceTest {
 
         assertThat((Collection<String>) underTest.replaceTables(), is(empty()));
 
+        // verify all Hive tables get deleted
         verify(mockGlueHiveTableClient, times(8))
                 .deleteTable(deleteDatabaseArgCaptor.capture(), deleteTableArgCaptor.capture());
 
-        verify(mockGlueHiveTableClient, times(6))
+        assertThat(deleteDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteDatabaseArgs));
+        assertThat(deleteTableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteTableArgs));
+
+        // verify raw_archive tables are created as parquet format
+        verify(mockGlueHiveTableClient, times(2))
+                .createParquetTable(
+                        createArchiveDatabaseArgCaptor.capture(),
+                        createArchiveTableArgCaptor.capture(),
+                        createArchivePathArgCaptor.capture(),
+                        eq(withMetadataFields(JSON_DATA_SCHEMA))
+                );
+
+        assertOnCreateTableArgs(
+                expectedCreateArchiveDatabaseArgs,
+                expectedCreateArchiveTableArgs,
+                expectedCreateArchivePathArgs,
+                createArchiveDatabaseArgCaptor,
+                createArchiveTableArgCaptor,
+                createArchivePathArgCaptor
+        );
+
+        // verify structured and curated Hive tables are created as parquet format
+        verify(mockGlueHiveTableClient, times(4))
                 .createParquetTable(
                         createParquetDatabaseArgCaptor.capture(),
                         createParquetTableArgCaptor.capture(),
@@ -142,6 +172,16 @@ public class HiveSchemaServiceTest {
                         eq(JSON_DATA_SCHEMA)
                 );
 
+        assertOnCreateTableArgs(
+                expectedCreateParquetDatabaseArgs,
+                expectedCreateParquetTableArgs,
+                expectedCreateParquetPathArgs,
+                createParquetDatabaseArgCaptor,
+                createParquetTableArgCaptor,
+                createParquetPathArgCaptor
+        );
+
+        // verify prisons tables are created with symlink format
         verify(mockGlueHiveTableClient, times(2))
                 .createTableWithSymlink(
                         createSymlinkDatabaseArgCaptor.capture(),
@@ -150,20 +190,31 @@ public class HiveSchemaServiceTest {
                         eq(JSON_DATA_SCHEMA)
                 );
 
-        assertThat(deleteDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteDatabaseArgs));
-        assertThat(deleteTableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteTableArgs));
+        assertOnCreateTableArgs(
+                expectedCreateSymlinkDatabaseArgs,
+                expectedCreateSymlinkTableArgs,
+                expectedCreateSymlinkPathArgs,
+                createSymlinkDatabaseArgCaptor,
+                createSymlinkTableArgCaptor,
+                createSymlinkPathArgCaptor
+        );
+    }
 
-        assertThat(createParquetDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedCreateParquetDatabaseArgs));
-        assertThat(createParquetTableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedCreateParquetTableArgs));
-        assertThat(createParquetPathArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedCreateParquetPathArgs));
-
-        assertThat(createSymlinkDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedCreateSymlinkDatabaseArgs));
-        assertThat(createSymlinkTableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedCreateSymlinkTableArgs));
-        assertThat(createSymlinkPathArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedCreateSymlinkPathArgs));
+    private void assertOnCreateTableArgs(
+            List<String> expectedDatabaseArgs,
+            List<String> expectedTableArgs,
+            List<String> expectedPathArgs,
+            ArgumentCaptor<String> databaseArgCaptor,
+            ArgumentCaptor<String> tableArgCaptor,
+            ArgumentCaptor<String> pathCaptor
+    ) {
+        assertThat(databaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDatabaseArgs));
+        assertThat(tableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedTableArgs));
+        assertThat(pathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedPathArgs));
     }
 
     @NotNull
-    private static List<String> createExpectedTableArgs(Stream<Integer> schemaIndexes) {
+    private static List<String> createExpectedTableArgsFromSequence(Stream<Integer> schemaIndexes) {
         List<String> argList = new ArrayList<>();
         schemaIndexes.forEach(schemaIndex -> argList.add(createHiveTableName(schemaIndex)));
         return argList;
@@ -202,10 +253,10 @@ public class HiveSchemaServiceTest {
         when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_ZONE_BUCKET);
         when(mockJobArguments.getCuratedS3Path()).thenReturn(CURATED_ZONE_BUCKET);
 
-        when(mockJobArguments.getRawArchiveDatabase());
-        when(mockJobArguments.getStructuredDatabase());
-        when(mockJobArguments.getCuratedDatabase());
-        when(mockJobArguments.getPrisonsDatabase());
+        when(mockJobArguments.getRawArchiveDatabase()).thenReturn(RAW_ARCHIVE_DATABASE);
+        when(mockJobArguments.getStructuredDatabase()).thenReturn(STRUCTURED_DATABASE);
+        when(mockJobArguments.getCuratedDatabase()).thenReturn(CURATED_DATABASE);
+        when(mockJobArguments.getPrisonsDatabase()).thenReturn(PRISONS_DATABASE);
     }
 
 }

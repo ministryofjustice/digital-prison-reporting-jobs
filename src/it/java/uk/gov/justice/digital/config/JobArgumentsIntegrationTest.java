@@ -37,7 +37,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RAW_ARCHIVE_S3_PATH, "s3://somepath/raw-archive" },
             { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
             { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
-            { JobArguments.RAW_ARCHIVE_DATABASE, "raw" },
+            { JobArguments.RAW_ARCHIVE_DATABASE, "raw_archive" },
             { JobArguments.STRUCTURED_DATABASE, "structured" },
             { JobArguments.CURATED_DATABASE, "curated" },
             { JobArguments.PRISONS_DATABASE, "prisons" },
@@ -255,6 +255,7 @@ class JobArgumentsIntegrationTest {
         return mockContext;
     }
 
+    @SuppressWarnings("unchecked")
     private static HashMap<String, String> cloneTestArguments() {
         return (HashMap<String, String>)((HashMap<String, String>) testArguments).clone();
     }

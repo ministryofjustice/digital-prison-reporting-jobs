@@ -299,6 +299,14 @@ public class JobArguments {
                 .orElse(defaultValue);
     }
 
+    @SuppressWarnings("unused")
+    private boolean getArgument(String argumentName, boolean defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Boolean::parseBoolean)
+                .orElse(defaultValue);
+    }
+
     // Where command line arguments are present Micronaut will create a CommandLinePropertySource instance which
     // parses any arguments and makes them available directly on the context via the getProperty() method (the args
     // are combined with properties) or via the CommandLinePropertySource instance on the environment. We prefer the

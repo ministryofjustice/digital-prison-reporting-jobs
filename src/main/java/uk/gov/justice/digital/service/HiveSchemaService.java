@@ -1,11 +1,9 @@
 package uk.gov.justice.digital.service;
 
-import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.GlueHiveTableClient;
-import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -17,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
@@ -65,10 +64,7 @@ public class HiveSchemaService {
                 StructType schema = sourceReference.getSchema();
 
                 String rawArchivePath = createValidatedPath(jobArguments.getRawArchiveS3Path(), sourceName, tableName);
-                StructType rawSchema = schema
-                        .add(CommonDataFields.OPERATION, DataTypes.StringType, false)
-                        .add(CommonDataFields.TIMESTAMP, DataTypes.StringType, false);
-
+                StructType rawSchema = withMetadataFields(schema);
                 replaceTableParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema);
 
                 String structuredPath = createValidatedPath(jobArguments.getStructuredS3Path(), sourceName, tableName);
