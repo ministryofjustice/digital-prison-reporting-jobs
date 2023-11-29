@@ -69,6 +69,13 @@ public class SourceReferenceService {
         }
     }
 
+    public List<SourceReference> getAllSourceReferences() {
+        return schemaClient.getAllSchemas()
+                .stream()
+                .map(this::createFromAvroSchema)
+                .collect(Collectors.toList());
+    }
+
     public SourceReference getSourceReferenceOrThrow(String inputSchemaName, String inputTableName) {
         Optional<SourceReference> maybeSourceRef = getSourceReference(inputSchemaName, inputTableName);
         return maybeSourceRef.orElseThrow(() -> new RuntimeException(format("No schema found for %s/%s", inputSchemaName, inputTableName)));

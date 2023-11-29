@@ -19,7 +19,6 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,8 +34,13 @@ class JobArgumentsIntegrationTest {
             { JobArguments.DOMAIN_TARGET_PATH, "s3://somepath/domain/target" },
             { JobArguments.DOMAIN_TABLE_NAME, "test_table" },
             { JobArguments.RAW_S3_PATH, "s3://somepath/raw" },
+            { JobArguments.RAW_ARCHIVE_S3_PATH, "s3://somepath/raw-archive" },
             { JobArguments.STRUCTURED_S3_PATH, "s3://somepath/structured" },
             { JobArguments.VIOLATIONS_S3_PATH, "s3://somepath/violations" },
+            { JobArguments.RAW_ARCHIVE_DATABASE, "raw_archive" },
+            { JobArguments.STRUCTURED_DATABASE, "structured" },
+            { JobArguments.CURATED_DATABASE, "curated" },
+            { JobArguments.PRISONS_DATABASE, "prisons" },
             { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com" },
             { JobArguments.CONTRACT_REGISTRY_NAME, "SomeContractRegistryName" },
             { JobArguments.CHECKPOINT_LOCATION, "s3://somepath/checkpoint/app-name" },
@@ -64,8 +68,13 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.DOMAIN_TARGET_PATH, validArguments.getDomainTargetPath() },
                 { JobArguments.DOMAIN_TABLE_NAME, validArguments.getDomainTableName() },
                 { JobArguments.RAW_S3_PATH, validArguments.getRawS3Path() },
+                { JobArguments.RAW_ARCHIVE_S3_PATH, validArguments.getRawArchiveS3Path() },
                 { JobArguments.STRUCTURED_S3_PATH, validArguments.getStructuredS3Path() },
                 { JobArguments.VIOLATIONS_S3_PATH, validArguments.getViolationsS3Path() },
+                { JobArguments.RAW_ARCHIVE_DATABASE, validArguments.getRawArchiveDatabase() },
+                { JobArguments.STRUCTURED_DATABASE, validArguments.getStructuredDatabase() },
+                { JobArguments.CURATED_DATABASE, validArguments.getCuratedDatabase() },
+                { JobArguments.PRISONS_DATABASE, validArguments.getPrisonsDatabase() },
                 { JobArguments.CONTRACT_REGISTRY_NAME, validArguments.getContractRegistryName() },
                 { JobArguments.CHECKPOINT_LOCATION, validArguments.getCheckpointLocation() },
                 { JobArguments.KINESIS_STREAM_ARN, validArguments.getKinesisStreamArn() },
@@ -164,22 +173,6 @@ class JobArgumentsIntegrationTest {
         assertEquals(expected.toString(), jobArguments.getIdleTimeBetweenReadsInMillis());
     }
 
-    @ParameterizedTest
-    @CsvSource({ "false, false", "False, false", "FALSE, false", "true, true", "True, true", "TRUE, true" })
-    public void shouldSetDomainRefreshEnabled(String input, Boolean expected) {
-        HashMap<String, String> args = cloneTestArguments();
-        args.put(JobArguments.DOMAIN_REFRESH_ENABLED, input);
-        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(expected, jobArguments.isDomainRefreshEnabled());
-    }
-
-    @Test
-    public void shouldDefaultDomainRefreshEnabledToTrue() {
-        HashMap<String, String> args = cloneTestArguments();
-        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertTrue(jobArguments.isDomainRefreshEnabled());
-    }
-
     @Test
     public void shouldSetCdcFileGlobPattern() {
         HashMap<String, String> args = cloneTestArguments();
@@ -262,6 +255,7 @@ class JobArgumentsIntegrationTest {
         return mockContext;
     }
 
+    @SuppressWarnings("unchecked")
     private static HashMap<String, String> cloneTestArguments() {
         return (HashMap<String, String>)((HashMap<String, String>) testArguments).clone();
     }

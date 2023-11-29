@@ -45,6 +45,7 @@ ext {
     awsSdkVersion = '1.11.1026'
     glueApiVersion = '4.0.0'
     failSafeVersion = '3.3.2'
+    systemLambdaVersion = '1.2.1'
 }
 
 dependencies {
@@ -95,6 +96,7 @@ dependencies {
     testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
     testImplementation "org.hamcrest:hamcrest:$hamcrestVersion"
     testImplementation "com.networknt:json-schema-validator:1.0.81"
+    testImplementation "com.github.stefanbirkner:system-lambda:$systemLambdaVersion"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }

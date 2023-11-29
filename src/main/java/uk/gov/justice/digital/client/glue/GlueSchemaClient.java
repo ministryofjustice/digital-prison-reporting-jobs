@@ -10,13 +10,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 
-import java.util.Optional;
+import java.util.*;
 
 @Singleton
 public class GlueSchemaClient {
 
+    private static final Logger logger = LoggerFactory.getLogger(GlueSchemaClient.class);
+
     private final AWSGlue glueClient;
     private final String contractRegistryName;
+    // Glue schema registry allows a maximum of 1000 schema versions per registry. However, only 100 can be retrieved per sdk request
+    // https://docs.aws.amazon.com/glue/latest/dg/schema-registry.html#schema-registry-quotas
+    private static final int MAX_SCHEMA_RESULTS = 100;
 
     @Inject
     public GlueSchemaClient(GlueClientProvider glueClientProvider,
@@ -33,10 +38,32 @@ public class GlueSchemaClient {
                     result.getSchemaVersionId(),
                     result.getSchemaDefinition()
             ));
-        }
-        catch (EntityNotFoundException e) {
+        } catch (EntityNotFoundException e) {
+            logger.warn("Schema not found for {}", schemaName);
             return Optional.empty();
         }
+    }
+
+    public List<GlueSchemaResponse> getAllSchemas() {
+        List<GlueSchemaResponse> schemas = new ArrayList<>();
+        ListSchemasRequest listSchemasRequest = createlistSchemasRequest();
+        ListSchemasResult listSchemasResult;
+
+        do {
+            listSchemasResult = glueClient.listSchemas(listSchemasRequest);
+
+            for (SchemaListItem schemaItem : listSchemasResult.getSchemas()) {
+                String schemaName = schemaItem.getSchemaName();
+                logger.info("Getting schema for {}", schemaName);
+                val schema = getSchema(schemaName).orElseThrow(() -> new RuntimeException("Failed to get schema " + schemaName));
+                schemas.add(schema);
+            }
+            listSchemasRequest.setNextToken(listSchemasResult.getNextToken());
+        } while (listSchemasResult.getNextToken() != null);
+
+        logger.info("Retrieved a total of {} schemas", schemas.size());
+
+        return schemas;
     }
 
     private GetSchemaVersionRequest createRequestForSchemaName(String schemaName) {
@@ -50,6 +77,13 @@ public class GlueSchemaClient {
         return new GetSchemaVersionRequest()
                 .withSchemaId(schemaId)
                 .withSchemaVersionNumber(latestSchemaVersion);
+    }
+
+    private ListSchemasRequest createlistSchemasRequest() {
+        RegistryId registryId = new RegistryId().withRegistryName(contractRegistryName);
+        return new ListSchemasRequest()
+                .withRegistryId(registryId)
+                .withMaxResults(MAX_SCHEMA_RESULTS);
     }
 
     @Data
