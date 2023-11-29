@@ -10,7 +10,12 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.ViolationService;
 
+import java.util.Optional;
+
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -28,32 +33,35 @@ class TableStreamingQueryProviderTest {
     private SourceReferenceService sourceReferenceService;
     @Mock
     private SourceReference sourceReference;
+    @Mock
+    private ViolationService violationService;
 
     private TableStreamingQueryProvider underTest;
 
     @BeforeEach
     public void setUp() {
-        underTest = new TableStreamingQueryProvider(arguments, s3DataProvider, batchProcessor, sourceReferenceService);
+        underTest = new TableStreamingQueryProvider(arguments, s3DataProvider, batchProcessor, sourceReferenceService, violationService);
     }
 
     @Test
-    public void shouldCreateATableStreamingQuery() {
+    public void shouldCreateATableStreamingQueryToProcessDataWhenSourceReferenceExists() {
         String source = "some-source";
         String table = "some-table";
 
-        when(sourceReferenceService.getSourceReferenceOrThrow(source, table)).thenReturn(sourceReference);
+        when(sourceReferenceService.getSourceReference(source, table)).thenReturn(Optional.of(sourceReference));
 
         TableStreamingQuery streamingQuery = underTest.provide(source, table);
-        assertNotNull(streamingQuery);
+        assertThat(streamingQuery, instanceOf(ProcessingTableStreamingQuery.class));
     }
 
     @Test
-    public void shouldPropagateSourceReferenceThrowable() {
+    public void shouldCreateATableStreamingQueryToWriteAllDataToViolationsWhenNoSourceReference() {
         String source = "some-source";
         String table = "some-table";
 
-        when(sourceReferenceService.getSourceReferenceOrThrow(source, table)).thenThrow(new RuntimeException());
-        assertThrows(RuntimeException.class, () -> underTest.provide(source, table));
+        when(sourceReferenceService.getSourceReference(source, table)).thenReturn(Optional.empty());
+        TableStreamingQuery streamingQuery = underTest.provide(source, table);
+        assertThat(streamingQuery, instanceOf(SchemaViolationTableStreamingQuery.class));
     }
 
 }

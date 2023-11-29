@@ -55,7 +55,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private SourceReference sourceReference;
 
-    private TableStreamingQuery underTest;
+    private ProcessingTableStreamingQuery underTest;
 
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
@@ -216,7 +216,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
         StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone);
-        underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
+        underTest = new ProcessingTableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
     }
 
     private void givenAnInputStream() {

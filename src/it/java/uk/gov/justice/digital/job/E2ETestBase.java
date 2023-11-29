@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -56,11 +57,15 @@ public class E2ETestBase extends BaseSparkTest {
 
     protected void givenASourceReferenceFor(String inputTableName, SourceReferenceService sourceReferenceService) {
         SourceReference sourceReference = mock(SourceReference.class);
-        when(sourceReferenceService.getSourceReferenceOrThrow(eq(inputSchemaName), eq(inputTableName))).thenReturn(sourceReference);
+        when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.of(sourceReference));
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+    }
+
+    protected void givenNoSourceReferenceFor(String inputTableName, SourceReferenceService sourceReferenceService) {
+        when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.empty());
     }
 
     protected void givenRawDataIsAddedToEveryTable(List<Row> initialDataEveryTable) {
@@ -108,6 +113,11 @@ public class E2ETestBase extends BaseSparkTest {
 
     protected void thenStructuredAndCuratedForTableDoNotContainPK(String table, int primaryKey) {
         assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
+    }
+
+    protected void thenViolationsContainsForPK(String table, String data, int primaryKey) {
+        String violationsTablePath = Paths.get(violationsPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
+        assertDeltaTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 
 }

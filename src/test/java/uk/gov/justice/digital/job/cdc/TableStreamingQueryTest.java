@@ -50,7 +50,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
     @TempDir
     private Path testRoot;
 
-    private TableStreamingQuery underTest;
+    private ProcessingTableStreamingQuery underTest;
 
     private MemoryStream<Row> inputStream;
 
@@ -62,7 +62,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
+        underTest = new ProcessingTableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
 
     }
 

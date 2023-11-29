@@ -129,6 +129,23 @@ public class ViolationService {
         storageService.updateDeltaManifestForTable(spark, destinationPath);
     }
 
+    // todo tests
+    public void handleNoSchemaFoundS3(
+            SparkSession spark,
+            Dataset<Row> dataFrame,
+            String source,
+            String table
+    ) throws DataStorageException {
+        logger.warn("Violation - No schema found for {}/{}", source, table);
+        val destinationPath = createValidatedPath(violationsPath, source, table);
+
+        val missingSchemaRecords = dataFrame
+                .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)));
+
+        storageService.append(destinationPath, missingSchemaRecords);
+        storageService.updateDeltaManifestForTable(spark, destinationPath);
+    }
+
     public void handleInvalidSchema(
             SparkSession spark,
             Dataset<Row> dataFrame,

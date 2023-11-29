@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.job.cdc.ProcessingTableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.job.context.MicronautContext;

@@ -2,6 +2,7 @@ package uk.gov.justice.digital.config;
 
 import io.micronaut.logging.LogLevel;
 import org.apache.spark.SparkConf;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -98,12 +99,22 @@ public class BaseSparkTest {
 	}
 
 	public static void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {
-		Dataset<Row> df = spark.read().format("delta").load(tablePath);
-		List<Row> result = df
-				.select(DATA_COLUMN)
-				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
-				.collectAsList();
-		assertEquals(0, result.size());
+		try {
+			Dataset<Row> df = spark.read().format("delta").load(tablePath);
+			List<Row> result = df
+					.select(DATA_COLUMN)
+					.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
+					.collectAsList();
+			assertEquals(0, result.size());
+		} catch (Exception e) {
+			// If the path doesn't exist then the delta table definitely does not contain the primary key
+			// so we squash the Exception in that case. We can't be more specific than Exception in what we
+			// catch because the Java compiler will complain that AnalysisException isn't declared as thrown
+			// due to Scala trickery.
+			if(!e.getMessage().startsWith("Path does not exist")) {
+				throw e;
+			}
+		}
 	}
 
 	public static void assertStructuredAndCuratedForTableContainForPK(String structuredPath, String curatedPath, String schemaName, String tableName, String data, int primaryKey) {

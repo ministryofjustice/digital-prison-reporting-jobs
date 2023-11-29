@@ -17,6 +17,7 @@ import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
+import uk.gov.justice.digital.service.ViolationService;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -24,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,6 +64,8 @@ class DataHubBatchJobTest {
     @Mock
     private SourceReferenceService sourceReferenceService;
     @Mock
+    private ViolationService violationService;
+    @Mock
     private SourceReference sourceReference1;
     @Mock
     private SourceReference sourceReference2;
@@ -75,15 +79,26 @@ class DataHubBatchJobTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor, dataProvider, sourceReferenceService);
+        underTest = new DataHubBatchJob(
+                arguments,
+                properties,
+                sparkSessionProvider,
+                tableDiscoveryService,
+                batchProcessor,
+                dataProvider,
+                sourceReferenceService,
+                violationService
+        );
     }
 
     @Test
-    public void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() throws IOException {
+    public void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() throws Exception {
         stubRawPath();
         stubReadData();
         stubDiscoveredTablePaths();
-        stubSourceReference();
+
+        when(sourceReferenceService.getSourceReference(eq("s1"), eq("t1"))).thenReturn(Optional.of(sourceReference1));
+        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference2));
 
         underTest.runJob(spark);
 
@@ -101,6 +116,24 @@ class DataHubBatchJobTest {
         assertThrows(RuntimeException.class, () -> underTest.runJob(spark));
     }
 
+    @Test
+    public void shouldRunAQueryPerTableButWriteMissingSchemasToViolations() throws Exception {
+        stubRawPath();
+        stubReadData();
+        stubDiscoveredTablePaths();
+
+        when(sourceReferenceService.getSourceReference(eq("s1"), eq("t1"))).thenReturn(Optional.empty());
+        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference1));
+
+        underTest.runJob(spark);
+
+        // Should write table 1 to violations
+        verify(violationService, times(1)).handleNoSchemaFoundS3(any(), any(), eq("s1"), eq("t1"));
+        // Should process table 2 and no other tables
+        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
+        verify(batchProcessor, times(1)).processBatch(any(), any(), any());
+    }
+
     private void stubRawPath() {
         when(arguments.getRawS3Path()).thenReturn(rawPath);
     }
@@ -116,11 +149,6 @@ class DataHubBatchJobTest {
     private void stubReadData() {
         when(dataProvider.getSourceDataBatch(any(), any(), any())).thenReturn(dataFrame);
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
-    }
-
-    private void stubSourceReference() {
-        when(sourceReferenceService.getSourceReferenceOrThrow(eq("s1"), eq("t1"))).thenReturn(sourceReference1);
-        when(sourceReferenceService.getSourceReferenceOrThrow(eq("s2"), eq("t2"))).thenReturn(sourceReference2);
     }
 
 }

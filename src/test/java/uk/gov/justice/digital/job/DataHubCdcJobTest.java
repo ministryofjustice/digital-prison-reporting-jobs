@@ -9,7 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
+import uk.gov.justice.digital.job.cdc.ProcessingTableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.TableDiscoveryService;
@@ -43,11 +43,11 @@ class DataHubCdcJobTest {
     @Mock
     private SparkSession spark;
     @Mock
-    private TableStreamingQuery table1StreamingQuery;
+    private ProcessingTableStreamingQuery table1StreamingQuery;
     @Mock
-    private TableStreamingQuery table2StreamingQuery;
+    private ProcessingTableStreamingQuery table2StreamingQuery;
     @Mock
-    private TableStreamingQuery table3StreamingQuery;
+    private ProcessingTableStreamingQuery table3StreamingQuery;
 
     private DataHubCdcJob underTest;
 
