@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,7 +32,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
 
     @Test
     public void shouldCompleteSuccessfullyWhenThereAreNoFailedTables() {
-        when(mockHiveSchemaService.replaceTables()).thenReturn(Collections.emptySet());
+        when(mockHiveSchemaService.replaceTables(any())).thenReturn(Collections.emptySet());
 
         assertDoesNotThrow(() -> underTest.run());
     }
@@ -40,14 +41,14 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
     public void shouldFailWhenThereAreFailedTables() throws Exception {
         Set<String> failedTables = Collections.singleton("failed-table-1");
 
-        when(mockHiveSchemaService.replaceTables()).thenReturn(failedTables);
+        when(mockHiveSchemaService.replaceTables(any())).thenReturn(failedTables);
 
         SystemLambda.catchSystemExit(() -> underTest.run());
     }
 
     @Test
     public void shouldFailWhenSchemaServiceThrowsAnException() throws Exception {
-        when(mockHiveSchemaService.replaceTables()).thenThrow(new HiveSchemaServiceException("Schema service exception"));
+        when(mockHiveSchemaService.replaceTables(any())).thenThrow(new HiveSchemaServiceException("Schema service exception"));
 
         SystemLambda.catchSystemExit(() -> underTest.run());
     }

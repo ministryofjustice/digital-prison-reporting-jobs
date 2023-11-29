@@ -14,10 +14,8 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -28,6 +26,7 @@ import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
 import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,20 +68,28 @@ public class HiveSchemaServiceTest {
 
     @Test
     public void shouldFailWhenThereAreNoSchemas() {
-        when(mockSourceReferenceService.getAllSourceReferences()).thenReturn(Collections.emptyList());
+        Set<String> schemaGroup = Collections.singleton(String.join(SCHEMA_NAME, ".", TABLE_NAME));
 
-        assertThrows(HiveSchemaServiceException.class, () -> underTest.replaceTables());
+        when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
+
+        assertThrows(HiveSchemaServiceException.class, () -> underTest.replaceTables(schemaGroup));
     }
 
     @Test
     public void shouldFailWhenSourceReferenceServiceThrowsAndException() {
-        when(mockSourceReferenceService.getAllSourceReferences()).thenThrow(new RuntimeException("Source reference error"));
+        Set<String> schemaGroup = Collections.singleton(String.join(SCHEMA_NAME, ".", TABLE_NAME));
 
-        assertThrows(RuntimeException.class, () -> underTest.replaceTables());
+        when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
+
+        assertThrows(RuntimeException.class, () -> underTest.replaceTables(schemaGroup));
     }
 
     @Test
     public void shouldReplaceHiveTablesForSchemas() {
+        Set<String> schemaGroup = Stream.of(0, 1)
+                .map(index -> String.join(createSchemaName(index), ".", createTableName(index)))
+                .collect(Collectors.toSet());
+
         List<SourceReference> sourceReferences = new ArrayList<>();
         sourceReferences.add(createSourceRef(0));
         sourceReferences.add(createSourceRef(1));
@@ -134,9 +141,9 @@ public class HiveSchemaServiceTest {
         expectedCreateSymlinkPathArgs.add(createPath(CURATED_ZONE_BUCKET, 1));
 
         mockJobArgumentCalls();
-        when(mockSourceReferenceService.getAllSourceReferences()).thenReturn(sourceReferences);
+        when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(sourceReferences);
 
-        assertThat((Collection<String>) underTest.replaceTables(), is(empty()));
+        assertThat((Collection<String>) underTest.replaceTables(schemaGroup), is(empty()));
 
         // verify all Hive tables get deleted
         verify(mockGlueHiveTableClient, times(8))

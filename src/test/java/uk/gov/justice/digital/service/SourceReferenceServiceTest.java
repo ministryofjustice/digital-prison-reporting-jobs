@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsEmptyCollection.empty;
+import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.hamcrest.Matchers.*;
 import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
 
@@ -170,6 +172,7 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void shouldReturnAListOfAllSourceReferences() {
+        Set<String> schemaGroup = Collections.singleton("test_schema.test_table");
         List<GlueSchemaResponse> expectedSchemas = new ArrayList<>();
 
         IntStream.range(0, 3).forEach(index -> {
@@ -180,9 +183,9 @@ public class SourceReferenceServiceTest {
                 }
         );
 
-        when(client.getAllSchemas()).thenReturn(expectedSchemas);
+        when(client.getAllSchemas(any())).thenReturn(expectedSchemas);
 
-        List<SourceReference> result = underTest.getAllSourceReferences();
+        List<SourceReference> result = underTest.getAllSourceReferences(schemaGroup);
 
         List<String> actualIds = result
                 .stream()
@@ -196,8 +199,10 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void shouldReturnAnEmptyListWhenNoSchemaIsFound() {
-        when(client.getAllSchemas()).thenReturn(Collections.emptyList());
+        Set<String> schemaGroup = Collections.singleton("test_schema.test_table");
 
-        assertThat((Collection<SourceReference>) underTest.getAllSourceReferences(), is(empty()));
+        when(client.getAllSchemas(any())).thenReturn(Collections.emptyList());
+
+        assertThat((Collection<SourceReference>) underTest.getAllSourceReferences(schemaGroup), is(empty()));
     }
 }

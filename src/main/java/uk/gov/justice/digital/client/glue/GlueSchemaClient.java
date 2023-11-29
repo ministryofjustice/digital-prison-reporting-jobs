@@ -44,7 +44,7 @@ public class GlueSchemaClient {
         }
     }
 
-    public List<GlueSchemaResponse> getAllSchemas() {
+    public List<GlueSchemaResponse> getAllSchemas(Set<String> schemaGroup) {
         List<GlueSchemaResponse> schemas = new ArrayList<>();
         ListSchemasRequest listSchemasRequest = createlistSchemasRequest();
         ListSchemasResult listSchemasResult;
@@ -55,8 +55,10 @@ public class GlueSchemaClient {
             for (SchemaListItem schemaItem : listSchemasResult.getSchemas()) {
                 String schemaName = schemaItem.getSchemaName();
                 logger.info("Getting schema for {}", schemaName);
-                val schema = getSchema(schemaName).orElseThrow(() -> new RuntimeException("Failed to get schema " + schemaName));
-                schemas.add(schema);
+                if (schemaGroup.contains(schemaName)) {
+                    val schema = getSchema(schemaName).orElseThrow(() -> new RuntimeException("Failed to get schema " + schemaName));
+                    schemas.add(schema);
+                }
             }
             listSchemasRequest.setNextToken(listSchemasResult.getNextToken());
         } while (listSchemasResult.getNextToken() != null);

@@ -17,12 +17,7 @@ import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Scanner;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -69,8 +64,8 @@ public class SourceReferenceService {
         }
     }
 
-    public List<SourceReference> getAllSourceReferences() {
-        return schemaClient.getAllSchemas()
+    public List<SourceReference> getAllSourceReferences(Set<String> schemaGroup) {
+        return schemaClient.getAllSchemas(schemaGroup)
                 .stream()
                 .map(this::createFromAvroSchema)
                 .collect(Collectors.toList());
