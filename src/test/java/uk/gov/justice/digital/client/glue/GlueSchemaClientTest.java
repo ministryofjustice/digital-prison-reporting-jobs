@@ -86,9 +86,9 @@ public class GlueSchemaClientTest {
     @Test
     public void shouldRetrieveAllSchemas() {
         List<String> schemaNames = new ArrayList<>();
-        schemaNames.add("schema_1");
-        schemaNames.add("schema_2");
-        schemaNames.add("schema_3");
+        schemaNames.add("schema1.some_table");
+        schemaNames.add("schema2.some_table");
+        schemaNames.add("schema3.some_table");
 
         val schemas = schemaNames.stream()
                 .map(schemaName -> new SchemaListItem().withSchemaName(schemaName))
@@ -101,7 +101,7 @@ public class GlueSchemaClientTest {
         when(mockResponse.getSchemaDefinition()).thenReturn(FAKE_SCHEMA_DEFINITION);
         when(mockClient.getSchemaVersion(schemaVersionRequestCaptor.capture())).thenReturn(mockResponse);
 
-        val result = underTest.getAllSchemas();
+        val result = underTest.getAllSchemas(new HashSet<>(schemaNames));
 
         List<String> actualSchemaNames = schemaVersionRequestCaptor.getAllValues()
                 .stream()
@@ -121,18 +121,20 @@ public class GlueSchemaClientTest {
 
     @Test
     public void shouldReturnAnEmptyListWhenThereAreNoSchemas() {
+        Set<String> schemaGroup = Collections.singleton("test_schema.test_table");
         ListSchemasResult emptyListSchemasResult = new ListSchemasResult().withSchemas(Collections.emptyList());
+
         when(mockClient.listSchemas(any())).thenReturn(emptyListSchemasResult);
 
-        assertThat((Collection<GlueSchemaResponse>) underTest.getAllSchemas(), is(empty()));
+        assertThat((Collection<GlueSchemaResponse>) underTest.getAllSchemas(schemaGroup), is(empty()));
     }
 
     @Test
     public void shouldFailWhenThereIsAMissingSchema() {
         List<String> schemaNames = new ArrayList<>();
-        schemaNames.add("schema_1");
-        schemaNames.add("schema_2");
-        schemaNames.add("schema_3");
+        schemaNames.add("schema1.some_table");
+        schemaNames.add("schema2.some_table");
+        schemaNames.add("schema3.some_table");
 
         val schemas = schemaNames.stream()
                 .map(schemaName -> new SchemaListItem().withSchemaName(schemaName))
@@ -143,14 +145,16 @@ public class GlueSchemaClientTest {
         when(mockClient.listSchemas(listSchemaRequestCaptor.capture())).thenReturn(listSchemasResult);
         when(mockClient.getSchemaVersion(any())).thenThrow(new EntityNotFoundException("Schema not found"));
 
-        assertThrows(RuntimeException.class, () -> underTest.getAllSchemas());
+        assertThrows(RuntimeException.class, () -> underTest.getAllSchemas(new HashSet<>(schemaNames)));
     }
 
     @Test
     public void shouldThrowAnExceptionIfAnErrorOccursWhenListingSchemas() {
+        Set<String> schemaGroup = Collections.singleton("test_schema.test_table");
+
         when(mockClient.listSchemas(any())).thenThrow(new AWSGlueException("failed to list schemas"));
 
-        assertThrows(AWSGlueException.class, () -> underTest.getAllSchemas());
+        assertThrows(AWSGlueException.class, () -> underTest.getAllSchemas(schemaGroup));
     }
 
     private void givenClientProviderReturnsAClient() {

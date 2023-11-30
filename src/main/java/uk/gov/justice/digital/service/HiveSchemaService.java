@@ -41,12 +41,12 @@ public class HiveSchemaService {
         this.glueHiveTableClient = glueHiveTableClient;
     }
 
-    public Set<String> replaceTables() {
+    public Set<String> replaceTables(Set<String> schemaGroup) {
 
         Set<String> failedTables = new HashSet<>();
 
         logger.info("Retrieving all schemas in registry");
-        List<SourceReference> sourceReferences = sourceReferenceService.getAllSourceReferences();
+        List<SourceReference> sourceReferences = sourceReferenceService.getAllSourceReferences(schemaGroup);
 
         if (sourceReferences.isEmpty()) {
             throw new HiveSchemaServiceException("No schemas retrieved from registry");
