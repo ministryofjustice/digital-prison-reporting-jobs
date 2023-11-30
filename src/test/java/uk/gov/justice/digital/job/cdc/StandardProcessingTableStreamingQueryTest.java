@@ -35,7 +35,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestam
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 @ExtendWith(MockitoExtension.class)
-class TableStreamingQueryTest extends BaseSparkTest {
+class StandardProcessingTableStreamingQueryTest extends BaseSparkTest {
     private static List<Row> testData;
     private static Seq<Row> testDataSeq;
     @Mock
@@ -50,7 +50,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
     @TempDir
     private Path testRoot;
 
-    private ProcessingTableStreamingQuery underTest;
+    private StandardProcessingTableStreamingQuery underTest;
 
     private MemoryStream<Row> inputStream;
 
@@ -62,7 +62,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new ProcessingTableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
+        underTest = new StandardProcessingTableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
 
     }
 
@@ -104,7 +104,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
-        when(dataProvider.getSourceDataStreaming(any(), eq(sourceReference))).thenReturn(streamingDataframe);
+        when(dataProvider.getStreamingSourceData(any(), eq(sourceReference))).thenReturn(streamingDataframe);
     }
 
     private void givenJobArguments() {

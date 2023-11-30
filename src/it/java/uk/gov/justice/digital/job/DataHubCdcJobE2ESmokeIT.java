@@ -12,7 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
-import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
+import uk.gov.justice.digital.job.cdc.TableStreamingQueryFactory;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -64,12 +64,6 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         givenCheckpointsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
-        givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
-        givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
-        givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);
-        givenASourceReferenceFor(offenderBookingsTable, sourceReferenceService);
-        givenASourceReferenceFor(offenderExternalMovementsTable, sourceReferenceService);
-        givenASourceReferenceFor(offendersTable, sourceReferenceService);
     }
 
     @AfterEach
@@ -84,7 +78,16 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     }
 
     @Test
-    public void shouldRunTheJobEndToEndApplyingSomeCDCMessages() throws Throwable {
+    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws Throwable {
+        givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
+        givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
+        givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);
+        givenASourceReferenceFor(offenderBookingsTable, sourceReferenceService);
+        givenASourceReferenceFor(offenderExternalMovementsTable, sourceReferenceService);
+
+        // offenders is the only table that has no schema - we expect its data to arrive in violations
+        givenNoSourceReferenceFor(offendersTable, sourceReferenceService);
+
         List<Row> initialDataEveryTable = Arrays.asList(
                 createRow(pk1, "2023-11-13 10:00:00.000000", Insert, "1a"),
                 createRow(pk2, "2023-11-13 10:00:00.000000", Insert, "2a")
@@ -94,8 +97,20 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenEventuallyCuratedAndStructuredHaveDataForPK("1a", pk1);
-        thenEventuallyCuratedAndStructuredHaveDataForPK("2a", pk2);
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "1a", pk1));
+
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "2a", pk2));
+
+        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "1a", pk1));
+        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "2a", pk2));
 
         whenUpdateOccursForTableAndPK(agencyInternalLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
         whenUpdateOccursForTableAndPK(agencyLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
@@ -113,7 +128,12 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(offenderBookingsTable, pk2));
 
         thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "3a", pk3));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offendersTable, "3a", pk3));
+
+        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "3a", pk3));
+
+        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk1);
+        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk2);
+        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk3);
     }
 
     private void whenTheJobRuns() {
@@ -134,8 +154,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
         StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone);
-        TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(arguments, s3DataProvider, batchProcessor, sourceReferenceService, violationService);
-        underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
+        TableStreamingQueryFactory tableStreamingQueryFactory = new TableStreamingQueryFactory(arguments, s3DataProvider, batchProcessor, sourceReferenceService, violationService);
+        underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryFactory, tableDiscoveryService);
     }
 
     private void givenCheckpointsAreConfigured() throws IOException {
@@ -147,15 +167,6 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getCdcFileGlobPattern()).thenReturn("*.parquet");
-    }
-
-    private void thenEventuallyCuratedAndStructuredHaveDataForPK(String data, int primaryKey) throws Throwable {
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, data, primaryKey));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, data, primaryKey));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, data, primaryKey));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, data, primaryKey));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, data, primaryKey));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offendersTable, data, primaryKey));
     }
 
     @FunctionalInterface

@@ -84,6 +84,19 @@ class ViolationServiceTest extends BaseSparkTest {
     }
 
     @Test
+    public void handleNoSchemaS3FoundShouldWriteViolations() throws DataStorageException {
+        underTest.handleNoSchemaFoundS3(spark, testInputDataframe(), "source", "table");
+        verify(mockDataStorage).append(any(), any());
+        verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
+    }
+
+    @Test
+    public void handleNoSchemaS3FoundShouldThrowIfWriteFails() throws DataStorageException {
+        doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
+        assertThrows(DataStorageException.class, () -> underTest.handleNoSchemaFoundS3(spark, testInputDataframe(), "source", "table"));
+    }
+
+    @Test
     public void handleInvalidSchemaShouldWriteViolations() throws DataStorageException {
         underTest.handleInvalidSchema(spark, testInputDataframe(), "source", "table");
         verify(mockDataStorage).append(any(), any());

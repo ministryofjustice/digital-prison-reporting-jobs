@@ -12,7 +12,7 @@ import javax.inject.Singleton;
 import java.util.Optional;
 
 @Singleton
-public class TableStreamingQueryProvider {
+public class TableStreamingQueryFactory {
 
     private final JobArguments arguments;
     private final S3DataProvider s3DataProvider;
@@ -21,7 +21,7 @@ public class TableStreamingQueryProvider {
     private final ViolationService violationService;
 
     @Inject
-    public TableStreamingQueryProvider(
+    public TableStreamingQueryFactory(
             JobArguments arguments,
             S3DataProvider s3DataProvider,
             CdcBatchProcessor batchProcessor,
@@ -33,11 +33,11 @@ public class TableStreamingQueryProvider {
         this.violationService = violationService;
     }
 
-    public TableStreamingQuery provide(String inputSourceName, String inputTableName) {
+    public TableStreamingQuery create(String inputSourceName, String inputTableName) {
         Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(inputSourceName, inputTableName);
         if(maybeSourceReference.isPresent()) {
             SourceReference sourceReference = maybeSourceReference.get();
-            return new ProcessingTableStreamingQuery(arguments, s3DataProvider, batchProcessor, sourceReference);
+            return new StandardProcessingTableStreamingQuery(arguments, s3DataProvider, batchProcessor, sourceReference);
         } else {
             return new SchemaViolationTableStreamingQuery(inputSourceName, inputTableName, arguments, s3DataProvider, violationService);
         }

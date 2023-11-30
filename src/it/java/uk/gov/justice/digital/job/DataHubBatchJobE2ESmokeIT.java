@@ -49,17 +49,18 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenGlobPatternIsConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
+    }
+
+    @Test
+    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws Exception {
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);
         givenASourceReferenceFor(offenderBookingsTable, sourceReferenceService);
         givenASourceReferenceFor(offenderExternalMovementsTable, sourceReferenceService);
-
+        // offenders is the only table that has no schema - we expect its data to arrive in violations
         givenNoSourceReferenceFor(offendersTable, sourceReferenceService);
-    }
 
-    @Test
-    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws Exception {
         List<Row> initialDataEveryTable = Arrays.asList(
                 createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
                 createRow(2, "2023-11-13 10:00:00.000000", Insert, "2")

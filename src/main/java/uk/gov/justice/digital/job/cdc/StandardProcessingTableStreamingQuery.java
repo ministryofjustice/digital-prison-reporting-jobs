@@ -20,9 +20,9 @@ import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
  * Encapsulates logic for standard processing of a stream of micro-batches of CDC events for a single table.
  * You can test behaviour across multiple batches by testing against this class.
  */
-public class ProcessingTableStreamingQuery implements TableStreamingQuery {
+public class StandardProcessingTableStreamingQuery implements TableStreamingQuery {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProcessingTableStreamingQuery.class);
+    private static final Logger logger = LoggerFactory.getLogger(StandardProcessingTableStreamingQuery.class);
 
     private final JobArguments arguments;
     private final S3DataProvider s3DataProvider;
@@ -31,7 +31,7 @@ public class ProcessingTableStreamingQuery implements TableStreamingQuery {
 
     private StreamingQuery query;
 
-    public ProcessingTableStreamingQuery(
+    public StandardProcessingTableStreamingQuery(
             JobArguments arguments,
             S3DataProvider dataProvider,
             CdcBatchProcessor batchProcessor,
@@ -52,7 +52,7 @@ public class ProcessingTableStreamingQuery implements TableStreamingQuery {
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
-        Dataset<Row> sourceDf = s3DataProvider.getSourceDataStreaming(spark, sourceReference);
+        Dataset<Row> sourceDf = s3DataProvider.getStreamingSourceData(spark, sourceReference);
         try {
             query = sourceDf
                     .writeStream()

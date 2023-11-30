@@ -129,7 +129,6 @@ public class ViolationService {
         storageService.updateDeltaManifestForTable(spark, destinationPath);
     }
 
-    // todo tests
     public void handleNoSchemaFoundS3(
             SparkSession spark,
             Dataset<Row> dataFrame,

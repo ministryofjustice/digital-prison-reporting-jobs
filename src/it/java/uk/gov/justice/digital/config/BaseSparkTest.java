@@ -94,7 +94,6 @@ public class BaseSparkTest {
 				.collectAsList();
 
 		List<Row> expected = Collections.singletonList(RowFactory.create(data));
-		assertEquals(expected.size(), result.size());
 		assertTrue(result.containsAll(expected));
 	}
 

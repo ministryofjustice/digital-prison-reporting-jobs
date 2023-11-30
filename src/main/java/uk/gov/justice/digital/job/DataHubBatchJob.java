@@ -123,13 +123,13 @@ public class DataHubBatchJob implements Runnable {
                 Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
                 if(maybeSourceReference.isPresent()) {
                     SourceReference sourceReference = maybeSourceReference.get();
-                    val dataFrame = dataProvider.getSourceDataBatch(sparkSession, sourceReference, filePaths);
+                    val dataFrame = dataProvider.getBatchSourceData(sparkSession, sourceReference, filePaths);
                     logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
                     batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
                     logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
                 } else {
                     logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
-                    val dataFrame = dataProvider.getSourceDataBatchWithSchemaInference(sparkSession, filePaths);
+                    val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
                     violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table);
                 }
             } else {

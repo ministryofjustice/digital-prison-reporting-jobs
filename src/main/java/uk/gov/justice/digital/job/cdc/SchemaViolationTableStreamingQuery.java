@@ -15,7 +15,6 @@ import java.util.concurrent.TimeoutException;
 import static java.lang.String.format;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 
-// todo tests
 public class SchemaViolationTableStreamingQuery implements TableStreamingQuery {
 
     private static final Logger logger = LoggerFactory.getLogger(SchemaViolationTableStreamingQuery.class);
@@ -50,7 +49,7 @@ public class SchemaViolationTableStreamingQuery implements TableStreamingQuery {
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
-        Dataset<Row> sourceDf = dataProvider.getSourceDataStreamingWithSchemaInference(spark, sourceName, tableName);
+        Dataset<Row> sourceDf = dataProvider.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
         try {
             query = sourceDf
                     .writeStream()

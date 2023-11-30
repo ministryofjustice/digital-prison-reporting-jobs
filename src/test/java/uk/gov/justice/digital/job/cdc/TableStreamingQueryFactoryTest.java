@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class TableStreamingQueryProviderTest {
+class TableStreamingQueryFactoryTest {
 
     @Mock
     private JobArguments arguments;
@@ -36,11 +36,11 @@ class TableStreamingQueryProviderTest {
     @Mock
     private ViolationService violationService;
 
-    private TableStreamingQueryProvider underTest;
+    private TableStreamingQueryFactory underTest;
 
     @BeforeEach
     public void setUp() {
-        underTest = new TableStreamingQueryProvider(arguments, s3DataProvider, batchProcessor, sourceReferenceService, violationService);
+        underTest = new TableStreamingQueryFactory(arguments, s3DataProvider, batchProcessor, sourceReferenceService, violationService);
     }
 
     @Test
@@ -50,8 +50,8 @@ class TableStreamingQueryProviderTest {
 
         when(sourceReferenceService.getSourceReference(source, table)).thenReturn(Optional.of(sourceReference));
 
-        TableStreamingQuery streamingQuery = underTest.provide(source, table);
-        assertThat(streamingQuery, instanceOf(ProcessingTableStreamingQuery.class));
+        TableStreamingQuery streamingQuery = underTest.create(source, table);
+        assertThat(streamingQuery, instanceOf(StandardProcessingTableStreamingQuery.class));
     }
 
     @Test
@@ -60,7 +60,7 @@ class TableStreamingQueryProviderTest {
         String table = "some-table";
 
         when(sourceReferenceService.getSourceReference(source, table)).thenReturn(Optional.empty());
-        TableStreamingQuery streamingQuery = underTest.provide(source, table);
+        TableStreamingQuery streamingQuery = underTest.create(source, table);
         assertThat(streamingQuery, instanceOf(SchemaViolationTableStreamingQuery.class));
     }
 

@@ -47,7 +47,7 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
  * can be received in a single batch or across multiple batches.
  */
 @ExtendWith(MockitoExtension.class)
-public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
+public class StandardProcessingTableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private JobArguments arguments;
     @Mock
@@ -55,7 +55,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private SourceReference sourceReference;
 
-    private ProcessingTableStreamingQuery underTest;
+    private StandardProcessingTableStreamingQuery underTest;
 
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
@@ -216,14 +216,14 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
         StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone);
-        underTest = new ProcessingTableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
+        underTest = new StandardProcessingTableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
     }
 
     private void givenAnInputStream() {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
-        when(dataProvider.getSourceDataStreaming(any(), eq(sourceReference))).thenReturn(streamingDataframe);
+        when(dataProvider.getStreamingSourceData(any(), eq(sourceReference))).thenReturn(streamingDataframe);
     }
 
     private void givenASourceReference() {

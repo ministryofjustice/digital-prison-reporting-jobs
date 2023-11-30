@@ -35,14 +35,14 @@ public class S3DataProvider {
         this.arguments = arguments;
     }
 
-    public Dataset<Row> getSourceDataStreaming(SparkSession sparkSession, SourceReference sourceReference) {
+    public Dataset<Row> getStreamingSourceData(SparkSession sparkSession, SourceReference sourceReference) {
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
         StructType schema = withMetadataFields(sourceReference.getSchema());
-        logger.info("SPecified schema for {}.{}: \n{}", sourceName, tableName, schema.treeString());
+        logger.info("Specified schema for {}.{}: \n{}", sourceName, tableName, schema.treeString());
         logger.info("Initialising S3 data source for {}.{} with file glob path {}", sourceName, tableName, fileGlobPath);
         return sparkSession
                 .readStream()
@@ -50,8 +50,7 @@ public class S3DataProvider {
                 .parquet(fileGlobPath);
     }
 
-    // todo tests
-    public Dataset<Row> getSourceDataStreamingWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) {
+    public Dataset<Row> getStreamingSourceDataWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) {
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
@@ -64,7 +63,7 @@ public class S3DataProvider {
                 .parquet(fileGlobPath);
     }
 
-    public Dataset<Row> getSourceDataBatch(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) {
+    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) {
         StructType schema = withMetadataFields(sourceReference.getSchema());
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
         logger.info("Schema for {}.{}: \n{}", sourceReference.getSource(), sourceReference.getTable(), schema.treeString());
@@ -74,8 +73,7 @@ public class S3DataProvider {
                 .parquet(scalaFilePaths);
     }
 
-    // todo tests
-    public Dataset<Row> getSourceDataBatchWithSchemaInference(SparkSession sparkSession, List<String> filePaths) {
+    public Dataset<Row> getBatchSourceDataWithSchemaInference(SparkSession sparkSession, List<String> filePaths) {
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
         return sparkSession
                 .read()
