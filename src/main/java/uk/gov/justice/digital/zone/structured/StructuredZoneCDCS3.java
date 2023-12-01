@@ -48,6 +48,7 @@ public class StructuredZoneCDCS3 {
             logger.debug("Merging {} records to deltalake table: {}", dataFrame.count(), structuredTablePath);
             storage.mergeRecordsCdc(spark, structuredTablePath, dataFrame, sourceReference.getPrimaryKey());
             logger.debug("Merge completed successfully to table: {}", structuredTablePath);
+            storage.updateDeltaManifestForTable(spark, structuredTablePath);
             logger.info("Processed batch for structured {}/{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
         } catch (DataStorageRetriesExhaustedException e) {
             logger.warn("Structured zone cdc retries exhausted", e);
