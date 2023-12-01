@@ -13,6 +13,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.SchemaMismatchException;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -123,15 +124,35 @@ class DataHubBatchJobTest {
         stubDiscoveredTablePaths();
 
         when(sourceReferenceService.getSourceReference(eq("s1"), eq("t1"))).thenReturn(Optional.empty());
-        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference1));
+        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference2));
 
         underTest.runJob(spark);
 
         // Should write table 1 to violations
         verify(violationService, times(1)).handleNoSchemaFoundS3(any(), any(), eq("s1"), eq("t1"));
         // Should process table 2 and no other tables
+        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
+        verify(batchProcessor, times(1)).processBatch(any(), any(), any());
+    }
+
+    @Test
+    public void shouldRunAQueryPerTableButWriteMismatchingSchemasToViolations() throws Exception {
+        stubRawPath();
+        stubDiscoveredTablePaths();
+        when(dataProvider.getBatchSourceData(any(), eq(sourceReference1), any())).thenReturn(dataFrame);
+        when(dataProvider.getBatchSourceData(any(), eq(sourceReference2), any())).thenThrow(new SchemaMismatchException(""));
+        when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+
+        when(sourceReferenceService.getSourceReference(eq("s1"), eq("t1"))).thenReturn(Optional.of(sourceReference1));
+        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference2));
+
+        underTest.runJob(spark);
+
+        // Should process table 1 and no other tables
         verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
         verify(batchProcessor, times(1)).processBatch(any(), any(), any());
+        // Should write table 2 to violations
+        verify(violationService, times(1)).handleInvalidSchema(any(), any(), eq("s2"), eq("t2"));
     }
 
     private void stubRawPath() {
@@ -146,7 +167,7 @@ class DataHubBatchJobTest {
         when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(Collections.emptyMap());
     }
 
-    private void stubReadData() {
+    private void stubReadData() throws SchemaMismatchException {
         when(dataProvider.getBatchSourceData(any(), any(), any())).thenReturn(dataFrame);
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
