@@ -48,6 +48,7 @@ public class StructuredZoneLoadS3 {
             logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), path);
             storage.appendDistinct(path, dataFrame, primaryKey);
             logger.info("Append completed successfully to table: {}", path);
+            storage.updateDeltaManifestForTable(spark, path);
             logger.info("Processed batch for structured {}/{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
         } catch (DataStorageRetriesExhaustedException e) {
             logger.warn("Structured zone load retries exhausted", e);
