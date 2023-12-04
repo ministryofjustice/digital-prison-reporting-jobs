@@ -21,7 +21,10 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import javax.inject.Singleton;
 import java.util.Arrays;
 
+import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
 
 @Singleton
 public class ValidationService {
@@ -37,10 +40,10 @@ public class ValidationService {
     public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference, ViolationService.ZoneName zoneName) {
         try {
             val maybeValidRows = validateRows(dataFrame, sourceReference);
-            val validRows = maybeValidRows.filter("valid = true").drop("valid");
-            val invalidRows = maybeValidRows.filter("valid = false").drop("valid");
+            val validRows = maybeValidRows.filter(col(ERROR).isNull()).drop(ERROR);
+            val invalidRows = maybeValidRows.filter(col(ERROR).isNotNull());
             if(!invalidRows.isEmpty()) {
-                violationService.handleInvalidSchema(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable(), zoneName);
+                violationService.handleViolation(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable(), zoneName);
             }
             return validRows;
         } catch (DataStorageException e) {
@@ -53,25 +56,36 @@ public class ValidationService {
     Dataset<Row> validateRows(Dataset<Row> df, SourceReference sourceReference) {
         val schemaFields = sourceReference.getSchema().fields();
 
-        Column cond = allRequiredColumnsAreNotNull(schemaFields);
         return df.withColumn(
-                "valid",
-                cond
+                ERROR,
+                when(pkIsNull(sourceReference), lit("Record does not have a primary key"))
+                        .when(requiredColumnIsNull(schemaFields), lit("Required column is null"))
+                        .otherwise(lit(null))
         );
     }
 
-    private static Column allRequiredColumnsAreNotNull(StructField[] schemaFields) {
+    private static Column pkIsNull(SourceReference sourceReference) {
+        return sourceReference
+                .getPrimaryKey()
+                .getKeyColumnNames()
+                .stream()
+                .map(pk -> col(pk).isNull())
+                .reduce(Column::or)
+                .orElse(lit(false));
+    }
+
+    private static Column requiredColumnIsNull(StructField[] schemaFields) {
         return Arrays.stream(schemaFields)
                 .filter(field -> !field.nullable())
                 .map(StructField::name)
                 .map(functions::col)
-                .map(Column::isNotNull)
-                .reduce(Column::and)
-                .orElse(lit(true));
+                .map(Column::isNull)
+                .reduce(Column::or)
+                .orElse(lit(false));
     }
 
     @VisibleForTesting
-    static boolean schemasMatch(StructType inferredSchema, StructType specifiedSchema) {
+    static boolean schemasMatch (StructType inferredSchema, StructType specifiedSchema) {
         if(inferredSchema.fields().length != specifiedSchema.fields().length) {
             return false;
         }

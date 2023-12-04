@@ -23,7 +23,6 @@ import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.DATA;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.METADATA;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.TIMESTAMP;
 
 @Singleton
 public class ViolationService {
@@ -165,7 +164,26 @@ public class ViolationService {
 
         logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
         logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), destinationPath);
-        storageService.append(destinationPath, invalidRecords.drop(OPERATION, TIMESTAMP));
+        storageService.append(destinationPath, invalidRecords);
+
+        logger.info("Append completed successfully");
+        storageService.updateDeltaManifestForTable(spark, destinationPath);
+    }
+
+    /**
+     * Handle violations with error column already present on the DataFrame.
+     */
+    public void handleViolation(
+            SparkSession spark,
+            Dataset<Row> invalidRecords,
+            String source,
+            String table,
+            ZoneName zoneName
+    ) throws DataStorageException {
+        val destinationPath = fullTablePath(source, table, zoneName);
+        logger.warn("Violation - for source {}, table {}", source, table);
+        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), destinationPath);
+        storageService.append(destinationPath, invalidRecords);
 
         logger.info("Append completed successfully");
         storageService.updateDeltaManifestForTable(spark, destinationPath);
