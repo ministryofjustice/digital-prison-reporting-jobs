@@ -105,7 +105,15 @@ public class TableStreamingQueryProvider {
         Dataset<Row> sourceData =
                 s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, sourceReference.getSource(), sourceReference.getTable());
         VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
-                (df, batchId) -> violationService.handleInvalidSchema(spark, df, sourceReference.getSource(), sourceReference.getTable(), STRUCTURED_CDC);
+                (df, batchId) ->
+                        violationService.handleInvalidSchema(
+                            spark,
+                            df,
+                            sourceReference.getSource(),
+                            sourceReference.getTable(),
+                            STRUCTURED_CDC,
+                            sourceReference.getVersionNumber()
+                        );
 
         return new TableStreamingQuery(
                 inputSourceName,

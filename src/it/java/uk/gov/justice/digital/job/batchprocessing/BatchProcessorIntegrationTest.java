@@ -151,6 +151,7 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
                 source,
                 table,
                 new SourceReference.PrimaryKey("s"),
+                1L,
                 new StructType().add(new StructField("s", StringType, true, Metadata.empty()))
         );
         when(sourceReferenceService.getSourceReference(source, table)).thenReturn(Optional.of(sourceReference));

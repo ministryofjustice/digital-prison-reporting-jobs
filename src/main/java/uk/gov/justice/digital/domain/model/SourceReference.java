@@ -14,6 +14,7 @@ public class SourceReference {
     private final String source;
     private final String table;
     private final PrimaryKey primaryKey;
+    private final Long versionNumber;
     private final StructType schema;
 
     public static class PrimaryKey {

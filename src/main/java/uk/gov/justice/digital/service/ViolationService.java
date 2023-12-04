@@ -150,11 +150,12 @@ public class ViolationService {
             Dataset<Row> dataFrame,
             String source,
             String table,
-            ZoneName zoneName
+            ZoneName zoneName,
+            Long schemaVersion
     ) throws DataStorageException {
         logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
-        val errorPrefix = String.format("Record does not match schema %s/%s: ", source, table);
-        val invalidRecords = dataFrame.withColumn(ERROR, lit(errorPrefix));
+        val errorMsg = String.format("Record does not match schema version %d", schemaVersion);
+        val invalidRecords = dataFrame.withColumn(ERROR, lit(errorMsg));
         handleViolation(spark, invalidRecords, source, table, zoneName);
     }
 

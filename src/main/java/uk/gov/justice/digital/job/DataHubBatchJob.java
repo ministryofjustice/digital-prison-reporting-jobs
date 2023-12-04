@@ -133,7 +133,7 @@ public class DataHubBatchJob implements Runnable {
                     } catch (SchemaMismatchException e) {
                         logger.warn("Schema mismatch for table {}.{} - writing all data to violations", schema, table);
                         val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
-                        violationService.handleInvalidSchema(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
+                        violationService.handleInvalidSchema(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD, sourceReference.getVersionNumber());
                     }
                 } else {
                     logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);

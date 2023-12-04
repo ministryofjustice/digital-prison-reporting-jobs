@@ -147,13 +147,15 @@ class DataHubBatchJobTest {
         when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.of(sourceReference1));
         when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.of(sourceReference2));
 
+        when(sourceReference2.getVersionNumber()).thenReturn(2L);
+
         underTest.runJob(spark);
 
         // Should process table 1 and no other tables
         verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
         verify(batchProcessor, times(1)).processBatch(any(), any(), any());
         // Should write table 2 to violations
-        verify(violationService, times(1)).handleInvalidSchema(any(), any(), eq("s2"), eq("t2"), eq(STRUCTURED_LOAD));
+        verify(violationService, times(1)).handleInvalidSchema(any(), any(), eq("s2"), eq("t2"), eq(STRUCTURED_LOAD), eq(2L));
     }
 
     private void stubRawPath() {

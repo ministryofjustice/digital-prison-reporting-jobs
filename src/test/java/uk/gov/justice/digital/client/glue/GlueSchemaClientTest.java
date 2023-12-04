@@ -30,6 +30,7 @@ public class GlueSchemaClientTest {
     private static final String SCHEMA_NAME = "somesource.sometable";
     private static final String FAKE_SCHEMA_DEFINITION = "This is a fake schema definition";
     private static final String FIXED_UUID = "35AC2858-B6B4-462A-8F5E-A13D6E9E0FF2";
+    private static final Long VERSION_NUMBER = 1L;
 
     @Mock
     private GlueClientProvider mockClientProvider;
@@ -64,7 +65,7 @@ public class GlueSchemaClientTest {
 
         val result = underTest.getSchema(SCHEMA_NAME);
 
-        assertEquals(Optional.of(new GlueSchemaResponse(FIXED_UUID, FAKE_SCHEMA_DEFINITION)), result);
+        assertEquals(Optional.of(new GlueSchemaResponse(FIXED_UUID, FAKE_SCHEMA_DEFINITION, VERSION_NUMBER)), result);
     }
 
     @Test
@@ -168,6 +169,7 @@ public class GlueSchemaClientTest {
     private void givenClientReturnsAValidResponse() {
         when(mockResponse.getSchemaVersionId()).thenReturn(FIXED_UUID);
         when(mockResponse.getSchemaDefinition()).thenReturn(FAKE_SCHEMA_DEFINITION);
+        when(mockResponse.getVersionNumber()).thenReturn(VERSION_NUMBER);
         when(mockClient.getSchemaVersion(any())).thenReturn(mockResponse);
     }
 

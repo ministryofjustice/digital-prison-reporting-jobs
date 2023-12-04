@@ -36,7 +36,8 @@ public class GlueSchemaClient {
             val result = glueClient.getSchemaVersion(request);
             return Optional.of(new GlueSchemaResponse(
                     result.getSchemaVersionId(),
-                    result.getSchemaDefinition()
+                    result.getSchemaDefinition(),
+                    result.getVersionNumber()
             ));
         } catch (EntityNotFoundException e) {
             logger.warn("Schema not found for {}", schemaName);
@@ -92,6 +93,7 @@ public class GlueSchemaClient {
     public static class GlueSchemaResponse {
         private final String id;
         private final String avro;
+        private final Long versionNumber;
     }
 
 }
