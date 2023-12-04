@@ -9,8 +9,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.job.cdc.StandardProcessingTableStreamingQuery;
-import uk.gov.justice.digital.job.cdc.TableStreamingQueryFactory;
+import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
+import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
@@ -37,23 +37,23 @@ class DataHubCdcJobTest {
     @Mock
     private JobProperties properties;
     @Mock
-    private TableStreamingQueryFactory tableStreamingQueryFactory;
+    private TableStreamingQueryProvider tableStreamingQueryProvider;
     @Mock
     private TableDiscoveryService tableDiscoveryService;
     @Mock
     private SparkSession spark;
     @Mock
-    private StandardProcessingTableStreamingQuery table1StreamingQuery;
+    private TableStreamingQuery table1StreamingQuery;
     @Mock
-    private StandardProcessingTableStreamingQuery table2StreamingQuery;
+    private TableStreamingQuery table2StreamingQuery;
     @Mock
-    private StandardProcessingTableStreamingQuery table3StreamingQuery;
+    private TableStreamingQuery table3StreamingQuery;
 
     private DataHubCdcJob underTest;
 
     @BeforeEach
     public void setUp() {
-        underTest = new DataHubCdcJob(arguments, properties, sparkSessionProvider, tableStreamingQueryFactory, tableDiscoveryService);
+        underTest = new DataHubCdcJob(arguments, properties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }
 
     @Test
@@ -61,15 +61,15 @@ class DataHubCdcJobTest {
 
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
-        when(tableStreamingQueryFactory.create("source1", "table1")).thenReturn(table1StreamingQuery);
-        when(tableStreamingQueryFactory.create("source2", "table2")).thenReturn(table2StreamingQuery);
-        when(tableStreamingQueryFactory.create("source3", "table3")).thenReturn(table3StreamingQuery);
+        when(tableStreamingQueryProvider.create(spark, "source1", "table1")).thenReturn(table1StreamingQuery);
+        when(tableStreamingQueryProvider.create(spark, "source2", "table2")).thenReturn(table2StreamingQuery);
+        when(tableStreamingQueryProvider.create(spark, "source3", "table3")).thenReturn(table3StreamingQuery);
 
         underTest.runJob(spark);
 
-        verify(table1StreamingQuery, times(1)).runQuery(spark);
-        verify(table2StreamingQuery, times(1)).runQuery(spark);
-        verify(table3StreamingQuery, times(1)).runQuery(spark);
+        verify(table1StreamingQuery, times(1)).runQuery();
+        verify(table2StreamingQuery, times(1)).runQuery();
+        verify(table3StreamingQuery, times(1)).runQuery();
     }
 
     @Test

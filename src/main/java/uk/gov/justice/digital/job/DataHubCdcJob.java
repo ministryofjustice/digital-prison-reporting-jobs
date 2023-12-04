@@ -16,7 +16,7 @@ import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
-import uk.gov.justice.digital.job.cdc.TableStreamingQueryFactory;
+import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.TableDiscoveryService;
@@ -35,7 +35,7 @@ public class DataHubCdcJob implements Runnable {
     private final JobArguments arguments;
     private final JobProperties properties;
     private final SparkSessionProvider sparkSessionProvider;
-    private final TableStreamingQueryFactory tableStreamingQueryFactory;
+    private final TableStreamingQueryProvider tableStreamingQueryProvider;
     private final TableDiscoveryService tableDiscoveryService;
 
     @Inject
@@ -43,13 +43,13 @@ public class DataHubCdcJob implements Runnable {
             JobArguments arguments,
             JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
-            TableStreamingQueryFactory tableStreamingQueryFactory,
+            TableStreamingQueryProvider tableStreamingQueryProvider,
             TableDiscoveryService tableDiscoveryService) {
         logger.info("Initializing DataHubCdcJob");
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
-        this.tableStreamingQueryFactory = tableStreamingQueryFactory;
+        this.tableStreamingQueryProvider = tableStreamingQueryProvider;
         this.tableDiscoveryService = tableDiscoveryService;
         logger.info("DataHubCdcJob initialization complete");
     }
@@ -93,8 +93,8 @@ public class DataHubCdcJob implements Runnable {
             tablesToProcess.forEach(tableDetails -> {
                 String inputSchemaName = tableDetails.getLeft();
                 String inputTableName = tableDetails.getRight();
-                TableStreamingQuery streamingQuery = tableStreamingQueryFactory.create(inputSchemaName, inputTableName);
-                streamingQuery.runQuery(spark);
+                TableStreamingQuery streamingQuery = tableStreamingQueryProvider.create(spark, inputSchemaName, inputTableName);
+                streamingQuery.runQuery();
                 streamingQueries.add(streamingQuery);
             });
         } else {

@@ -1,15 +1,11 @@
 package uk.gov.justice.digital.job.cdc;
 
+import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 
 import java.util.concurrent.TimeoutException;
 
@@ -24,43 +20,41 @@ public class TableStreamingQuery {
 
     private static final Logger logger = LoggerFactory.getLogger(TableStreamingQuery.class);
 
-    private final JobArguments arguments;
-    private final S3DataProvider s3DataProvider;
-    private final CdcBatchProcessor batchProcessor;
-    private final SourceReference sourceReference;
+    private final String inputSourceName;
+    private final String inputTableName;
+    private final String checkpointLocation;
+
+    private final Dataset<Row> sourceData;
+    private final VoidFunction2<Dataset<Row>, Long> batchProcessingFunc;
 
     private StreamingQuery query;
 
     public TableStreamingQuery(
-            JobArguments arguments,
-            S3DataProvider dataProvider,
-            CdcBatchProcessor batchProcessor,
-            SourceReference sourceReference
-    ) {
-        this.arguments = arguments;
-        this.s3DataProvider = dataProvider;
-        this.batchProcessor = batchProcessor;
-        this.sourceReference = sourceReference;
+            String inputSourceName,
+            String inputTableName,
+            String checkpointLocation,
+            Dataset<Row> sourceData,
+            VoidFunction2<Dataset<Row>, Long> batchProcessingFunc) {
+        this.inputSourceName = inputSourceName;
+        this.inputTableName = inputTableName;
+        this.checkpointLocation = checkpointLocation;
+        this.sourceData = sourceData;
+        this.batchProcessingFunc = batchProcessingFunc;
     }
 
 
-    public StreamingQuery runQuery(SparkSession spark) {
-
-        logger.info("Initialising per batch processing for {}/{}", sourceReference.getSource(), sourceReference.getTable());
-
-        String queryName = format("Datahub_CDC_%s.%s", sourceReference.getSource(), sourceReference.getTable());
-        String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
+    public StreamingQuery runQuery() {
+        logger.info("Initialising per batch processing for {}/{}", inputSourceName, inputTableName);
+        String queryName = format("Datahub_CDC_%s.%s", inputSourceName, inputTableName);
+        String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(checkpointLocation), queryName);
 
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
-        Dataset<Row> sourceDf = s3DataProvider.getSourceDataStreaming(spark, sourceReference);
         try {
-            query = sourceDf
+            query = sourceData
                     .writeStream()
                     .queryName(queryName)
                     .format("delta")
-                    .foreachBatch((df, batchId) -> {
-                        batchProcessor.processBatch(sourceReference, spark, df, batchId);
-                    })
+                    .foreachBatch(batchProcessingFunc)
                     .outputMode("update")
                     .option("checkpointLocation", queryCheckpointPath)
                     .start();

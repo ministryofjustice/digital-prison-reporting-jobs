@@ -32,7 +32,7 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
         assertDeltaTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 
-    protected void thenCuratedAndStructuredDoNotContainPK(int primaryKey) {
+    protected void thenStructuredAndCuratedDoNotContainPK(int primaryKey) {
         assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, inputTableName, primaryKey);
     }
 

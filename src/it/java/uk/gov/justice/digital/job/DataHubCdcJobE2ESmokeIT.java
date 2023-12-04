@@ -12,7 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
-import uk.gov.justice.digital.job.cdc.TableStreamingQueryFactory;
+import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -154,8 +154,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
         StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone);
-        TableStreamingQueryFactory tableStreamingQueryFactory = new TableStreamingQueryFactory(arguments, s3DataProvider, batchProcessor, sourceReferenceService, violationService);
-        underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryFactory, tableDiscoveryService);
+        TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(arguments, s3DataProvider, batchProcessor, sourceReferenceService, violationService);
+        underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }
 
     private void givenCheckpointsAreConfigured() throws IOException {

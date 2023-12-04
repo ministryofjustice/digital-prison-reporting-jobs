@@ -41,7 +41,7 @@ public class S3DataProvider {
         this.arguments = arguments;
     }
 
-    public Dataset<Row> getStreamingSourceData(SparkSession sparkSession, SourceReference sourceReference) {
+    public Dataset<Row> getStreamingSourceData(SparkSession sparkSession, SourceReference sourceReference) throws SchemaMismatchException {
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
@@ -60,9 +60,7 @@ public class S3DataProvider {
         } else {
             String msg = "Provided and inferred schemas do not match";
             logger.warn(msg);
-            throw new RuntimeException(msg);
-            // todo use SchemaMismatchException
-//            throw new SchemaMismatchException(msg);
+            throw new SchemaMismatchException(msg);
         }
     }
 

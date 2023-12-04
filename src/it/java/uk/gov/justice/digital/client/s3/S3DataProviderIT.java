@@ -92,7 +92,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldGetStreamingSourceDataWithSpecifiedSchema() {
+    public void shouldGetStreamingSourceDataWithSpecifiedSchema() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
