@@ -74,7 +74,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedContainForPK("data1", pk1);
         thenStructuredAndCuratedContainForPK("data3", pk3);
 
-        thenViolationsContainsForPK("data2", pk2);
+        thenStructuredViolationsContainsForPK("data2", pk2);
         thenStructuredAndCuratedDoNotContainPK(pk2);
     }
 

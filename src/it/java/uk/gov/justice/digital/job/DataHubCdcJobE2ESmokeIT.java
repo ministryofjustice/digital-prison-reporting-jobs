@@ -109,8 +109,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "2a", pk2));
         thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "2a", pk2));
 
-        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "1a", pk1));
-        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "2a", pk2));
+        thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "1a", pk1));
+        thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "2a", pk2));
 
         whenUpdateOccursForTableAndPK(agencyInternalLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
         whenUpdateOccursForTableAndPK(agencyLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
@@ -129,7 +129,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
         thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "3a", pk3));
 
-        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "3a", pk3));
+        thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "3a", pk3));
 
         thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk1);
         thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk2);

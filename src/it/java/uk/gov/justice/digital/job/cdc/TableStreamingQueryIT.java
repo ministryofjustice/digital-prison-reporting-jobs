@@ -113,9 +113,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenViolationsContainsForPK("data1", pk1);
-        thenViolationsContainsForPK("data2", pk2);
-        thenViolationsContainsForPK(null, pk3);
+        thenStructuredViolationsContainsForPK("data1", pk1);
+        thenStructuredViolationsContainsForPK("data2", pk2);
+        thenStructuredViolationsContainsForPK(null, pk3);
         thenStructuredAndCuratedDoNotContainPK(pk1);
         thenStructuredAndCuratedDoNotContainPK(pk2);
         thenStructuredAndCuratedDoNotContainPK(pk3);
@@ -126,9 +126,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenViolationsContainsForPK("data4", pk1);
-        thenViolationsContainsForPK("data5", pk2);
-        thenViolationsContainsForPK(null, pk3);
+        thenStructuredViolationsContainsForPK("data4", pk1);
+        thenStructuredViolationsContainsForPK("data5", pk2);
+        thenStructuredViolationsContainsForPK(null, pk3);
         thenStructuredAndCuratedDoNotContainPK(pk1);
         thenStructuredAndCuratedDoNotContainPK(pk2);
         thenStructuredAndCuratedDoNotContainPK(pk3);
@@ -149,9 +149,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenViolationsContainsForPK("data1", pk1);
-        thenViolationsContainsForPK("data2", pk2);
-        thenViolationsContainsForPK(null, pk3);
+        thenStructuredViolationsContainsForPK("data1", pk1);
+        thenStructuredViolationsContainsForPK("data2", pk2);
+        thenStructuredViolationsContainsForPK(null, pk3);
         thenStructuredAndCuratedDoNotContainPK(pk1);
         thenStructuredAndCuratedDoNotContainPK(pk2);
         thenStructuredAndCuratedDoNotContainPK(pk3);
@@ -162,9 +162,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenViolationsContainsForPK("data4", pk1);
-        thenViolationsContainsForPK("data5", pk2);
-        thenViolationsContainsForPK(null, pk3);
+        thenStructuredViolationsContainsForPK("data4", pk1);
+        thenStructuredViolationsContainsForPK("data5", pk2);
+        thenStructuredViolationsContainsForPK(null, pk3);
         thenStructuredAndCuratedDoNotContainPK(pk1);
         thenStructuredAndCuratedDoNotContainPK(pk2);
         thenStructuredAndCuratedDoNotContainPK(pk3);

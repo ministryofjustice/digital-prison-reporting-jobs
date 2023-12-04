@@ -84,8 +84,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
         thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, 1);
         thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, 2);
-        thenViolationsContainsForPK(offendersTable, "1", 1);
-        thenViolationsContainsForPK(offendersTable, "2", 2);
+        thenStructuredViolationsContainsForPK(offendersTable, "1", 1);
+        thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
     }
 
     private void whenTheJobRuns() throws IOException, DataStorageException {

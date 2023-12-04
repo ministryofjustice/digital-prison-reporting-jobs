@@ -34,13 +34,13 @@ public class ValidationService {
         this.violationService = violationService;
     }
 
-    public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
+    public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference, ViolationService.ZoneName zoneName) {
         try {
             val maybeValidRows = validateRows(dataFrame, sourceReference);
             val validRows = maybeValidRows.filter("valid = true").drop("valid");
             val invalidRows = maybeValidRows.filter("valid = false").drop("valid");
             if(!invalidRows.isEmpty()) {
-                violationService.handleInvalidSchema(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable());
+                violationService.handleInvalidSchema(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable(), zoneName);
             }
             return validRows;
         } catch (DataStorageException e) {

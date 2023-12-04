@@ -115,8 +115,8 @@ public class E2ETestBase extends BaseSparkTest {
         assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
     }
 
-    protected void thenViolationsContainsForPK(String table, String data, int primaryKey) {
-        String violationsTablePath = Paths.get(violationsPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
+    protected void thenStructuredViolationsContainsForPK(String table, String data, int primaryKey) {
+        String violationsTablePath = Paths.get(violationsPath).resolve("structured").resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
         assertDeltaTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 

@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 
 @ExtendWith(MockitoExtension.class)
@@ -129,7 +130,7 @@ class DataHubBatchJobTest {
         underTest.runJob(spark);
 
         // Should write table 1 to violations
-        verify(violationService, times(1)).handleNoSchemaFoundS3(any(), any(), eq("s1"), eq("t1"));
+        verify(violationService, times(1)).handleNoSchemaFoundS3(any(), any(), eq("s1"), eq("t1"), eq(STRUCTURED_LOAD));
         // Should process table 2 and no other tables
         verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
         verify(batchProcessor, times(1)).processBatch(any(), any(), any());
@@ -152,7 +153,7 @@ class DataHubBatchJobTest {
         verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
         verify(batchProcessor, times(1)).processBatch(any(), any(), any());
         // Should write table 2 to violations
-        verify(violationService, times(1)).handleInvalidSchema(any(), any(), eq("s2"), eq("t2"));
+        verify(violationService, times(1)).handleInvalidSchema(any(), any(), eq("s2"), eq("t2"), eq(STRUCTURED_LOAD));
     }
 
     private void stubRawPath() {

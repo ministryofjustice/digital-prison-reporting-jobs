@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
@@ -84,7 +85,7 @@ class ValidationServiceTest extends BaseSparkTest {
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
 
-        List<Row> result = underTest.handleValidation(spark, inputDf, sourceReference).collectAsList();
+        List<Row> result = underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedValid = Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.000000", Delete, null)
@@ -100,7 +101,7 @@ class ValidationServiceTest extends BaseSparkTest {
         when(sourceReference.getTable()).thenReturn(table);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
-        underTest.handleValidation(spark, inputDf, sourceReference).collectAsList();
+        underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
                 createRow(2, "2023-11-13 10:49:29.000000", null, "2a"),
@@ -108,7 +109,7 @@ class ValidationServiceTest extends BaseSparkTest {
                 createRow(null, "2023-11-13 10:49:29.000000", Update, "2a")
         );
 
-        verify(violationService, times(1)).handleInvalidSchema(any(), argumentCaptor.capture(), eq(source), eq(table));
+        verify(violationService, times(1)).handleInvalidSchema(any(), argumentCaptor.capture(), eq(source), eq(table), eq(STRUCTURED_LOAD));
 
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(expectedInvalid.size(), result.size());
@@ -122,8 +123,8 @@ class ValidationServiceTest extends BaseSparkTest {
 
         doThrow(new DataStorageException(""))
                 .when(violationService)
-                .handleInvalidSchema(any(), any(), any(), any());
-        assertThrows(RuntimeException.class, () -> underTest.handleValidation(spark, inputDf, sourceReference).collectAsList());
+                .handleInvalidSchema(any(), any(), any(), any(), any());
+        assertThrows(RuntimeException.class, () -> underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList());
     }
 
 }

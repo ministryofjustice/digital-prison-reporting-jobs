@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service;
 
 import jakarta.inject.Inject;
+import lombok.Getter;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -18,6 +19,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
+import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.DATA;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.METADATA;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
@@ -35,23 +37,26 @@ public class ViolationService {
      * Allows us to record where a violation occurred.
      */
     public enum ZoneName {
-        RAW("Raw"),
-        STRUCTURED_LOAD("Structured Load"),
-        STRUCTURED_CDC("Structured CDC"),
-        CURATED_LOAD("Curated Load"),
-        CURATED_CDC("Curated CDC"),
-        CDC("CDC");
+        RAW("Raw", "raw"),
+        STRUCTURED_LOAD("Structured Load", "structured"),
+        STRUCTURED_CDC("Structured CDC", "structured"),
+        CURATED_LOAD("Curated Load", "curated"),
+        CURATED_CDC("Curated CDC", "curated");
 
         private final String name;
+        @Getter
+        private final String path;
 
-        ZoneName(String name) {
+        ZoneName(String name, String path) {
             this.name = name;
+            this.path = path;
         }
 
         @Override
         public String toString() {
             return name;
         }
+
     }
 
     @Inject
@@ -98,7 +103,7 @@ public class ViolationService {
     ) {
         String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
         logger.warn(violationMessage, cause);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
+        val destinationPath = fullTablePath(source, table, zoneName);
         val violationDf = dataFrame.withColumn(ERROR, lit(violationMessage));
         try {
             storageService.append(destinationPath, violationDf);
@@ -133,10 +138,11 @@ public class ViolationService {
             SparkSession spark,
             Dataset<Row> dataFrame,
             String source,
-            String table
+            String table,
+            ZoneName zoneName
     ) throws DataStorageException {
         logger.warn("Violation - No schema found for {}/{}", source, table);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
+        val destinationPath = fullTablePath(source, table, zoneName);
 
         val missingSchemaRecords = dataFrame
                 .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)));
@@ -149,19 +155,25 @@ public class ViolationService {
             SparkSession spark,
             Dataset<Row> dataFrame,
             String source,
-            String table
+            String table,
+            ZoneName zoneName
     ) throws DataStorageException {
         val errorPrefix = String.format("Record does not match schema %s/%s: ", source, table);
-        val validationFailedViolationPath = createValidatedPath(violationsPath, source, table);
+        val destinationPath = fullTablePath(source, table, zoneName);
         // Write invalid records where schema validation failed
         val invalidRecords = dataFrame.withColumn(ERROR, lit(errorPrefix));
 
         logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
-        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), validationFailedViolationPath);
-        storageService.append(validationFailedViolationPath, invalidRecords.drop(OPERATION, TIMESTAMP));
+        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), destinationPath);
+        storageService.append(destinationPath, invalidRecords.drop(OPERATION, TIMESTAMP));
 
         logger.info("Append completed successfully");
-        storageService.updateDeltaManifestForTable(spark, validationFailedViolationPath);
+        storageService.updateDeltaManifestForTable(spark, destinationPath);
+    }
+
+    private String fullTablePath(String source, String table, ZoneName zone) {
+        String root = ensureEndsWithSlash(violationsPath) + zone.getPath() + "/";
+        return createValidatedPath(root, source, table);
     }
 
 

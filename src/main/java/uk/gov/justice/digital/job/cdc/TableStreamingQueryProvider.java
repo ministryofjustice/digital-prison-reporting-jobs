@@ -19,6 +19,8 @@ import uk.gov.justice.digital.service.ViolationService;
 import javax.inject.Singleton;
 import java.util.Optional;
 
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
+
 @Singleton
 public class TableStreamingQueryProvider {
 
@@ -72,14 +74,14 @@ public class TableStreamingQueryProvider {
     @VisibleForTesting
     TableStreamingQuery noSchemaFoundQuery(SparkSession spark, String inputSourceName, String inputTableName) {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, inputSourceName, inputTableName);
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName);
+        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC);
         return new TableStreamingQuery(inputSourceName, inputTableName, arguments.getCheckpointLocation(), sourceData, batchProcessingFunc);
     }
 
     @VisibleForTesting
     TableStreamingQuery schemaMismatchQuery(SparkSession spark, String inputSourceName, String inputTableName, SourceReference sourceReference) {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, sourceReference.getSource(), sourceReference.getTable());
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = (df, batchId) -> violationService.handleInvalidSchema(spark, df, sourceReference.getSource(), sourceReference.getTable());
+        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = (df, batchId) -> violationService.handleInvalidSchema(spark, df, sourceReference.getSource(), sourceReference.getTable(), STRUCTURED_CDC);
         return new TableStreamingQuery(inputSourceName, inputTableName, arguments.getCheckpointLocation(), sourceData, batchProcessingFunc);
     }
 }

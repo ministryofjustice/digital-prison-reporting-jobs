@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 
 @Singleton
 @CommandLine.Command(name = "DataHubBatchJob")
@@ -132,12 +133,12 @@ public class DataHubBatchJob implements Runnable {
                     } catch (SchemaMismatchException e) {
                         logger.warn("Schema mismatch for table {}.{} - writing all data to violations", schema, table);
                         val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
-                        violationService.handleInvalidSchema(sparkSession, dataFrame, schema, table);
+                        violationService.handleInvalidSchema(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
                     }
                 } else {
                     logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
                     val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
-                    violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table);
+                    violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
                 }
             } else {
                 logger.warn("No paths found for table {}.{}", schema, table);
