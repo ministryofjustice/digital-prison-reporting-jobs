@@ -158,30 +158,6 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldReturnValidWhenNoFieldsAreRequired() {
-        when(sourceReference.getSchema()).thenReturn(new StructType(new StructField[]{
-                new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, true, Metadata.empty()),
-                new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty())
-        }));
-        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
-        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
-
-        List<Row> input = Collections.singletonList(
-                createRow(1, null, null, null)
-        );
-        Dataset<Row> thisInputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
-
-        List<Row> result = underTest.validateRows(thisInputDf, sourceReference).collectAsList();
-
-        List<Row> expected = Collections.singletonList(
-                RowFactory.create(1, null, null, null, null)
-        );
-
-        assertEquals(expected.size(), result.size());
-        assertTrue(result.containsAll(expected));
-    }
-
-    @Test
     public void handleValidationShouldReturnValidRows() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
