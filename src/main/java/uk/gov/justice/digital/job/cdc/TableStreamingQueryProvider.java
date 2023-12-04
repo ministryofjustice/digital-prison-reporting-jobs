@@ -46,7 +46,7 @@ public class TableStreamingQueryProvider {
         this.violationService = violationService;
     }
 
-    public TableStreamingQuery create(SparkSession spark, String inputSourceName, String inputTableName) {
+    public TableStreamingQuery provide(SparkSession spark, String inputSourceName, String inputTableName) {
         // We'll build the streaming query we want here. It might do normal processing, or it might write everything to violations
         Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(inputSourceName, inputTableName);
         if(!maybeSourceReference.isPresent()) {
@@ -65,23 +65,54 @@ public class TableStreamingQueryProvider {
     }
 
     @VisibleForTesting
-    TableStreamingQuery standardProcessingQuery(SparkSession spark, String inputSourceName, String inputTableName, SourceReference sourceReference) throws SchemaMismatchException {
+    TableStreamingQuery standardProcessingQuery(
+            SparkSession spark,
+            String inputSourceName,
+            String inputTableName,
+            SourceReference sourceReference
+    ) throws SchemaMismatchException {
+
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceData(spark, sourceReference);
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = (df, batchId) -> batchProcessor.processBatch(sourceReference, spark, df, batchId);
-        return new TableStreamingQuery(inputSourceName, inputTableName, arguments.getCheckpointLocation(), sourceData, batchProcessingFunc);
+        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
+                (df, batchId) -> batchProcessor.processBatch(sourceReference, spark, df, batchId);
+
+        return new TableStreamingQuery(
+                inputSourceName,
+                inputTableName,
+                arguments.getCheckpointLocation(),
+                sourceData,
+                batchProcessingFunc
+        );
     }
 
     @VisibleForTesting
     TableStreamingQuery noSchemaFoundQuery(SparkSession spark, String inputSourceName, String inputTableName) {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, inputSourceName, inputTableName);
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC);
-        return new TableStreamingQuery(inputSourceName, inputTableName, arguments.getCheckpointLocation(), sourceData, batchProcessingFunc);
+        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
+                (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC);
+
+        return new TableStreamingQuery(
+                inputSourceName,
+                inputTableName,
+                arguments.getCheckpointLocation(),
+                sourceData,
+                batchProcessingFunc
+        );
     }
 
     @VisibleForTesting
     TableStreamingQuery schemaMismatchQuery(SparkSession spark, String inputSourceName, String inputTableName, SourceReference sourceReference) {
-        Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, sourceReference.getSource(), sourceReference.getTable());
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = (df, batchId) -> violationService.handleInvalidSchema(spark, df, sourceReference.getSource(), sourceReference.getTable(), STRUCTURED_CDC);
-        return new TableStreamingQuery(inputSourceName, inputTableName, arguments.getCheckpointLocation(), sourceData, batchProcessingFunc);
+        Dataset<Row> sourceData =
+                s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, sourceReference.getSource(), sourceReference.getTable());
+        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
+                (df, batchId) -> violationService.handleInvalidSchema(spark, df, sourceReference.getSource(), sourceReference.getTable(), STRUCTURED_CDC);
+
+        return new TableStreamingQuery(
+                inputSourceName,
+                inputTableName,
+                arguments.getCheckpointLocation(),
+                sourceData,
+                batchProcessingFunc
+        );
     }
 }

@@ -42,6 +42,14 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
+
+/**
+ * This class tests TableStreamingQuery using mainly real dependencies, including integrating with real
+ * delta lake operations on the local filesystem. This allows testing the processing logic together with the
+ * delta lake merge operations to give a close to end-to-end set of tests for an individual table.
+ * The input stream is mocked and uses Spark's MemoryStream. This allows us to simulate test scenarios where test data
+ * can be received in a single batch or across multiple batches.
+ */
 @ExtendWith(MockitoExtension.class)
 public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
@@ -67,6 +75,166 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     public void tearDown() throws TimeoutException {
         streamingQuery.stop();
     }
+
+    @Test
+    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() throws Exception {
+        givenSourceReference();
+        givenASourceReferenceSchema();
+        givenASourceReferencePrimaryKey();
+        givenAnInputStream();
+        givenTableStreamingQuery();
+        givenTheStreamingQueryRuns();
+
+        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk2, "data2", "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk3, "data3", "2023-11-13 10:00:02.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data1", pk1);
+        thenStructuredAndCuratedContainForPK("data2", pk2);
+        thenStructuredAndCuratedContainForPK("data3", pk3);
+    }
+    @Test
+    public void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
+        givenSourceReference();
+        givenASourceReferenceSchema();
+        givenASourceReferencePrimaryKey();
+        givenAnInputStream();
+        givenTableStreamingQuery();
+        givenTheStreamingQueryRuns();
+
+        whenInsertOccursForPK(pk1, "data1a", "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk2, "data2a", "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk3, "data3a", "2023-11-13 10:00:02.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data1a", pk1);
+        thenStructuredAndCuratedContainForPK("data2a", pk2);
+        thenStructuredAndCuratedContainForPK("data3a", pk3);
+
+        whenUpdateOccursForPK(pk1, "data1b", "2023-11-13 10:01:01.000000");
+        whenUpdateOccursForPK(pk2, "data2b", "2023-11-13 10:01:01.000000");
+        whenDeleteOccursForPK(pk3, "2023-11-13 10:01:01.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data1b", pk1);
+        thenStructuredAndCuratedContainForPK("data2b", pk2);
+        thenStructuredAndCuratedDoNotContainPK(pk3);
+    }
+
+    @Test
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() throws Exception {
+        givenSourceReference();
+        givenASourceReferenceSchema();
+        givenASourceReferencePrimaryKey();
+        givenAnInputStream();
+        givenTableStreamingQuery();
+        givenTheStreamingQueryRuns();
+
+        whenInsertOccursForPK(pk1, "data1a", "2023-11-13 10:00:01.000000");
+        whenUpdateOccursForPK(pk1, "data1b", "2023-11-13 10:00:02.000000");
+        whenUpdateOccursForPK(pk1, "data1c", "2023-11-13 10:00:03.000000");
+        whenDeleteOccursForPK(pk1, "2023-11-13 10:00:04.000000");
+
+        whenInsertOccursForPK(pk2, "data2a", "2023-11-13 10:00:01.000000");
+        whenUpdateOccursForPK(pk2, "data2b", "2023-11-13 10:00:02.000000");
+        whenUpdateOccursForPK(pk2, "data2c", "2023-11-13 10:00:03.000000");
+
+        whenInsertOccursForPK(pk3, "data3a", "2023-11-13 10:00:01.000000");
+        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:02.000000");
+
+        whenInsertOccursForPK(pk4, "data4a", "2023-11-13 10:00:01.000000");
+        whenUpdateOccursForPK(pk4, "data4b", "2023-11-13 10:00:02.000000");
+
+        whenInsertOccursForPK(pk5, "data5a", "2023-11-13 10:00:01.000000");
+        whenUpdateOccursForPK(pk5, "data5b", "2023-11-13 10:00:02.000000");
+        whenDeleteOccursForPK(pk5, "2023-11-13 10:00:03.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedDoNotContainPK(pk1);
+        thenStructuredAndCuratedContainForPK("data2c", pk2);
+        thenStructuredAndCuratedDoNotContainPK(pk3);
+        thenStructuredAndCuratedContainForPK("data4b", pk4);
+    }
+
+    @Test
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() throws Exception {
+        givenSourceReference();
+        givenASourceReferenceSchema();
+        givenASourceReferencePrimaryKey();
+        givenAnInputStream();
+        givenTableStreamingQuery();
+        givenTheStreamingQueryRuns();
+
+        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:01:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data1", pk1);
+
+        whenUpdateOccursForPK(pk1, "data2", "2023-11-13 10:02:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data2", pk1);
+
+        whenUpdateOccursForPK(pk1, "data3", "2023-11-13 10:03:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data3", pk1);
+
+        whenDeleteOccursForPK(pk1, "2023-11-13 10:04:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedDoNotContainPK(pk1);
+    }
+
+    @Test
+    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() throws Exception {
+        givenSourceReference();
+        givenASourceReferenceSchema();
+        givenASourceReferencePrimaryKey();
+        givenAnInputStream();
+        givenTableStreamingQuery();
+        givenTheStreamingQueryRuns();
+
+        whenUpdateOccursForPK(pk1, "data1", "2023-11-13 10:00:00.000000");
+        whenDeleteOccursForPK(pk2, "2023-11-13 10:00:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data1", pk1);
+        thenStructuredAndCuratedDoNotContainPK(pk2);
+    }
+
+    @Test
+    public void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
+        givenSourceReference();
+        givenASourceReferenceSchema();
+        givenASourceReferencePrimaryKey();
+        givenAnInputStream();
+        givenTableStreamingQuery();
+        givenTheStreamingQueryRuns();
+
+        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:01:00.000000");
+        whenInsertOccursForPK(pk2, "data2", null);
+        whenInsertOccursForPK(pk3, "data3", "2023-11-13 10:01:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredAndCuratedContainForPK("data1", pk1);
+        thenStructuredAndCuratedContainForPK("data3", pk3);
+
+        thenStructuredAndCuratedDoNotContainPK(pk2);
+        thenStructuredViolationsContainsForPK("data2", pk2);
+    }
+
 
     @Test
     public void shouldWriteBatchesAcrossMultipleBatches() throws Exception {
@@ -238,7 +406,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 sourceReferenceService,
                 violationService
         );
-        underTest = streamingQueryProvider.create(spark, inputSchemaName, inputTableName);
+        underTest = streamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
     }
 
     private void whenTheNextBatchIsProcessed() {

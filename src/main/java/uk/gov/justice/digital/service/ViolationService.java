@@ -102,11 +102,9 @@ public class ViolationService {
     ) {
         String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
         logger.warn(violationMessage, cause);
-        val destinationPath = fullTablePath(source, table, zoneName);
-        val violationDf = dataFrame.withColumn(ERROR, lit(violationMessage));
+        val invalidRecords = dataFrame.withColumn(ERROR, lit(violationMessage));
         try {
-            storageService.append(destinationPath, violationDf);
-            storageService.updateDeltaManifestForTable(spark, destinationPath);
+            handleViolation(spark, invalidRecords, source, table, zoneName);
         } catch (DataStorageException e) {
             String msg = "Could not write violation data";
             logger.error(msg, e);
@@ -141,13 +139,10 @@ public class ViolationService {
             ZoneName zoneName
     ) throws DataStorageException {
         logger.warn("Violation - No schema found for {}/{}", source, table);
-        val destinationPath = fullTablePath(source, table, zoneName);
-
-        val missingSchemaRecords = dataFrame
+        val invalidRecords = dataFrame
                 .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)));
 
-        storageService.append(destinationPath, missingSchemaRecords);
-        storageService.updateDeltaManifestForTable(spark, destinationPath);
+        handleViolation(spark, invalidRecords, source, table, zoneName);
     }
 
     public void handleInvalidSchema(
@@ -157,17 +152,10 @@ public class ViolationService {
             String table,
             ZoneName zoneName
     ) throws DataStorageException {
-        val errorPrefix = String.format("Record does not match schema %s/%s: ", source, table);
-        val destinationPath = fullTablePath(source, table, zoneName);
-        // Write invalid records where schema validation failed
-        val invalidRecords = dataFrame.withColumn(ERROR, lit(errorPrefix));
-
         logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
-        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), destinationPath);
-        storageService.append(destinationPath, invalidRecords);
-
-        logger.info("Append completed successfully");
-        storageService.updateDeltaManifestForTable(spark, destinationPath);
+        val errorPrefix = String.format("Record does not match schema %s/%s: ", source, table);
+        val invalidRecords = dataFrame.withColumn(ERROR, lit(errorPrefix));
+        handleViolation(spark, invalidRecords, source, table, zoneName);
     }
 
     /**

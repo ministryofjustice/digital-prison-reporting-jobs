@@ -63,7 +63,7 @@ class TableStreamingQueryProviderTest {
     public void shouldCreateStandardProcessingQueryUnderNormalCircumstances() throws Exception {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.of(sourceReference));
         when(dataProvider.getStreamingSourceData(spark, sourceReference)).thenReturn(df);
-        underTest.create(spark, sourceName, tableName);
+        underTest.provide(spark, sourceName, tableName);
 
         verify(underTest, times(1)).standardProcessingQuery(any(), eq(sourceName), eq(tableName), eq(sourceReference));
     }
@@ -71,7 +71,7 @@ class TableStreamingQueryProviderTest {
     @Test
     public void shouldCreateNoSchemaFoundQueryWhenNoSourceReference() {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
-        underTest.create(spark, sourceName, tableName);
+        underTest.provide(spark, sourceName, tableName);
 
         verify(underTest, times(1)).noSchemaFoundQuery(any(), eq(sourceName), eq(tableName));
     }
@@ -80,7 +80,7 @@ class TableStreamingQueryProviderTest {
     public void shouldCreateSchemaMismatchQueryWhenThereIsASchemaMismatch() throws Exception {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.of(sourceReference));
         when(dataProvider.getStreamingSourceData(spark, sourceReference)).thenThrow(new SchemaMismatchException(""));
-        underTest.create(spark, sourceName, tableName);
+        underTest.provide(spark, sourceName, tableName);
 
         verify(underTest, times(1)).schemaMismatchQuery(any(), eq(sourceName), eq(tableName), eq(sourceReference));
     }

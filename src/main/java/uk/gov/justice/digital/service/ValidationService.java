@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 
 @Singleton
 public class ValidationService {
@@ -50,10 +51,12 @@ public class ValidationService {
 
     @VisibleForTesting
     Dataset<Row> validateRows(Dataset<Row> df, SourceReference sourceReference) {
-        val schemaFields = sourceReference.getSchema().fields();
+        val schemaFields = withMetadataFields(sourceReference.getSchema()).fields();
 
         return df.withColumn(
                 ERROR,
+                // The order of the 'when' clauses determines the validation error message used - first wins.
+                // Null means there is no validation error.
                 when(pkIsNull(sourceReference), lit("Record does not have a primary key"))
                         .when(requiredColumnIsNull(schemaFields), lit("Required column is null"))
                         .otherwise(lit(null))
@@ -67,7 +70,7 @@ public class ValidationService {
                 .stream()
                 .map(pk -> col(pk).isNull())
                 .reduce(Column::or)
-                .orElse(lit(false));
+                .orElse(lit(true));
     }
 
     private static Column requiredColumnIsNull(StructField[] schemaFields) {
