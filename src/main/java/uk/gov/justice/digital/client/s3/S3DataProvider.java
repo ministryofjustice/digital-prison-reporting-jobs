@@ -115,7 +115,7 @@ public class S3DataProvider {
                 boolean sameType = specifiedDataType.getClass().equals(inferredDataType.getClass());
                 // We represent shorts as ints in avro so this difference is allowed
                 boolean allowedDifference = inferredDataType instanceof ShortType && specifiedDataType instanceof IntegerType;
-                if(!sameType&& !allowedDifference) {
+                if(!sameType && !allowedDifference) {
                     return false;
                 }
                 // If it is a struct then recurse to check the nested types
