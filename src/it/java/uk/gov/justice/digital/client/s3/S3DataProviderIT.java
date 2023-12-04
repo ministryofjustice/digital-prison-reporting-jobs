@@ -114,11 +114,11 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
 
-        assertThrows(RuntimeException.class, () -> underTest.getStreamingSourceData(spark, sourceReference));
+        assertThrows(SchemaMismatchException.class, () -> underTest.getStreamingSourceData(spark, sourceReference));
     }
 
     @Test
-    public void getBatchSourceDataShouldThrowForSchemaMismatch() throws SchemaMismatchException {
+    public void getBatchSourceDataShouldThrowForSchemaMismatch() {
         StructType mismatchingSchema = new StructType(new StructField[]{
                 new StructField("this column does not exist", DataTypes.DoubleType, false, Metadata.empty())
         });
