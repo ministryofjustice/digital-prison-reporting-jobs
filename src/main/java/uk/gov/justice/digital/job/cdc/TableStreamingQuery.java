@@ -48,7 +48,7 @@ public class TableStreamingQuery {
 
         logger.info("Initialising per batch processing for {}/{}", sourceReference.getSource(), sourceReference.getTable());
 
-        String queryName = format("Datahub CDC %s.%s", sourceReference.getSource(), sourceReference.getTable());
+        String queryName = format("Datahub_CDC_%s.%s", sourceReference.getSource(), sourceReference.getTable());
         String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(arguments.getCheckpointLocation()), queryName);
 
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
