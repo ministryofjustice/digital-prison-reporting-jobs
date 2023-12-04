@@ -99,8 +99,8 @@ class DataHubBatchJobTest {
         stubReadData();
         stubDiscoveredTablePaths();
 
-        when(sourceReferenceService.getSourceReference(eq("s1"), eq("t1"))).thenReturn(Optional.of(sourceReference1));
-        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference2));
+        when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.of(sourceReference1));
+        when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.of(sourceReference2));
 
         underTest.runJob(spark);
 
@@ -124,8 +124,8 @@ class DataHubBatchJobTest {
         stubReadData();
         stubDiscoveredTablePaths();
 
-        when(sourceReferenceService.getSourceReference(eq("s1"), eq("t1"))).thenReturn(Optional.empty());
-        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference2));
+        when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.empty());
+        when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.of(sourceReference2));
 
         underTest.runJob(spark);
 
@@ -144,8 +144,8 @@ class DataHubBatchJobTest {
         when(dataProvider.getBatchSourceData(any(), eq(sourceReference2), any())).thenThrow(new SchemaMismatchException(""));
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
 
-        when(sourceReferenceService.getSourceReference(eq("s1"), eq("t1"))).thenReturn(Optional.of(sourceReference1));
-        when(sourceReferenceService.getSourceReference(eq("s2"), eq("t2"))).thenReturn(Optional.of(sourceReference2));
+        when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.of(sourceReference1));
+        when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.of(sourceReference2));
 
         underTest.runJob(spark);
 

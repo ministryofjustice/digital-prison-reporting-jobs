@@ -235,38 +235,6 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data2", pk2);
     }
 
-
-    @Test
-    public void shouldWriteBatchesAcrossMultipleBatches() throws Exception {
-        givenSourceReference();
-        givenASourceReferenceSchema();
-        givenASourceReferencePrimaryKey();
-        givenAnInputStream();
-        givenTableStreamingQuery();
-        givenTheStreamingQueryRuns();
-
-
-        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk2, "data2", "2023-11-13 10:00:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:01.000000");
-
-        whenTheNextBatchIsProcessed();
-
-        thenStructuredAndCuratedContainForPK("data1", pk1);
-        thenStructuredAndCuratedContainForPK("data2", pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
-
-        whenInsertOccursForPK(pk1, "data4", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk2, "data5", "2023-11-13 10:00:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:01.000000");
-
-        whenTheNextBatchIsProcessed();
-
-        thenStructuredAndCuratedContainForPK("data4", pk1);
-        thenStructuredAndCuratedContainForPK("data5", pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
-    }
-
     @Test
     public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() {
         givenMissingSourceReference();

@@ -50,7 +50,7 @@ public class S3DataProvider {
         StructType inferredSchema = sparkSession.read().parquet(fileGlobPath).schema();
         StructType schema = withMetadataFields(sourceReference.getSchema());
         logger.info("Provided schema for {}.{}: \n{}", sourceName, tableName, schema.treeString());
-        logger.info("Inferred schema for {}.{}: \n{}", sourceName, tableName, inferredSchema.treeString());
+        logger.info("Inferred streaming source schema for {}.{}: \n{}", sourceName, tableName, inferredSchema.treeString());
         logger.info("Initialising S3 data source for {}.{} with file glob path {}", sourceName, tableName, fileGlobPath);
         if(schemasMatch(inferredSchema, schema)) {
             return sparkSession
@@ -82,7 +82,7 @@ public class S3DataProvider {
         StructType inferredSchema = sparkSession.read().parquet(scalaFilePaths).schema();
         StructType schema = withMetadataFields(sourceReference.getSchema());
         logger.info("Provided schema for {}.{}: \n{}", sourceReference.getSource(), sourceReference.getTable(), schema.treeString());
-        logger.info("Inferred schema for {}.{}: \n{}", sourceReference.getSource(), sourceReference.getTable(), inferredSchema.treeString());
+        logger.info("Inferred batch source schema for {}.{}: \n{}", sourceReference.getSource(), sourceReference.getTable(), inferredSchema.treeString());
         if(schemasMatch(inferredSchema, schema)) {
             return sparkSession
                     .read()
@@ -118,11 +118,11 @@ public class S3DataProvider {
                 if(!sameType&& !allowedDifference) {
                     return false;
                 }
-                if(inferredDataType instanceof StructType) {
-                    // If it is a struct then recurse to check the nested types
-                    if(!schemasMatch((StructType) inferredDataType, (StructType) specifiedDataType)) {
-                        return false;
-                    }
+                // If it is a struct then recurse to check the nested types
+                if(inferredDataType instanceof StructType &&
+                        !schemasMatch((StructType) inferredDataType, (StructType) specifiedDataType)) {
+                    // The struct schemas don't recursively match so the overall schema doesn't match
+                    return false;
                 }
             } catch (IllegalArgumentException e) {
                 // No corresponding field with that name
