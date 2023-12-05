@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -48,16 +49,18 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenGlobPatternIsConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
+    }
+
+    @Test
+    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws Exception {
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);
         givenASourceReferenceFor(offenderBookingsTable, sourceReferenceService);
         givenASourceReferenceFor(offenderExternalMovementsTable, sourceReferenceService);
-        givenASourceReferenceFor(offendersTable, sourceReferenceService);
-    }
+        // offenders is the only table that has no schema - we expect its data to arrive in violations
+        givenNoSourceReferenceFor(offendersTable, sourceReferenceService);
 
-    @Test
-    public void shouldRunTheJobEndToEndApplyingSomeCDCMessages() throws IOException {
         List<Row> initialDataEveryTable = Arrays.asList(
                 createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
                 createRow(2, "2023-11-13 10:00:00.000000", Insert, "2")
@@ -72,17 +75,20 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "1", 1);
         thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "1", 1);
         thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "1", 1);
-        thenStructuredAndCuratedForTableContainForPK(offendersTable, "1", 1);
 
         thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "2", 2);
         thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "2", 2);
         thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "2", 2);
         thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "2", 2);
         thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "2", 2);
-        thenStructuredAndCuratedForTableContainForPK(offendersTable, "2", 2);
+
+        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, 1);
+        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, 2);
+        thenStructuredViolationsContainsForPK(offendersTable, "1", 1);
+        thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
     }
 
-    private void whenTheJobRuns() throws IOException {
+    private void whenTheJobRuns() throws IOException, DataStorageException {
         underTest.runJob(spark);
     }
 
@@ -98,7 +104,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);
         S3BatchProcessor batchProcessor = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, validationService);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
-        underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor, dataProvider, sourceReferenceService);
+        underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor, dataProvider, sourceReferenceService, violationService);
     }
 
     private void givenGlobPatternIsConfigured() {

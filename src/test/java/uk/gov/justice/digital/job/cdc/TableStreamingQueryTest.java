@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.job.cdc;
 
+import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.execution.streaming.MemoryStream;
@@ -14,11 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import scala.Option;
 import scala.collection.Seq;
-import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
-import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -26,27 +23,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 @ExtendWith(MockitoExtension.class)
 class TableStreamingQueryTest extends BaseSparkTest {
+    private static final String source = "some-source";
+    private static final String table = "some-table";
     private static List<Row> testData;
     private static Seq<Row> testDataSeq;
     @Mock
-    private JobArguments arguments;
-    @Mock
-    private S3DataProvider dataProvider;
-    @Mock
-    private CdcBatchProcessor batchProcessor;
-    @Mock
-    private SourceReference sourceReference;
-
+    private VoidFunction2<Dataset<Row>, Long> batchProcessingFunc;
     @TempDir
     private Path testRoot;
 
@@ -62,53 +52,29 @@ class TableStreamingQueryTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new TableStreamingQuery(arguments, dataProvider, batchProcessor, sourceReference);
-
+        String checkpointPath = testRoot.toAbsolutePath().toString();
+        inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
+        Dataset<Row> streamingDataframe = inputStream.toDF();
+        underTest = new TableStreamingQuery(
+                source,
+                table,
+                checkpointPath,
+                streamingDataframe,
+                batchProcessingFunc
+        );
     }
 
     @Test
-    public void runQueryShouldDelegateProcessingToBatchProcessor() {
-        givenJobArguments();
-        givenAnInputStream();
-
-        whenDataIsAddedToTheInputStream();
-        whenTheStreamingQueryRuns();
-
-        thenProcessingIsDelegatedToBatchProcessor();
-    }
-
-    private void whenTheStreamingQueryRuns() {
-        StreamingQuery streamingQuery = underTest.runQuery(spark);
-        streamingQuery.processAllAvailable();
-    }
-
-    private void whenDataIsAddedToTheInputStream() {
+    public void shouldDelegateToBatchProcessingFunc() throws Exception {
         inputStream.addData(testDataSeq);
-    }
+        StreamingQuery sparkStreamingQuery = underTest.runQuery();
+        sparkStreamingQuery.processAllAvailable();
 
-    private void thenProcessingIsDelegatedToBatchProcessor() {
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
-        verify(batchProcessor, times(1))
-                .processBatch(
-                        eq(sourceReference),
-                        eq(spark),
-                        argumentCaptor.capture(),
-                        any()
-                );
+        verify(batchProcessingFunc, times(1))
+                .call(argumentCaptor.capture(), any());
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(testData.size(), result.size());
         assertTrue(result.containsAll(testData));
-    }
-
-    private void givenAnInputStream() {
-        inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
-        Dataset<Row> streamingDataframe = inputStream.toDF();
-
-        when(dataProvider.getSourceDataStreaming(any(), eq(sourceReference))).thenReturn(streamingDataframe);
-    }
-
-    private void givenJobArguments() {
-        String checkpointPath = testRoot.toAbsolutePath().toString();
-        when(arguments.getCheckpointLocation()).thenReturn(checkpointPath);
     }
 }

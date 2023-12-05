@@ -17,6 +17,7 @@ import javax.inject.Singleton;
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 
 /**
  * Responsible for processing batches of DMS records.
@@ -53,7 +54,7 @@ public class S3BatchProcessor {
         dataFrame.persist();
         try {
             val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
-            val validRows = validationService.handleValidation(spark, filteredDf, sourceReference);
+            val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, STRUCTURED_LOAD);
             val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
             curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
         } catch (Exception e) {

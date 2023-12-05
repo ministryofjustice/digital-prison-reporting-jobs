@@ -93,8 +93,8 @@ public class DataHubCdcJob implements Runnable {
             tablesToProcess.forEach(tableDetails -> {
                 String inputSchemaName = tableDetails.getLeft();
                 String inputTableName = tableDetails.getRight();
-                TableStreamingQuery streamingQuery = tableStreamingQueryProvider.provide(inputSchemaName, inputTableName);
-                streamingQuery.runQuery(spark);
+                TableStreamingQuery streamingQuery = tableStreamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
+                streamingQuery.runQuery();
                 streamingQueries.add(streamingQuery);
             });
         } else {

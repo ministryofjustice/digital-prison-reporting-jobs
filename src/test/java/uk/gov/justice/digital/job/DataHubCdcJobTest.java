@@ -61,15 +61,15 @@ class DataHubCdcJobTest {
 
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
-        when(tableStreamingQueryProvider.provide("source1", "table1")).thenReturn(table1StreamingQuery);
-        when(tableStreamingQueryProvider.provide("source2", "table2")).thenReturn(table2StreamingQuery);
-        when(tableStreamingQueryProvider.provide("source3", "table3")).thenReturn(table3StreamingQuery);
+        when(tableStreamingQueryProvider.provide(spark, "source1", "table1")).thenReturn(table1StreamingQuery);
+        when(tableStreamingQueryProvider.provide(spark, "source2", "table2")).thenReturn(table2StreamingQuery);
+        when(tableStreamingQueryProvider.provide(spark, "source3", "table3")).thenReturn(table3StreamingQuery);
 
         underTest.runJob(spark);
 
-        verify(table1StreamingQuery, times(1)).runQuery(spark);
-        verify(table2StreamingQuery, times(1)).runQuery(spark);
-        verify(table3StreamingQuery, times(1)).runQuery(spark);
+        verify(table1StreamingQuery, times(1)).runQuery();
+        verify(table2StreamingQuery, times(1)).runQuery();
+        verify(table3StreamingQuery, times(1)).runQuery();
     }
 
     @Test

@@ -20,6 +20,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.row_number;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 
 /**
  * Encapsulates logic for processing a single micro-batch of CDC events for a single table.
@@ -48,7 +49,7 @@ public class CdcBatchProcessor {
         String table = sourceReference.getTable();
         logger.info("Processing batch {} for {}.{}", batchId, source, table);
 
-        val validRows = validationService.handleValidation(spark, df, sourceReference);
+        val validRows = validationService.handleValidation(spark, df, sourceReference, STRUCTURED_CDC);
         val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
 
         structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);

@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkDfSameTimestamp;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimestampLatest;
@@ -71,16 +72,16 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldDelegateValidation() {
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any())).thenReturn(rowPerPk);
+        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
-        verify(mockValidationService, times(1)).handleValidation(spark, rowPerPk, mockSourceReference);
+        verify(mockValidationService, times(1)).handleValidation(spark, rowPerPk, mockSourceReference, STRUCTURED_CDC);
     }
 
     @Test
     public void shouldPassDataForStructuredZoneProcessing() {
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any())).thenReturn(rowPerPk);
+        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
@@ -95,7 +96,7 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldPassDataForCuratedZoneProcessing() {
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any())).thenReturn(rowPerPk);
+        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
@@ -110,7 +111,7 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldWriteLatestRecordsByPK() throws DataStorageRetriesExhaustedException {
-        when(mockValidationService.handleValidation(any(), any(), any())).thenReturn(manyRowsPerPk);
+        when(mockValidationService.handleValidation(any(), any(), any(), any())).thenReturn(manyRowsPerPk);
 
         ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor = ArgumentCaptor.forClass(Dataset.class);
         ArgumentCaptor<Dataset<Row>> curatedArgumentCaptor = ArgumentCaptor.forClass(Dataset.class);

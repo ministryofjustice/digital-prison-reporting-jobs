@@ -45,17 +45,17 @@ public class SourceReferenceServiceTest {
         underTest = new SourceReferenceService(client, converter);
     }
 
-
-    @Test
-    public void shouldReturnCorrectReferenceForExistingSourceAndTable() {
-        val sourceReference = underTest.getSourceReference("OMS_OWNER", "OFFENDERS");
-
-        assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
-        assertEquals(Optional.of("offenders"), sourceReference.map(SourceReference::getTable));
-    }
-
     @Test
     public void shouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
+        val schemaId = UUID.randomUUID().toString();
+        val version = 1L;
+        val schemaResponse = new GlueSchemaResponse(
+                schemaId,
+                getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT),
+                version
+        );
+        when(client.getSchema("oms_owner.offenders")).thenReturn(Optional.of(schemaResponse));
+
         val sourceReference = underTest.getSourceReference("oMs_oWnEr", "oFfEnDeRs");
 
         assertEquals(Optional.of("nomis"), sourceReference.map(SourceReference::getSource));
@@ -68,32 +68,13 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
-    public void getSourceReferenceOrThrowShouldThrowWhereItDoesNotExist() {
-        when(client.getSchema("source.schema")).thenReturn(Optional.empty());
-        assertThrows(RuntimeException.class, () -> {
-            underTest.getSourceReferenceOrThrow("oms_owner", "offenders");
-        });
-    }
-
-    @Test
-    public void getSourceReferenceOrThrowShouldReturnReferenceWhereItExists() {
-        val schemaId = UUID.randomUUID().toString();
-        val schemaResponse = new GlueSchemaResponse(
-                schemaId,
-                getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT)
-        );
-        when(client.getSchema("oms_owner.offenders")).thenReturn(Optional.of(schemaResponse));
-
-        val result = underTest.getSourceReferenceOrThrow("oms_owner", "offenders");
-        assertEquals(schemaId, result.getKey());
-    }
-
-    @Test
     public void shouldReturnReferenceFromClientWhereItExists() {
         val schemaId = UUID.randomUUID().toString();
+        val version = 1L;
         val schemaResponse = new GlueSchemaResponse(
                 schemaId,
-                getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT)
+                getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT),
+                version
         );
         when(client.getSchema("oms_owner.offenders")).thenReturn(Optional.of(schemaResponse));
 
@@ -109,6 +90,7 @@ public class SourceReferenceServiceTest {
         assertEquals("nomis", sourceReference.getSource());
         assertEquals("offenders", sourceReference.getTable());
         assertEquals(pk, sourceReference.getPrimaryKey());
+        assertEquals(version, sourceReference.getVersionNumber());
         // See AvroToSparkSchemaConverter for more detailed testing of the conversion.
         assertNotNull(sourceReference.getSchema());
     }
@@ -119,11 +101,13 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldStripVersionSuffixFromNameAttribute() {
         val schemaId = UUID.randomUUID().toString();
+        val version = 1L;
         val tableName = "AGENCY_INTERNAL_LOCATIONS";
         val schemaResponse = new GlueSchemaResponse(
                 schemaId,
                 getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT)
-                        .replace(tableName, tableName + "_17")
+                        .replace(tableName, tableName + "_17"),
+                version
         );
         when(client.getSchema("oms_owner.agency_internal_locations")).thenReturn(Optional.of(schemaResponse));
 
@@ -139,7 +123,7 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldThrowExceptionIfSchemaCannotBeParsed() {
         when(client.getSchema("some.schema"))
-                .thenReturn(Optional.of(new GlueSchemaResponse(UUID.randomUUID().toString(), "This is not valid JSON")));
+                .thenReturn(Optional.of(new GlueSchemaResponse(UUID.randomUUID().toString(), "This is not valid JSON", 1L)));
 
         assertThrows(RuntimeException.class, () -> underTest.getSourceReference("some", "schema"));
     }
@@ -147,10 +131,11 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldGetASourceReferenceWithACompositeSchema() {
         val schemaId = UUID.randomUUID().toString();
-        val tableName = "COMPOSITE";
+        val version = 1L;
         val schemaResponse = new GlueSchemaResponse(
                 schemaId,
-                getResource(RESOURCE_PATH + "/" + COMPOSITE_KEY_CONTRACT)
+                getResource(RESOURCE_PATH + "/" + COMPOSITE_KEY_CONTRACT),
+                version
         );
 
         when(client.getSchema("oms_owner.composite")).thenReturn(Optional.of(schemaResponse));
@@ -177,8 +162,9 @@ public class SourceReferenceServiceTest {
 
         IntStream.range(0, 3).forEach(index -> {
                     String schemaId = String.valueOf(index);
+                    val version = 1L;
                     String avroString = getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT);
-                    val schemaResponse = new GlueSchemaResponse(schemaId, avroString);
+                    val schemaResponse = new GlueSchemaResponse(schemaId, avroString, version);
                     expectedSchemas.add(schemaResponse);
                 }
         );

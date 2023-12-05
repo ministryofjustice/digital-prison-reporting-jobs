@@ -58,8 +58,8 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedContainForPK("data1", pk1);
         thenStructuredAndCuratedContainForPK("data2", pk2);
 
-        thenCuratedAndStructuredDoNotContainPK(pk3);
-        thenCuratedAndStructuredDoNotContainPK(pk4);
+        thenStructuredAndCuratedDoNotContainPK(pk3);
+        thenStructuredAndCuratedDoNotContainPK(pk4);
     }
 
     @Test
@@ -74,8 +74,8 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedContainForPK("data1", pk1);
         thenStructuredAndCuratedContainForPK("data3", pk3);
 
-        thenViolationsContainsForPK("data2", pk2);
-        thenCuratedAndStructuredDoNotContainPK(pk2);
+        thenStructuredViolationsContainsForPK("data2", pk2);
+        thenStructuredAndCuratedDoNotContainPK(pk2);
     }
 
     private void givenS3BatchProcessorDependenciesAreInjected() {

@@ -228,7 +228,8 @@ public class HiveSchemaServiceTest {
         val primaryKey = new SourceReference.PrimaryKey(key);
         String source = SCHEMA_NAME + key;
         String table = TABLE + key;
-        return new SourceReference(key, source, table, primaryKey, JSON_DATA_SCHEMA);
+        val version = 1L;
+        return new SourceReference(key, source, table, primaryKey, version, JSON_DATA_SCHEMA);
     }
 
     private void mockJobArgumentCalls() {

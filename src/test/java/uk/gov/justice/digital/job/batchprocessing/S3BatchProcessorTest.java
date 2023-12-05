@@ -31,6 +31,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
@@ -78,7 +79,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
     public void shouldProcessStructured() throws DataStorageException {
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
-        when(validationService.handleValidation(any(), any(), eq(sourceReference))).thenReturn(validatedDf);
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
         underTest.processBatch(spark, sourceReference, inputDf);
@@ -94,7 +95,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
     public void shouldProcessCurated() throws DataStorageException {
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
-        when(validationService.handleValidation(any(), any(), eq(sourceReference))).thenReturn(validatedDf);
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
         underTest.processBatch(spark, sourceReference, inputDf);
@@ -113,13 +114,13 @@ class S3BatchProcessorTest extends BaseSparkTest {
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));
 
-        when(validationService.handleValidation(any(), any(), eq(sourceReference))).thenReturn(validatedDf);
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
 
         underTest.processBatch(spark, sourceReference, mixedOperations);
 
-        verify(validationService, times(1)).handleValidation(any(), argumentCaptor.capture(), eq(sourceReference));
+        verify(validationService, times(1)).handleValidation(any(), argumentCaptor.capture(), eq(sourceReference), eq(STRUCTURED_LOAD));
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(validatedRows.size(), result.size());
         assertTrue(result.containsAll(validatedRows));

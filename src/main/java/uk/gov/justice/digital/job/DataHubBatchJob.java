@@ -16,17 +16,22 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.SchemaMismatchException;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
+import uk.gov.justice.digital.service.ViolationService;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 
 @Singleton
 @CommandLine.Command(name = "DataHubBatchJob")
@@ -41,6 +46,7 @@ public class DataHubBatchJob implements Runnable {
     private final S3BatchProcessor batchProcessor;
     private final S3DataProvider dataProvider;
     private final SourceReferenceService sourceReferenceService;
+    private final ViolationService violationService;
 
     @Inject
     public DataHubBatchJob(
@@ -50,7 +56,8 @@ public class DataHubBatchJob implements Runnable {
             TableDiscoveryService tableDiscoveryService,
             S3BatchProcessor batchProcessor,
             S3DataProvider dataProvider,
-            SourceReferenceService sourceReferenceService) {
+            SourceReferenceService sourceReferenceService,
+            ViolationService violationService) {
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
@@ -58,6 +65,7 @@ public class DataHubBatchJob implements Runnable {
         this.batchProcessor = batchProcessor;
         this.dataProvider = dataProvider;
         this.sourceReferenceService = sourceReferenceService;
+        this.violationService = violationService;
     }
 
     public static void main(String[] args) {
@@ -97,7 +105,7 @@ public class DataHubBatchJob implements Runnable {
      * The main entry point for testing a batch job to process raw data for all tables.
      */
     @VisibleForTesting
-    void runJob(SparkSession sparkSession) throws IOException {
+    void runJob(SparkSession sparkSession) throws IOException, DataStorageException {
         val startTime = System.currentTimeMillis();
         String rawPath = arguments.getRawS3Path();
         logger.info("Processing Raw {} table by table", rawPath);
@@ -114,11 +122,24 @@ public class DataHubBatchJob implements Runnable {
             logger.info("Processing table {}.{}", schema, table);
             val filePaths = entry.getValue();
             if(!filePaths.isEmpty()) {
-                SourceReference sourceReference = sourceReferenceService.getSourceReferenceOrThrow(schema, table);
-                val dataFrame = dataProvider.getSourceDataBatch(sparkSession, sourceReference, filePaths);
-                logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
-                batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
-                logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
+                Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
+                if(maybeSourceReference.isPresent()) {
+                    SourceReference sourceReference = maybeSourceReference.get();
+                    try {
+                        val dataFrame = dataProvider.getBatchSourceData(sparkSession, sourceReference, filePaths);
+                        logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
+                        batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
+                        logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
+                    } catch (SchemaMismatchException e) {
+                        logger.warn("Schema mismatch for table {}.{} - writing all data to violations", schema, table);
+                        val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
+                        violationService.handleInvalidSchema(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD, sourceReference.getVersionNumber());
+                    }
+                } else {
+                    logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
+                    val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
+                    violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
+                }
             } else {
                 logger.warn("No paths found for table {}.{}", schema, table);
             }

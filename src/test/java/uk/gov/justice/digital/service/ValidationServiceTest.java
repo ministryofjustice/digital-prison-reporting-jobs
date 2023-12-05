@@ -3,7 +3,10 @@ package uk.gov.justice.digital.service;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.junit.jupiter.api.BeforeAll;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +18,7 @@ import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,8 +33,12 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 
@@ -39,40 +47,110 @@ class ValidationServiceTest extends BaseSparkTest {
 
     private static final String source = "source";
     private static final String table = "table";
+    private static final String requiredColumnIsNullMsg = "Required column is null";
+    private static final String noPkMsg = "Record does not have a primary key";
     private static Dataset<Row> inputDf;
     @Mock
     private ViolationService violationService;
     @Mock
     private SourceReference sourceReference;
+    @Mock
+    private SourceReference.PrimaryKey primaryKey;
     private ValidationService underTest;
-
-    @BeforeAll
-    public static void setUpTest() {
-        List<Row> input = Arrays.asList(
-                createRow(1, "2023-11-13 10:49:28.000000", Delete, null),
-                createRow(2, "2023-11-13 10:49:29.000000", null, "2a"),
-                createRow(3, null, Insert, "2a"),
-                createRow(null, "2023-11-13 10:49:29.000000", Update, "2a")
-        );
-        inputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
-    }
 
     @BeforeEach
     public void setUp() {
         underTest = new ValidationService(violationService);
-
-        when(sourceReference.getSchema()).thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
+        List<Row> input = Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.000000", Delete, "data"),
+                createRow(2, "2023-11-13 10:49:28.000000", Delete, null),
+                createRow(3, "2023-11-13 10:49:29.000000", null, "data"),
+                createRow(4, null, Insert, "data"),
+                createRow(5, null, null, "data"),
+                createRow(6, "2023-11-13 10:49:29.000000", null, null),
+                createRow(7, null, null, null),
+                createRow(null, "2023-11-13 10:49:29.000000", Update, "data"),
+                createRow(null, null, Update, "data"),
+                createRow(null, "2023-11-13 10:49:29.000000", null, "data"),
+                createRow(null, "2023-11-13 10:49:29.000000", Update, null),
+                createRow(null, "2023-11-13 10:49:29.000000", null, null),
+                createRow(null, null, Update, null),
+                createRow(null, null, null, "data")
+        );
+        inputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
     }
 
     @Test
-    public void validateRowsShouldValidateBasedOnNullability() {
+    public void validateRowsShouldValidateBasedOnNullPrimaryKeysAndNonNullColumns() {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
+
         List<Row> result = underTest.validateRows(inputDf, sourceReference).collectAsList();
 
         List<Row> expected = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", null, true),
-                RowFactory.create(2, "2023-11-13 10:49:29.000000", null, "2a", false),
-                RowFactory.create(3, null, "I", "2a", false),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "2a", false)
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", null),
+                RowFactory.create(2, "2023-11-13 10:49:28.000000", "D", null, null),
+                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", requiredColumnIsNullMsg),
+                RowFactory.create(4, null, "I", "data", requiredColumnIsNullMsg),
+                RowFactory.create(5, null, null, "data", requiredColumnIsNullMsg),
+                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, requiredColumnIsNullMsg),
+                RowFactory.create(7, null, null, null, requiredColumnIsNullMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", noPkMsg),
+                RowFactory.create(null, null, "U", "data", noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, noPkMsg),
+                RowFactory.create(null, null, "U", null, noPkMsg),
+                RowFactory.create(null, null, null, "data", noPkMsg)
+        );
+
+        assertEquals(expected.size(), result.size());
+        assertTrue(result.containsAll(expected));
+    }
+
+    @Test
+    public void validateRowsShouldValidateCompositePrimaryKeys() {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Arrays.asList(PRIMARY_KEY_COLUMN, TIMESTAMP));
+
+        List<Row> input = Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.000000", Update, "data"),
+                createRow(2, null, Update, null),
+                createRow(null, "2023-11-13 10:49:29.000000", Update, "data"),
+                createRow(null, null, Update, "data")
+        );
+        Dataset<Row> thisInputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
+
+        List<Row> result = underTest.validateRows(thisInputDf, sourceReference).collectAsList();
+
+        List<Row> expected = Arrays.asList(
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", null),
+                RowFactory.create(2, null, "U", null, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", noPkMsg),
+                RowFactory.create(null, null, "U", "data", noPkMsg)
+        );
+
+        assertEquals(expected.size(), result.size());
+        assertTrue(result.containsAll(expected));
+    }
+
+    @Test
+    public void validateRowsShouldReturnInvalidWhenNoPrimaryKeyIsPresentInSchema() {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.emptyList());
+
+        List<Row> input = Collections.singletonList(
+                createRow(1, "2023-11-13 10:49:28.000000", Update, "data")
+        );
+        Dataset<Row> thisInputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
+
+        List<Row> result = underTest.validateRows(thisInputDf, sourceReference).collectAsList();
+
+        List<Row> expected = Collections.singletonList(
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", noPkMsg)
         );
 
         assertEquals(expected.size(), result.size());
@@ -81,13 +159,17 @@ class ValidationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleValidationShouldReturnValidRows() {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
 
-        List<Row> result = underTest.handleValidation(spark, inputDf, sourceReference).collectAsList();
+        List<Row> result = underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedValid = Arrays.asList(
-                createRow(1, "2023-11-13 10:49:28.000000", Delete, null)
+                createRow(1, "2023-11-13 10:49:28.000000", Delete, "data"),
+                createRow(2, "2023-11-13 10:49:28.000000", Delete, null)
         );
 
         assertEquals(expectedValid.size(), result.size());
@@ -96,19 +178,31 @@ class ValidationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleValidationShouldWriteViolationsWithInvalidRows() throws DataStorageException {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
-        underTest.handleValidation(spark, inputDf, sourceReference).collectAsList();
+        underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
-                createRow(2, "2023-11-13 10:49:29.000000", null, "2a"),
-                createRow(3, null, Insert, "2a"),
-                createRow(null, "2023-11-13 10:49:29.000000", Update, "2a")
+                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", requiredColumnIsNullMsg),
+                RowFactory.create(4, null, "I", "data", requiredColumnIsNullMsg),
+                RowFactory.create(5, null, null, "data", requiredColumnIsNullMsg),
+                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, requiredColumnIsNullMsg),
+                RowFactory.create(7, null, null, null, requiredColumnIsNullMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", noPkMsg),
+                RowFactory.create(null, null, "U", "data", noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, noPkMsg),
+                RowFactory.create(null, null, "U", null, noPkMsg),
+                RowFactory.create(null, null, null, "data", noPkMsg)
         );
 
-        verify(violationService, times(1)).handleInvalidSchema(any(), argumentCaptor.capture(), eq(source), eq(table));
+        verify(violationService, times(1)).handleViolation(any(), argumentCaptor.capture(), eq(source), eq(table), eq(STRUCTURED_LOAD));
 
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(expectedInvalid.size(), result.size());
@@ -117,13 +211,16 @@ class ValidationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleValidationShouldThrowRTEWhenViolationServiceThrows() throws DataStorageException {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
 
         doThrow(new DataStorageException(""))
                 .when(violationService)
-                .handleInvalidSchema(any(), any(), any(), any());
-        assertThrows(RuntimeException.class, () -> underTest.handleValidation(spark, inputDf, sourceReference).collectAsList());
+                .handleViolation(any(), any(), any(), any(), any());
+        assertThrows(RuntimeException.class, () -> underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList());
     }
 
 }

@@ -27,12 +27,12 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, inputTableName, data, primaryKey);
     }
 
-    protected void thenViolationsContainsForPK(String data, int primaryKey) {
-        String violationsTablePath = Paths.get(violationsPath).resolve(inputSchemaName).resolve(inputTableName).toAbsolutePath().toString();
+    protected void thenStructuredViolationsContainsForPK(String data, int primaryKey) {
+        String violationsTablePath = Paths.get(violationsPath).resolve("structured").resolve(inputSchemaName).resolve(inputTableName).toAbsolutePath().toString();
         assertDeltaTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 
-    protected void thenCuratedAndStructuredDoNotContainPK(int primaryKey) {
+    protected void thenStructuredAndCuratedDoNotContainPK(int primaryKey) {
         assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, inputTableName, primaryKey);
     }
 
