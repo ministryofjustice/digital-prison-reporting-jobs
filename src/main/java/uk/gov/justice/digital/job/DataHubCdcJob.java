@@ -61,22 +61,27 @@ public class DataHubCdcJob implements Runnable {
 
     @Override
     public void run() {
-        boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
-        if(runLocal) {
-            logger.info("Running locally");
-            SparkConf sparkConf = new SparkConf().setAppName("DataHubCdcJob local").setMaster("local[*]");
-            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
-            runJob(spark);
-            waitUntilQueryTerminates(spark);
-        } else {
-            logger.info("Running in Glue");
-            String jobName = properties.getSparkJobName();
-            GlueContext glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
-            SparkSession spark = glueContext.getSparkSession();
-            Job.init(jobName, glueContext, arguments.getConfig());
-            runJob(spark);
-            waitUntilQueryTerminates(spark);
-            Job.commit();
+        try {
+            boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
+            if (runLocal) {
+                logger.info("Running locally");
+                SparkConf sparkConf = new SparkConf().setAppName("DataHubCdcJob local").setMaster("local[*]");
+                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
+                runJob(spark);
+                waitUntilQueryTerminates(spark);
+            } else {
+                logger.info("Running in Glue");
+                String jobName = properties.getSparkJobName();
+                GlueContext glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
+                SparkSession spark = glueContext.getSparkSession();
+                Job.init(jobName, glueContext, arguments.getConfig());
+                runJob(spark);
+                waitUntilQueryTerminates(spark);
+                Job.commit();
+            }
+        } catch (Exception e) {
+            logger.error("Caught exception during job run", e);
+            System.exit(1);
         }
     }
 
