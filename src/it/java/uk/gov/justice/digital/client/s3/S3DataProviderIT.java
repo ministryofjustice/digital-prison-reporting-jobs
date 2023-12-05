@@ -4,6 +4,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.streaming.OutputMode;
+import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -84,11 +86,23 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldGetStreamingSourceDataWithSchemaInference() {
+    public void shouldGetStreamingSourceDataWithSchemaInference() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
 
-        underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
+        Dataset<Row> df = underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
+        StreamingQuery query = df.writeStream()
+                .format("memory")
+                .queryName("output")
+                .outputMode(OutputMode.Append())
+                .start();
+        try {
+            query.processAllAvailable();
+            Dataset<Row> result = spark.sql("select * from output");
+            assertEquals(3, result.count());
+        } finally {
+            query.stop();
+        }
     }
 
     @Test
@@ -99,7 +113,20 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
 
-        underTest.getStreamingSourceData(spark, sourceReference);
+        Dataset<Row> df = underTest.getStreamingSourceData(spark, sourceReference);
+
+        StreamingQuery query = df.writeStream()
+                .format("memory")
+                .queryName("output")
+                .outputMode(OutputMode.Append())
+                .start();
+        try {
+            query.processAllAvailable();
+            Dataset<Row> result = spark.sql("select * from output");
+            assertEquals(3, result.count());
+        } finally {
+            query.stop();
+        }
     }
 
     @Test
