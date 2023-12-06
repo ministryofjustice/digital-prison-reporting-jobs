@@ -17,6 +17,7 @@ import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 
 import java.util.List;
 
+import static java.lang.String.format;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
@@ -65,8 +66,10 @@ public class S3DataProvider {
                     .schema(schema)
                     .parquet(fileGlobPath);
         } catch (Exception e) {
+            //  We can't be more specific than Exception in what we catch because the Java compiler will complain
+            //  that AnalysisException isn't declared as thrown due to Scala trickery.
             if (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) {
-                String msg = "No data available to read and no schema";
+                String msg = format("No data available to read and no schema provided to read it with, so we can't run a streaming job for %s.%s", sourceName, tableName);
                 logger.error(msg, e);
                 throw new NoSchemaNoDataException(msg, e);
             } else {
