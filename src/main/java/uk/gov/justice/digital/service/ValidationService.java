@@ -73,6 +73,7 @@ public class ValidationService {
             );
         } else {
             String msg = format("Record does not match schema version %d", sourceReference.getVersionNumber());
+            logger.warn(msg + " Inferred schema:\n{}\nActual schema:\n{}", inferredSchema, schema);
             return df.withColumn(ERROR, lit(msg));
         }
     }
