@@ -66,13 +66,14 @@ public class S3DataProvider {
                     .schema(schema)
                     .parquet(fileGlobPath);
         } catch (Exception e) {
-            //  We can't be more specific than Exception in what we catch because the Java compiler will complain
-            //  that AnalysisException isn't declared as thrown due to Scala trickery.
+            //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch
+            //  because the Java compiler will complain that AnalysisException isn't declared as thrown due to Scala trickery.
             if (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) {
                 String msg = format("No data available to read and no schema provided to read it with, so we can't run a streaming job for %s.%s", sourceName, tableName);
                 logger.error(msg, e);
                 throw new NoSchemaNoDataException(msg, e);
             } else {
+                // We don't want to handle this here, so rethrow
                 throw e;
             }
         }
