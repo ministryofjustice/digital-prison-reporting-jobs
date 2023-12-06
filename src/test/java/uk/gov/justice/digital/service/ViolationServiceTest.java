@@ -102,7 +102,7 @@ class ViolationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleInvalidSchemaShouldWriteViolations() throws DataStorageException {
-        underTest.handleInvalidSchema(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD, 1L);
+        underTest.handleViolation(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
         verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
         verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
     }
@@ -110,7 +110,7 @@ class ViolationServiceTest extends BaseSparkTest {
     @Test
     public void handleInvalidSchemaShouldThrowIfWriteFails() throws DataStorageException {
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
-        assertThrows(DataStorageException.class, () -> underTest.handleInvalidSchema(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD, 1L));
+        assertThrows(DataStorageException.class, () -> underTest.handleViolation(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD));
     }
 
     @Test

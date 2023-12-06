@@ -4,6 +4,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.execution.streaming.MemoryStream;
 import org.apache.spark.sql.streaming.StreamingQuery;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +19,6 @@ import scala.collection.Seq;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.SchemaMismatchException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -38,6 +41,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
@@ -77,10 +81,11 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() throws Exception {
+    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
+        givenAMatchingSchema();
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
@@ -96,10 +101,11 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedContainForPK("data3", pk3);
     }
     @Test
-    public void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
+    public void shouldHandleMultiplePrimaryKeysAcrossBatches() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
+        givenAMatchingSchema();
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
@@ -126,10 +132,11 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() throws Exception {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
+        givenAMatchingSchema();
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
@@ -162,10 +169,11 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() throws Exception {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
+        givenAMatchingSchema();
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
@@ -196,10 +204,11 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() throws Exception {
+    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
+        givenAMatchingSchema();
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
@@ -214,10 +223,11 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
+    public void shouldWriteNullsToViolationsForNonNullableColumns() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
+        givenAMatchingSchema();
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
@@ -273,11 +283,12 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldWriteSchemaMismatchesToViolationsAcrossMultipleBatches() throws Exception {
         givenSourceReference();
+        givenASourceReferenceSchema();
+        givenASourceReferencePrimaryKey();
         givenASchemaMismatch();
-        givenAnInputStreamWithSchemaInference();
+        givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
-
 
         whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:01.000000");
         whenUpdateOccursForPK(pk2, "data2", "2023-11-13 10:00:01.000000");
@@ -306,12 +317,20 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedDoNotContainPK(pk3);
     }
 
-    private void givenASchemaMismatch() throws SchemaMismatchException {
-        when(dataProvider.getStreamingSourceData(any(), eq(sourceReference)))
-                .thenThrow(new SchemaMismatchException(""));
+    private void givenAMatchingSchema() {
+        when(dataProvider.inferSchema(any(), eq(inputSchemaName), eq(inputTableName)))
+                .thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
     }
 
-    private void givenAnInputStream() throws SchemaMismatchException {
+    private void givenASchemaMismatch() {
+        StructType misMatchingSchema = SCHEMA_WITHOUT_METADATA_FIELDS.add(
+                new StructField("an-extra-column", DataTypes.StringType, true, Metadata.empty())
+        );
+        when(dataProvider.inferSchema(any(), eq(inputSchemaName), eq(inputTableName)))
+                .thenReturn(misMatchingSchema);
+    }
+
+    private void givenAnInputStream() {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
@@ -363,7 +382,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
-                new ValidationService(violationService),
+                new ValidationService(violationService, dataProvider),
                 new StructuredZoneCDCS3(arguments, violationService, storageService),
                 new CuratedZoneCDCS3(arguments, violationService, storageService)
         );

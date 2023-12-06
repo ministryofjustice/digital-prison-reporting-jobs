@@ -1,27 +1,20 @@
 package uk.gov.justice.digital.client.s3;
 
-import com.google.common.annotations.VisibleForTesting;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.IntegerType;
-import org.apache.spark.sql.types.ShortType;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.SchemaMismatchException;
 
 import java.util.List;
 
-import static java.lang.String.format;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
@@ -42,28 +35,19 @@ public class S3DataProvider {
         this.arguments = arguments;
     }
 
-    public Dataset<Row> getStreamingSourceData(SparkSession sparkSession, SourceReference sourceReference) throws SchemaMismatchException {
+    public Dataset<Row> getStreamingSourceData(SparkSession sparkSession, SourceReference sourceReference) {
         String source = sourceReference.getSource();
         String table = sourceReference.getTable();
         String tablePath = tablePath(arguments.getRawS3Path(), source, table);
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
-        StructType inferredSchema = sparkSession.read().parquet(fileGlobPath).schema();
         StructType schema = withMetadataFields(sourceReference.getSchema());
         logger.info("Provided schema for {}.{}: \n{}", source, table, schema.treeString());
-        logger.info("Inferred streaming source schema for {}.{}: \n{}", source, table, inferredSchema.treeString());
         logger.info("Initialising S3 data source for {}.{} with file glob path {}", source, table, fileGlobPath);
-        if(schemasMatch(inferredSchema, schema)) {
-            return sparkSession
-                    .readStream()
-                    .schema(schema)
-                    .parquet(fileGlobPath);
-        } else {
-            String msg = format("Provided and inferred schemas for %s.%s do not match. Provided: \n%s\nInferred:\n%sn",
-                    source, table, schema.treeString(), inferredSchema.treeString());
-            logger.warn(msg);
-            throw new SchemaMismatchException(msg);
-        }
+        return sparkSession
+                .readStream()
+                .schema(schema)
+                .parquet(fileGlobPath);
     }
 
     public Dataset<Row> getStreamingSourceDataWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) {
@@ -79,25 +63,16 @@ public class S3DataProvider {
                 .parquet(fileGlobPath);
     }
 
-    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) throws SchemaMismatchException {
+    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) {
         String source = sourceReference.getSource();
         String table = sourceReference.getTable();
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
-        StructType inferredSchema = sparkSession.read().parquet(scalaFilePaths).schema();
         StructType schema = withMetadataFields(sourceReference.getSchema());
         logger.info("Provided schema for {}.{}: \n{}", source, table, schema.treeString());
-        logger.info("Inferred batch source schema for {}.{}: \n{}", source, table, inferredSchema.treeString());
-        if(schemasMatch(inferredSchema, schema)) {
-            return sparkSession
-                    .read()
-                    .schema(schema)
-                    .parquet(scalaFilePaths);
-        } else {
-            String msg = format("Provided and inferred schemas for %s.%s do not match. Provided: \n%s\nInferred:\n%sn",
-                    source, table, schema.treeString(), inferredSchema.treeString());
-            logger.warn(msg);
-            throw new SchemaMismatchException(msg);
-        }
+        return sparkSession
+                .read()
+                .schema(schema)
+                .parquet(scalaFilePaths);
     }
 
     public Dataset<Row> getBatchSourceDataWithSchemaInference(SparkSession sparkSession, List<String> filePaths) {
@@ -107,33 +82,8 @@ public class S3DataProvider {
                 .parquet(scalaFilePaths);
     }
 
-    @VisibleForTesting
-    static boolean schemasMatch(StructType inferredSchema, StructType specifiedSchema) {
-        if(inferredSchema.fields().length != specifiedSchema.fields().length) {
-            return false;
-        }
-        for (StructField inferredField : inferredSchema.fields()) {
-            try {
-                StructField specifiedField = specifiedSchema.apply(inferredField.name());
-                DataType inferredDataType = inferredField.dataType();
-                DataType specifiedDataType = specifiedField.dataType();
-                boolean sameType = specifiedDataType.getClass().equals(inferredDataType.getClass());
-                // We represent shorts as ints in avro so this difference is allowed
-                boolean allowedDifference = inferredDataType instanceof ShortType && specifiedDataType instanceof IntegerType;
-                if(!sameType && !allowedDifference) {
-                    return false;
-                }
-                // If it is a struct then recurse to check the nested types
-                if(inferredDataType instanceof StructType &&
-                        !schemasMatch((StructType) inferredDataType, (StructType) specifiedDataType)) {
-                    // The struct schemas don't recursively match so the overall schema doesn't match
-                    return false;
-                }
-            } catch (IllegalArgumentException e) {
-                // No corresponding field with that name
-                return false;
-            }
-        }
-        return true;
+    public StructType inferSchema(SparkSession sparkSession, String sourceName, String tableName) {
+        String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
+        return sparkSession.read().parquet(tablePath).schema();
     }
 }

@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.SchemaMismatchException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -49,18 +48,13 @@ public class TableStreamingQueryProvider {
     public TableStreamingQuery provide(SparkSession spark, String inputSourceName, String inputTableName) {
         // We'll build the streaming query we want here. It might do normal processing, or it might write everything to violations
         Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(inputSourceName, inputTableName);
-        if(!maybeSourceReference.isPresent()) {
+        if(maybeSourceReference.isPresent()) {
+            SourceReference sourceReference = maybeSourceReference.get();
+            logger.info("{}/{} looks good so we will do normal batch processing", inputSourceName, inputTableName);
+            return standardProcessingQuery(spark, inputSourceName, inputTableName, sourceReference);
+        } else {
             logger.warn("{}/{} has no source reference so we will write all data to violations until the stream restarts", inputSourceName, inputTableName);
             return noSchemaFoundQuery(spark, inputSourceName, inputTableName);
-        } else {
-            SourceReference sourceReference = maybeSourceReference.get();
-            try {
-                logger.info("{}/{} looks good so we will do normal batch processing", inputSourceName, inputTableName);
-                return standardProcessingQuery(spark, inputSourceName, inputTableName, sourceReference);
-            } catch (SchemaMismatchException e) {
-                logger.warn("{}/{} has a schema mismatch so we will write all data to violations until the stream restarts", inputSourceName, inputTableName);
-                return schemaMismatchQuery(spark, inputSourceName, inputTableName, sourceReference);
-            }
         }
     }
 
@@ -70,7 +64,7 @@ public class TableStreamingQueryProvider {
             String inputSourceName,
             String inputTableName,
             SourceReference sourceReference
-    ) throws SchemaMismatchException {
+    ) {
 
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceData(spark, sourceReference);
         VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
@@ -90,30 +84,6 @@ public class TableStreamingQueryProvider {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, inputSourceName, inputTableName);
         VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
                 (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC);
-
-        return new TableStreamingQuery(
-                inputSourceName,
-                inputTableName,
-                arguments.getCheckpointLocation(),
-                sourceData,
-                batchProcessingFunc
-        );
-    }
-
-    @VisibleForTesting
-    TableStreamingQuery schemaMismatchQuery(SparkSession spark, String inputSourceName, String inputTableName, SourceReference sourceReference) {
-        Dataset<Row> sourceData =
-                s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, sourceReference.getSource(), sourceReference.getTable());
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
-                (df, batchId) ->
-                        violationService.handleInvalidSchema(
-                            spark,
-                            df,
-                            sourceReference.getSource(),
-                            sourceReference.getTable(),
-                            STRUCTURED_CDC,
-                            sourceReference.getVersionNumber()
-                        );
 
         return new TableStreamingQuery(
                 inputSourceName,

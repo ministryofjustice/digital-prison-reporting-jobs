@@ -6,9 +6,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.streaming.StreamingQuery;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.SchemaMismatchException;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 
 import java.io.IOException;
@@ -30,10 +26,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,7 +72,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldGetBatchSourceDataWithSpecifiedSchema() throws SchemaMismatchException {
+    public void shouldGetBatchSourceDataWithSpecifiedSchema() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
@@ -130,30 +126,9 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void getStreamingSourceDataShouldThrowForSchemaMismatch() {
-        StructType mismatchingSchema = new StructType(new StructField[]{
-                new StructField("column 1 does not exist", DataTypes.IntegerType, false, Metadata.empty()),
-                new StructField("column 2 does not exist", DataTypes.IntegerType, true, Metadata.empty()),
-        });
+    public void shouldInferSchema() {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
-        when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
-        when(sourceReference.getSchema()).thenReturn(mismatchingSchema);
-        when(sourceReference.getSource()).thenReturn(sourceName);
-        when(sourceReference.getTable()).thenReturn(tableName);
-
-        assertThrows(SchemaMismatchException.class, () -> underTest.getStreamingSourceData(spark, sourceReference));
-    }
-
-    @Test
-    public void getBatchSourceDataShouldThrowForSchemaMismatch() {
-        StructType mismatchingSchema = new StructType(new StructField[]{
-                new StructField("this column does not exist", DataTypes.DoubleType, false, Metadata.empty())
-        });
-        when(sourceReference.getSchema()).thenReturn(mismatchingSchema);
-        when(sourceReference.getSource()).thenReturn(sourceName);
-        when(sourceReference.getTable()).thenReturn(tableName);
-
-        assertThrows(SchemaMismatchException.class, () ->underTest.getBatchSourceData(spark, sourceReference, dataFilePaths));
-
+        StructType inferredSchema = underTest.inferSchema(spark, sourceName, tableName);
+        assertEquals(TEST_DATA_SCHEMA, inferredSchema);
     }
 }

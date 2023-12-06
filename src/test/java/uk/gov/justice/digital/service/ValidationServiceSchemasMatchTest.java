@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.client.s3;
+package uk.gov.justice.digital.service;
 
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
@@ -6,11 +6,11 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static uk.gov.justice.digital.client.s3.S3DataProvider.schemasMatch;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.justice.digital.service.ValidationService.schemasMatch;
 
-class S3DataProviderTest {
-
+public class ValidationServiceSchemasMatchTest {
     @Test
     public void sameObjectShouldMatch() {
         StructType schema = new StructType(new StructField[]{

@@ -11,7 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.SchemaMismatchException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -75,14 +74,4 @@ class TableStreamingQueryProviderTest {
 
         verify(underTest, times(1)).noSchemaFoundQuery(any(), eq(sourceName), eq(tableName));
     }
-
-    @Test
-    public void shouldCreateSchemaMismatchQueryWhenThereIsASchemaMismatch() throws Exception {
-        when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.of(sourceReference));
-        when(dataProvider.getStreamingSourceData(spark, sourceReference)).thenThrow(new SchemaMismatchException(""));
-        underTest.provide(spark, sourceName, tableName);
-
-        verify(underTest, times(1)).schemaMismatchQuery(any(), eq(sourceName), eq(tableName), eq(sourceReference));
-    }
-
 }
