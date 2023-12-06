@@ -19,6 +19,7 @@ import scala.collection.Seq;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -81,7 +82,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() {
+    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -101,7 +102,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedContainForPK("data3", pk3);
     }
     @Test
-    public void shouldHandleMultiplePrimaryKeysAcrossBatches() {
+    public void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -132,7 +133,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -169,7 +170,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -204,7 +205,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() {
+    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -223,7 +224,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNullsToViolationsForNonNullableColumns() {
+    public void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -246,7 +247,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() {
+    public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() throws Exception {
         givenMissingSourceReference();
         givenAnInputStreamWithSchemaInference();
         givenTableStreamingQuery();
@@ -337,7 +338,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         when(dataProvider.getStreamingSourceData(any(), eq(sourceReference))).thenReturn(streamingDataframe);
     }
 
-    private void givenAnInputStreamWithSchemaInference() {
+    private void givenAnInputStreamWithSchemaInference() throws NoSchemaNoDataException {
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
 
@@ -378,7 +379,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 .thenReturn(Optional.empty());
     }
 
-    private void givenTableStreamingQuery() {
+    private void givenTableStreamingQuery() throws NoSchemaNoDataException {
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(

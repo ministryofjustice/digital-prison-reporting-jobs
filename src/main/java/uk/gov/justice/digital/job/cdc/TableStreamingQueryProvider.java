@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -45,7 +46,7 @@ public class TableStreamingQueryProvider {
         this.violationService = violationService;
     }
 
-    public TableStreamingQuery provide(SparkSession spark, String inputSourceName, String inputTableName) {
+    public TableStreamingQuery provide(SparkSession spark, String inputSourceName, String inputTableName) throws NoSchemaNoDataException {
         // We'll build the streaming query we want here. It might do normal processing, or it might write everything to violations
         Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(inputSourceName, inputTableName);
         if(maybeSourceReference.isPresent()) {
@@ -80,7 +81,7 @@ public class TableStreamingQueryProvider {
     }
 
     @VisibleForTesting
-    TableStreamingQuery noSchemaFoundQuery(SparkSession spark, String inputSourceName, String inputTableName) {
+    TableStreamingQuery noSchemaFoundQuery(SparkSession spark, String inputSourceName, String inputTableName) throws NoSchemaNoDataException {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, inputSourceName, inputTableName);
         VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
                 (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC);

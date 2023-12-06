@@ -68,7 +68,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void shouldCreateNoSchemaFoundQueryWhenNoSourceReference() {
+    public void shouldCreateNoSchemaFoundQueryWhenNoSourceReference() throws Exception {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
         underTest.provide(spark, sourceName, tableName);
 

@@ -6,6 +6,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.job.context.MicronautContext;
@@ -89,19 +91,19 @@ public class DataHubCdcJob implements Runnable {
      * The main entry point for testing a streaming application to process all micro-batches continuously for all tables.
      */
     @VisibleForTesting
-    List<TableStreamingQuery> runJob(SparkSession spark) {
+    List<TableStreamingQuery> runJob(SparkSession spark) throws NoSchemaNoDataException {
         logger.info("Initialising Job");
         List<ImmutablePair<String, String>> tablesToProcess = tableDiscoveryService.discoverTablesToProcess();
         List<TableStreamingQuery> streamingQueries = new ArrayList<>();
 
         if(!tablesToProcess.isEmpty()) {
-            tablesToProcess.forEach(tableDetails -> {
+            for (val tableDetails: tablesToProcess) {
                 String inputSchemaName = tableDetails.getLeft();
                 String inputTableName = tableDetails.getRight();
                 TableStreamingQuery streamingQuery = tableStreamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
                 streamingQuery.runQuery();
                 streamingQueries.add(streamingQuery);
-            });
+            }
         } else {
             logger.warn("No tables to process");
         }

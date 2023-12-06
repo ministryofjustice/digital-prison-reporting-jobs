@@ -57,7 +57,7 @@ class DataHubCdcJobTest {
     }
 
     @Test
-    public void shouldRunAQueryPerTable() {
+    public void shouldRunAQueryPerTable() throws Exception {
 
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
@@ -73,7 +73,7 @@ class DataHubCdcJobTest {
     }
 
     @Test
-    public void shouldNotThrowForNoTables() {
+    public void shouldNotThrowForNoTables() throws Exception {
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(Collections.emptyList());
 
         underTest.runJob(spark);

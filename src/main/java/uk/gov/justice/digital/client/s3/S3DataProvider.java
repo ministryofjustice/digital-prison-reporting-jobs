@@ -3,6 +3,7 @@ package uk.gov.justice.digital.client.s3;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 
 import java.util.List;
 
@@ -50,17 +52,27 @@ public class S3DataProvider {
                 .parquet(fileGlobPath);
     }
 
-    public Dataset<Row> getStreamingSourceDataWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) {
+    public Dataset<Row> getStreamingSourceDataWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) throws NoSchemaNoDataException {
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
-        StructType schema = sparkSession.read().parquet(fileGlobPath).schema();
-        logger.info("Inferred schema for {}.{}: \n{}", sourceName, tableName, schema.treeString());
-        logger.info("Initialising S3 data source for {}.{} with file glob path {}", sourceName, tableName, fileGlobPath);
-        return sparkSession
-                .readStream()
-                .schema(schema)
-                .parquet(fileGlobPath);
+        try {
+            StructType schema = sparkSession.read().parquet(fileGlobPath).schema();
+            logger.info("Inferred schema for {}.{}: \n{}", sourceName, tableName, schema.treeString());
+            logger.info("Initialising S3 data source for {}.{} with file glob path {}", sourceName, tableName, fileGlobPath);
+            return sparkSession
+                    .readStream()
+                    .schema(schema)
+                    .parquet(fileGlobPath);
+        } catch (Exception e) {
+            if (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) {
+                String msg = "No data available to read and no schema";
+                logger.error(msg, e);
+                throw new NoSchemaNoDataException(msg, e);
+            } else {
+                throw e;
+            }
+        }
     }
 
     public Dataset<Row> getBatchSourceData(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) {

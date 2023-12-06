@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
@@ -136,7 +137,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk3);
     }
 
-    private void whenTheJobRuns() {
+    private void whenTheJobRuns() throws NoSchemaNoDataException {
         streamingQueries = underTest.runJob(spark);
         assertFalse(streamingQueries.isEmpty());
     }
