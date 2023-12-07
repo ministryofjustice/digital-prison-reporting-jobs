@@ -50,6 +50,7 @@ public class S3DataProvider {
         return sparkSession
                 .readStream()
                 .schema(schema)
+                .option("mergeSchema", true)
                 .parquet(fileGlobPath);
     }
 
@@ -64,6 +65,7 @@ public class S3DataProvider {
             return sparkSession
                     .readStream()
                     .schema(schema)
+                    .option("mergeSchema", true)
                     .parquet(fileGlobPath);
         } catch (Exception e) {
             //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch
@@ -88,6 +90,7 @@ public class S3DataProvider {
         return sparkSession
                 .read()
                 .schema(schema)
+                .option("mergeSchema", true)
                 .parquet(scalaFilePaths);
     }
 
@@ -95,6 +98,7 @@ public class S3DataProvider {
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
         return sparkSession
                 .read()
+                .option("mergeSchema", true)
                 .parquet(scalaFilePaths);
     }
 
