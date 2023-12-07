@@ -11,8 +11,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
-import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
@@ -36,8 +34,6 @@ import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestam
 class CdcBatchProcessorTest extends BaseSparkTest {
 
     private static final long batchId = 1;
-    private static final String structuredTablePath = "/structured/path";
-    private static final String curatedTablePath = "/curated/path";
     private static Dataset<Row> rowPerPk;
     private static Dataset<Row> manyRowsPerPk;
 
@@ -48,8 +44,6 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     private StructuredZoneCDCS3 mockStructuredZone;
     @Mock
     private CuratedZoneCDCS3 mockCuratedZone;
-    @Mock
-    private DataStorageService mockDataStorageService;
     @Mock
     private SourceReference mockSourceReference;
 
@@ -62,16 +56,23 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-
         underTest = new CdcBatchProcessor(mockValidationService, mockStructuredZone, mockCuratedZone);
+    }
 
-        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
-        when(mockSourceReference.getSource()).thenReturn("source");
-        when(mockSourceReference.getTable()).thenReturn("table");
+    @Test
+    public void shouldSkipEmptyBatches() {
+        underTest.processBatch(mockSourceReference, spark, spark.emptyDataFrame(), batchId);
+
+        verify(mockValidationService, times(0)).handleValidation(any(), any(), any(), any());
+        verify(mockStructuredZone, times(0)).process(any(), any(), any());
+        verify(mockCuratedZone, times(0)).process(any(), any(), any());
     }
 
     @Test
     public void shouldDelegateValidation() {
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
@@ -81,6 +82,9 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldPassDataForStructuredZoneProcessing() {
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
@@ -96,6 +100,9 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldPassDataForCuratedZoneProcessing() {
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
@@ -110,7 +117,10 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteLatestRecordsByPK() throws DataStorageRetriesExhaustedException {
+    public void shouldWriteLatestRecordsByPK() {
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any())).thenReturn(manyRowsPerPk);
 
         ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor = ArgumentCaptor.forClass(Dataset.class);

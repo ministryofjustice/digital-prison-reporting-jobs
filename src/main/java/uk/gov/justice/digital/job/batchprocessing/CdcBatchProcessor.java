@@ -44,17 +44,21 @@ public class CdcBatchProcessor {
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
-        val batchStartTime = System.currentTimeMillis();
-        String source = sourceReference.getSource();
-        String table = sourceReference.getTable();
-        logger.info("Processing batch {} for {}.{}", batchId, source, table);
+        if(!df.isEmpty()) {
+            val batchStartTime = System.currentTimeMillis();
+            String source = sourceReference.getSource();
+            String table = sourceReference.getTable();
+            logger.info("Processing batch {} for {}.{}", batchId, source, table);
 
-        val validRows = validationService.handleValidation(spark, df, sourceReference, STRUCTURED_CDC);
-        val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
+            val validRows = validationService.handleValidation(spark, df, sourceReference, STRUCTURED_CDC);
+            val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
 
-        structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
-        curatedZone.process(spark, latestCDCRecordsByPK, sourceReference);
-        logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
+            structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
+            curatedZone.process(spark, latestCDCRecordsByPK, sourceReference);
+            logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
+        } else {
+            logger.info("Skipping empty batch");
+        }
     }
 
     @VisibleForTesting
