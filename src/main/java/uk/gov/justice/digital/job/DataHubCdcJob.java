@@ -91,7 +91,7 @@ public class DataHubCdcJob implements Runnable {
      * The main entry point for testing a streaming application to process all micro-batches continuously for all tables.
      */
     @VisibleForTesting
-    List<TableStreamingQuery> runJob(SparkSession spark) throws NoSchemaNoDataException {
+    List<TableStreamingQuery> runJob(SparkSession spark) {
         logger.info("Initialising Job");
         List<ImmutablePair<String, String>> tablesToProcess = tableDiscoveryService.discoverTablesToProcess();
         List<TableStreamingQuery> streamingQueries = new ArrayList<>();
@@ -100,9 +100,15 @@ public class DataHubCdcJob implements Runnable {
             for (val tableDetails: tablesToProcess) {
                 String inputSchemaName = tableDetails.getLeft();
                 String inputTableName = tableDetails.getRight();
-                TableStreamingQuery streamingQuery = tableStreamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
-                streamingQuery.runQuery();
-                streamingQueries.add(streamingQuery);
+                try {
+                    TableStreamingQuery streamingQuery = tableStreamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
+                    streamingQuery.runQuery();
+                    streamingQueries.add(streamingQuery);
+                } catch (NoSchemaNoDataException e) {
+                    logger.error("No schema and no data for {}.{}. We will skip this table and continue processing the other tables",
+                            inputSchemaName, inputTableName, e);
+                }
+
             }
         } else {
             logger.warn("No tables to process");
