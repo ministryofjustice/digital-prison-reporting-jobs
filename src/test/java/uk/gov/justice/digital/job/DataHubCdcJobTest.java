@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -69,6 +70,22 @@ class DataHubCdcJobTest {
 
         verify(table1StreamingQuery, times(1)).runQuery();
         verify(table2StreamingQuery, times(1)).runQuery();
+        verify(table3StreamingQuery, times(1)).runQuery();
+    }
+
+    @Test
+    public void shouldSkipQueryWhenThereIsNoSchemaAndNoData() throws Exception {
+        when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
+
+        when(tableStreamingQueryProvider.provide(spark, "source1", "table1")).thenReturn(table1StreamingQuery);
+        when(tableStreamingQueryProvider.provide(spark, "source2", "table2"))
+                .thenThrow(new NoSchemaNoDataException("", new Exception()));
+        when(tableStreamingQueryProvider.provide(spark, "source3", "table3")).thenReturn(table3StreamingQuery);
+
+        underTest.runJob(spark);
+
+        verify(table1StreamingQuery, times(1)).runQuery();
+        verify(table2StreamingQuery, times(0)).runQuery();
         verify(table3StreamingQuery, times(1)).runQuery();
     }
 
