@@ -99,11 +99,11 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments);
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);
-        ValidationService validationService = new ValidationService(violationService);
+        S3DataProvider dataProvider = new S3DataProvider(arguments);
+        ValidationService validationService = new ValidationService(violationService, dataProvider);
         StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);
         CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);
         S3BatchProcessor batchProcessor = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, validationService);
-        S3DataProvider dataProvider = new S3DataProvider(arguments);
         underTest = new DataHubBatchJob(arguments, properties, sparkSessionProvider, tableDiscoveryService, batchProcessor, dataProvider, sourceReferenceService, violationService);
     }
 

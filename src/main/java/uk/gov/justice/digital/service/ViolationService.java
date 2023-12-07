@@ -145,20 +145,6 @@ public class ViolationService {
         handleViolation(spark, invalidRecords, source, table, zoneName);
     }
 
-    public void handleInvalidSchema(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table,
-            ZoneName zoneName,
-            Long schemaVersion
-    ) throws DataStorageException {
-        logger.warn("Violation - Records failed schema validation for source {}, table {}", source, table);
-        val errorMsg = String.format("Record does not match schema version %d", schemaVersion);
-        val invalidRecords = dataFrame.withColumn(ERROR, lit(errorMsg));
-        handleViolation(spark, invalidRecords, source, table, zoneName);
-    }
-
     /**
      * Handle violations with error column already present on the DataFrame.
      */

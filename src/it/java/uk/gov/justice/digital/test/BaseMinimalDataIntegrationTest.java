@@ -6,6 +6,9 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.apache.spark.sql.functions.lit;
+import static uk.gov.justice.digital.test.MinimalTestData.inserts;
+
 public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected static final int pk1 = 1;
     protected static final int pk2 = 2;
@@ -18,10 +21,22 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
 
     @TempDir
     protected Path testRoot;
+    protected String rawPath;
     protected String structuredPath;
     protected String curatedPath;
     protected String violationsPath;
     protected String checkpointPath;
+
+    protected void givenRawContainsDataWithMatchingSchema() {
+        String rawTablePath = Paths.get(rawPath).resolve(inputSchemaName).resolve(inputTableName).toAbsolutePath().toString();
+        inserts(spark).write().parquet(rawTablePath);
+    }
+
+    protected void givenRawContainsDataWithMisMatchingSchema() {
+        String rawTablePath = Paths.get(rawPath).resolve(inputSchemaName).resolve(inputTableName).toAbsolutePath().toString();
+        inserts(spark).withColumn("a-new-column", lit(1)).write().parquet(rawTablePath);
+
+    }
 
     protected void thenStructuredAndCuratedContainForPK(String data, int primaryKey) {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, inputTableName, data, primaryKey);

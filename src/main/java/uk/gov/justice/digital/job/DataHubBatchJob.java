@@ -17,7 +17,6 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.exception.SchemaMismatchException;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -125,16 +124,10 @@ public class DataHubBatchJob implements Runnable {
                 Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
                 if(maybeSourceReference.isPresent()) {
                     SourceReference sourceReference = maybeSourceReference.get();
-                    try {
-                        val dataFrame = dataProvider.getBatchSourceData(sparkSession, sourceReference, filePaths);
-                        logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
-                        batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
-                        logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
-                    } catch (SchemaMismatchException e) {
-                        logger.warn("Schema mismatch for table {}.{} - writing all data to violations", schema, table);
-                        val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
-                        violationService.handleInvalidSchema(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD, sourceReference.getVersionNumber());
-                    }
+                    val dataFrame = dataProvider.getBatchSourceData(sparkSession, sourceReference, filePaths);
+                    logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
+                    batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
+                    logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
                 } else {
                     logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
                     val dataFrame = dataProvider.getBatchSourceDataWithSchemaInference(sparkSession, filePaths);
