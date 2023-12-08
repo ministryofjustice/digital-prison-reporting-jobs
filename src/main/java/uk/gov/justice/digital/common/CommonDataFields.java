@@ -11,6 +11,7 @@ public class CommonDataFields {
     public static final String TIMESTAMP = "_timestamp";
     // The error column is added to the schema by the app when writing violations to give error details.
     public static final String ERROR = "error";
+    public static final String ERROR_RAW = "raw";
 
     /**
      * The possible entries in the operation column

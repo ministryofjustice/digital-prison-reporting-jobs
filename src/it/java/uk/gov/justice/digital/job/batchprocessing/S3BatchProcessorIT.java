@@ -165,6 +165,40 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedDoNotContainPK(pk3);
     }
 
+    @Test
+    public void shouldWriteToViolationsWhenSchemaChangesFromWhatIsAlreadyInViolations() {
+        // The 1st bad dataframe will be written to violations with one schema
+        Dataset<Row> dfNullNonNullableCols = spark.createDataFrame(Arrays.asList(
+                createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
+                createRow(pk2, null, Insert, "data2"),
+                createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
+        ), TEST_DATA_SCHEMA);
+        underTest.processBatch(spark, sourceReference, dfNullNonNullableCols);
+
+        thenStructuredAndCuratedContainForPK("data1", pk1);
+        thenStructuredAndCuratedContainForPK("data3", pk3);
+
+        thenStructuredViolationsContainsForPK("data2", pk2);
+        thenStructuredAndCuratedDoNotContainPK(pk2);
+        // The 2nd bad dataframe will be written to violations with another, incompatible schema
+        Dataset<Row> schemaChanged = spark.createDataFrame(Arrays.asList(
+                        createRow(pk4, "2023-11-13 10:50:00.123456", Insert, "data1"),
+                        createRow(pk5, null, Insert, "data2"),
+                        createRow(pk6, "2023-11-13 10:50:00.123456", Insert, "data3")
+                ), TEST_DATA_SCHEMA)
+                .withColumn("data", lit(1))
+                .withColumn("new-column", lit("new"));
+
+        underTest.processBatch(spark, sourceReference, schemaChanged);
+
+        thenStructuredViolationsContainsPK(pk4);
+        thenStructuredViolationsContainsPK(pk5);
+        thenStructuredViolationsContainsPK(pk6);
+        thenStructuredAndCuratedDoNotContainPK(pk4);
+        thenStructuredAndCuratedDoNotContainPK(pk5);
+        thenStructuredAndCuratedDoNotContainPK(pk6);
+    }
+
     private void givenS3BatchProcessorDependenciesAreInjected() {
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);

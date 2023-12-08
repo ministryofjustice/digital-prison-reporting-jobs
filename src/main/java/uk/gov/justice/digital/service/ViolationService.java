@@ -3,21 +3,29 @@ package uk.gov.justice.digital.service;
 import jakarta.inject.Inject;
 import lombok.Getter;
 import lombok.val;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import javax.inject.Singleton;
 
+import java.util.Arrays;
+
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.struct;
+import static org.apache.spark.sql.functions.to_json;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
+import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.DATA;
@@ -158,7 +166,17 @@ public class ViolationService {
         val destinationPath = fullTablePath(source, table, zoneName);
         logger.warn("Violation - for source {}, table {}", source, table);
         logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), destinationPath);
-        storageService.append(destinationPath, invalidRecords);
+        Column[] columns = Arrays
+                .stream(invalidRecords.columns())
+                .filter(c -> !ERROR.equals(c))
+                .map(functions::col)
+                .toArray(Column[]::new);
+
+        Dataset<Row> toWrite = invalidRecords.select(
+                col(ERROR),
+                to_json(struct(columns)).as(ERROR_RAW)
+        );
+        storageService.append(destinationPath, toWrite);
 
         logger.info("Append completed successfully");
         storageService.updateDeltaManifestForTable(spark, destinationPath);
