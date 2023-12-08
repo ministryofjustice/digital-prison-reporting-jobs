@@ -9,9 +9,11 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
@@ -32,15 +34,18 @@ public class CdcBatchProcessor {
     private final ValidationService validationService;
     private final StructuredZoneCDCS3 structuredZone;
     private final CuratedZoneCDCS3 curatedZone;
+    private final S3DataProvider dataProvider;
 
     @Inject
     public CdcBatchProcessor(
             ValidationService validationService,
             StructuredZoneCDCS3 structuredZone,
-            CuratedZoneCDCS3 curatedZone) {
+            CuratedZoneCDCS3 curatedZone,
+            S3DataProvider dataProvider) {
         this.validationService = validationService;
         this.structuredZone = structuredZone;
         this.curatedZone = curatedZone;
+        this.dataProvider = dataProvider;
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
@@ -49,8 +54,8 @@ public class CdcBatchProcessor {
             String source = sourceReference.getSource();
             String table = sourceReference.getTable();
             logger.info("Processing batch {} for {}.{}", batchId, source, table);
-
-            val validRows = validationService.handleValidation(spark, df, sourceReference, STRUCTURED_CDC);
+            StructType inferredSchema = dataProvider.inferSchema(df.sparkSession(), sourceReference.getSource(), sourceReference.getTable());
+            val validRows = validationService.handleValidation(spark, df, sourceReference, inferredSchema, STRUCTURED_CDC);
             val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
 
             structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);

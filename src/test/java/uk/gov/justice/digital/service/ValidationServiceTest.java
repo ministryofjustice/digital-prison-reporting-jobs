@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -55,8 +54,6 @@ class ValidationServiceTest extends BaseSparkTest {
     @Mock
     private ViolationService violationService;
     @Mock
-    private S3DataProvider dataProvider;
-    @Mock
     private SourceReference sourceReference;
     @Mock
     private SourceReference.PrimaryKey primaryKey;
@@ -64,7 +61,7 @@ class ValidationServiceTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new ValidationService(violationService, dataProvider);
+        underTest = new ValidationService(violationService);
         List<Row> input = Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.000000", Delete, "data"),
                 createRow(2, "2023-11-13 10:49:28.000000", Delete, null),
@@ -189,14 +186,14 @@ class ValidationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleValidationShouldReturnValidRows() {
-        when(dataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
 
-        List<Row> result = underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList();
+        List<Row> result =
+                underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedValid = Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.000000", Delete, "data"),
@@ -209,7 +206,6 @@ class ValidationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleValidationShouldWriteViolationsWithInvalidRows() throws DataStorageException {
-        when(dataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
@@ -217,7 +213,7 @@ class ValidationServiceTest extends BaseSparkTest {
         when(sourceReference.getTable()).thenReturn(table);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
-        underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList();
+        underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
                 RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", requiredColumnIsNullMsg),
@@ -246,14 +242,13 @@ class ValidationServiceTest extends BaseSparkTest {
         StructType misMatchingSchema = TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS.add(
                 new StructField("extra-column", DataTypes.IntegerType, false, Metadata.empty())
         );
-        when(dataProvider.inferSchema(any(), any(), any())).thenReturn(misMatchingSchema);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getVersionNumber()).thenReturn(1L);
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
-        underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList();
+        underTest.handleValidation(spark, inputDf, sourceReference, misMatchingSchema, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
                 RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", schemaMisMatchMsg),
@@ -281,7 +276,6 @@ class ValidationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleValidationShouldThrowRTEWhenViolationServiceThrows() throws DataStorageException {
-        when(dataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
@@ -291,7 +285,8 @@ class ValidationServiceTest extends BaseSparkTest {
         doThrow(new DataStorageException(""))
                 .when(violationService)
                 .handleViolation(any(), any(), any(), any(), any());
-        assertThrows(RuntimeException.class, () -> underTest.handleValidation(spark, inputDf, sourceReference, STRUCTURED_LOAD).collectAsList());
+        assertThrows(RuntimeException.class, () ->
+                underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList());
     }
 
 }

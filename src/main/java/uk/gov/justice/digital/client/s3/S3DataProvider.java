@@ -79,19 +79,7 @@ public class S3DataProvider {
         }
     }
 
-    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, SourceReference sourceReference, List<String> filePaths) {
-        String source = sourceReference.getSource();
-        String table = sourceReference.getTable();
-        val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
-        StructType schema = withMetadataFields(sourceReference.getSchema());
-        logger.info("Provided schema for {}.{}: \n{}", source, table, schema.treeString());
-        return sparkSession
-                .read()
-                .schema(schema)
-                .parquet(scalaFilePaths);
-    }
-
-    public Dataset<Row> getBatchSourceDataWithSchemaInference(SparkSession sparkSession, List<String> filePaths) {
+    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) {
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
         return sparkSession
                 .read()

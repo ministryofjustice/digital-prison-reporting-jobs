@@ -86,6 +86,16 @@ public class BaseSparkTest {
 				.select("jsonData.*");
 	}
 
+	protected static void assertDeltaTableContainsPK(String tablePath, int primaryKey) {
+		Dataset<Row> df = spark.read().format("delta").load(tablePath);
+		List<Row> result = df
+				.select(PRIMARY_KEY_COLUMN)
+				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
+				.collectAsList();
+
+		assertTrue(result.contains(RowFactory.create(primaryKey)));
+	}
+
 	public static void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
 		Dataset<Row> df = spark.read().format("delta").load(tablePath);
 		List<Row> result = df
@@ -93,8 +103,7 @@ public class BaseSparkTest {
 				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
 				.collectAsList();
 
-		List<Row> expected = Collections.singletonList(RowFactory.create(data));
-		assertTrue(result.containsAll(expected));
+		assertTrue(result.contains(RowFactory.create(data)));
 	}
 
 	public static void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {

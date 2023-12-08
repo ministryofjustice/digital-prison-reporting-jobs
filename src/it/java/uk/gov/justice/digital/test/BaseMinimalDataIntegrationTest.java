@@ -27,23 +27,27 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected String violationsPath;
     protected String checkpointPath;
 
-    protected void givenRawContainsDataWithMatchingSchema() {
-        String rawTablePath = Paths.get(rawPath).resolve(inputSchemaName).resolve(inputTableName).toAbsolutePath().toString();
-        inserts(spark).write().parquet(rawTablePath);
-    }
-
-    protected void givenRawContainsDataWithMisMatchingSchema() {
-        String rawTablePath = Paths.get(rawPath).resolve(inputSchemaName).resolve(inputTableName).toAbsolutePath().toString();
-        inserts(spark).withColumn("a-new-column", lit(1)).write().parquet(rawTablePath);
-
-    }
-
     protected void thenStructuredAndCuratedContainForPK(String data, int primaryKey) {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, inputTableName, data, primaryKey);
     }
 
+    protected void thenStructuredViolationsContainsPK(int primaryKey) {
+        String violationsTablePath = Paths.get(violationsPath)
+                .resolve("structured")
+                .resolve(inputSchemaName)
+                .resolve(inputTableName)
+                .toAbsolutePath()
+                .toString();
+        assertDeltaTableContainsPK(violationsTablePath, primaryKey);
+    }
+
     protected void thenStructuredViolationsContainsForPK(String data, int primaryKey) {
-        String violationsTablePath = Paths.get(violationsPath).resolve("structured").resolve(inputSchemaName).resolve(inputTableName).toAbsolutePath().toString();
+        String violationsTablePath = Paths.get(violationsPath)
+                .resolve("structured")
+                .resolve(inputSchemaName)
+                .resolve(inputTableName)
+                .toAbsolutePath()
+                .toString();
         assertDeltaTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 

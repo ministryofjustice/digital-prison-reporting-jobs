@@ -383,9 +383,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
-                new ValidationService(violationService, dataProvider),
+                new ValidationService(violationService),
                 new StructuredZoneCDCS3(arguments, violationService, storageService),
-                new CuratedZoneCDCS3(arguments, violationService, storageService)
+                new CuratedZoneCDCS3(arguments, violationService, storageService),
+                dataProvider
         );
         TableStreamingQueryProvider streamingQueryProvider = new TableStreamingQueryProvider(
                 arguments,
