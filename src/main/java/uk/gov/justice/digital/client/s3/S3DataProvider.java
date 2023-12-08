@@ -83,6 +83,7 @@ public class S3DataProvider {
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
         return sparkSession
                 .read()
+                .option("mergeSchema", "true")
                 .parquet(scalaFilePaths);
     }
 

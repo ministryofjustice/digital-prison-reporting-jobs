@@ -165,7 +165,7 @@ public class ViolationService {
     ) throws DataStorageException {
         val destinationPath = fullTablePath(source, table, zoneName);
         logger.warn("Violation - for source {}, table {}", source, table);
-        logger.info("Appending {} records to deltalake table: {}", invalidRecords.count(), destinationPath);
+        logger.info("Appending records to deltalake table: {}", destinationPath);
         Column[] columns = Arrays
                 .stream(invalidRecords.columns())
                 .filter(c -> !ERROR.equals(c))
