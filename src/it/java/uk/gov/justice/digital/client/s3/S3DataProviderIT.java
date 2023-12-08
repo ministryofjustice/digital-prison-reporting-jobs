@@ -67,17 +67,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
 
     @Test
     public void shouldGetBatchSourceDataWithSchemaInference() {
-        Dataset<Row> df = underTest.getBatchSourceDataWithSchemaInference(spark, dataFilePaths);
-        assertEquals(3, df.count());
-    }
-
-    @Test
-    public void shouldGetBatchSourceDataWithSpecifiedSchema() {
-        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
-        when(sourceReference.getSource()).thenReturn(sourceName);
-        when(sourceReference.getTable()).thenReturn(tableName);
-
-        Dataset<Row> df = underTest.getBatchSourceData(spark, sourceReference, dataFilePaths);
+        Dataset<Row> df = underTest.getBatchSourceData(spark, dataFilePaths);
         assertEquals(3, df.count());
     }
 

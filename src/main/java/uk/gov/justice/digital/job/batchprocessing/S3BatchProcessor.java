@@ -5,6 +5,7 @@ import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.domain.model.SourceReference;
@@ -46,27 +47,32 @@ public class S3BatchProcessor {
     }
 
     public void processBatch(SparkSession spark, SourceReference sourceReference, Dataset<Row> dataFrame) {
-        String sourceName = sourceReference.getSource();
-        String tableName = sourceReference.getTable();
-        logger.info("Processing records {}/{}", sourceName, tableName);
+        if(!dataFrame.isEmpty()) {
+            String sourceName = sourceReference.getSource();
+            String tableName = sourceReference.getTable();
+            logger.info("Processing records {}/{}", sourceName, tableName);
 
-        val startTime = System.currentTimeMillis();
-        dataFrame.persist();
-        try {
-            val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
-            val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, STRUCTURED_LOAD);
-            val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-            curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
-        } catch (Exception e) {
-            logger.error("Caught unexpected exception", e);
-            throw new RuntimeException("Caught unexpected exception", e);
+            val startTime = System.currentTimeMillis();
+            dataFrame.persist();
+            try {
+                val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
+                StructType inferredSchema = filteredDf.schema();
+                val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
+                val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
+                curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+            } catch (Exception e) {
+                logger.error("Caught unexpected exception", e);
+                throw new RuntimeException("Caught unexpected exception", e);
+            }
+            dataFrame.unpersist();
+
+            logger.info("Processed records {}/{} in {}ms",
+                    sourceName,
+                    tableName,
+                    System.currentTimeMillis() - startTime
+            );
+        } else {
+            logger.info("Skipping empty batch");
         }
-        dataFrame.unpersist();
-
-        logger.info("Processed records {}/{} in {}ms",
-                sourceName,
-                tableName,
-                System.currentTimeMillis() - startTime
-        );
     }
 }

@@ -15,7 +15,6 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 
@@ -34,17 +33,13 @@ public class ValidationService {
 
     private static final Logger logger = LoggerFactory.getLogger(ValidationService.class);
     private final ViolationService violationService;
-    private final S3DataProvider dataProvider;
-
     @Inject
-    public ValidationService(ViolationService violationService, S3DataProvider dataProvider) {
+    public ValidationService(ViolationService violationService) {
         this.violationService = violationService;
-        this.dataProvider = dataProvider;
     }
 
-    public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference, ViolationService.ZoneName zoneName) {
+    public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference, StructType inferredSchema, ViolationService.ZoneName zoneName) {
         try {
-            StructType inferredSchema = dataProvider.inferSchema(dataFrame.sparkSession(), sourceReference.getSource(), sourceReference.getTable());
             val maybeValidRows = validateRows(dataFrame, sourceReference, inferredSchema);
             val validRows = maybeValidRows.filter(col(ERROR).isNull()).drop(ERROR);
             val invalidRows = maybeValidRows.filter(col(ERROR).isNotNull());

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkDfSameTimestamp;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimestampLatest;
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
@@ -46,6 +48,8 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     private CuratedZoneCDCS3 mockCuratedZone;
     @Mock
     private SourceReference mockSourceReference;
+    @Mock
+    private S3DataProvider mockDataProvider;
 
 
     @BeforeAll
@@ -56,14 +60,14 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new CdcBatchProcessor(mockValidationService, mockStructuredZone, mockCuratedZone);
+        underTest = new CdcBatchProcessor(mockValidationService, mockStructuredZone, mockCuratedZone, mockDataProvider);
     }
 
     @Test
     public void shouldSkipEmptyBatches() {
         underTest.processBatch(mockSourceReference, spark, spark.emptyDataFrame(), batchId);
 
-        verify(mockValidationService, times(0)).handleValidation(any(), any(), any(), any());
+        verify(mockValidationService, times(0)).handleValidation(any(), any(), any(), any(), any());
         verify(mockStructuredZone, times(0)).process(any(), any(), any());
         verify(mockCuratedZone, times(0)).process(any(), any(), any());
     }
@@ -73,11 +77,13 @@ class CdcBatchProcessorTest extends BaseSparkTest {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
+        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
-        verify(mockValidationService, times(1)).handleValidation(spark, rowPerPk, mockSourceReference, STRUCTURED_CDC);
+        verify(mockValidationService, times(1))
+                .handleValidation(spark, rowPerPk, mockSourceReference, TEST_DATA_SCHEMA, STRUCTURED_CDC);
     }
 
     @Test
@@ -85,7 +91,8 @@ class CdcBatchProcessorTest extends BaseSparkTest {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
+        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
@@ -103,7 +110,8 @@ class CdcBatchProcessorTest extends BaseSparkTest {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any())).thenReturn(rowPerPk);
+        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
@@ -121,7 +129,8 @@ class CdcBatchProcessorTest extends BaseSparkTest {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), any(), any(), any())).thenReturn(manyRowsPerPk);
+        when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(manyRowsPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
 
         ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor = ArgumentCaptor.forClass(Dataset.class);
         ArgumentCaptor<Dataset<Row>> curatedArgumentCaptor = ArgumentCaptor.forClass(Dataset.class);

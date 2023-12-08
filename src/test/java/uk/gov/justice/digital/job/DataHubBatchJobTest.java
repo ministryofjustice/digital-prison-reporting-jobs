@@ -148,7 +148,7 @@ class DataHubBatchJobTest {
     }
 
     private void stubReadData() {
-        when(dataProvider.getBatchSourceData(any(), any(), any())).thenReturn(dataFrame);
+        when(dataProvider.getBatchSourceData(any(), any())).thenReturn(dataFrame);
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
 
