@@ -96,16 +96,6 @@ public class BaseSparkTest {
 		assertTrue(result.contains(RowFactory.create(primaryKey)));
 	}
 
-	protected static void assertDeltaTableContainsPK(String tablePath, String primaryKey) {
-		Dataset<Row> df = spark.read().format("delta").load(tablePath);
-		List<Row> result = df
-				.select(PRIMARY_KEY_COLUMN)
-				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
-				.collectAsList();
-
-		assertTrue(result.contains(RowFactory.create(primaryKey)));
-	}
-
 	public static void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
 		Dataset<Row> df = spark.read().format("delta").load(tablePath);
 		List<Row> result = df

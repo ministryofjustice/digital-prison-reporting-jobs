@@ -123,9 +123,9 @@ public class DataHubBatchJob implements Runnable {
             if(!filePaths.isEmpty()) {
                 Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
                 val dataFrame = dataProvider.getBatchSourceData(sparkSession, filePaths);
+                logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
                 if(maybeSourceReference.isPresent()) {
                     SourceReference sourceReference = maybeSourceReference.get();
-                    logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
                     batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
                     logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
                 } else {
