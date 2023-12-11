@@ -56,8 +56,7 @@ public class IncompatibleSchemaHandlingService {
             try {
                 originalFunc.call(df, batchId);
             } catch (Exception e) {
-                String msg = format("Violation - incompatible types for column %s. Tried to use %s but found %s",
-                        e.getColumn(), e.getLogicalType(), e.getPhysicalType());
+                String msg = "Violation - incompatible types for column %s. Tried to use %s but found %s";
                 logger.error(msg, e);
                 moveCdcDataToViolations(df.sparkSession(), source, table, msg);
             }
