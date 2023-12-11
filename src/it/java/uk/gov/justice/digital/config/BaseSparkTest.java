@@ -4,6 +4,7 @@ import io.micronaut.logging.LogLevel;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
@@ -21,6 +22,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
 import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT;
@@ -96,22 +98,45 @@ public class BaseSparkTest {
 		assertTrue(result.contains(RowFactory.create(primaryKey)));
 	}
 
-	public static void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
+	protected static void assertDeltaTableContainsForPK(String tablePath, String data, int primaryKey) {
 		Dataset<Row> df = spark.read().format("delta").load(tablePath);
 		List<Row> result = df
 				.select(DATA_COLUMN)
-				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
+				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
 				.collectAsList();
 
 		assertTrue(result.contains(RowFactory.create(data)));
 	}
 
-	public static void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {
+	protected static void assertViolationsTableContainsPK(String tablePath, int primaryKey) {
+		Dataset<Row> df = spark.read().format("delta").load(tablePath);
+		Dataset<Row> errorRawAsJson = spark.read().json(df.select(ERROR_RAW).as(Encoders.STRING()).javaRDD());
+		List<Row> result = errorRawAsJson
+				.select(PRIMARY_KEY_COLUMN)
+				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
+				.collectAsList();
+
+		assertTrue(result.contains(RowFactory.create(primaryKey)));
+	}
+
+
+	protected static void assertViolationsTableContainsForPK(String tablePath, String data, int primaryKey) {
+		Dataset<Row> df = spark.read().format("delta").load(tablePath);
+		Dataset<Row> errorRawAsJson = spark.read().json(df.select(ERROR_RAW).as(Encoders.STRING()).javaRDD());
+		List<Row> result = errorRawAsJson
+				.select(DATA_COLUMN)
+				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
+				.collectAsList();
+
+		assertTrue(result.contains(RowFactory.create(data)));
+	}
+
+	protected static void assertDeltaTableDoesNotContainPK(String tablePath, int primaryKey) {
 		try {
 			Dataset<Row> df = spark.read().format("delta").load(tablePath);
 			List<Row> result = df
 					.select(DATA_COLUMN)
-					.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(Integer.toString(primaryKey))))
+					.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
 					.collectAsList();
 			assertEquals(0, result.size());
 		} catch (Exception e) {
@@ -125,21 +150,21 @@ public class BaseSparkTest {
 		}
 	}
 
-	public static void assertStructuredAndCuratedForTableContainForPK(String structuredPath, String curatedPath, String schemaName, String tableName, String data, int primaryKey) {
+	protected static void assertStructuredAndCuratedForTableContainForPK(String structuredPath, String curatedPath, String schemaName, String tableName, String data, int primaryKey) {
 		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		assertDeltaTableContainsForPK(structuredTablePath, data, primaryKey);
 		assertDeltaTableContainsForPK(curatedTablePath, data, primaryKey);
 	}
 
-	public static void assertStructuredAndCuratedForTableDoNotContainPK(String structuredPath, String curatedPath, String schemaName, String tableName, int primaryKey) {
+	protected static void assertStructuredAndCuratedForTableDoNotContainPK(String structuredPath, String curatedPath, String schemaName, String tableName, int primaryKey) {
 		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
 		assertDeltaTableDoesNotContainPK(structuredTablePath, primaryKey);
 		assertDeltaTableDoesNotContainPK(curatedTablePath, primaryKey);
 	}
 
-	public static void givenRetrySettingsAreConfigured(JobArguments arguments) {
+	protected static void givenRetrySettingsAreConfigured(JobArguments arguments) {
 		when(arguments.getDataStorageRetryMinWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT);
 		when(arguments.getDataStorageRetryMaxWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
 		when(arguments.getDataStorageRetryMaxAttempts()).thenReturn(DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);

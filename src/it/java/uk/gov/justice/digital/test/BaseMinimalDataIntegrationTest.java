@@ -15,6 +15,7 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected static final int pk3 = 3;
     protected static final int pk4 = 4;
     protected static final int pk5 = 5;
+    protected static final int pk6 = 6;
 
     protected static final String inputSchemaName = "my-schema";
     protected static final String inputTableName = "my-table";
@@ -38,7 +39,7 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
                 .resolve(inputTableName)
                 .toAbsolutePath()
                 .toString();
-        assertDeltaTableContainsPK(violationsTablePath, primaryKey);
+        assertViolationsTableContainsPK(violationsTablePath, primaryKey);
     }
 
     protected void thenStructuredViolationsContainsForPK(String data, int primaryKey) {
@@ -48,7 +49,7 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
                 .resolve(inputTableName)
                 .toAbsolutePath()
                 .toString();
-        assertDeltaTableContainsForPK(violationsTablePath, data, primaryKey);
+        assertViolationsTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 
     protected void thenStructuredAndCuratedDoNotContainPK(int primaryKey) {
