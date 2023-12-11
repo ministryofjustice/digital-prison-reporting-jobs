@@ -32,6 +32,7 @@ public class IncompatibleSchemaHandlingService {
     private final ViolationService violationService;
     private final JobArguments arguments;
     private final String source;
+    private final String table;
 
     public IncompatibleSchemaHandlingService(
             S3DataProvider dataProvider,
@@ -49,19 +50,13 @@ public class IncompatibleSchemaHandlingService {
         this.table = table;
     }
 
-    private final String table;
-
-
     public VoidFunction2<Dataset<Row>, Long> decorate(VoidFunction2<Dataset<Row>, Long> originalFunc) {
         return (df, batchId) -> {
             try {
                 originalFunc.call(df, batchId);
             } catch (SparkException e) {
                 // We only want to handle a very specific Exception (wrapped in two others) here
-                // todo null check might be redundant with instanceof
-                if (e.getCause() != null &&
-                        e.getCause() instanceof QueryExecutionException &&
-                        e.getCause().getCause() != null &&
+                if (e.getCause() instanceof QueryExecutionException &&
                         e.getCause().getCause() instanceof SchemaColumnConvertNotSupportedException) {
                     SchemaColumnConvertNotSupportedException cause =
                             (SchemaColumnConvertNotSupportedException) e.getCause().getCause();
