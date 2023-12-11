@@ -55,7 +55,7 @@ public class IncompatibleSchemaHandlingService {
         return (df, batchId) -> {
             try {
                 originalFunc.call(df, batchId);
-            } catch (SchemaColumnConvertNotSupportedException e) {
+            } catch (Exception e) {
                 String msg = format("Violation - incompatible types for column %s. Tried to use %s but found %s",
                         e.getColumn(), e.getLogicalType(), e.getPhysicalType());
                 logger.error(msg, e);
@@ -71,6 +71,7 @@ public class IncompatibleSchemaHandlingService {
             String cdcGlobPattern = arguments.getRawS3Path();
             FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
             String tablePath = tablePath(rawRoot, source, table);
+            // We only read data that matches the CDC file glob pattern
             Optional<List<String>> maybePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
             if (maybePaths.isPresent()) {
                 Dataset<Row> df = dataProvider.getBatchSourceData(spark, maybePaths.get());
