@@ -7,6 +7,7 @@ import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.execution.QueryExecutionException;
 import org.apache.spark.sql.execution.datasources.SchemaColumnConvertNotSupportedException;
 import org.apache.spark.sql.functions;
 import org.slf4j.Logger;
@@ -16,7 +17,6 @@ import uk.gov.justice.digital.config.JobArguments;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
 import static java.lang.String.format;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
@@ -57,13 +57,21 @@ public class IncompatibleSchemaHandlingService {
             try {
                 originalFunc.call(df, batchId);
             } catch (SparkException e) {
-                logger.error("Cause was", e.getCause());
-                if (e.getCause() != null) {
-                    logger.error("Cause of cause was was", e.getCause().getCause());
+                // We only want to handle a very specific Exception (wrapped in two others) here
+                // todo null check might be redundant with instanceof
+                if (e.getCause() != null &&
+                        e.getCause() instanceof QueryExecutionException &&
+                        e.getCause().getCause() != null &&
+                        e.getCause().getCause() instanceof SchemaColumnConvertNotSupportedException) {
+                    SchemaColumnConvertNotSupportedException cause =
+                            (SchemaColumnConvertNotSupportedException) e.getCause().getCause();
+                    String msg = format("Violation - incompatible types for column %s. Tried to use %s but found %s",
+                            cause.getColumn(), cause.getLogicalType(), cause.getPhysicalType());
+                    logger.warn(msg, e);
+                    moveCdcDataToViolations(df.sparkSession(), source, table, msg);
+                } else {
+                    throw e;
                 }
-                String msg = "Violation - incompatible types for column %s. Tried to use %s but found %s";
-                logger.error(msg, e);
-                moveCdcDataToViolations(df.sparkSession(), source, table, msg);
             }
         };
     }
@@ -76,20 +84,15 @@ public class IncompatibleSchemaHandlingService {
             String tablePath = tablePath(rawRoot, source, table);
             FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
             // We only read data that matches the CDC file glob pattern
-            Optional<List<String>> maybePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
-            if (maybePaths.isPresent()) {
-                List<String> filePaths = maybePaths.get();
-                if(!filePaths.isEmpty()) {
-                    Dataset<Row> df = dataProvider.getBatchSourceData(spark, filePaths);
-                    Dataset<Row> violations = df.withColumn(ERROR, functions.lit(errorMessage));
-                    violationService.handleViolation(spark, violations, source, table, STRUCTURED_CDC);
-                } else {
-                    // This shouldn't happen, but we should be able to continue if it does
-                    logger.warn("The list of files to move to violations was empty");
-                }
+            List<String> filePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
+            if(!filePaths.isEmpty()) {
+                Dataset<Row> df = dataProvider.getBatchSourceData(spark, filePaths);
+                Dataset<Row> violations = df.withColumn(ERROR, functions.lit(errorMessage));
+                violationService.handleViolation(spark, violations, source, table, STRUCTURED_CDC);
+                logger.info("Finished moving all available CDC data to violations to avoid schema mismatch problems");
             } else {
                 // This shouldn't happen, but we should be able to continue if it does
-                logger.warn("There were no matching files to move to violations");
+                logger.warn("The list of files to move to violations was empty");
             }
         } catch (Exception e) {
             logger.error("Caught unexpected Exception when moving CDC data to violations", e);

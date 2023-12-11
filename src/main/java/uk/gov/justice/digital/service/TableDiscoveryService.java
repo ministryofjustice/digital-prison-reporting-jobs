@@ -16,10 +16,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
@@ -61,29 +61,28 @@ public class TableDiscoveryService {
             String schema = tableToProcess.getLeft();
             String table = tableToProcess.getRight();
             String tablePath = tablePath(rawS3Path, schema, table);
-            Optional<List<String>> filePathsToProcess = listFiles(fileSystem, tablePath, fileGlobPattern);
-            if(filePathsToProcess.isPresent()) {
+            List<String> filePathsToProcess = listFiles(fileSystem, tablePath, fileGlobPattern);
+            if(!filePathsToProcess.isEmpty()) {
                 val key = new ImmutablePair<>(schema, table);
-                pathsByTable.put(key, filePathsToProcess.get());
+                pathsByTable.put(key, filePathsToProcess);
             }
         }
         logger.info("Finished enumerating load files in {}ms", System.currentTimeMillis() - listPathsStartTime);
         return pathsByTable;
     }
 
-    public Optional<List<String>> listFiles(FileSystem fs, String tablePath, String fileGlobPattern) throws IOException {
-        // todo use empty list instead of option
+    public List<String> listFiles(FileSystem fs, String tablePath, String fileGlobPattern) throws IOException {
         logger.info("Listing files with path {} and glob pattern {}", tablePath, fileGlobPattern);
         Path tablePathGlob = new Path(tablePath, fileGlobPattern);
         FileStatus[] fileStatuses = fs.globStatus(tablePathGlob);
         if (fileStatuses != null) {
-           return Optional.of(Arrays.stream(fileStatuses)
+           return Arrays.stream(fileStatuses)
                     .filter(FileStatus::isFile)
                     .map(f -> f.getPath().toString())
                     .peek(filePath -> logger.info("Processing file {}", filePath))
-                    .collect(Collectors.toList()));
+                    .collect(Collectors.toList());
         } else {
-            return Optional.empty();
+            return Collections.emptyList();
         }
     }
 }
