@@ -139,6 +139,7 @@ tasks.register('integrationTest', Test) {
 
     testLogging {
         events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
     }
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
 
