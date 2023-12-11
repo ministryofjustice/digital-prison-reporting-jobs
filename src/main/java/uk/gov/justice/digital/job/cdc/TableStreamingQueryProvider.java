@@ -13,7 +13,9 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
+import uk.gov.justice.digital.service.IncompatibleSchemaHandlingService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
 
 import javax.inject.Singleton;
@@ -31,6 +33,7 @@ public class TableStreamingQueryProvider {
     private final CdcBatchProcessor batchProcessor;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
+    private final TableDiscoveryService tableDiscoveryService;
 
     @Inject
     public TableStreamingQueryProvider(
@@ -38,12 +41,14 @@ public class TableStreamingQueryProvider {
             S3DataProvider s3DataProvider,
             CdcBatchProcessor batchProcessor,
             SourceReferenceService sourceReferenceService,
-            ViolationService violationService) {
+            ViolationService violationService,
+            TableDiscoveryService tableDiscoveryService) {
         this.arguments = arguments;
         this.s3DataProvider = s3DataProvider;
         this.batchProcessor = batchProcessor;
         this.sourceReferenceService = sourceReferenceService;
         this.violationService = violationService;
+        this.tableDiscoveryService = tableDiscoveryService;
     }
 
     public TableStreamingQuery provide(SparkSession spark, String inputSourceName, String inputTableName) throws NoSchemaNoDataException {
@@ -68,8 +73,12 @@ public class TableStreamingQueryProvider {
     ) {
 
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceData(spark, sourceReference);
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
-                (df, batchId) -> batchProcessor.processBatch(sourceReference, spark, df, batchId);
+        IncompatibleSchemaHandlingService incompatibleSchemaHandlingService = new IncompatibleSchemaHandlingService(
+                s3DataProvider, tableDiscoveryService, violationService, arguments, inputSourceName, inputTableName
+        );
+        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = incompatibleSchemaHandlingService.decorate(
+                (df, batchId) -> batchProcessor.processBatch(sourceReference, spark, df, batchId)
+        );
 
         return new TableStreamingQuery(
                 inputSourceName,
@@ -83,8 +92,12 @@ public class TableStreamingQueryProvider {
     @VisibleForTesting
     TableStreamingQuery noSchemaFoundQuery(SparkSession spark, String inputSourceName, String inputTableName) throws NoSchemaNoDataException {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, inputSourceName, inputTableName);
-        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc =
-                (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC);
+        IncompatibleSchemaHandlingService incompatibleSchemaHandlingService = new IncompatibleSchemaHandlingService(
+                s3DataProvider, tableDiscoveryService, violationService, arguments, inputSourceName, inputTableName
+        );
+        VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = incompatibleSchemaHandlingService.decorate(
+                (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC)
+        );
 
         return new TableStreamingQuery(
                 inputSourceName,

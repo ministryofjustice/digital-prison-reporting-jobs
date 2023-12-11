@@ -155,7 +155,9 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         CuratedZoneCDCS3 curatedZone = new CuratedZoneCDCS3(arguments, violationService, storageService);
         StructuredZoneCDCS3 structuredZone = new StructuredZoneCDCS3(arguments, violationService, storageService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone, dataProvider);
-        TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(arguments, dataProvider, batchProcessor, sourceReferenceService, violationService);
+        TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(
+                arguments, dataProvider, batchProcessor, sourceReferenceService, violationService, tableDiscoveryService
+        );
         underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }
 

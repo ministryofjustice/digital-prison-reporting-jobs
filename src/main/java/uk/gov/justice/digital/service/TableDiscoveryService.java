@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
@@ -60,20 +61,27 @@ public class TableDiscoveryService {
             String schema = tableToProcess.getLeft();
             String table = tableToProcess.getRight();
             String tablePath = tablePath(rawS3Path, schema, table);
-            Path tablePathGlob = new Path(tablePath, fileGlobPattern);
-            FileStatus[] fileStatuses = fileSystem.globStatus(tablePathGlob);
-            if (fileStatuses != null) {
-                List<String> filePathsToProcess = Arrays.stream(fileStatuses)
-                        .filter(FileStatus::isFile)
-                        .map(f -> f.getPath().toString())
-                        .peek(filePath -> logger.info("Processing file {} for {}.{}", filePath, schema, table))
-                        .collect(Collectors.toList());
+            Optional<List<String>> filePathsToProcess = listFiles(fileSystem, tablePath, fileGlobPattern);
+            if(filePathsToProcess.isPresent()) {
                 val key = new ImmutablePair<>(schema, table);
-                pathsByTable.put(key, filePathsToProcess);
+                pathsByTable.put(key, filePathsToProcess.get());
             }
-
         }
         logger.info("Finished enumerating load files in {}ms", System.currentTimeMillis() - listPathsStartTime);
         return pathsByTable;
+    }
+
+    public Optional<List<String>> listFiles(FileSystem fs, String tablePath, String fileGlobPattern) throws IOException {
+        Path tablePathGlob = new Path(tablePath, fileGlobPattern);
+        FileStatus[] fileStatuses = fs.globStatus(tablePathGlob);
+        if (fileStatuses != null) {
+           return Optional.of(Arrays.stream(fileStatuses)
+                    .filter(FileStatus::isFile)
+                    .map(f -> f.getPath().toString())
+                    .peek(filePath -> logger.info("Processing file {}", filePath))
+                    .collect(Collectors.toList()));
+        } else {
+            return Optional.empty();
+        }
     }
 }

@@ -23,6 +23,7 @@ import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -66,6 +67,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private SourceReferenceService sourceReferenceService;
     @Mock
     private SourceReference sourceReference;
+    @Mock
+    private TableDiscoveryService tableDiscoveryService;
     private TableStreamingQuery underTest;
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
@@ -393,7 +396,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 dataProvider,
                 batchProcessor,
                 sourceReferenceService,
-                violationService
+                violationService,
+                tableDiscoveryService
         );
         underTest = streamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
     }
