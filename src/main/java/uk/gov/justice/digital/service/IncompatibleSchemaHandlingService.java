@@ -72,9 +72,9 @@ public class IncompatibleSchemaHandlingService {
     void moveCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage) {
         try {
             String rawRoot = arguments.getRawS3Path();
-            String cdcGlobPattern = arguments.getRawS3Path();
-            FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
+            String cdcGlobPattern = arguments.getCdcFileGlobPattern();
             String tablePath = tablePath(rawRoot, source, table);
+            FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
             // We only read data that matches the CDC file glob pattern
             Optional<List<String>> maybePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
             if (maybePaths.isPresent()) {
