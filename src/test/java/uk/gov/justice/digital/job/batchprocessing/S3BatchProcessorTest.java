@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
@@ -61,6 +62,8 @@ class S3BatchProcessorTest extends BaseSparkTest {
     private SourceReference sourceReference;
     @Mock
     private ValidationService validationService;
+    @Captor
+    private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
     private S3BatchProcessor underTest;
 
@@ -84,8 +87,6 @@ class S3BatchProcessorTest extends BaseSparkTest {
     }
     @Test
     public void shouldProcessStructured() throws DataStorageException {
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
-
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
@@ -100,8 +101,6 @@ class S3BatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldProcessCurated() throws DataStorageException {
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
-
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
@@ -116,8 +115,6 @@ class S3BatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldDelegateValidationOnlyValidatingInserts() throws DataStorageException {
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
-
         Dataset<Row> mixedOperations = validatedDf
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));

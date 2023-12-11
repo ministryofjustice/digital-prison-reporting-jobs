@@ -58,7 +58,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
     private ViolationService mockViolationService;
 
     @Captor
-    ArgumentCaptor<Dataset<Row>> dataframeCaptor;
+    private ArgumentCaptor<Dataset<Row>> dataframeCaptor;
 
     private StructuredZone underTest;
 

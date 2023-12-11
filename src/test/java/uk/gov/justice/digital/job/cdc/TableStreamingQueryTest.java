@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import scala.Option;
@@ -39,6 +40,8 @@ class TableStreamingQueryTest extends BaseSparkTest {
     private VoidFunction2<Dataset<Row>, Long> batchProcessingFunc;
     @TempDir
     private Path testRoot;
+    @Captor
+    private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
     private TableStreamingQuery underTest;
 
@@ -70,7 +73,6 @@ class TableStreamingQueryTest extends BaseSparkTest {
         StreamingQuery sparkStreamingQuery = underTest.runQuery();
         sparkStreamingQuery.processAllAvailable();
 
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
         verify(batchProcessingFunc, times(1))
                 .call(argumentCaptor.capture(), any());
         List<Row> result = argumentCaptor.getValue().collectAsList();

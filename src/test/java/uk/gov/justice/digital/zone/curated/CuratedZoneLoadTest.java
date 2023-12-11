@@ -53,7 +53,7 @@ class CuratedZoneLoadTest extends BaseSparkTest {
     private ViolationService mockViolationService;
 
     @Captor
-    ArgumentCaptor<Dataset<Row>> dataframeCaptor;
+    private ArgumentCaptor<Dataset<Row>> dataframeCaptor;
 
     private final Dataset<Row> testDataSet = createStructuredLoadDataset(spark);
 

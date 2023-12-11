@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
@@ -50,6 +51,10 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     private SourceReference mockSourceReference;
     @Mock
     private S3DataProvider mockDataProvider;
+    @Captor
+    private ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor;
+    @Captor
+    private ArgumentCaptor<Dataset<Row>> curatedArgumentCaptor;
 
 
     @BeforeAll
@@ -93,14 +98,12 @@ class CdcBatchProcessorTest extends BaseSparkTest {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
-
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
-        verify(mockStructuredZone, times(1)).process(any(), argumentCaptor.capture(), eq(mockSourceReference));
+        verify(mockStructuredZone, times(1)).process(any(), structuredArgumentCaptor.capture(), eq(mockSourceReference));
 
         List<Row> expected = rowPerPk.collectAsList();
-        List<Row> result = argumentCaptor.getValue().collectAsList();
+        List<Row> result = structuredArgumentCaptor.getValue().collectAsList();
         assertEquals(expected.size(), result.size());
         assertTrue(result.containsAll(expected));
     }
@@ -112,14 +115,13 @@ class CdcBatchProcessorTest extends BaseSparkTest {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
-        verify(mockCuratedZone, times(1)).process(any(), argumentCaptor.capture(), eq(mockSourceReference));
+        verify(mockCuratedZone, times(1)).process(any(), curatedArgumentCaptor.capture(), eq(mockSourceReference));
 
         List<Row> expected = rowPerPk.collectAsList();
-        List<Row> result = argumentCaptor.getValue().collectAsList();
+        List<Row> result = curatedArgumentCaptor.getValue().collectAsList();
         assertEquals(expected.size(), result.size());
         assertTrue(result.containsAll(expected));
     }
@@ -131,9 +133,6 @@ class CdcBatchProcessorTest extends BaseSparkTest {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(manyRowsPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-
-        ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor = ArgumentCaptor.forClass(Dataset.class);
-        ArgumentCaptor<Dataset<Row>> curatedArgumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
 
