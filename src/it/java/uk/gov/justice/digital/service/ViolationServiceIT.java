@@ -94,7 +94,7 @@ public class ViolationServiceIT extends BaseSparkTest {
 
         Dataset<Row> result = spark.read().format("delta")
                 .load(violationsRoot.resolve(STRUCTURED_LOAD.getPath()).resolve(source).resolve(table).toString());
-        Dataset<Row> errorRawAsJson = spark.read().json(result.select(ERROR_RAW).as(Encoders.STRING()).javaRDD());
+        Dataset<Row> errorRawAsJson = spark.read().json(result.select(ERROR_RAW).as(Encoders.STRING()));
         errorRawAsJson.show(30, false);
 
         long expectedCount = original.count();

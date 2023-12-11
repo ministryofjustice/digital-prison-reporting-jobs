@@ -110,7 +110,7 @@ public class BaseSparkTest {
 
 	protected static void assertViolationsTableContainsPK(String tablePath, int primaryKey) {
 		Dataset<Row> df = spark.read().format("delta").load(tablePath);
-		Dataset<Row> errorRawAsJson = spark.read().json(df.select(ERROR_RAW).as(Encoders.STRING()).javaRDD());
+		Dataset<Row> errorRawAsJson = spark.read().json(df.select(ERROR_RAW).as(Encoders.STRING()));
 		List<Row> result = errorRawAsJson
 				.select(PRIMARY_KEY_COLUMN)
 				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
@@ -122,7 +122,7 @@ public class BaseSparkTest {
 
 	protected static void assertViolationsTableContainsForPK(String tablePath, String data, int primaryKey) {
 		Dataset<Row> df = spark.read().format("delta").load(tablePath);
-		Dataset<Row> errorRawAsJson = spark.read().json(df.select(ERROR_RAW).as(Encoders.STRING()).javaRDD());
+		Dataset<Row> errorRawAsJson = spark.read().json(df.select(ERROR_RAW).as(Encoders.STRING()));
 		List<Row> result = errorRawAsJson
 				.select(DATA_COLUMN)
 				.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))

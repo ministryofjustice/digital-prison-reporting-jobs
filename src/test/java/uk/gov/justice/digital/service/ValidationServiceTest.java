@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
@@ -57,6 +58,8 @@ class ValidationServiceTest extends BaseSparkTest {
     private SourceReference sourceReference;
     @Mock
     private SourceReference.PrimaryKey primaryKey;
+    @Captor
+    private ArgumentCaptor<Dataset<Row>> argumentCaptor;
     private ValidationService underTest;
 
     @BeforeEach
@@ -211,7 +214,6 @@ class ValidationServiceTest extends BaseSparkTest {
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
 
@@ -246,7 +248,6 @@ class ValidationServiceTest extends BaseSparkTest {
         when(sourceReference.getVersionNumber()).thenReturn(1L);
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
 
         underTest.handleValidation(spark, inputDf, sourceReference, misMatchingSchema, STRUCTURED_LOAD).collectAsList();
 

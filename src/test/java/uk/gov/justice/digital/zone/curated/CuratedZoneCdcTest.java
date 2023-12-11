@@ -52,7 +52,7 @@ class CuratedZoneCdcTest extends BaseSparkTest {
     private ViolationService mockViolationService;
 
     @Captor
-    ArgumentCaptor<Dataset<Row>> dataframeCaptor;
+    private ArgumentCaptor<Dataset<Row>> dataframeCaptor;
 
     private final String curatedPath = createValidatedPath(CURATED_PATH, TABLE_SOURCE, TABLE_NAME);
 

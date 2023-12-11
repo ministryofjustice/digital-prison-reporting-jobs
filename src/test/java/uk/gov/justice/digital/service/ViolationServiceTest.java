@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
@@ -45,6 +46,8 @@ class ViolationServiceTest extends BaseSparkTest {
     private DataStorageService mockDataStorage;
     @Mock
     private DataStorageRetriesExhaustedException mockCause;
+    @Captor
+    private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
     private ViolationService underTest;
 
@@ -130,7 +133,6 @@ class ViolationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleViolationShouldWriteViolationsUsingCommonSchema() throws DataStorageException {
-        ArgumentCaptor<Dataset<Row>> argumentCaptor = ArgumentCaptor.forClass(Dataset.class);
         underTest.handleViolation(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
         verify(mockDataStorage).append(any(), argumentCaptor.capture());
 
