@@ -72,7 +72,9 @@ public class TableDiscoveryService {
     }
 
     public Optional<List<String>> listFiles(FileSystem fs, String tablePath, String fileGlobPattern) throws IOException {
+        // todo use empty list instead of option
         Path tablePathGlob = new Path(tablePath, fileGlobPattern);
+        logger.info("Listing files with glob pattern {}", tablePathGlob);
         FileStatus[] fileStatuses = fs.globStatus(tablePathGlob);
         if (fileStatuses != null) {
            return Optional.of(Arrays.stream(fileStatuses)

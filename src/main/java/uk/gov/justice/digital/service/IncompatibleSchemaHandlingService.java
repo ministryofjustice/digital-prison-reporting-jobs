@@ -2,6 +2,7 @@ package uk.gov.justice.digital.service;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.spark.SparkException;
 import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -55,7 +56,11 @@ public class IncompatibleSchemaHandlingService {
         return (df, batchId) -> {
             try {
                 originalFunc.call(df, batchId);
-            } catch (Exception e) {
+            } catch (SparkException e) {
+                logger.error("Cause was", e.getCause());
+                if (e.getCause() != null) {
+                    logger.error("Cause of cause was was", e.getCause().getCause());
+                }
                 String msg = "Violation - incompatible types for column %s. Tried to use %s but found %s";
                 logger.error(msg, e);
                 moveCdcDataToViolations(df.sparkSession(), source, table, msg);
@@ -73,9 +78,15 @@ public class IncompatibleSchemaHandlingService {
             // We only read data that matches the CDC file glob pattern
             Optional<List<String>> maybePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
             if (maybePaths.isPresent()) {
-                Dataset<Row> df = dataProvider.getBatchSourceData(spark, maybePaths.get());
-                Dataset<Row> violations = df.withColumn(ERROR, functions.lit(errorMessage));
-                violationService.handleViolation(spark, violations, source, table, STRUCTURED_CDC);
+                List<String> filePaths = maybePaths.get();
+                if(!filePaths.isEmpty()) {
+                    Dataset<Row> df = dataProvider.getBatchSourceData(spark, filePaths);
+                    Dataset<Row> violations = df.withColumn(ERROR, functions.lit(errorMessage));
+                    violationService.handleViolation(spark, violations, source, table, STRUCTURED_CDC);
+                } else {
+                    // This shouldn't happen, but we should be able to continue if it does
+                    logger.warn("The list of files to move to violations was empty");
+                }
             } else {
                 // This shouldn't happen, but we should be able to continue if it does
                 logger.warn("There were no matching files to move to violations");
