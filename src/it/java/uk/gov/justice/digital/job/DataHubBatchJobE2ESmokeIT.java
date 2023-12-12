@@ -98,8 +98,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments);
         DataStorageService storageService = new DataStorageService(arguments);
-        ViolationService violationService = new ViolationService(arguments, storageService);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
+        ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);
         CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);

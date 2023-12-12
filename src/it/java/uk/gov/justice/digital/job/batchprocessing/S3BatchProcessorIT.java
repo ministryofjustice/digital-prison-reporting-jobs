@@ -7,9 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -201,7 +203,9 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
     private void givenS3BatchProcessorDependenciesAreInjected() {
         DataStorageService storageService = new DataStorageService(arguments);
-        ViolationService violationService = new ViolationService(arguments, storageService);
+        S3DataProvider dataProvider = new S3DataProvider(arguments);
+        TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments);
+        ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);
         CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);

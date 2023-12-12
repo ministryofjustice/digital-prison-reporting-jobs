@@ -13,7 +13,6 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
 
 import java.util.Optional;
@@ -43,8 +42,6 @@ class TableStreamingQueryProviderTest {
     @Mock
     private ViolationService violationService;
     @Mock
-    private TableDiscoveryService tableDiscoveryService;
-    @Mock
     private SparkSession spark;
     @Mock
     private Dataset<Row> df;
@@ -57,8 +54,7 @@ class TableStreamingQueryProviderTest {
                 dataProvider,
                 batchProcessor,
                 sourceReferenceService,
-                violationService,
-                tableDiscoveryService
+                violationService
         ));
     }
 

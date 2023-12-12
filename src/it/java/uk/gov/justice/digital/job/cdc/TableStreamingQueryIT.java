@@ -384,7 +384,12 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     private void givenTableStreamingQuery() throws NoSchemaNoDataException {
         DataStorageService storageService = new DataStorageService(arguments);
-        ViolationService violationService = new ViolationService(arguments, storageService);
+        ViolationService violationService = new ViolationService(
+                arguments,
+                storageService,
+                dataProvider,
+                tableDiscoveryService
+        );
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 new ValidationService(violationService),
                 new StructuredZoneCDCS3(arguments, violationService, storageService),
@@ -396,8 +401,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 dataProvider,
                 batchProcessor,
                 sourceReferenceService,
-                violationService,
-                tableDiscoveryService
+                violationService
         );
         underTest = streamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
     }

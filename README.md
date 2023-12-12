@@ -57,20 +57,20 @@ ensuring that your job class has a main method that can be executed.
 Authenticate your AWS account and then set the following CLI arguments, e.g. in your Intellij run configuration.
 ```
 --checkpoint.location ./.checkpoints/
---dpr.curated.s3.path s3a://dpr-dms-curated-zone-development/
---dpr.structured.s3.path s3a://dpr-dms-structured-zone-development/
---dpr.violations.s3.path s3a://dpr-dms-violation-development/
+--dpr.curated.s3.path s3a://dpr-curated-zone-development/
+--dpr.structured.s3.path s3a://dpr-structured-zone-development/
+--dpr.violations.s3.path s3a://dpr-violation-development/
 --dpr.aws.dynamodb.endpointUrl https://dynamodb.eu-west-2.amazonaws.com
 --dpr.aws.kinesis.endpointUrl https://kinesis.eu-west-2.amazonaws.com
 --dpr.aws.region eu-west-2
 --dpr.datamart.db.name datamart
 --dpr.domain.catalog.db domain
 --dpr.domain.registry dpr-domain-registry-development
---dpr.domain.target.path s3a://dpr-dms-domain-development
+--dpr.domain.target.path s3a://dpr-domain-development
 --dpr.kinesis.reader.batchDurationSeconds 30
 --dpr.kinesis.reader.streamName dpr-kinesis-ingestor-development
 --dpr.log.level INFO
---dpr.raw.s3.path s3a://dpr-dms-raw-zone-development/
+--dpr.raw.s3.path s3a://dpr-raw-zone-development/
 --dpr.redshift.secrets.name dpr-redshift-secret-development
 --dpr.contract.registryName dpr-glue-registry-avro-development
 ```

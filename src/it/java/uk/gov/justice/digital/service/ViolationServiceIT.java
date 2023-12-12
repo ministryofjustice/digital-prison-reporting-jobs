@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 
@@ -46,7 +47,12 @@ public class ViolationServiceIT extends BaseSparkTest {
     public void setUp() {
         givenRetrySettingsAreConfigured(arguments);
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
-        underTest = new ViolationService(arguments, new DataStorageService(arguments));
+        underTest = new ViolationService(
+                arguments,
+                new DataStorageService(arguments),
+                new S3DataProvider(arguments),
+                new TableDiscoveryService(arguments)
+        );
     }
 
     @Test
