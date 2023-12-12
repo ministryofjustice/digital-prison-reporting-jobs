@@ -40,9 +40,8 @@ ext {
     micronautVersion = '3.8.7'
     mockitoVersion = '4.11.0'
     sparkVersion = '3.3.0'
-    hadoopVersion = '3.3.3' // Glue 4.0 uses hadoopVersion = '3.3.3'
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
-    awsSdkVersion = '1.11.1026'
+    awsSdkVersion = '1.12.128' // Glue 4.0 uses awsSdkVersion = '1.12.128'
     glueApiVersion = '4.0.0'
     failSafeVersion = '3.3.2'
     systemLambdaVersion = '1.2.1'
@@ -53,10 +52,9 @@ dependencies {
 
     compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
     compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
-    compileOnly "org.apache.hadoop:hadoop-aws:$hadoopVersion"
     compileOnly "com.amazonaws:AWSGlueETL:$glueApiVersion"
 
-    implementation "com.amazonaws:aws-java-sdk-bundle:$awsSdkVersion"
+    implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion"
     implementation "org.apache.spark:spark-avro_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"

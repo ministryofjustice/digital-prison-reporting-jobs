@@ -21,6 +21,7 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -50,7 +51,9 @@ class ValidationServiceTest extends BaseSparkTest {
     private static final String table = "table";
     private static final String requiredColumnIsNullMsg = "Required column is null";
     private static final String noPkMsg = "Record does not have a primary key";
-    private static final String schemaMisMatchMsg = "Record does not match schema version 1";
+    private static final String VERSION_ID = UUID.randomUUID().toString();
+    private static final String schemaMisMatchMsg = "Record does not match schema version " + VERSION_ID;
+
     private static Dataset<Row> inputDf;
     @Mock
     private ViolationService violationService;
@@ -143,7 +146,7 @@ class ValidationServiceTest extends BaseSparkTest {
     @Test
     public void validateRowsShouldValidateMismatchingSchemas() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
-        when(sourceReference.getVersionNumber()).thenReturn(1L);
+        when(sourceReference.getVersionId()).thenReturn(VERSION_ID);
 
         StructType misMatchingSchema = TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS.add(
                 new StructField("extra-column", DataTypes.IntegerType, false, Metadata.empty())
@@ -245,7 +248,7 @@ class ValidationServiceTest extends BaseSparkTest {
                 new StructField("extra-column", DataTypes.IntegerType, false, Metadata.empty())
         );
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
-        when(sourceReference.getVersionNumber()).thenReturn(1L);
+        when(sourceReference.getVersionId()).thenReturn(VERSION_ID);
         when(sourceReference.getSource()).thenReturn(source);
         when(sourceReference.getTable()).thenReturn(table);
 
