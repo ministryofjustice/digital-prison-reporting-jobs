@@ -17,7 +17,6 @@ import uk.gov.justice.digital.config.JobArguments;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -41,48 +40,48 @@ public class ViolationServiceIT extends BaseSparkTest {
     private static final String source = "some";
     private static final String table = "table";
 
-    @Mock
-    private JobArguments arguments;
-    @TempDir
-    protected Path scratchTempDirRoot;
-    @TempDir
-    protected Path rawRoot;
-    @TempDir
-    protected Path violationsRoot;
-
-    private ViolationService underTest;
-
-    String testCaseColumn = "test-case";
-    Dataset<Row> original = inserts(spark)
+    private static final String testCaseColumn = "test-case";
+    private static final Dataset<Row> original = inserts(spark)
             .withColumn(ERROR, lit("an error"))
             .withColumn(testCaseColumn, lit("original"));
-    String extraColumn = "extra-column";
-    Dataset<Row> anExtraColumn = original
+    private static final String extraColumn = "extra-column";
+    private static final Dataset<Row> anExtraColumn = original
             .withColumn(extraColumn, lit(extraColumn))
             .withColumn(testCaseColumn, lit(extraColumn));
-    Dataset<Row> missingAColumn = original
+    private static final Dataset<Row> missingAColumn = original
             .drop(DATA_COLUMN)
             .withColumn(testCaseColumn, lit("missing column"));
-    Dataset<Row> stringColumnChangedToInt = original
+    private static final Dataset<Row> stringColumnChangedToInt = original
             .withColumn(DATA_COLUMN, lit(1))
             .withColumn(testCaseColumn, lit("string changed to int"));
-    Dataset<Row> intColumnChangedToString = original
+    private static final Dataset<Row> intColumnChangedToString = original
             .withColumn(PRIMARY_KEY_COLUMN, lit("a string"))
             .withColumn(testCaseColumn, lit("int changed to string"));
-    Dataset<Row> intColumnChangedToLong = original
+    private static final Dataset<Row> intColumnChangedToLong = original
             .withColumn(PRIMARY_KEY_COLUMN, lit(1L))
             .withColumn(testCaseColumn, lit("int changed to long"));
 
-    String timestampAndIntColumn = "timestamp-and-int";
-    Dataset<Row> tsAndInt1 = original
+    private static final String timestampAndIntColumn = "timestamp-and-int";
+    private static final Dataset<Row> tsAndInt1 = original
             .withColumn(timestampAndIntColumn, lit(1))
             .withColumn(testCaseColumn, lit("timestamp-and-int-1"));
-    Dataset<Row> tsAndInt2 = original
+    private static final Dataset<Row> tsAndInt2 = original
             .withColumn(timestampAndIntColumn, to_timestamp(
                     lit("2022-01-01 00:00:00"),
                     "yyyy-MM-dd HH:mm:ss"
             ))
             .withColumn(testCaseColumn, lit("timestamp-and-int-2"));
+
+    @Mock
+    private JobArguments arguments;
+    @TempDir
+    private Path scratchTempDirRoot;
+    @TempDir
+    private Path rawRoot;
+    @TempDir
+    private Path violationsRoot;
+
+    private ViolationService underTest;
 
     @BeforeEach
     public void setUp() {
