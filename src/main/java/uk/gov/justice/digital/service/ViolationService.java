@@ -18,6 +18,7 @@ import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import javax.inject.Singleton;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -164,11 +165,11 @@ public class ViolationService {
         handleViolation(spark, invalidRecords, source, table, zoneName);
     }
 
-    public void writeCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage, String rawRoot, String cdcGlobPattern) {
+    public void writeCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage, String rawRoot, String cdcGlobPattern) throws DataStorageException {
         try {
-            String tablePath = tablePath(rawRoot, source, table);
             FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
-            // We only read data that matches the CDC file glob pattern
+        String tablePath = tablePath(rawRoot, source, table);
+        // We only read data that matches the CDC file glob pattern
             List<String> filePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
             logger.info("Moving {} CDC files to violations to avoid schema mismatch", filePaths.size());
             for (String filePath: filePaths) {
@@ -181,9 +182,9 @@ public class ViolationService {
                 logger.info("Moving {} to violations completed", filePath);
             }
             logger.info("Finished moving all available CDC data to violations to avoid schema mismatch");
-        } catch (Exception e) {
-            logger.error("Caught unexpected Exception when moving CDC data to violations", e);
-            throw new RuntimeException(e);
+        } catch (IOException e) {
+            logger.error("Unexpected Exception when moving CDC data to violations", e);
+            throw new DataStorageException(e);
         }
     }
 
