@@ -43,7 +43,7 @@ public class ViolationService {
 
     private static final Logger logger = LoggerFactory.getLogger(ViolationService.class);
 
-    private final String violationsPath;
+    private final JobArguments arguments;
     private final DataStorageService storageService;
     private final S3DataProvider dataProvider;
     private final TableDiscoveryService tableDiscoveryService;
@@ -81,7 +81,7 @@ public class ViolationService {
             S3DataProvider dataProvider,
             TableDiscoveryService tableDiscoveryService
     ) {
-        this.violationsPath = arguments.getViolationsS3Path();
+        this.arguments = arguments;
         this.storageService = storageService;
         this.dataProvider = dataProvider;
         this.tableDiscoveryService = tableDiscoveryService;
@@ -97,7 +97,7 @@ public class ViolationService {
     ) {
         String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
         logger.warn(violationMessage, cause);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
+        val destinationPath = createValidatedPath(arguments.getViolationsS3Path(), source, table);
         val violationDf = dataFrame
                 .select(col(DATA), col(METADATA))
                 .withColumn(ERROR, lit(violationMessage));
@@ -140,7 +140,7 @@ public class ViolationService {
             String table
     ) throws DataStorageException {
         logger.warn("Violation - No schema found for {}/{}", source, table);
-        val destinationPath = createValidatedPath(violationsPath, source, table);
+        val destinationPath = createValidatedPath(arguments.getViolationsS3Path(), source, table);
 
         val missingSchemaRecords = dataFrame
                 .select(col(DATA), col(METADATA))
@@ -165,12 +165,16 @@ public class ViolationService {
         handleViolation(spark, invalidRecords, source, table, zoneName);
     }
 
-    public void writeCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage, String rawRoot, String cdcGlobPattern) throws DataStorageException {
+    /**
+     * Writes all CDC data in the table's input directory to violations.
+     */
+    public void writeCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
         try {
+            String rawRoot = arguments.getRawS3Path();
             FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
-        String tablePath = tablePath(rawRoot, source, table);
-        // We only read data that matches the CDC file glob pattern
-            List<String> filePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
+            String tablePath = tablePath(rawRoot, source, table);
+            // We only read data that matches the CDC file glob pattern
+            List<String> filePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, arguments.getCdcFileGlobPattern());
             logger.info("Moving {} CDC files to violations to avoid schema mismatch", filePaths.size());
             for (String filePath: filePaths) {
                 logger.info("Moving {} to violations started", filePath);
@@ -183,8 +187,9 @@ public class ViolationService {
             }
             logger.info("Finished moving all available CDC data to violations to avoid schema mismatch");
         } catch (IOException e) {
-            logger.error("Unexpected Exception when moving CDC data to violations", e);
-            throw new DataStorageException(e);
+            String msg = "Unexpected Exception when moving CDC data to violations";
+            logger.error(msg, e);
+            throw new DataStorageException(msg, e);
         }
     }
 
@@ -218,7 +223,7 @@ public class ViolationService {
     }
 
     private String fullTablePath(String source, String table, ZoneName zone) {
-        String root = ensureEndsWithSlash(violationsPath) + zone.getPath() + "/";
+        String root = ensureEndsWithSlash(arguments.getViolationsS3Path()) + zone.getPath() + "/";
         return createValidatedPath(root, source, table);
     }
 

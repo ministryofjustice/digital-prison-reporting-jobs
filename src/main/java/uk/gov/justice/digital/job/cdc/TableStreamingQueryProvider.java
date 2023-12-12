@@ -101,9 +101,10 @@ public class TableStreamingQueryProvider {
     }
 
 
+    @VisibleForTesting
     // Add handling of incompatible schemas to the batch processing function.
     // If files use a schema which cannot be read using the configured input schema then write to violations and continue.
-    private VoidFunction2<Dataset<Row>, Long> withIncompatibleSchemaHandling(String source, String table, VoidFunction2<Dataset<Row>, Long> originalFunc) {
+    VoidFunction2<Dataset<Row>, Long> withIncompatibleSchemaHandling(String source, String table, VoidFunction2<Dataset<Row>, Long> originalFunc) {
         return (df, batchId) -> {
             try {
                 originalFunc.call(df, batchId);
@@ -116,9 +117,7 @@ public class TableStreamingQueryProvider {
                     String msg = format("Violation - some of the input data had incompatible types for column %s. Tried to use %s but found %s",
                             cause.getColumn(), cause.getLogicalType(), cause.getPhysicalType());
                     logger.warn(msg, e);
-                    String rawRoot = arguments.getRawS3Path();
-                    String cdcFileGlobPattern = arguments.getCdcFileGlobPattern();
-                    violationService.writeCdcDataToViolations(df.sparkSession(), source, table, msg, rawRoot, cdcFileGlobPattern);
+                    violationService.writeCdcDataToViolations(df.sparkSession(), source, table, msg);
                 } else {
                     throw e;
                 }
