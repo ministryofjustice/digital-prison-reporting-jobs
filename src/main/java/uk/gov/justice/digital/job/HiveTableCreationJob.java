@@ -39,12 +39,12 @@ public class HiveTableCreationJob implements Runnable {
             // TODO (DPR2-250): Temporarily using a static list of schemas to create Hive tables.
             // This will be replaced with a config possibly loaded from S3 which contains a group of schemas
             Set<String> schemaNames = new HashSet<>();
-            schemaNames.add("nomis.offender_external_movements");
-            schemaNames.add("nomis.offenders");
-            schemaNames.add("nomis.offender_bookings");
-            schemaNames.add("nomis.agency_locations");
-            schemaNames.add("nomis.agency_internal_locations");
-            schemaNames.add("nomis.movement_reasons");
+            schemaNames.add("nomis/offender_external_movements");
+            schemaNames.add("nomis/offenders");
+            schemaNames.add("nomis/offender_bookings");
+            schemaNames.add("nomis/agency_locations");
+            schemaNames.add("nomis/agency_internal_locations");
+            schemaNames.add("nomis/movement_reasons");
 
             Set<String> failedTables = hiveSchemaService.replaceTables(schemaNames);
 

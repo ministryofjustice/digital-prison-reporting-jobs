@@ -8,16 +8,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;
 import lombok.val;
-import uk.gov.justice.digital.client.glue.GlueSchemaClient;
-import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
+import uk.gov.justice.digital.client.s3.S3SchemaClient;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Singleton
@@ -26,11 +21,11 @@ public class SourceReferenceService {
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    private final GlueSchemaClient schemaClient;
+    private final S3SchemaClient schemaClient;
     private final AvroToSparkSchemaConverter converter;
 
     @Inject
-    public SourceReferenceService(GlueSchemaClient schemaClient,
+    public SourceReferenceService(S3SchemaClient schemaClient,
                                   AvroToSparkSchemaConverter converter) {
         this.schemaClient = schemaClient;
         this.converter = converter;
@@ -49,10 +44,10 @@ public class SourceReferenceService {
     }
 
     private String generateKey(String source, String table) {
-        return String.join(".", source, table).toLowerCase();
+        return String.join("/", source, table).toLowerCase();
     }
 
-    private SourceReference createFromAvroSchema(GlueSchemaResponse response) {
+    private SourceReference createFromAvroSchema(S3SchemaClient.S3SchemaResponse response) {
         val parsedAvro = parseAvroString(response.getAvro());
 
         return new SourceReference(
@@ -61,7 +56,7 @@ public class SourceReferenceService {
                 parsedAvro.getNameWithoutVersionSuffix(),
                 parsedAvro.findPrimaryKey()
                         .orElseThrow(() -> new IllegalStateException("No primary key found in schema: " + response)),
-                response.getVersionNumber(),
+                response.getVersionId(),
                 converter.convert(response.getAvro())
         );
 

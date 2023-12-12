@@ -30,6 +30,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.apache.spark.sql.types.DataTypes.StringType;
 import static org.mockito.ArgumentMatchers.any;
@@ -146,12 +147,13 @@ public class BatchProcessorIntegrationTest extends BaseSparkTest {
     }
 
     private void givenSourceReferenceIsPresent(String source, String table) {
+        String versionId = UUID.randomUUID().toString();
         val sourceReference = new SourceReference(
                 "key",
                 source,
                 table,
                 new SourceReference.PrimaryKey("s"),
-                1L,
+                versionId,
                 new StructType().add(new StructField("s", StringType, true, Metadata.empty()))
         );
         when(sourceReferenceService.getSourceReference(source, table)).thenReturn(Optional.of(sourceReference));

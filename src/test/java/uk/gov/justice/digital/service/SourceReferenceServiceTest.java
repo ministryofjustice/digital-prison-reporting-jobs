@@ -6,8 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.glue.GlueSchemaClient;
-import uk.gov.justice.digital.client.glue.GlueSchemaClient.GlueSchemaResponse;
+import uk.gov.justice.digital.client.s3.S3SchemaClient;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
 
@@ -21,6 +20,7 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.client.s3.S3SchemaClient.S3SchemaResponse;
 import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
 
@@ -31,11 +31,12 @@ public class SourceReferenceServiceTest {
     private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACT = "agency-internal-locations-dummy.avsc";
     private static final String OFFENDERS_CONTRACT = "offenders-dummy.avsc";
     private static final String COMPOSITE_KEY_CONTRACT = "composite-key.avsc";
+    private static final String VERSION_ID = UUID.randomUUID().toString();
 
     private static final AvroToSparkSchemaConverter converter = new AvroToSparkSchemaConverter();
 
     @Mock
-    private GlueSchemaClient client;
+    private S3SchemaClient client;
 
 
     private SourceReferenceService underTest;
@@ -48,13 +49,12 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
         val schemaId = UUID.randomUUID().toString();
-        val version = 1L;
-        val schemaResponse = new GlueSchemaResponse(
+        val schemaResponse = new S3SchemaResponse(
                 schemaId,
                 getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT),
-                version
+                VERSION_ID
         );
-        when(client.getSchema("oms_owner.offenders")).thenReturn(Optional.of(schemaResponse));
+        when(client.getSchema("oms_owner/offenders")).thenReturn(Optional.of(schemaResponse));
 
         val sourceReference = underTest.getSourceReference("oMs_oWnEr", "oFfEnDeRs");
 
@@ -70,13 +70,12 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldReturnReferenceFromClientWhereItExists() {
         val schemaId = UUID.randomUUID().toString();
-        val version = 1L;
-        val schemaResponse = new GlueSchemaResponse(
+        val schemaResponse = new S3SchemaResponse(
                 schemaId,
                 getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT),
-                version
+                VERSION_ID
         );
-        when(client.getSchema("oms_owner.offenders")).thenReturn(Optional.of(schemaResponse));
+        when(client.getSchema("oms_owner/offenders")).thenReturn(Optional.of(schemaResponse));
 
         val result = underTest.getSourceReference("oms_owner", "offenders");
 
@@ -90,7 +89,7 @@ public class SourceReferenceServiceTest {
         assertEquals("nomis", sourceReference.getSource());
         assertEquals("offenders", sourceReference.getTable());
         assertEquals(pk, sourceReference.getPrimaryKey());
-        assertEquals(version, sourceReference.getVersionNumber());
+        assertEquals(VERSION_ID, sourceReference.getVersionId());
         // See AvroToSparkSchemaConverter for more detailed testing of the conversion.
         assertNotNull(sourceReference.getSchema());
     }
@@ -101,15 +100,14 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldStripVersionSuffixFromNameAttribute() {
         val schemaId = UUID.randomUUID().toString();
-        val version = 1L;
         val tableName = "AGENCY_INTERNAL_LOCATIONS";
-        val schemaResponse = new GlueSchemaResponse(
+        val schemaResponse = new S3SchemaResponse(
                 schemaId,
                 getResource(RESOURCE_PATH + "/" + AGENCY_INTERNAL_LOCATIONS_CONTRACT)
                         .replace(tableName, tableName + "_17"),
-                version
+                VERSION_ID
         );
-        when(client.getSchema("oms_owner.agency_internal_locations")).thenReturn(Optional.of(schemaResponse));
+        when(client.getSchema("oms_owner/agency_internal_locations")).thenReturn(Optional.of(schemaResponse));
 
         val result = underTest.getSourceReference("oms_owner", "agency_internal_locations");
 
@@ -122,8 +120,8 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void shouldThrowExceptionIfSchemaCannotBeParsed() {
-        when(client.getSchema("some.schema"))
-                .thenReturn(Optional.of(new GlueSchemaResponse(UUID.randomUUID().toString(), "This is not valid JSON", 1L)));
+        when(client.getSchema("some/schema"))
+                .thenReturn(Optional.of(new S3SchemaResponse(UUID.randomUUID().toString(), "This is not valid JSON", VERSION_ID)));
 
         assertThrows(RuntimeException.class, () -> underTest.getSourceReference("some", "schema"));
     }
@@ -131,18 +129,15 @@ public class SourceReferenceServiceTest {
     @Test
     public void shouldGetASourceReferenceWithACompositeSchema() {
         val schemaId = UUID.randomUUID().toString();
-        val version = 1L;
-        val schemaResponse = new GlueSchemaResponse(
+        val schemaResponse = new S3SchemaResponse(
                 schemaId,
                 getResource(RESOURCE_PATH + "/" + COMPOSITE_KEY_CONTRACT),
-                version
+                VERSION_ID
         );
 
-        when(client.getSchema("oms_owner.composite")).thenReturn(Optional.of(schemaResponse));
+        when(client.getSchema("oms_owner/composite")).thenReturn(Optional.of(schemaResponse));
 
-        val result = underTest.getSourceReference("oms_owner", "composite");
-
-
+        assertTrue(underTest.getSourceReference("oms_owner", "composite").isPresent());
     }
 
     @Test
@@ -157,14 +152,13 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void shouldReturnAListOfAllSourceReferences() {
-        Set<String> schemaGroup = Collections.singleton("test_schema.test_table");
-        List<GlueSchemaResponse> expectedSchemas = new ArrayList<>();
+        Set<String> schemaGroup = Collections.singleton("test_schema/test_table");
+        List<S3SchemaResponse> expectedSchemas = new ArrayList<>();
 
         IntStream.range(0, 3).forEach(index -> {
                     String schemaId = String.valueOf(index);
-                    val version = 1L;
                     String avroString = getResource(RESOURCE_PATH + "/" + OFFENDERS_CONTRACT);
-                    val schemaResponse = new GlueSchemaResponse(schemaId, avroString, version);
+                    val schemaResponse = new S3SchemaResponse(schemaId, avroString, VERSION_ID);
                     expectedSchemas.add(schemaResponse);
                 }
         );
@@ -178,14 +172,14 @@ public class SourceReferenceServiceTest {
                 .map(SourceReference::getKey)
                 .collect(Collectors.toList());
 
-        List<String> expectedIds = expectedSchemas.stream().map(GlueSchemaResponse::getId).collect(Collectors.toList());
+        List<String> expectedIds = expectedSchemas.stream().map(S3SchemaResponse::getId).collect(Collectors.toList());
 
         assertThat(actualIds, containsTheSameElementsInOrderAs(expectedIds));
     }
 
     @Test
     public void shouldReturnAnEmptyListWhenNoSchemaIsFound() {
-        Set<String> schemaGroup = Collections.singleton("test_schema.test_table");
+        Set<String> schemaGroup = Collections.singleton("test_schema/test_table");
 
         when(client.getAllSchemas(any())).thenReturn(Collections.emptyList());
 
