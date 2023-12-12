@@ -29,6 +29,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -148,7 +149,7 @@ class DataHubBatchJobTest {
     }
 
     private void stubReadData() {
-        when(dataProvider.getBatchSourceData(any(), any())).thenReturn(dataFrame);
+        when(dataProvider.getBatchSourceData(any(), anyList())).thenReturn(dataFrame);
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
 

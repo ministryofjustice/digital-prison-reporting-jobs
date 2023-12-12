@@ -80,15 +80,17 @@ public class IncompatibleSchemaHandlingService {
             FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
             // We only read data that matches the CDC file glob pattern
             List<String> filePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, cdcGlobPattern);
-            if(!filePaths.isEmpty()) {
-                Dataset<Row> df = dataProvider.getBatchSourceData(spark, filePaths);
+            logger.info("Moving {} CDC files to violations to avoid schema mismatch", filePaths.size());
+            for (String filePath: filePaths) {
+                logger.info("Moving {} to violations started", filePath);
+                // We need to read the data file-by-file, rather than in a single read call for all files, in case
+                // there are multiple files with incompatible schemas which cannot be read and merged in a single read.
+                Dataset<Row> df = dataProvider.getBatchSourceData(spark, filePath);
                 Dataset<Row> violations = df.withColumn(ERROR, functions.lit(errorMessage));
                 violationService.handleViolation(spark, violations, source, table, STRUCTURED_CDC);
-                logger.info("Finished moving all available CDC data to violations to avoid schema mismatch problems");
-            } else {
-                // This shouldn't happen, but we should be able to continue if it does
-                logger.warn("The list of files to move to violations was empty");
+                logger.info("Moving {} to violations completed", filePath);
             }
+            logger.info("Finished moving all available CDC data to violations to avoid schema mismatch");
         } catch (Exception e) {
             logger.error("Caught unexpected Exception when moving CDC data to violations", e);
             throw new RuntimeException(e);
