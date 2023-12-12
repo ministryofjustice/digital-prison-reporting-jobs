@@ -21,6 +21,7 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
 import java.util.Arrays;
 
 import static org.apache.spark.sql.functions.lit;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
@@ -219,7 +220,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         violationsPath = testRoot.resolve("violations").toAbsolutePath().toString();
         when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
         when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
-        when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
+        lenient().when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
     }
 
     private void givenASourceReference() {

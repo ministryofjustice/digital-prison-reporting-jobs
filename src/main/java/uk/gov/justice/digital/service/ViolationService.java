@@ -17,7 +17,6 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import javax.inject.Singleton;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -187,9 +186,7 @@ public class ViolationService {
             }
             logger.info("Finished moving all available CDC data to violations to avoid schema mismatch");
         } catch (IOException e) {
-            String msg = "Unexpected Exception when moving CDC data to violations";
-            logger.error(msg, e);
-            throw new DataStorageException(msg, e);
+            throw new DataStorageException("Unexpected Exception when moving CDC data to violations", e);
         }
     }
 

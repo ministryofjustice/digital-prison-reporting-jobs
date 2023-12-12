@@ -37,6 +37,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
@@ -359,7 +360,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         checkpointPath = testRoot.resolve("checkpoints").toAbsolutePath().toString();
         when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
         when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
-        when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
+        lenient().when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
         when(arguments.getCheckpointLocation()).thenReturn(checkpointPath);
     }
 
