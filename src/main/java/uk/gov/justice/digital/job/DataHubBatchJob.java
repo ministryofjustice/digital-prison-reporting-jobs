@@ -8,6 +8,7 @@ import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,15 +123,28 @@ public class DataHubBatchJob implements Runnable {
             val filePaths = entry.getValue();
             if(!filePaths.isEmpty()) {
                 Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
-                val dataFrame = dataProvider.getBatchSourceData(sparkSession, filePaths);
-                logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
-                if(maybeSourceReference.isPresent()) {
-                    SourceReference sourceReference = maybeSourceReference.get();
-                    batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
-                    logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
-                } else {
-                    logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
-                    violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
+                try {
+                    val dataFrame = dataProvider.getBatchSourceData(sparkSession, filePaths);
+
+                    logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
+                    if(maybeSourceReference.isPresent()) {
+                        SourceReference sourceReference = maybeSourceReference.get();
+                        batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
+                        logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
+                    } else {
+                        logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
+                        violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
+                    }
+                } catch (Exception e) {
+                    // Due to Scala not advertising checked Exceptions we have to catch a broader Exception and
+                    // then check its type rather than catching the actual Exception type we want
+                    if(e instanceof SparkException && ((SparkException)e).getMessage().startsWith("Failed merging schema")) {
+                        String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
+                        logger.warn(msg, e);
+                        violationService.writeBatchDataToViolations(sparkSession, schema, table, msg);
+                    } else {
+                        throw e;
+                    }
                 }
             } else {
                 logger.warn("No paths found for table {}.{}", schema, table);

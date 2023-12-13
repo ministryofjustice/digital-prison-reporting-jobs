@@ -36,6 +36,7 @@ import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.DA
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.METADATA;
 import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 
 @Singleton
 public class ViolationService {
@@ -168,20 +169,37 @@ public class ViolationService {
      * Writes all CDC data in the table's input directory to violations.
      */
     public void writeCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
+        writeDataToViolations(spark, source, table, errorMessage, arguments.getCdcFileGlobPattern(), STRUCTURED_CDC);
+    }
+    /**
+     * Writes all Batch data in the table's input directory to violations.
+     */
+    public void writeBatchDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
+        writeDataToViolations(spark, source, table, errorMessage, arguments.getBatchLoadFileGlobPattern(), STRUCTURED_LOAD);
+    }
+    public void writeDataToViolations(
+            SparkSession spark,
+            String source,
+            String table,
+            String errorMessage,
+            String fileGlobPattern,
+            ZoneName zone
+    ) throws DataStorageException {
+
         try {
             String rawRoot = arguments.getRawS3Path();
             FileSystem fileSystem = FileSystem.get(URI.create(rawRoot), spark.sparkContext().hadoopConfiguration());
             String tablePath = tablePath(rawRoot, source, table);
-            // We only read data that matches the CDC file glob pattern
-            List<String> filePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, arguments.getCdcFileGlobPattern());
-            logger.info("Moving {} CDC files to violations to avoid schema mismatch", filePaths.size());
+            // We only read data that matches the file glob pattern
+            List<String> filePaths = tableDiscoveryService.listFiles(fileSystem, tablePath, fileGlobPattern);
+            logger.info("Moving {} files to violations to avoid schema mismatch", filePaths.size());
             for (String filePath: filePaths) {
                 logger.info("Moving {} to violations started", filePath);
                 // We need to read the data file-by-file, rather than in a single read call for all files, in case
                 // there are multiple files with incompatible schemas which cannot be read and merged in a single read.
                 Dataset<Row> df = dataProvider.getBatchSourceData(spark, filePath);
                 Dataset<Row> violations = df.withColumn(ERROR, functions.lit(errorMessage));
-                handleViolation(spark, violations, source, table, STRUCTURED_CDC);
+                handleViolation(spark, violations, source, table, zone);
                 logger.info("Moving {} to violations completed", filePath);
             }
             logger.info("Finished moving all available CDC data to violations to avoid schema mismatch");
