@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 /**
  * Class that defines and provides access to the job arguments that we support.
- *
  * Arguments are taken from the values parsed by the CommandLinePropertySource.
  */
 @Singleton
@@ -30,6 +29,8 @@ public class JobArguments {
     public static final String AWS_REGION = "dpr.aws.region";
     public static final String LOG_LEVEL = "dpr.log.level";
     public static final String CONTRACT_REGISTRY_NAME = "dpr.contract.registryName";
+    public static final String SCHEMA_CACHE_MAX_SIZE = "dpr.schema.cache.max.size";
+    public static final String SCHEMA_CACHE_EXPIRY_IN_MINUTES = "dpr.schema.cache.expiry.days";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
     public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
     public static final String DOMAIN_NAME = "dpr.domain.name";
@@ -70,6 +71,8 @@ public class JobArguments {
     public static final String DATA_STORAGE_RETRY_MAX_ATTEMPTS = "dpr.datastorage.retry.maxAttempts";
     // You can turn off retries by setting max attempts to 1
     public static final int DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT = 1;
+    public static final long SCHEMA_CACHE_MAX_SIZE_DEFAULT = 2000L;
+    public static final long SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT = 120L;
 
     public static final String DATA_STORAGE_RETRY_MIN_WAIT_MILLIS = "dpr.datastorage.retry.minWaitMillis";
     public static final long DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT = 100L;
@@ -224,6 +227,14 @@ public class JobArguments {
 
     public String getContractRegistryName() {
         return getArgument(CONTRACT_REGISTRY_NAME);
+    }
+
+    public Long getSchemaCacheMaxSize() {
+        return getArgument(SCHEMA_CACHE_MAX_SIZE, SCHEMA_CACHE_MAX_SIZE_DEFAULT);
+    }
+
+    public Long getSchemaCacheExpiryInMinutes() {
+        return getArgument(SCHEMA_CACHE_EXPIRY_IN_MINUTES, SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT);
     }
 
     public String getMaintenanceTablesRootPath() {

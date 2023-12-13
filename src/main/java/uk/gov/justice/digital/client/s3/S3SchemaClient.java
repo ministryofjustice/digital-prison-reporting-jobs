@@ -5,6 +5,10 @@ import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.amazonaws.util.IOUtils;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import jakarta.inject.Inject;
 import lombok.Data;
 import lombok.val;
@@ -16,6 +20,8 @@ import uk.gov.justice.digital.config.JobArguments;
 import javax.inject.Singleton;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Singleton
@@ -24,6 +30,7 @@ public class S3SchemaClient {
     private static final Logger logger = LoggerFactory.getLogger(S3SchemaClient.class);
 
     private final AmazonS3 s3;
+    private final LoadingCache<String, S3SchemaResponse> cache;
     private final String contractRegistryName;
 
     static final String SCHEMA_FILE_EXTENSION = ".avsc";
@@ -34,6 +41,10 @@ public class S3SchemaClient {
             JobArguments jobArguments
     ) {
         this.s3 = schemaClientProvider.getClient();
+        this.cache = CacheBuilder.newBuilder()
+                .maximumSize(jobArguments.getSchemaCacheMaxSize())
+                .expireAfterWrite(jobArguments.getSchemaCacheExpiryInMinutes(), TimeUnit.MINUTES)
+                .build(getCacheLoader());
         this.contractRegistryName = jobArguments.getContractRegistryName();
     }
 
@@ -61,8 +72,8 @@ public class S3SchemaClient {
 
     private Optional<S3SchemaResponse> getAvroSchema(String schemaNameWithExtension) {
         try {
-            return Optional.of(getSchemaResponse(schemaNameWithExtension));
-        } catch (AmazonClientException | IOException e) {
+            return Optional.ofNullable(cache.get(schemaNameWithExtension));
+        } catch (UncheckedExecutionException | ExecutionException e) {
             logger.warn("Failed to retrieve schema {}", schemaNameWithExtension);
             return Optional.empty();
         }
@@ -100,6 +111,16 @@ public class S3SchemaClient {
             IOUtils.closeQuietly(schemaObjectInputStream, null);
             IOUtils.closeQuietly(schemaObject, null);
         }
+    }
+
+    @NotNull
+    private CacheLoader<String, S3SchemaResponse> getCacheLoader() {
+        return new CacheLoader<String, S3SchemaResponse>() {
+            @Override
+            public S3SchemaResponse load(@NotNull String key) throws IOException {
+                return getSchemaResponse(key);
+            }
+        };
     }
 
     @Data
