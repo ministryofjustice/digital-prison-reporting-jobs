@@ -87,6 +87,13 @@ public class S3DataProvider {
                 .parquet(scalaFilePaths);
     }
 
+    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, String filePath) {
+        return sparkSession
+                .read()
+                .option("mergeSchema", "true")
+                .parquet(filePath);
+    }
+
     public StructType inferSchema(SparkSession sparkSession, String sourceName, String tableName) {
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
         return sparkSession.read().parquet(tablePath).schema();

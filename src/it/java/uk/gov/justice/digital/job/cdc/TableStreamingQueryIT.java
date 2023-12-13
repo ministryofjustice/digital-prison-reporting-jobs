@@ -23,6 +23,7 @@ import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -36,6 +37,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
@@ -66,6 +68,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private SourceReferenceService sourceReferenceService;
     @Mock
     private SourceReference sourceReference;
+    @Mock
+    private TableDiscoveryService tableDiscoveryService;
     private TableStreamingQuery underTest;
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
@@ -356,7 +360,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         checkpointPath = testRoot.resolve("checkpoints").toAbsolutePath().toString();
         when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
         when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
-        when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
+        lenient().when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
         when(arguments.getCheckpointLocation()).thenReturn(checkpointPath);
     }
 
@@ -381,7 +385,12 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     private void givenTableStreamingQuery() throws NoSchemaNoDataException {
         DataStorageService storageService = new DataStorageService(arguments);
-        ViolationService violationService = new ViolationService(arguments, storageService);
+        ViolationService violationService = new ViolationService(
+                arguments,
+                storageService,
+                dataProvider,
+                tableDiscoveryService
+        );
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 new ValidationService(violationService),
                 new StructuredZoneCDCS3(arguments, violationService, storageService),

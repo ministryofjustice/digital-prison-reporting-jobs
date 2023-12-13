@@ -1,8 +1,12 @@
 package uk.gov.justice.digital.job.cdc;
 
+import org.apache.spark.SparkException;
+import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.execution.QueryExecutionException;
+import org.apache.spark.sql.execution.datasources.SchemaColumnConvertNotSupportedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +22,7 @@ import uk.gov.justice.digital.service.ViolationService;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -73,5 +78,32 @@ class TableStreamingQueryProviderTest {
         underTest.provide(spark, sourceName, tableName);
 
         verify(underTest, times(1)).noSchemaFoundQuery(any(), eq(sourceName), eq(tableName));
+    }
+
+    @Test
+    public void shouldDecorateBatchFuncWithIncompatibleSchemaHandling() throws Exception {
+        when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
+        underTest.provide(spark, sourceName, tableName);
+
+        verify(underTest, times(1)).withIncompatibleSchemaHandling(eq(sourceName), eq(tableName), any());
+    }
+
+    @Test
+    public void incompatibleSchemaHandlingShouldWriteCdcDataToViolationsWhenSchemaIsIncompatible() throws Exception {
+        when(df.sparkSession()).thenReturn(spark);
+        SchemaColumnConvertNotSupportedException ultimateCause =
+                new SchemaColumnConvertNotSupportedException("col", "physical type", "logical type");
+        SparkException toThrow = new SparkException("", new QueryExecutionException("", ultimateCause));
+
+        VoidFunction2<Dataset<Row>, Long> decoratedFunc = underTest.withIncompatibleSchemaHandling(sourceName, tableName, (df, batchId) -> {
+            throw toThrow;
+        });
+
+        long arbitraryBatchId = 1L;
+        decoratedFunc.call(df, arbitraryBatchId);
+
+        verify(violationService, times(1))
+                .writeCdcDataToViolations(any(), eq(sourceName), eq(tableName), anyString());
+
     }
 }

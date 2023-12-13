@@ -11,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -45,6 +46,10 @@ class ViolationServiceTest extends BaseSparkTest {
     @Mock
     private DataStorageService mockDataStorage;
     @Mock
+    private S3DataProvider dataProvider;
+    @Mock
+    private TableDiscoveryService tableDiscoveryService;
+    @Mock
     private DataStorageRetriesExhaustedException mockCause;
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
@@ -54,7 +59,7 @@ class ViolationServiceTest extends BaseSparkTest {
     @BeforeEach
     public void setUp() {
         when(mockJobArguments.getViolationsS3Path()).thenReturn(violationsPath);
-        underTest = new ViolationService(mockJobArguments, mockDataStorage);
+        underTest = new ViolationService(mockJobArguments, mockDataStorage, dataProvider, tableDiscoveryService);
     }
 
     @Test
