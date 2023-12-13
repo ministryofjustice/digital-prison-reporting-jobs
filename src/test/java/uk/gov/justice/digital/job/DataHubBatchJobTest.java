@@ -138,13 +138,15 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    public void shouldWriteViolationsWhen() throws Exception {
+    public void shouldWriteViolationsWhenDataProviderCannotMergeInputData() throws Exception {
         SparkException thrown = new SparkException("Failed merging schema");
         when(dataProvider.getBatchSourceData(any(), anyList())).thenThrow(thrown);
         stubRawPath();
         stubDiscoveredTablePaths();
 
-        verify(violationService, times(1)).writeBatchDataToViolations(any(), any(), any(), any());
+        underTest.runJob(spark);
+
+        verify(violationService, times(2)).writeBatchDataToViolations(any(), any(), any(), any());
     }
 
     private void stubRawPath() {
