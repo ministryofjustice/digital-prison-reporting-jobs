@@ -80,7 +80,7 @@ public class S3DataProvider {
         }
     }
 
-    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) throws SparkException {
+    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) {
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
         return sparkSession
                 .read()
