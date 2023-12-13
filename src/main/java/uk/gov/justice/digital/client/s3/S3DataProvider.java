@@ -3,6 +3,7 @@ package uk.gov.justice.digital.client.s3;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -79,7 +80,7 @@ public class S3DataProvider {
         }
     }
 
-    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) {
+    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) throws SparkException {
         val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
         return sparkSession
                 .read()

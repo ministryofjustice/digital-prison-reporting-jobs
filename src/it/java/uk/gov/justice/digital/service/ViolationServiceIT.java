@@ -131,7 +131,7 @@ public class ViolationServiceIT extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteFilesWithIncompatibleSchemasToViolations() throws Exception {
+    public void shouldWriteCdcFilesWithIncompatibleSchemasToViolations() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(rawRoot.toString());
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
         when(arguments.getCdcFileGlobPattern()).thenReturn(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT);
@@ -145,6 +145,37 @@ public class ViolationServiceIT extends BaseSparkTest {
         putFilesInRaw(tsAndInt1);
         putFilesInRaw(tsAndInt2);
         underTest.writeCdcDataToViolations(spark, source, table, "error msg");
+
+        Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
+
+        long expectedCount = original.count();
+
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("original")).count());
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("extra-column")).count());
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("missing column")).count());
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("string changed to int")).count());
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("int changed to long")).count());
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("int changed to string")).count());
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("timestamp-and-int-1")).count());
+        assertEquals(expectedCount, errorRawAsJson.where(col(testCaseColumn).equalTo("timestamp-and-int-2")).count());
+
+    }
+
+    @Test
+    public void shouldWriteBatchFilesWithIncompatibleSchemasToViolations() throws Exception {
+        when(arguments.getRawS3Path()).thenReturn(rawRoot.toString());
+        when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
+        when(arguments.getBatchLoadFileGlobPattern()).thenReturn("*-*.parquet");
+
+        putFilesInRaw(original);
+        putFilesInRaw(anExtraColumn);
+        putFilesInRaw(missingAColumn);
+        putFilesInRaw(stringColumnChangedToInt);
+        putFilesInRaw(intColumnChangedToString);
+        putFilesInRaw(intColumnChangedToLong);
+        putFilesInRaw(tsAndInt1);
+        putFilesInRaw(tsAndInt2);
+        underTest.writeBatchDataToViolations(spark, source, table, "error msg");
 
         Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
 

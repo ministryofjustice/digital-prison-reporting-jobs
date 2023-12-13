@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.job;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -136,6 +137,18 @@ class DataHubBatchJobTest {
         verify(batchProcessor, times(1)).processBatch(any(), any(), any());
     }
 
+    @Test
+    public void shouldWriteViolationsWhenDataProviderCannotMergeInputData() throws Exception {
+        SparkException thrown = new SparkException("Failed merging schema");
+        when(dataProvider.getBatchSourceData(any(), anyList())).thenThrow(thrown);
+        stubRawPath();
+        stubDiscoveredTablePaths();
+
+        underTest.runJob(spark);
+
+        verify(violationService, times(2)).writeBatchDataToViolations(any(), any(), any(), any());
+    }
+
     private void stubRawPath() {
         when(arguments.getRawS3Path()).thenReturn(rawPath);
     }
@@ -148,7 +161,7 @@ class DataHubBatchJobTest {
         when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(Collections.emptyMap());
     }
 
-    private void stubReadData() {
+    private void stubReadData() throws SparkException {
         when(dataProvider.getBatchSourceData(any(), anyList())).thenReturn(dataFrame);
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
