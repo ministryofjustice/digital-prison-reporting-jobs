@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.job;
 
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,7 +89,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
     }
 
-    private void whenTheJobRuns() throws IOException, DataStorageException {
+    private void whenTheJobRuns() throws IOException, DataStorageException, SparkException {
         underTest.runJob(spark);
     }
 

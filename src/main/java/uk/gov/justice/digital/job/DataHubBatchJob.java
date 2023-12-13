@@ -105,7 +105,7 @@ public class DataHubBatchJob implements Runnable {
      * The main entry point for testing a batch job to process raw data for all tables.
      */
     @VisibleForTesting
-    void runJob(SparkSession sparkSession) throws IOException, DataStorageException {
+    void runJob(SparkSession sparkSession) throws IOException, DataStorageException, SparkException {
         val startTime = System.currentTimeMillis();
         String rawPath = arguments.getRawS3Path();
         logger.info("Processing Raw {} table by table", rawPath);
@@ -130,7 +130,7 @@ public class DataHubBatchJob implements Runnable {
         logger.info("Finished processing Raw {} table by table in {}ms", rawPath, System.currentTimeMillis() - startTime);
     }
 
-    private void processFilePaths(SparkSession sparkSession, String schema, String table, List<String> filePaths, long tableStartTime) throws DataStorageException {
+    private void processFilePaths(SparkSession sparkSession, String schema, String table, List<String> filePaths, long tableStartTime) throws DataStorageException, SparkException {
         Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
         try {
             val dataFrame = dataProvider.getBatchSourceData(sparkSession, filePaths);
@@ -144,10 +144,8 @@ public class DataHubBatchJob implements Runnable {
                 logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
                 violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
             }
-        } catch (Exception e) {
-            // Due to Scala not advertising checked Exceptions we have to catch a broader Exception and
-            // then check its type rather than catching the actual Exception type we want
-            if(e instanceof SparkException && ((SparkException)e).getMessage().startsWith("Failed merging schema")) {
+        } catch (SparkException e) {
+            if(e.getMessage().startsWith("Failed merging schema")) {
                 String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
                 logger.warn(msg, e);
                 violationService.writeBatchDataToViolations(sparkSession, schema, table, msg);
