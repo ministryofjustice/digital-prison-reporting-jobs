@@ -18,7 +18,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,7 +44,7 @@ class S3DataProviderTest {
         when(spark.read()).thenReturn(dfReader);
         when(dfReader.option(anyString(), anyString())).thenReturn(dfReader);
         // Can't use thenThrow because scala does not advertise that it throws the checked exception!
-        when(dfReader.parquet(eq(scalaExpectedInput))).thenAnswer(i -> {
+        when(dfReader.parquet(scalaExpectedInput)).thenAnswer(i -> {
             throw new SparkException("Failed merging schema");
         });
 
