@@ -2,6 +2,7 @@ package uk.gov.justice.digital.client.s3;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.*;
 import lombok.val;
 import org.jetbrains.annotations.NotNull;
@@ -24,10 +25,11 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.client.s3.S3SchemaClient.S3SchemaResponse;
 import static uk.gov.justice.digital.client.s3.S3SchemaClient.SCHEMA_FILE_EXTENSION;
-import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
+import static uk.gov.justice.digital.config.JobArguments.SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.SCHEMA_CACHE_MAX_SIZE_DEFAULT;
 
 @ExtendWith(MockitoExtension.class)
 public class S3SchemaClientTest {
@@ -49,35 +51,64 @@ public class S3SchemaClientTest {
     @Mock
     private ObjectListing mockObjectListing;
 
-    @Mock
-    private S3Object mockS3Object;
-
-    @Mock
-    private ObjectMetadata mockObjectMetadata;
-
     @Captor
     ArgumentCaptor<ListObjectsRequest> listObjectsRequestCaptor;
-
-    @Captor
-    ArgumentCaptor<String> schemaRequestCaptor;
 
     private S3SchemaClient underTest;
 
     @BeforeEach
     public void setup() {
-        givenJobArgumentsReturnsContractRegistryName();
+        reset(mockClientProvider, mockClient, mockArguments, mockObjectListing);
+        givenSuccessfulJobArgumentCalls();
         givenClientProviderReturnsAClient();
         underTest = new S3SchemaClient(mockClientProvider, mockArguments);
     }
 
     @Test
     public void shouldReturnSchemaForValidRequest() {
-        givenSchemaRetrievalSucceeds();
-        when(mockClient.getObject(SCHEMA_REGISTRY, SCHEMA_NAME + SCHEMA_FILE_EXTENSION)).thenReturn(mockS3Object);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, SCHEMA_NAME + SCHEMA_FILE_EXTENSION);
 
         val result = underTest.getSchema(SCHEMA_NAME);
 
         assertEquals(Optional.of(new S3SchemaResponse(SCHEMA_NAME, FAKE_SCHEMA_DEFINITION, VERSION_ID)), result);
+    }
+
+    @Test
+    public void shouldUseCachedSchemaWhenOneExists() {
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, SCHEMA_NAME + SCHEMA_FILE_EXTENSION);
+
+        val firstResult = underTest.getSchema(SCHEMA_NAME);
+
+        assertEquals(Optional.of(new S3SchemaResponse(SCHEMA_NAME, FAKE_SCHEMA_DEFINITION, VERSION_ID)), firstResult);
+
+        val secondResult = underTest.getSchema(SCHEMA_NAME);
+
+        assertEquals(firstResult, secondResult);
+
+        verify(mockClient, times(1)).getObject(anyString(), anyString());
+    }
+
+    @Test
+    public void shouldEvictOldItemsWhenCacheIsFull() {
+        when(mockArguments.getSchemaCacheMaxSize()).thenReturn(1L);
+        String secondSchemaName = SCHEMA_NAME + "-new";
+        String secondSchemaDefinition = FAKE_SCHEMA_DEFINITION + "-new";
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, SCHEMA_NAME + SCHEMA_FILE_EXTENSION);
+        givenSchemaRetrievalSucceeds(secondSchemaDefinition, secondSchemaName + SCHEMA_FILE_EXTENSION);
+
+        S3SchemaClient schemaClient = new S3SchemaClient(mockClientProvider, mockArguments);
+
+        val firstResult = schemaClient.getSchema(SCHEMA_NAME);
+        val secondResult = schemaClient.getSchema(secondSchemaName);
+
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, SCHEMA_NAME + SCHEMA_FILE_EXTENSION);
+        val thirdResult = schemaClient.getSchema(SCHEMA_NAME);
+
+        assertEquals(Optional.of(new S3SchemaResponse(SCHEMA_NAME, FAKE_SCHEMA_DEFINITION, VERSION_ID)), firstResult);
+        assertEquals(Optional.of(new S3SchemaResponse(secondSchemaName, secondSchemaDefinition, VERSION_ID)), secondResult);
+        assertEquals(firstResult, thirdResult);
+
+        verify(mockClient, times(3)).getObject(anyString(), anyString());
     }
 
     @Test
@@ -97,17 +128,11 @@ public class S3SchemaClientTest {
         schemaNames.add("schema3/some_table");
 
         givenObjectListingSucceeds(createObjectSummaries(schemaNames));
-        givenSchemaRetrievalSucceeds();
-        when(mockClient.getObject(eq(SCHEMA_REGISTRY), schemaRequestCaptor.capture())).thenReturn(mockS3Object);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema2/some_table" + SCHEMA_FILE_EXTENSION);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema3/some_table" + SCHEMA_FILE_EXTENSION);
 
         val result = underTest.getAllSchemas(new HashSet<>(schemaNames));
-
-        List<String> expectedSchemaRequestNames = schemaNames.stream()
-                .map(item -> item + SCHEMA_FILE_EXTENSION)
-                .collect(Collectors.toList());
-        assertThat(schemaRequestCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedSchemaRequestNames));
-
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), equalTo(SCHEMA_REGISTRY));
 
         assertThat(result.size(), equalTo(schemaNames.size()));
     }
@@ -128,9 +153,7 @@ public class S3SchemaClientTest {
         schemaNames.add("schema2/some_table");
 
         givenObjectListingSucceeds(createObjectSummaries(schemaNames));
-        givenSchemaRetrievalSucceeds();
-        when(mockClient.getObject(SCHEMA_REGISTRY, "schema1/some_table" + SCHEMA_FILE_EXTENSION))
-                .thenReturn(mockS3Object);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
         when(mockClient.getObject(SCHEMA_REGISTRY, "schema2/some_table" + SCHEMA_FILE_EXTENSION))
                 .thenThrow(new AmazonClientException("Schema not found"));
 
@@ -150,25 +173,22 @@ public class S3SchemaClientTest {
         when(mockClientProvider.getClient()).thenReturn(mockClient);
     }
 
-    private void givenJobArgumentsReturnsContractRegistryName() {
+    private void givenSuccessfulJobArgumentCalls() {
         when(mockArguments.getContractRegistryName()).thenReturn(SCHEMA_REGISTRY);
+        when(mockArguments.getSchemaCacheMaxSize()).thenReturn(SCHEMA_CACHE_MAX_SIZE_DEFAULT);
+        when(mockArguments.getSchemaCacheExpiryInMinutes()).thenReturn(SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT);
     }
 
-    @NotNull
-    private static List<S3ObjectSummary> createObjectSummaries(List<String> schemaNames) {
-        return schemaNames.stream()
-                .map(schemaName -> {
-                    S3ObjectSummary objectSummary = new S3ObjectSummary();
-                    objectSummary.setKey(schemaName + SCHEMA_FILE_EXTENSION);
-                    return objectSummary;
-                }).collect(Collectors.toList());
-    }
+    private void givenSchemaRetrievalSucceeds(String schemaDefinition, String objectKey) {
+        val objectMetadata = new ObjectMetadata();
+        objectMetadata.setHeader(Headers.S3_VERSION_ID, VERSION_ID);
 
-    private void givenSchemaRetrievalSucceeds() {
-        when(mockS3Object.getObjectMetadata()).thenReturn(mockObjectMetadata);
-        when(mockObjectMetadata.getVersionId()).thenReturn(VERSION_ID);
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(FAKE_SCHEMA_DEFINITION.getBytes());
-        when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(inputStream, null));
+        val schemaObject = new S3Object();
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(schemaDefinition.getBytes());
+        schemaObject.setObjectContent(inputStream);
+        schemaObject.setObjectMetadata(objectMetadata);
+
+        when(mockClient.getObject(SCHEMA_REGISTRY, objectKey)).thenReturn(schemaObject);
     }
 
     private void givenObjectListingSucceeds(List<S3ObjectSummary> objectSummaries) {
@@ -180,6 +200,16 @@ public class S3SchemaClientTest {
     private void givenObjectListIsEmpty() {
         when(mockClient.listObjects(any(ListObjectsRequest.class))).thenReturn(mockObjectListing);
         when(mockObjectListing.getObjectSummaries()).thenReturn(Collections.emptyList());
+    }
+
+    @NotNull
+    private static List<S3ObjectSummary> createObjectSummaries(List<String> schemaNames) {
+        return schemaNames.stream()
+                .map(schemaName -> {
+                    S3ObjectSummary objectSummary = new S3ObjectSummary();
+                    objectSummary.setKey(schemaName + SCHEMA_FILE_EXTENSION);
+                    return objectSummary;
+                }).collect(Collectors.toList());
     }
 
 }
