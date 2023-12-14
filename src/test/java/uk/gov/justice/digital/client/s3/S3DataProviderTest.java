@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.client.s3;
 
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,14 +39,14 @@ class S3DataProviderTest {
     }
 
     @Test
-    public void getBatchSourceDataShouldRethrowFailedMergingSchemaException() {
+    public void getBatchSourceDataShouldCatchAndThrowForFailedMergingSchemaException() {
         List<String> input = Collections.singletonList("s3://somepath");
         Seq<String> scalaExpectedInput = JavaConverters.asScalaIteratorConverter(input.iterator()).asScala().toSeq();
         when(spark.read()).thenReturn(dfReader);
         when(dfReader.option(anyString(), anyString())).thenReturn(dfReader);
         // Can't use thenThrow because scala does not advertise that it throws the checked exception!
         when(dfReader.parquet(eq(scalaExpectedInput))).thenAnswer(i -> {
-            throw new Exception("Failed merging schema");
+            throw new SparkException("Failed merging schema");
         });
 
         assertThrows(
