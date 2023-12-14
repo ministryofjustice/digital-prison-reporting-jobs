@@ -3,6 +3,7 @@ package uk.gov.justice.digital.client.s3;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -89,9 +90,14 @@ public class S3DataProvider {
                     .parquet(scalaFilePaths);
         } catch (Exception e) {
             // We can't catch the specific SparkException type we actually want here because scala erases the fact
-            // that a checked exception type is being thrown and java seems to optimise away the catch block if it
-            // thinks the SparkException can't be thrown in the try block.
-            if(e.getMessage().startsWith("Failed merging schema")) {
+            // that a checked exception type is being thrown. The SparkException which reports incompatible schemas
+            // can arrive either as the main Exception or wrapped in another Exception so we have to check for both.
+            String expectedExceptionMessage = "Failed merging schema";
+            boolean isSchemaMergeFail = e.getMessage().startsWith(expectedExceptionMessage);
+            boolean isWrappedSchemaMergeFail = e.getCause() instanceof SparkException &&
+                    e.getCause().getMessage().startsWith(expectedExceptionMessage);
+
+            if(isSchemaMergeFail || isWrappedSchemaMergeFail) {
                 throw new DataProviderFailedMergingSchemasException("Failed merging schemas when getting batch source data", e);
             } else {
                 throw e;
