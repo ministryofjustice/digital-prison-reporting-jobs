@@ -14,6 +14,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.FailedMergingSchemas;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -139,7 +140,7 @@ class DataHubBatchJobTest {
 
     @Test
     public void shouldWriteViolationsWhenDataProviderCannotMergeInputData() throws Exception {
-        SparkException thrown = new SparkException("Failed merging schema");
+        FailedMergingSchemas thrown = new FailedMergingSchemas("Failed merging schema", new Exception());
         when(dataProvider.getBatchSourceData(any(), anyList())).thenThrow(thrown);
         stubRawPath();
         stubDiscoveredTablePaths();
@@ -161,7 +162,7 @@ class DataHubBatchJobTest {
         when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(Collections.emptyMap());
     }
 
-    private void stubReadData() throws SparkException {
+    private void stubReadData() throws Exception {
         when(dataProvider.getBatchSourceData(any(), anyList())).thenReturn(dataFrame);
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }

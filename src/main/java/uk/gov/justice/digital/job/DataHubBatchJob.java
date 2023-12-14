@@ -18,6 +18,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.exception.FailedMergingSchemas;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -144,18 +145,10 @@ public class DataHubBatchJob implements Runnable {
                 logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
                 violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
             }
-        } catch (Exception e) {
-            // We can't catch the specific SparkException type we actually want here because scala erases the fact
-            // that a checked exception type is being thrown and java seems to optimise away the catch block if it
-            // thinks the SparkException can't be thrown in the try block.
-            if(e.getMessage().startsWith("Failed merging schema")) {
-                String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
-                logger.warn(msg, e);
-                violationService.writeBatchDataToViolations(sparkSession, schema, table, msg);
-            } else {
-                logger.info("Rethrowing", e);
-                throw e;
-            }
+        } catch (FailedMergingSchemas e) {
+            String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
+            logger.warn(msg, e);
+            violationService.writeBatchDataToViolations(sparkSession, schema, table, msg);
         }
     }
 }
