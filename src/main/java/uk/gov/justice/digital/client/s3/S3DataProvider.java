@@ -3,7 +3,6 @@ package uk.gov.justice.digital.client.s3;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
-import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -14,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 
 import java.util.List;
@@ -80,12 +80,23 @@ public class S3DataProvider {
         }
     }
 
-    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) throws SparkException {
-        val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
-        return sparkSession
-                .read()
-                .option("mergeSchema", "true")
-                .parquet(scalaFilePaths);
+    public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) throws DataProviderFailedMergingSchemasException {
+        try {
+            val scalaFilePaths = JavaConverters.asScalaIteratorConverter(filePaths.iterator()).asScala().toSeq();
+            return sparkSession
+                    .read()
+                    .option("mergeSchema", "true")
+                    .parquet(scalaFilePaths);
+        } catch (Exception e) {
+            // We can't catch the specific SparkException type we actually want here because scala erases the fact
+            // that a checked exception type is being thrown and java seems to optimise away the catch block if it
+            // thinks the SparkException can't be thrown in the try block.
+            if(e.getMessage().startsWith("Failed merging schema")) {
+                throw new DataProviderFailedMergingSchemasException("Failed merging schemas when getting batch source data", e);
+            } else {
+                throw e;
+            }
+        }
     }
 
     public Dataset<Row> getBatchSourceData(SparkSession sparkSession, String filePath) {
