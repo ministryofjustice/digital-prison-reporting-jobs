@@ -18,7 +18,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.exception.FailedMergingSchemas;
+import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -145,7 +145,7 @@ public class DataHubBatchJob implements Runnable {
                 logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
                 violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
             }
-        } catch (FailedMergingSchemas e) {
+        } catch (DataProviderFailedMergingSchemasException e) {
             String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
             logger.warn(msg, e);
             violationService.writeBatchDataToViolations(sparkSession, schema, table, msg);
