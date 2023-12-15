@@ -39,13 +39,15 @@ class S3DataProviderTest {
 
     @Test
     public void getBatchSourceDataShouldCatchAndThrowForFailedMergingSchemaException() {
+        // This also tests the case where the outer Exception's cause is null
+        SparkException mergeFailedException = new SparkException("Failed merging schema");
         List<String> input = Collections.singletonList("s3://somepath");
         Seq<String> scalaExpectedInput = JavaConverters.asScalaIteratorConverter(input.iterator()).asScala().toSeq();
         when(spark.read()).thenReturn(dfReader);
         when(dfReader.option(anyString(), anyString())).thenReturn(dfReader);
         // Can't use thenThrow because scala does not advertise that it throws the checked exception!
         when(dfReader.parquet(scalaExpectedInput)).thenAnswer(i -> {
-            throw new SparkException("Failed merging schema");
+            throw mergeFailedException;
         });
 
         assertThrows(
@@ -54,4 +56,21 @@ class S3DataProviderTest {
         );
     }
 
+    @Test
+    public void getBatchSourceDataShouldCatchAndThrowForFailedMergingSchemaWrappedException() {
+        SparkException wrappedMergeFailedException = new SparkException("a message", new SparkException("Failed merging schema"));
+        List<String> input = Collections.singletonList("s3://somepath");
+        Seq<String> scalaExpectedInput = JavaConverters.asScalaIteratorConverter(input.iterator()).asScala().toSeq();
+        when(spark.read()).thenReturn(dfReader);
+        when(dfReader.option(anyString(), anyString())).thenReturn(dfReader);
+        // Can't use thenThrow because scala does not advertise that it throws the checked exception!
+        when(dfReader.parquet(scalaExpectedInput)).thenAnswer(i -> {
+            throw wrappedMergeFailedException;
+        });
+
+        assertThrows(
+                DataProviderFailedMergingSchemasException.class,
+                () -> underTest.getBatchSourceData(spark, input)
+        );
+    }
 }
