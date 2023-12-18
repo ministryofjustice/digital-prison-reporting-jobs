@@ -50,29 +50,38 @@ WITH NO SCHEMA BINDING;
 
 -- =================================================================
 -- movement/movement
+-- Update
 -- =================================================================
 DROP VIEW IF EXISTS domain.movement_movement;
 
 CREATE OR REPLACE VIEW domain.movement_movement AS 
-SELECT
-   concat(cast(prisons.nomis_offender_external_movements.offender_book_id as varchar), concat('.', cast(prisons.nomis_offender_external_movements.movement_seq as varchar))) as id, 
-   prisons.nomis_offender_external_movements.offender_book_id as prisoner, 
-   prisons.nomis_offender_external_movements.movement_date as date, 
-   prisons.nomis_offender_external_movements.movement_time as time, 
-   prisons.nomis_offender_external_movements.direction_code as direction, 
-   prisons.nomis_offender_external_movements.movement_type as type, 
-   prisons.nomis_offender_external_movements.from_agy_loc_id as origin_code, 
-   origin_location.description as origin, 
-   prisons.nomis_offender_external_movements.to_agy_loc_id as destination_code, 
-   destination_location.description as destination, 
-   prisons.nomis_movement_reasons.description as reason 
-FROM 
-   prisons.nomis_offender_external_movements 
-JOIN prisons.nomis_movement_reasons ON prisons.nomis_movement_reasons.movement_type=prisons.nomis_offender_external_movements.movement_type and prisons.nomis_movement_reasons.movement_reason_code=prisons.nomis_offender_external_movements.movement_reason_code 
-LEFT JOIN prisons.nomis_agency_locations as origin_location ON prisons.nomis_offender_external_movements.from_agy_loc_id = origin_location.agy_loc_id 
-LEFT JOIN prisons.nomis_agency_locations as destination_location ON prisons.nomis_offender_external_movements.to_agy_loc_id = destination_location.agy_loc_id
+SELECT concat(cast(prisons.nomis_offender_external_movements.offender_book_id as varchar), concat('.', cast(prisons.nomis_offender_external_movements.movement_seq as varchar))) as id,
+ prisons.nomis_offender_external_movements.offender_book_id as prisoner,
+ prisons.nomis_offender_external_movements.movement_date as date,
+ prisons.nomis_offender_external_movements.movement_time as time,
+ prisons.nomis_offender_external_movements.direction_code as direction,
+ prisons.nomis_offender_external_movements.movement_type as type,
+ prisons.nomis_offender_external_movements.from_agy_loc_id as origin_code,
+ prisons.nomis_offender_external_movements.to_agy_loc_id as destination_code,
+ prisons.nomis_offender_external_movements.comment_text as comment,
+ prisons.nomis_offender_external_movements.escort_code as escort,
+ origin_location.description as origin,
+ destination_location.description as destination,
+ prisons.nomis_movement_reasons.description as reason,
+prisons.nomis_movement_reasons.movement_reason_code as reason_code
+from prisons.nomis_offender_external_movements
+ join prisons.nomis_movement_reasons
+ on prisons.nomis_movement_reasons.movement_type =
+ prisons.nomis_offender_external_movements.movement_type
+ and prisons.nomis_movement_reasons.movement_reason_code =
+ prisons.nomis_offender_external_movements.movement_reason_code
+ left join prisons.nomis_agency_locations as origin_location
+ on prisons.nomis_offender_external_movements.from_agy_loc_id =
+ origin_location.agy_loc_id
+ left join prisons.nomis_agency_locations as destination_location
+ on prisons.nomis_offender_external_movements.to_agy_loc_id =
+ destination_location.agy_loc_id
 WITH NO SCHEMA BINDING;
-
 
 
 -- =================================================================
