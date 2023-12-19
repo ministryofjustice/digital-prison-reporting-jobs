@@ -36,14 +36,21 @@ WITH NO SCHEMA BINDING;
 DROP VIEW IF EXISTS domain.prisoner_prisoner;
 
 CREATE OR REPLACE VIEW domain.prisoner_prisoner AS 
-SELECT
-         prisons.nomis_offender_bookings.offender_book_id as id,  
-         prisons.nomis_offenders.offender_id_display as number, 
-         prisons.nomis_offenders.first_name as firstname, 
-         prisons.nomis_offenders.last_name as lastname, 
-         prisons.nomis_offender_bookings.living_unit_id as living_unit_reference 
-FROM prisons.nomis_offender_bookings 
-JOIN prisons.nomis_offenders ON prisons.nomis_offender_bookings.offender_id = prisons.nomis_offenders.offender_id
+SELECT o.offender_id_display AS number,
+ob.offender_book_id AS id,
+ob.living_unit_id AS living_unit_reference,
+o.first_name AS firstname,
+o.middle_name AS middlename,
+o.middle_name_2 AS middename2,
+o.last_name AS lastname,
+CONCAT(CONCAT(o.last_name, ', '), substring(o.first_name, 1, 1)) AS name,
+o.birth_date AS dob,
+o.sex_code AS sexcode,
+CASE WHEN o.race_code='W8' then 'W3'
+WHEN o.race_code='O1' then 'A4'
+ELSE o.race_code END AS racecode
+FROM prisons.nomis_offender_bookings ob
+JOIN prisons.nomis_offenders o ON ob.offender_id=o.offender_id
 WITH NO SCHEMA BINDING;
 
 
