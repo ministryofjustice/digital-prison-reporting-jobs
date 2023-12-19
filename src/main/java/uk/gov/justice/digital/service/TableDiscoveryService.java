@@ -39,9 +39,9 @@ public class TableDiscoveryService {
     public List<ImmutablePair<String, String>> discoverTablesToProcess() {
         // Tables are initially hardcoded but will be configurable/discovered as part of DPR2-217
         List<ImmutablePair<String, String>> tablesToProcess = new ArrayList<>();
-        tablesToProcess.add(new ImmutablePair<>("nomis", "agency_internal_locations"));
-        tablesToProcess.add(new ImmutablePair<>("nomis", "agency_locations"));
-        tablesToProcess.add(new ImmutablePair<>("nomis", "movement_reasons"));
+//        tablesToProcess.add(new ImmutablePair<>("nomis", "agency_internal_locations"));
+//        tablesToProcess.add(new ImmutablePair<>("nomis", "agency_locations"));
+//        tablesToProcess.add(new ImmutablePair<>("nomis", "movement_reasons"));
         tablesToProcess.add(new ImmutablePair<>("nomis", "offender_bookings"));
         tablesToProcess.add(new ImmutablePair<>("nomis", "offender_external_movements"));
         tablesToProcess.add(new ImmutablePair<>("nomis", "offenders"));
