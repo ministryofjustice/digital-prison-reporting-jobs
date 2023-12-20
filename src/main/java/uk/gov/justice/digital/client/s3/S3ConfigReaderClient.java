@@ -26,7 +26,9 @@ public class S3ConfigReaderClient {
 
     private final String configBucketName;
 
-    static final String CONFIG_FILE_NAME = "configuration.json";
+    static final String CONFIGS_PATH = "configs/";
+
+    static final String CONFIG_FILE_SUFFIX = "_config.json";
 
     @Inject
     public S3ConfigReaderClient(
@@ -39,11 +41,12 @@ public class S3ConfigReaderClient {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public ImmutableSet<ImmutablePair<String, String>> getConfiguredTables(String configKey) {
-        logger.info("Loading config with key: {} from location: {}", configKey, CONFIG_FILE_NAME);
+        String configFileKey = CONFIGS_PATH + configKey + CONFIG_FILE_SUFFIX;
+        logger.info("Loading config with key: {} from location: {}", configKey, configFileKey);
         try {
-            String configString = s3.getObjectAsString(configBucketName, CONFIG_FILE_NAME);
+            String configString = s3.getObjectAsString(configBucketName, configFileKey);
             val config = new ObjectMapper().readValue(configString, HashMap.class);
-            return ImmutableSet.copyOf(convertToImmutablePairs((ArrayList<String>) config.get(configKey)));
+            return ImmutableSet.copyOf(convertToImmutablePairs((ArrayList<String>) config.get("tables")));
         } catch (Exception e) {
             throw new RuntimeException("Exception when loading config", e);
         }

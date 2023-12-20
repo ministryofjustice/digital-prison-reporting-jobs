@@ -18,7 +18,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.client.s3.S3ConfigReaderClient.CONFIG_FILE_NAME;
+import static uk.gov.justice.digital.client.s3.S3ConfigReaderClient.CONFIGS_PATH;
+import static uk.gov.justice.digital.client.s3.S3ConfigReaderClient.CONFIG_FILE_SUFFIX;
 
 @ExtendWith(MockitoExtension.class)
 class S3ConfigReaderClientTest {
@@ -46,13 +47,14 @@ class S3ConfigReaderClientTest {
 
     @Test
     public void shouldReadConfiguredTablesWithoutDuplicates() {
-        String configString = "{\"" + TEST_CONFIG_KEY + "\": [\"schema_1/table_1\", \"schema_2/table_2\", \"schema_1/table_1\"]}";
+        String configString = "{\"tables\": [\"schema_1/table_1\", \"schema_2/table_2\", \"schema_1/table_1\"]}";
         ImmutableSet<ImmutablePair<String, String>> expectedConfiguredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
         );
 
-        when(mockS3Client.getObjectAsString(eq(TEST_CONFIG_BUCKET), eq(CONFIG_FILE_NAME))).thenReturn(configString);
+        when(mockS3Client.getObjectAsString(eq(TEST_CONFIG_BUCKET), eq(CONFIGS_PATH + TEST_CONFIG_KEY + CONFIG_FILE_SUFFIX)))
+                .thenReturn(configString);
 
         ImmutableSet<ImmutablePair<String, String>> result = underTest.getConfiguredTables(TEST_CONFIG_KEY);
 
