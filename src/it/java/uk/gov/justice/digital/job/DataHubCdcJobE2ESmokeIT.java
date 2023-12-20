@@ -15,11 +15,7 @@ import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.TableDiscoveryService;
-import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.*;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
 
@@ -55,12 +51,15 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     private JobArguments arguments;
     @Mock
     private SourceReferenceService sourceReferenceService;
+    @Mock
+    private ConfigService configService;
     private DataHubCdcJob underTest;
     private List<TableStreamingQuery> streamingQueries;
 
     @BeforeEach
     public void setUp() throws IOException {
         givenPathsAreConfigured(arguments);
+        givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
         givenCheckpointsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
@@ -147,7 +146,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         // Manually creating dependencies because Micronaut test injection is not working
         JobProperties jobProperties = new JobProperties();
         SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
-        TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments);
+        TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         DataStorageService storageService = new DataStorageService(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);

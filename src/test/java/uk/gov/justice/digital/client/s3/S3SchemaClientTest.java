@@ -4,7 +4,9 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.*;
+import com.google.common.collect.ImmutableSet;
 import lombok.val;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +42,7 @@ public class S3SchemaClientTest {
     private static final String SCHEMA_REGISTRY = "test-contract-registry";
 
     @Mock
-    private S3SchemaClientProvider mockClientProvider;
+    private S3ClientProvider mockClientProvider;
 
     @Mock
     private AmazonS3 mockClient;
@@ -122,24 +124,25 @@ public class S3SchemaClientTest {
 
     @Test
     public void shouldRetrieveAllSchemas() {
-        List<String> schemaNames = new ArrayList<>();
-        schemaNames.add("schema1/some_table");
-        schemaNames.add("schema2/some_table");
-        schemaNames.add("schema3/some_table");
+        List<ImmutablePair<String, String>> schemaNamesList = new ArrayList<>();
+        schemaNamesList.add(ImmutablePair.of("schema1", "some_table"));
+        schemaNamesList.add(ImmutablePair.of("schema2", "some_table"));
+        schemaNamesList.add(ImmutablePair.of("schema3", "some_table"));
+        val schemaNames = ImmutableSet.copyOf(schemaNamesList);
 
         givenObjectListingSucceeds(createObjectSummaries(schemaNames));
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema2/some_table" + SCHEMA_FILE_EXTENSION);
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema3/some_table" + SCHEMA_FILE_EXTENSION);
 
-        val result = underTest.getAllSchemas(new HashSet<>(schemaNames));
+        val result = underTest.getAllSchemas(schemaNames);
 
         assertThat(result.size(), equalTo(schemaNames.size()));
     }
 
     @Test
     public void shouldReturnAnEmptyListWhenThereAreNoSchemas() {
-        Set<String> schemaGroup = Collections.singleton("test_schema/test_table");
+        val schemaGroup = ImmutableSet.copyOf(Collections.singleton(ImmutablePair.of("test_schema", "test_table")));
 
         givenObjectListIsEmpty();
 
@@ -148,21 +151,23 @@ public class S3SchemaClientTest {
 
     @Test
     public void shouldFailWhenThereIsAMissingSchema() {
-        List<String> schemaNames = new ArrayList<>();
-        schemaNames.add("schema1/some_table");
-        schemaNames.add("schema2/some_table");
+        ImmutableSet<ImmutablePair<String, String>> schemaNames = ImmutableSet.of(
+                ImmutablePair.of("schema1", "some_table"),
+                ImmutablePair.of("schema2", "some_table")
+        );
 
         givenObjectListingSucceeds(createObjectSummaries(schemaNames));
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
         when(mockClient.getObject(SCHEMA_REGISTRY, "schema2/some_table" + SCHEMA_FILE_EXTENSION))
                 .thenThrow(new AmazonClientException("Schema not found"));
 
-        assertThrows(RuntimeException.class, () -> underTest.getAllSchemas(new HashSet<>(schemaNames)));
+        assertThrows(RuntimeException.class, () -> underTest.getAllSchemas(schemaNames));
     }
 
     @Test
     public void shouldThrowAnExceptionIfAnErrorOccursWhenListingSchemas() {
-        Set<String> schemaGroup = Collections.singleton("test_schema/test_table");
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet
+                .of(ImmutablePair.of("test_schema", "test_table"));
 
         when(mockClient.listObjects(any(ListObjectsRequest.class))).thenThrow(new AmazonClientException("failed to list schemas"));
 
@@ -203,11 +208,11 @@ public class S3SchemaClientTest {
     }
 
     @NotNull
-    private static List<S3ObjectSummary> createObjectSummaries(List<String> schemaNames) {
+    private static List<S3ObjectSummary> createObjectSummaries(ImmutableSet<ImmutablePair<String, String>> schemaNames) {
         return schemaNames.stream()
                 .map(schemaName -> {
                     S3ObjectSummary objectSummary = new S3ObjectSummary();
-                    objectSummary.setKey(schemaName + SCHEMA_FILE_EXTENSION);
+                    objectSummary.setKey(schemaName.getLeft() + "/" + schemaName.getRight() + SCHEMA_FILE_EXTENSION);
                     return objectSummary;
                 }).collect(Collectors.toList());
     }

@@ -7,7 +7,7 @@ import uk.gov.justice.digital.client.ClientProvider;
 import javax.inject.Singleton;
 
 @Singleton
-public class S3SchemaClientProvider implements ClientProvider<AmazonS3> {
+public class S3ClientProvider implements ClientProvider<AmazonS3> {
     @Override
     public AmazonS3 getClient() {
         return AmazonS3ClientBuilder.defaultClient();

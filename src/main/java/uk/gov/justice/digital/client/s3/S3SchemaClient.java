@@ -8,10 +8,12 @@ import com.amazonaws.util.IOUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import jakarta.inject.Inject;
 import lombok.Data;
 import lombok.val;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +39,7 @@ public class S3SchemaClient {
 
     @Inject
     public S3SchemaClient(
-            S3SchemaClientProvider schemaClientProvider,
+            S3ClientProvider schemaClientProvider,
             JobArguments jobArguments
     ) {
         this.s3 = schemaClientProvider.getClient();
@@ -52,11 +54,11 @@ public class S3SchemaClient {
         return getAvroSchema(schemaName + SCHEMA_FILE_EXTENSION);
     }
 
-    public List<S3SchemaResponse> getAllSchemas(Set<String> schemaGroup) {
+    public List<S3SchemaResponse> getAllSchemas(ImmutableSet<ImmutablePair<String, String>> schemaGroup) {
         List<S3SchemaResponse> schemas = new ArrayList<>();
         List<String> schemaKeys = listObjects();
         Set<String> schemaGroupWithExtension = schemaGroup.stream()
-                .map(item -> item + SCHEMA_FILE_EXTENSION)
+                .map(item -> item.getLeft() + "/" + item.getRight() + SCHEMA_FILE_EXTENSION)
                 .collect(Collectors.toSet());
 
         for (String schemaKey : schemaKeys) {

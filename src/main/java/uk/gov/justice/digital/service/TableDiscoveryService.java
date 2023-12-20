@@ -14,12 +14,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import javax.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
@@ -28,24 +23,18 @@ import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 public class TableDiscoveryService {
 
     private final JobArguments arguments;
+    private final ConfigService configService;
 
     @Inject
-    public TableDiscoveryService(JobArguments arguments) {
+    public TableDiscoveryService(JobArguments arguments, ConfigService configService) {
         this.arguments = arguments;
+        this.configService = configService;
     }
 
     private static final Logger logger = LoggerFactory.getLogger(TableDiscoveryService.class);
 
     public List<ImmutablePair<String, String>> discoverTablesToProcess() {
-        // Tables are initially hardcoded but will be configurable/discovered as part of DPR2-217
-        List<ImmutablePair<String, String>> tablesToProcess = new ArrayList<>();
-        tablesToProcess.add(new ImmutablePair<>("nomis", "agency_internal_locations"));
-        tablesToProcess.add(new ImmutablePair<>("nomis", "agency_locations"));
-        tablesToProcess.add(new ImmutablePair<>("nomis", "movement_reasons"));
-        tablesToProcess.add(new ImmutablePair<>("nomis", "offender_bookings"));
-        tablesToProcess.add(new ImmutablePair<>("nomis", "offender_external_movements"));
-        tablesToProcess.add(new ImmutablePair<>("nomis", "offenders"));
-        return tablesToProcess;
+        return configService.getConfiguredTables(arguments.getConfigKey()).asList();
     }
 
     public Map<ImmutablePair<String, String>, List<String>> discoverBatchFilesToLoad(String rawS3Path, SparkSession sparkSession) throws IOException {

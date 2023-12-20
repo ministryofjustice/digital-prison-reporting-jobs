@@ -2,12 +2,14 @@ package uk.gov.justice.digital.service;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;
 import lombok.val;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import uk.gov.justice.digital.client.s3.S3SchemaClient;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.domain.model.SourceReference;
@@ -36,7 +38,7 @@ public class SourceReferenceService {
         return schemaClient.getSchema(key).map(this::createFromAvroSchema);
     }
 
-    public List<SourceReference> getAllSourceReferences(Set<String> schemaGroup) {
+    public List<SourceReference> getAllSourceReferences(ImmutableSet<ImmutablePair<String, String>> schemaGroup) {
         return schemaClient.getAllSchemas(schemaGroup)
                 .stream()
                 .map(this::createFromAvroSchema)

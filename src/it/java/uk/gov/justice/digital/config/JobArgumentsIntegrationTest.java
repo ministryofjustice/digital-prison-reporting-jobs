@@ -25,6 +25,8 @@ import static org.mockito.Mockito.when;
 class JobArgumentsIntegrationTest {
 
     private static final Map<String, String> testArguments = Stream.of(new String[][] {
+            { JobArguments.CONFIG_S3_BUCKET, "test-config-bucket" },
+            { JobArguments.CONFIG_KEY, "test-config" },
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
@@ -60,6 +62,8 @@ class JobArgumentsIntegrationTest {
     @Test
     public void shouldReturnCorrectValueForEachSupportedArgument() {
         Map<String, String> actualArguments = Stream.of(new Object[][] {
+                { JobArguments.CONFIG_S3_BUCKET, validArguments.getConfigS3Bucket() },
+                { JobArguments.CONFIG_KEY, validArguments.getConfigKey() },
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },

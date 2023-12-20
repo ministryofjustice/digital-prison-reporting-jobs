@@ -1,11 +1,14 @@
 package uk.gov.justice.digital.job;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
 import java.nio.file.Path;
@@ -34,6 +37,7 @@ public class E2ETestBase extends BaseSparkTest {
     protected static final String offenderBookingsTable = "offender_bookings";
     protected static final String offenderExternalMovementsTable = "offender_external_movements";
     protected static final String offendersTable = "offenders";
+    protected static final String TEST_CONFIG_KEY = "test-config-key";
 
     @TempDir
     protected Path testRoot;
@@ -53,6 +57,20 @@ public class E2ETestBase extends BaseSparkTest {
         when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
         when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
         when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
+    }
+
+    protected void givenTableConfigIsConfigured(JobArguments jobArguments, ConfigService configService) {
+        when(jobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(configService.getConfiguredTables(eq(TEST_CONFIG_KEY))).thenReturn(
+                ImmutableSet.of(
+                        ImmutablePair.of(inputSchemaName, agencyInternalLocationsTable),
+                        ImmutablePair.of(inputSchemaName, agencyLocationsTable),
+                        ImmutablePair.of(inputSchemaName, movementReasonsTable),
+                        ImmutablePair.of(inputSchemaName, offenderBookingsTable),
+                        ImmutablePair.of(inputSchemaName, offenderExternalMovementsTable),
+                        ImmutablePair.of(inputSchemaName, offendersTable)
+                )
+        );
     }
 
     protected void givenASourceReferenceFor(String inputTableName, SourceReferenceService sourceReferenceService) {

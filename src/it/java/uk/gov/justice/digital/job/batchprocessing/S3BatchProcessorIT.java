@@ -10,10 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.TableDiscoveryService;
-import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.*;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
@@ -23,14 +20,8 @@ import java.util.Arrays;
 import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
-import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
-import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
-import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
-import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
-import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.*;
+import static uk.gov.justice.digital.test.MinimalTestData.*;
 
 @ExtendWith(MockitoExtension.class)
 class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
@@ -38,6 +29,8 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     private JobArguments arguments;
     @Mock
     private SourceReference sourceReference;
+    @Mock
+    private ConfigService configService;
 
     private S3BatchProcessor underTest;
 
@@ -205,7 +198,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     private void givenS3BatchProcessorDependenciesAreInjected() {
         DataStorageService storageService = new DataStorageService(arguments);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
-        TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments);
+        TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);

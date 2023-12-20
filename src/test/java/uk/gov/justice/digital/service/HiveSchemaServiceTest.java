@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.service;
 
+import com.google.common.collect.ImmutableSet;
 import lombok.val;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,7 +70,7 @@ public class HiveSchemaServiceTest {
 
     @Test
     public void shouldFailWhenThereAreNoSchemas() {
-        Set<String> schemaGroup = Collections.singleton(String.join(SCHEMA_NAME, ".", TABLE_NAME));
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
 
@@ -77,7 +79,7 @@ public class HiveSchemaServiceTest {
 
     @Test
     public void shouldFailWhenSourceReferenceServiceThrowsAndException() {
-        Set<String> schemaGroup = Collections.singleton(String.join(SCHEMA_NAME, ".", TABLE_NAME));
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
 
@@ -86,9 +88,11 @@ public class HiveSchemaServiceTest {
 
     @Test
     public void shouldReplaceHiveTablesForSchemas() {
-        Set<String> schemaGroup = Stream.of(0, 1)
-                .map(index -> String.join(createSchemaName(index), ".", createTableName(index)))
+        Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
+                .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
                 .collect(Collectors.toSet());
+
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.copyOf(schemaGroupSet);
 
         List<SourceReference> sourceReferences = new ArrayList<>();
         sourceReferences.add(createSourceRef(0));
@@ -137,7 +141,7 @@ public class HiveSchemaServiceTest {
         mockJobArgumentCalls();
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(sourceReferences);
 
-        assertThat((Collection<String>) underTest.replaceTables(schemaGroup), is(empty()));
+        assertThat((Collection<ImmutablePair<String, String>>) underTest.replaceTables(schemaGroup), is(empty()));
 
         // verify all Hive tables get deleted
         verify(mockGlueHiveTableClient, times(8))

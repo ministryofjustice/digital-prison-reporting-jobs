@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.service;
 
+import com.google.common.collect.ImmutableSet;
 import lombok.val;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -152,7 +154,8 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void shouldReturnAListOfAllSourceReferences() {
-        Set<String> schemaGroup = Collections.singleton("test_schema/test_table");
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet
+                .of(ImmutablePair.of("test_schema", "test_table"));
         List<S3SchemaResponse> expectedSchemas = new ArrayList<>();
 
         IntStream.range(0, 3).forEach(index -> {
@@ -179,7 +182,8 @@ public class SourceReferenceServiceTest {
 
     @Test
     public void shouldReturnAnEmptyListWhenNoSchemaIsFound() {
-        Set<String> schemaGroup = Collections.singleton("test_schema/test_table");
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet
+                .of(ImmutablePair.of("test_schema", "test_table"));
 
         when(client.getAllSchemas(any())).thenReturn(Collections.emptyList());
 
