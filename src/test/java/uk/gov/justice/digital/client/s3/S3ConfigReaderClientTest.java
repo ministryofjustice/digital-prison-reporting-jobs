@@ -10,12 +10,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.exception.ConfigReaderClientException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.client.s3.S3ConfigReaderClient.CONFIGS_PATH;
@@ -53,7 +53,7 @@ class S3ConfigReaderClientTest {
                 ImmutablePair.of("schema_2", "table_2")
         );
 
-        when(mockS3Client.getObjectAsString(eq(TEST_CONFIG_BUCKET), eq(CONFIGS_PATH + TEST_CONFIG_KEY + CONFIG_FILE_SUFFIX)))
+        when(mockS3Client.getObjectAsString(TEST_CONFIG_BUCKET, CONFIGS_PATH + TEST_CONFIG_KEY + CONFIG_FILE_SUFFIX))
                 .thenReturn(configString);
 
         ImmutableSet<ImmutablePair<String, String>> result = underTest.getConfiguredTables(TEST_CONFIG_KEY);
@@ -65,7 +65,7 @@ class S3ConfigReaderClientTest {
     public void shouldThrowRuntimeExceptionWhenUnableToGetConfig() {
         when(mockS3Client.getObjectAsString(any(), any())).thenThrow(new SdkBaseException("Sdk error"));
 
-        assertThrows(RuntimeException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
+        assertThrows(ConfigReaderClientException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
     }
 
     @Test
@@ -74,6 +74,6 @@ class S3ConfigReaderClientTest {
 
         when(mockS3Client.getObjectAsString(any(), any())).thenReturn(invalidConfigString);
 
-        assertThrows(RuntimeException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
+        assertThrows(ConfigReaderClientException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
     }
 }

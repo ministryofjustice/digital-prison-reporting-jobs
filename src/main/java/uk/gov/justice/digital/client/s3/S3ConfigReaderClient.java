@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.exception.ConfigReaderClientException;
 
 import javax.inject.Singleton;
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ import java.util.stream.Collectors;
 @Singleton
 public class S3ConfigReaderClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(S3SchemaClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(S3ConfigReaderClient.class);
 
     private final AmazonS3 s3;
 
@@ -48,7 +49,7 @@ public class S3ConfigReaderClient {
             val config = new ObjectMapper().readValue(configString, HashMap.class);
             return ImmutableSet.copyOf(convertToImmutablePairs((ArrayList<String>) config.get("tables")));
         } catch (Exception e) {
-            throw new RuntimeException("Exception when loading config", e);
+            throw new ConfigReaderClientException("Exception when loading config", e);
         }
     }
 
@@ -67,7 +68,7 @@ public class S3ConfigReaderClient {
     private static void validate(String str, String[] split) {
         if (split.length != 2) {
             String errorMessage = String.format("Config %s does not match format schema/table", str);
-            throw new RuntimeException(errorMessage);
+            throw new ConfigReaderClientException(errorMessage);
         }
     }
 }

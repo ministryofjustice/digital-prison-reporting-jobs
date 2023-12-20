@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3ConfigReaderClient;
+import uk.gov.justice.digital.exception.ConfigServiceException;
 
 import java.util.Collections;
 import java.util.Set;
@@ -15,7 +16,6 @@ import java.util.Set;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
@@ -43,7 +43,7 @@ class ConfigServiceTest {
                 ImmutablePair.of("schema_2", "table_2")
         );
 
-        when(mockConfigClient.getConfiguredTables(eq(TEST_CONFIG_KEY))).thenReturn(ImmutableSet.copyOf(configuredTables));
+        when(mockConfigClient.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(configuredTables));
 
         Set<ImmutablePair<String, String>> result = underTest.getConfiguredTables(TEST_CONFIG_KEY);
 
@@ -54,8 +54,8 @@ class ConfigServiceTest {
     public void shouldFailWhenThereAreNoConfiguredTables() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.copyOf(Collections.emptySet());
 
-        when(mockConfigClient.getConfiguredTables(eq(TEST_CONFIG_KEY))).thenReturn(configuredTables);
+        when(mockConfigClient.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        assertThrows(RuntimeException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
+        assertThrows(ConfigServiceException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
     }
 }
