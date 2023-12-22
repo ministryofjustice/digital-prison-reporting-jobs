@@ -1,13 +1,16 @@
 package uk.gov.justice.digital.job;
 
+import com.google.common.collect.ImmutableSet;
 import io.micronaut.configuration.picocli.PicocliRunner;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.job.context.MicronautContext;
+import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.HiveSchemaService;
 
 import javax.inject.Inject;
-import java.util.HashSet;
 import java.util.Set;
 
 import static picocli.CommandLine.Command;
@@ -19,11 +22,19 @@ import static picocli.CommandLine.Command;
 public class HiveTableCreationJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(HiveTableCreationJob.class);
+    private final ConfigService configService;
     private final HiveSchemaService hiveSchemaService;
+    private final JobArguments jobArguments;
 
     @Inject
-    public HiveTableCreationJob(HiveSchemaService hiveSchemaService) {
+    public HiveTableCreationJob(
+            ConfigService configService,
+            HiveSchemaService hiveSchemaService,
+            JobArguments jobArguments
+    ) {
+        this.configService = configService;
         this.hiveSchemaService = hiveSchemaService;
+        this.jobArguments = jobArguments;
     }
 
     public static void main(String[] args) {
@@ -36,17 +47,10 @@ public class HiveTableCreationJob implements Runnable {
         try {
             logger.info("HiveTableCreationJob running");
 
-            // TODO (DPR2-250): Temporarily using a static list of schemas to create Hive tables.
-            // This will be replaced with a config possibly loaded from S3 which contains a group of schemas
-            Set<String> schemaNames = new HashSet<>();
-            schemaNames.add("nomis/offender_external_movements");
-            schemaNames.add("nomis/offenders");
-            schemaNames.add("nomis/offender_bookings");
-            schemaNames.add("nomis/agency_locations");
-            schemaNames.add("nomis/agency_internal_locations");
-            schemaNames.add("nomis/movement_reasons");
+            ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
+                    .getConfiguredTables(jobArguments.getConfigKey());
 
-            Set<String> failedTables = hiveSchemaService.replaceTables(schemaNames);
+            Set<ImmutablePair<String, String>> failedTables = hiveSchemaService.replaceTables(configuredTables);
 
             if (!failedTables.isEmpty()) {
                 logger.error("Not all schemas were processed");

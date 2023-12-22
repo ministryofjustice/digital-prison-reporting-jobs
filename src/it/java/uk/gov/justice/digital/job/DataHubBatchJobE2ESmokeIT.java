@@ -13,11 +13,7 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.DataStorageService;
-import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.TableDiscoveryService;
-import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.*;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
 
@@ -43,10 +39,13 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private JobArguments arguments;
     @Mock
     private SourceReferenceService sourceReferenceService;
+    @Mock
+    private ConfigService configService;
     private DataHubBatchJob underTest;
     @BeforeEach
     public void setUp() {
         givenPathsAreConfigured(arguments);
+        givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
@@ -97,7 +96,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         // Manually creating dependencies because Micronaut test injection is not working
         JobProperties properties = new JobProperties();
         SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
-        TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments);
+        TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         DataStorageService storageService = new DataStorageService(arguments);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);

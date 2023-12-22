@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.service;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,12 +43,12 @@ public class HiveSchemaService {
         this.glueHiveTableClient = glueHiveTableClient;
     }
 
-    public Set<String> replaceTables(Set<String> schemaGroup) {
+    public Set<ImmutablePair<String, String>> replaceTables(ImmutableSet<ImmutablePair<String, String>> tables) {
 
-        Set<String> failedTables = new HashSet<>();
+        Set<ImmutablePair<String, String>> failedTables = new HashSet<>();
 
         logger.info("Retrieving all schemas in registry");
-        List<SourceReference> sourceReferences = sourceReferenceService.getAllSourceReferences(schemaGroup);
+        List<SourceReference> sourceReferences = sourceReferenceService.getAllSourceReferences(tables);
 
         if (sourceReferences.isEmpty()) {
             throw new HiveSchemaServiceException("No schemas retrieved from registry");
@@ -76,7 +78,7 @@ public class HiveSchemaService {
                 replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, curatedPath, schema);
             } catch (Exception e) {
                 logger.error("Failed to replace Hive table {}", hiveTableName);
-                failedTables.add(hiveTableName);
+                failedTables.add(ImmutablePair.of(sourceName, tableName));
             }
 
         }

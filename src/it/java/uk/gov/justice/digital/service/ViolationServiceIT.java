@@ -74,6 +74,8 @@ public class ViolationServiceIT extends BaseSparkTest {
 
     @Mock
     private JobArguments arguments;
+    @Mock
+    private ConfigService configService;
     @TempDir
     private Path scratchTempDirRoot;
     @TempDir
@@ -90,7 +92,7 @@ public class ViolationServiceIT extends BaseSparkTest {
                 arguments,
                 new DataStorageService(arguments),
                 new S3DataProvider(arguments),
-                new TableDiscoveryService(arguments)
+                new TableDiscoveryService(arguments, configService)
         );
     }
 

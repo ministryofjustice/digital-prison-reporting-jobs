@@ -25,6 +25,8 @@ public class JobArguments {
 
     private static final Logger logger = LoggerFactory.getLogger(JobArguments.class);
 
+    public static final String CONFIG_S3_BUCKET = "dpr.config.s3.bucket";
+    public static final String CONFIG_KEY = "dpr.config.key";
     public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
     public static final String AWS_REGION = "dpr.aws.region";
     public static final String LOG_LEVEL = "dpr.log.level";
@@ -235,6 +237,14 @@ public class JobArguments {
 
     public Long getSchemaCacheExpiryInMinutes() {
         return getArgument(SCHEMA_CACHE_EXPIRY_IN_MINUTES, SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT);
+    }
+
+    public String getConfigS3Bucket() {
+        return getArgument(CONFIG_S3_BUCKET);
+    }
+
+    public String getConfigKey() {
+        return getArgument(CONFIG_KEY);
     }
 
     public String getMaintenanceTablesRootPath() {
