@@ -29,7 +29,7 @@ public class S3ConfigReaderClient {
 
     static final String CONFIGS_PATH = "configs/";
 
-    static final String CONFIG_FILE_SUFFIX = "_config.json";
+    static final String CONFIG_FILE_SUFFIX = "/table-config.json";
 
     @Inject
     public S3ConfigReaderClient(
