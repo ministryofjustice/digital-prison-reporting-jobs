@@ -64,56 +64,30 @@ class ViolationServiceTest extends BaseSparkTest {
 
     @Test
     public void handleRetriesExhaustedShouldWriteViolations() throws DataStorageException {
-        underTest.handleRetriesExhausted(spark, testInputDataframe(), "source", "table", mockCause, RAW);
-        verify(mockDataStorage).append(any(), any());
-        verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
-    }
-
-    @Test
-    public void handleRetriesExhaustedShouldThrowIfWriteFails() throws DataStorageException {
-        doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
-        assertThrows(RuntimeException.class, () -> underTest.handleRetriesExhausted(spark, testInputDataframe(), "source", "table", mockCause, RAW));
-    }
-
-    @Test
-    public void handleRetriesExhaustedS3ShouldWriteViolations() throws DataStorageException {
         Dataset<Row> inputDf = inserts(spark);
-        underTest.handleRetriesExhaustedS3(spark, inputDf, "source", "table", mockCause, STRUCTURED_LOAD);
+        underTest.handleRetriesExhausted(spark, inputDf, "source", "table", mockCause, STRUCTURED_LOAD);
         verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
         verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
     }
 
     @Test
-    public void handleRetriesExhaustedS3ShouldThrowIfWriteFails() throws DataStorageException {
+    public void handleRetriesExhaustedShouldThrowIfWriteFails() throws DataStorageException {
         Dataset<Row> inputDf = inserts(spark);
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
-        assertThrows(RuntimeException.class, () -> underTest.handleRetriesExhaustedS3(spark, inputDf, "source", "table", mockCause, RAW));
+        assertThrows(RuntimeException.class, () -> underTest.handleRetriesExhausted(spark, inputDf, "source", "table", mockCause, RAW));
     }
 
     @Test
     public void handleNoSchemaFoundShouldWriteViolations() throws DataStorageException {
-        underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table");
-        verify(mockDataStorage).append(any(), any());
+        underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
+        verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
         verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
     }
 
     @Test
     public void handleNoSchemaFoundShouldThrowIfWriteFails() throws DataStorageException {
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
-        assertThrows(DataStorageException.class, () -> underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table"));
-    }
-
-    @Test
-    public void handleNoSchemaS3FoundShouldWriteViolations() throws DataStorageException {
-        underTest.handleNoSchemaFoundS3(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
-        verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
-        verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
-    }
-
-    @Test
-    public void handleNoSchemaS3FoundShouldThrowIfWriteFails() throws DataStorageException {
-        doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
-        assertThrows(DataStorageException.class, () -> underTest.handleNoSchemaFoundS3(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD));
+        assertThrows(DataStorageException.class, () -> underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD));
     }
 
     @Test

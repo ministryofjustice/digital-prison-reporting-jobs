@@ -14,8 +14,8 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
+import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,7 +37,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
-class S3BatchProcessorTest extends BaseSparkTest {
+class BatchProcessorTest extends BaseSparkTest {
 
     private static final String table = "table";
     private static final String source = "source";
@@ -55,9 +55,9 @@ class S3BatchProcessorTest extends BaseSparkTest {
     private static Dataset<Row> validatedDf;
 
     @Mock
-    private StructuredZoneLoadS3 structuredZoneLoad;
+    private StructuredZoneLoad structuredZoneLoad;
     @Mock
-    private CuratedZoneLoadS3 curatedZoneLoad;
+    private CuratedZoneLoad curatedZoneLoad;
     @Mock
     private SourceReference sourceReference;
     @Mock
@@ -65,7 +65,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
-    private S3BatchProcessor underTest;
+    private BatchProcessor underTest;
 
     @BeforeAll
     public static void setupClass() {
@@ -75,7 +75,7 @@ class S3BatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new S3BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
+        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
     }
 
     @Test

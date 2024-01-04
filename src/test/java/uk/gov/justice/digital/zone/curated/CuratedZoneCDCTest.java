@@ -2,15 +2,14 @@ package uk.gov.justice.digital.zone.curated;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -24,58 +23,57 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 
 @ExtendWith(MockitoExtension.class)
-class CuratedZoneLoadS3Test {
+class CuratedZoneCDCTest extends BaseSparkTest {
 
-    @Mock
-    private SparkSession spark;
-    @Mock
-    private Dataset<Row> df;
-    @Mock
-    private SourceReference sourceReference;
+    private static final String curatedRootPath = "/curated/path";
+    private static final String curatedTablePath = "/curated/path/source/table";
+
     @Mock
     private JobArguments arguments;
     @Mock
+    private ViolationService violationService;
+    @Mock
     private DataStorageService storage;
     @Mock
-    private ViolationService violationService;
+    private SourceReference sourceReference;
+    @Mock
+    private static Dataset<Row> df;
 
-    private CuratedZoneLoadS3 underTest;
+    private CuratedZoneCDC underTest;
 
     @BeforeEach
     public void setUp() {
-        when(arguments.getCuratedS3Path()).thenReturn("s3://curated/path");
+        when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSource()).thenReturn("source");
         when(sourceReference.getTable()).thenReturn("table");
-        when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
-
-        underTest = new CuratedZoneLoadS3(arguments, storage, violationService);
+        when(df.count()).thenReturn(1L);
+        when(arguments.getCuratedS3Path()).thenReturn(curatedRootPath);
+        underTest = new CuratedZoneCDC(arguments, violationService, storage);
     }
 
     @Test
-    public void shouldAppendDistinctRecordsToTable() throws DataStorageException {
+    public void shouldMergeDataIntoTable() throws DataStorageRetriesExhaustedException {
         underTest.process(spark, df, sourceReference);
-
-        verify(storage, times(1)).appendDistinct(eq("s3://curated/path/source/table"), eq(df), eq(PRIMARY_KEY));
+        verify(storage, times(1)).mergeRecordsCdc(any(), eq(curatedTablePath), any(), eq(PRIMARY_KEY));
     }
 
     @Test
-    public void shouldUpdateDeltaManifest() throws DataStorageException {
+    public void shouldUpdateDeltaManifest() {
         underTest.process(spark, df, sourceReference);
-
-        verify(storage, times(1)).updateDeltaManifestForTable(any(), eq("s3://curated/path/source/table"));
+        verify(storage, times(1)).updateDeltaManifestForTable(any(), eq(curatedTablePath));
     }
 
     @Test
-    public void shouldHandleRetriesExhausted() throws DataStorageException {
+    public void shouldHandleRetriesExhausted() throws DataStorageRetriesExhaustedException {
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception());
-        doThrow(thrown)
-                .when(storage)
-                .appendDistinct(any(), any(), any());
+        doThrow(thrown).when(storage).mergeRecordsCdc(any(), any(), any(), any());
 
         underTest.process(spark, df, sourceReference);
 
-        verify(violationService, times(1))
-                .handleRetriesExhaustedS3(any(), eq(df), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.CURATED_LOAD));
+        verify(violationService, times(1)).handleRetriesExhausted(
+                any(), any(), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.STRUCTURED_CDC)
+        );
     }
+
 
 }

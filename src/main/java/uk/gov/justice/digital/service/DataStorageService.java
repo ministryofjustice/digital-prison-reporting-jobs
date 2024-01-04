@@ -70,7 +70,7 @@ public class DataStorageService {
     }
 
 
-    public boolean hasRecords(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
+    public boolean hasRecords(SparkSession spark, TableIdentifier tableId) {
         val hasRecords = exists(spark, tableId) &&
                 Optional.ofNullable(get(spark, tableId))
                         .map(df -> !df.isEmpty())

@@ -27,8 +27,8 @@ import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
-import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
-import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
+import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
+import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.util.Collections;
 import java.util.List;
@@ -393,8 +393,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         );
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 new ValidationService(violationService),
-                new StructuredZoneCDCS3(arguments, violationService, storageService),
-                new CuratedZoneCDCS3(arguments, violationService, storageService),
+                new StructuredZoneCDC(arguments, violationService, storageService),
+                new CuratedZoneCDC(arguments, violationService, storageService),
                 dataProvider
         );
         TableStreamingQueryProvider streamingQueryProvider = new TableStreamingQueryProvider(

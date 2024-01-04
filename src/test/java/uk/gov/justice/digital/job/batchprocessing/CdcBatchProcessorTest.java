@@ -14,8 +14,8 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
-import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
+import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
+import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.util.List;
 
@@ -44,9 +44,9 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     @Mock
     private ValidationService mockValidationService;
     @Mock
-    private StructuredZoneCDCS3 mockStructuredZone;
+    private StructuredZoneCDC mockStructuredZone;
     @Mock
-    private CuratedZoneCDCS3 mockCuratedZone;
+    private CuratedZoneCDC mockCuratedZone;
     @Mock
     private SourceReference mockSourceReference;
     @Mock

@@ -32,9 +32,6 @@ import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.DATA;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.METADATA;
-import static uk.gov.justice.digital.converter.dms.DMS_3_4_7.ParsedDataFields.OPERATION;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 
@@ -97,31 +94,6 @@ public class ViolationService {
     ) {
         String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
         logger.warn(violationMessage, cause);
-        val destinationPath = createValidatedPath(arguments.getViolationsS3Path(), source, table);
-        val violationDf = dataFrame
-                .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(violationMessage));
-        try {
-            storageService.append(destinationPath, violationDf);
-            storageService.updateDeltaManifestForTable(spark, destinationPath);
-        } catch (DataStorageException e) {
-            String msg = "Could not write violation data";
-            logger.error(msg, e);
-            // This is a serious problem because we could lose data if we don't stop here
-            throw new RuntimeException(msg, e);
-        }
-    }
-
-    public void handleRetriesExhaustedS3(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table,
-            DataStorageRetriesExhaustedException cause,
-            ZoneName zoneName
-    ) {
-        String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
-        logger.warn(violationMessage, cause);
         val invalidRecords = dataFrame.withColumn(ERROR, lit(violationMessage));
         try {
             handleViolation(spark, invalidRecords, source, table, zoneName);
@@ -134,24 +106,6 @@ public class ViolationService {
     }
 
     public void handleNoSchemaFound(
-            SparkSession spark,
-            Dataset<Row> dataFrame,
-            String source,
-            String table
-    ) throws DataStorageException {
-        logger.warn("Violation - No schema found for {}/{}", source, table);
-        val destinationPath = createValidatedPath(arguments.getViolationsS3Path(), source, table);
-
-        val missingSchemaRecords = dataFrame
-                .select(col(DATA), col(METADATA))
-                .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)))
-                .drop(OPERATION);
-
-        storageService.append(destinationPath, missingSchemaRecords);
-        storageService.updateDeltaManifestForTable(spark, destinationPath);
-    }
-
-    public void handleNoSchemaFoundS3(
             SparkSession spark,
             Dataset<Row> dataFrame,
             String source,
@@ -177,7 +131,7 @@ public class ViolationService {
     public void writeBatchDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
         writeDataToViolations(spark, source, table, errorMessage, arguments.getBatchLoadFileGlobPattern(), STRUCTURED_LOAD);
     }
-    public void writeDataToViolations(
+    private void writeDataToViolations(
             SparkSession spark,
             String source,
             String table,

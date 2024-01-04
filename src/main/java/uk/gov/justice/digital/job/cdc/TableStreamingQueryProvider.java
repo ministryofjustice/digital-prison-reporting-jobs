@@ -88,7 +88,7 @@ public class TableStreamingQueryProvider {
     TableStreamingQuery noSchemaFoundQuery(SparkSession spark, String inputSourceName, String inputTableName) throws NoSchemaNoDataException {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, inputSourceName, inputTableName);
         VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = withIncompatibleSchemaHandling(inputSourceName, inputTableName,
-                (df, batchId) -> violationService.handleNoSchemaFoundS3(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC)
+                (df, batchId) -> violationService.handleNoSchemaFound(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC)
         );
 
         return new TableStreamingQuery(

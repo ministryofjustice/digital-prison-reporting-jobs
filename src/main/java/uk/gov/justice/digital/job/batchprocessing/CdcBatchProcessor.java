@@ -16,8 +16,8 @@ import scala.collection.JavaConverters;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.domain.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneCDCS3;
-import uk.gov.justice.digital.zone.structured.StructuredZoneCDCS3;
+import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
+import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.row_number;
@@ -32,15 +32,15 @@ import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURE
 public class CdcBatchProcessor {
     private static final Logger logger = LoggerFactory.getLogger(CdcBatchProcessor.class);
     private final ValidationService validationService;
-    private final StructuredZoneCDCS3 structuredZone;
-    private final CuratedZoneCDCS3 curatedZone;
+    private final StructuredZoneCDC structuredZone;
+    private final CuratedZoneCDC curatedZone;
     private final S3DataProvider dataProvider;
 
     @Inject
     public CdcBatchProcessor(
             ValidationService validationService,
-            StructuredZoneCDCS3 structuredZone,
-            CuratedZoneCDCS3 curatedZone,
+            StructuredZoneCDC structuredZone,
+            CuratedZoneCDC curatedZone,
             S3DataProvider dataProvider) {
         this.validationService = validationService;
         this.structuredZone = structuredZone;
