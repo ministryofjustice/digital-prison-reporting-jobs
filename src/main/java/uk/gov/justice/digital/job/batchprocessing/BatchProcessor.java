@@ -47,6 +47,7 @@ public class BatchProcessor {
         logger.info("S3BatchProcessor initialization complete");
     }
 
+    @SuppressWarnings("java:S2139")
     public void processBatch(SparkSession spark, SourceReference sourceReference, Dataset<Row> dataFrame) {
         if(!dataFrame.isEmpty()) {
             String sourceName = sourceReference.getSource();
