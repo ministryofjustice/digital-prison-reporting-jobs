@@ -63,7 +63,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
     public void shouldAppendDistinctRecordsToTable() throws DataStorageException {
         underTest.process(spark, df, sourceReference);
 
-        verify(storage, times(1)).appendDistinct(eq("s3://structured/path/source/table"), eq(df), eq(PRIMARY_KEY));
+        verify(storage, times(1)).appendDistinct("s3://structured/path/source/table", df, PRIMARY_KEY);
     }
 
     @Test

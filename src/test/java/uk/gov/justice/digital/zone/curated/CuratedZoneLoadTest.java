@@ -55,7 +55,7 @@ class CuratedZoneLoadTest {
     public void shouldAppendDistinctRecordsToTable() throws DataStorageException {
         underTest.process(spark, df, sourceReference);
 
-        verify(storage, times(1)).appendDistinct(eq("s3://curated/path/source/table"), eq(df), eq(PRIMARY_KEY));
+        verify(storage, times(1)).appendDistinct("s3://curated/path/source/table", df, PRIMARY_KEY);
     }
 
     @Test
