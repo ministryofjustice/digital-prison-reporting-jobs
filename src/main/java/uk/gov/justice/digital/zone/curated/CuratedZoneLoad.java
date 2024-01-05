@@ -12,6 +12,7 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -19,7 +20,7 @@ import javax.inject.Singleton;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
 @Singleton
-public class CuratedZoneLoad {
+public class CuratedZoneLoad implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZoneLoad.class);
 
@@ -37,7 +38,7 @@ public class CuratedZoneLoad {
         this.violationService = violationService;
     }
 
-    public void process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
         val startTime = System.currentTimeMillis();
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
@@ -50,9 +51,11 @@ public class CuratedZoneLoad {
             logger.info("Append completed successfully to table: {}", path);
             storage.updateDeltaManifestForTable(spark, path);
             logger.info("Processed batch for curated {}/{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
+            return dataFrame;
         } catch (DataStorageRetriesExhaustedException e) {
             logger.warn("Curated zone load retries exhausted", e);
             violationService.handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e, ViolationService.ZoneName.CURATED_LOAD);
+            return spark.emptyDataFrame();
         }
     }
 }

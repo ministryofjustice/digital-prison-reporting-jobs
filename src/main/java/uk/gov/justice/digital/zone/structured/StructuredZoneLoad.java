@@ -12,6 +12,7 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -19,7 +20,7 @@ import javax.inject.Singleton;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
 @Singleton
-public class StructuredZoneLoad {
+public class StructuredZoneLoad implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(StructuredZoneLoad.class);
     private final String structuredZoneRootPath;
