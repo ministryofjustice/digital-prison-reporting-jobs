@@ -10,7 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3SchemaClient;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 
 import java.util.*;
 import java.util.stream.Collectors;

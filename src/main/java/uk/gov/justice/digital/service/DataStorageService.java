@@ -19,8 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.domain.model.TableIdentifier;
+import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 

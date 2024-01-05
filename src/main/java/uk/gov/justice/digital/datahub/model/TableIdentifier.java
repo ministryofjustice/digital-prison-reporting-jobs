@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.domain.model;
+package uk.gov.justice.digital.datahub.model;
 
 import lombok.Data;
 

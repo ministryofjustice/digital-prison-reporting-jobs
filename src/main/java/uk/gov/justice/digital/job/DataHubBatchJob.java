@@ -16,7 +16,7 @@ import picocli.CommandLine;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
 import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
