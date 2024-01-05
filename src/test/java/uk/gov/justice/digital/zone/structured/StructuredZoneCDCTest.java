@@ -9,7 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 
 @ExtendWith(MockitoExtension.class)
-class StructuredZoneCDCS3Test extends BaseSparkTest {
+class StructuredZoneCDCTest extends BaseSparkTest {
 
     private static final String structuredRootPath = "/structured/path";
     private static final String structuredTablePath = "/structured/path/source/table";
@@ -39,7 +39,7 @@ class StructuredZoneCDCS3Test extends BaseSparkTest {
     @Mock
     private static Dataset<Row> df;
 
-    private StructuredZoneCDCS3 underTest;
+    private StructuredZoneCDC underTest;
 
     @BeforeEach
     public void setUp() {
@@ -48,7 +48,7 @@ class StructuredZoneCDCS3Test extends BaseSparkTest {
         when(sourceReference.getTable()).thenReturn("table");
         when(df.count()).thenReturn(1L);
         when(arguments.getStructuredS3Path()).thenReturn(structuredRootPath);
-        underTest = new StructuredZoneCDCS3(arguments, violationService, storage);
+        underTest = new StructuredZoneCDC(arguments, violationService, storage);
     }
 
     @Test
@@ -64,7 +64,7 @@ class StructuredZoneCDCS3Test extends BaseSparkTest {
 
         underTest.process(spark, df, sourceReference);
 
-        verify(violationService, times(1)).handleRetriesExhaustedS3(
+        verify(violationService, times(1)).handleRetriesExhausted(
                 any(), any(), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.STRUCTURED_CDC)
         );
     }

@@ -12,9 +12,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
-import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
+import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
@@ -61,7 +61,7 @@ class DataHubBatchJobTest {
     @Mock
     private TableDiscoveryService tableDiscoveryService;
     @Mock
-    private S3BatchProcessor batchProcessor;
+    private BatchProcessor batchProcessor;
     @Mock
     private S3DataProvider dataProvider;
     @Mock
@@ -131,7 +131,7 @@ class DataHubBatchJobTest {
         underTest.runJob(spark);
 
         // Should write table 1 to violations
-        verify(violationService, times(1)).handleNoSchemaFoundS3(any(), any(), eq("s1"), eq("t1"), eq(STRUCTURED_LOAD));
+        verify(violationService, times(1)).handleNoSchemaFound(any(), any(), eq("s1"), eq("t1"), eq(STRUCTURED_LOAD));
         // Should process table 2 and no other tables
         verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
         verify(batchProcessor, times(1)).processBatch(any(), any(), any());

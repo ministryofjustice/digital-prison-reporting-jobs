@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.zone.curated;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -7,70 +9,55 @@ import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.domain.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.writer.Writer;
-import uk.gov.justice.digital.writer.curated.CuratedZoneCdcWriter;
+import uk.gov.justice.digital.zone.Zone;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
+import static uk.gov.justice.digital.common.ResourcePath.tablePath;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 
 @Singleton
-public class CuratedZoneCDC extends CuratedZone {
+public class CuratedZoneCDC implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratedZoneCDC.class);
 
+    private final String curatedZoneRootPath;
     private final ViolationService violationService;
+    private final DataStorageService storage;
 
     @Inject
     public CuratedZoneCDC(
-            JobArguments jobArguments,
-            DataStorageService storage,
-            ViolationService violationService
-    ) {
-        this(jobArguments, createWriter(storage), violationService);
-    }
-
-    @SuppressWarnings("unused")
-    private CuratedZoneCDC(
-            JobArguments jobArguments,
-            Writer writer,
-            ViolationService violationService
-    ) {
-        super(jobArguments, writer);
+            JobArguments arguments,
+            ViolationService violationService,
+            DataStorageService storage) {
+        this.curatedZoneRootPath = arguments.getCuratedS3Path();
         this.violationService = violationService;
+        this.storage = storage;
     }
 
-    private static Writer createWriter(DataStorageService storage) {
-        return new CuratedZoneCdcWriter(storage);
-    }
 
-    @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
-        Dataset<Row> result;
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
+        val startTime = System.currentTimeMillis();
+        String sourceName = sourceReference.getSource();
+        String tableName = sourceReference.getTable();
+        String curatedTablePath = tablePath(curatedZoneRootPath, sourceName, tableName);
+        logger.debug("Processing records for curated {}/{} {}", sourceName, tableName, curatedTablePath);
+
         try {
-            if (dataFrame.isEmpty()) {
-                result = spark.emptyDataFrame();
-            } else {
-                String sourceName = sourceReference.getSource();
-                String tableName = sourceReference.getTable();
-
-                val startTime = System.currentTimeMillis();
-
-                logger.debug("Processing records for {}/{}", sourceName, tableName);
-                result = super.process(spark, dataFrame, sourceReference);
-                logger.debug("Processed batch in {}ms", System.currentTimeMillis() - startTime);
-            }
+            logger.debug("Merging {} records to deltalake table: {}", dataFrame.count(), curatedTablePath);
+            storage.mergeRecordsCdc(spark, curatedTablePath, dataFrame, sourceReference.getPrimaryKey());
+            logger.debug("Merge completed successfully to table: {}", curatedTablePath);
+            storage.updateDeltaManifestForTable(spark, curatedTablePath);
+            logger.info("Processed batch for curated {}/{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
+            return dataFrame;
         } catch (DataStorageRetriesExhaustedException e) {
-            logger.warn("Curated zone CDC retries exhausted", e);
-            violationService.handleRetriesExhausted(spark, dataFrame, sourceReference.getSource(), sourceReference.getTable(), e, ViolationService.ZoneName.CURATED_CDC);
-            result = spark.emptyDataFrame();
+            logger.warn("Curated zone cdc retries exhausted", e);
+            violationService.handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e, STRUCTURED_CDC);
+            return spark.emptyDataFrame();
         }
-        return result;
     }
+
 
 }

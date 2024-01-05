@@ -11,11 +11,11 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.DataStorageException;
-import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
+import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.*;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
+import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -101,9 +101,9 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
-        StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);
-        CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);
-        S3BatchProcessor batchProcessor = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, validationService);
+        StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
+        CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
+        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
         underTest = new DataHubBatchJob(
                 arguments,
                 properties,

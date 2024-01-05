@@ -9,11 +9,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.*;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoadS3;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoadS3;
+import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
 
@@ -24,7 +24,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.test.MinimalTestData.*;
 
 @ExtendWith(MockitoExtension.class)
-class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
+class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private JobArguments arguments;
     @Mock
@@ -32,7 +32,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private ConfigService configService;
 
-    private S3BatchProcessor underTest;
+    private BatchProcessor underTest;
 
     @BeforeEach
     public void setUp() {
@@ -201,9 +201,9 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
-        StructuredZoneLoadS3 structuredZoneLoadS3 = new StructuredZoneLoadS3(arguments, storageService, violationService);
-        CuratedZoneLoadS3 curatedZoneLoad = new CuratedZoneLoadS3(arguments, storageService, violationService);
-        underTest = new S3BatchProcessor(structuredZoneLoadS3, curatedZoneLoad, validationService);
+        StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
+        CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
+        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
     }
 
     private void givenPathsAreConfigured() {
@@ -218,7 +218,7 @@ class S3BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
     private void givenASourceReference() {
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
-        when(sourceReference.getTable()).thenReturn(S3BatchProcessorIT.inputTableName);
+        when(sourceReference.getTable()).thenReturn(BatchProcessorIT.inputTableName);
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }

@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 

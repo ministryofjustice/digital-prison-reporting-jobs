@@ -16,10 +16,10 @@ import picocli.CommandLine;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.domain.model.SourceReference;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
-import uk.gov.justice.digital.job.batchprocessing.S3BatchProcessor;
+import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -44,7 +44,7 @@ public class DataHubBatchJob implements Runnable {
     private final JobProperties properties;
     private final SparkSessionProvider sparkSessionProvider;
     private final TableDiscoveryService tableDiscoveryService;
-    private final S3BatchProcessor batchProcessor;
+    private final BatchProcessor batchProcessor;
     private final S3DataProvider dataProvider;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
@@ -55,7 +55,7 @@ public class DataHubBatchJob implements Runnable {
             JobProperties properties,
             SparkSessionProvider sparkSessionProvider,
             TableDiscoveryService tableDiscoveryService,
-            S3BatchProcessor batchProcessor,
+            BatchProcessor batchProcessor,
             S3DataProvider dataProvider,
             SourceReferenceService sourceReferenceService,
             ViolationService violationService) {
@@ -143,7 +143,7 @@ public class DataHubBatchJob implements Runnable {
                 logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
             } else {
                 logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
-                violationService.handleNoSchemaFoundS3(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
+                violationService.handleNoSchemaFound(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
             }
         } catch (DataProviderFailedMergingSchemasException e) {
             String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
