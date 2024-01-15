@@ -120,4 +120,6 @@ public class MinimalTestData {
         }
         return RowFactory.create(pk, timestamp, operationName, data);
      }
+
+     private MinimalTestData() {}
 }

@@ -22,7 +22,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldCompactDeltaTableWhenRecursingDepth1() throws Exception {
+    public void shouldCompactDeltaTableWhenRecursingWithDepth1() throws Exception {
         int depthLimit = 1;
         assertMultipleParquetFilesPrecondition(offendersTablePath);
         assertMultipleParquetFilesPrecondition(offenderBookingsTablePath);
@@ -54,7 +54,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldCompactDeltaTablesWhenRecursingDepth2() throws Exception {
+    public void shouldCompactDeltaTablesWhenRecursingWithDepth2() throws Exception {
         int depthLimit = 2;
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
@@ -66,7 +66,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldCompactDeltaTablesWhenRecursingDepth3() throws Exception {
+    public void shouldCompactDeltaTablesWhenRecursingWithDepth3() throws Exception {
         int depthLimit = 3;
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
