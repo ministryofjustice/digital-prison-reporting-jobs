@@ -18,4 +18,6 @@ public class ResourceLoader {
 			.next();
 	}
 
+	private ResourceLoader() {}
+
 }
