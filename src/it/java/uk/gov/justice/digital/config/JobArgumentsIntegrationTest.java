@@ -128,14 +128,13 @@ class JobArgumentsIntegrationTest {
         assertThrows(NumberFormatException.class, jobArguments::getBatchMaxRetries);
     }
 
-    @Test
-    public void shouldSetAllowedLogLevels() {
-        for(String level: Arrays.asList("debug", "info", "warn", "error", "DEBUG", "INFO", "WARN", "ERROR")) {
-            HashMap<String, String> args = cloneTestArguments();
-            args.put(JobArguments.LOG_LEVEL, level);
-            JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-            assertEquals(level.toUpperCase(), jobArguments.getLogLevel().toString().toUpperCase());
-        }
+    @ParameterizedTest
+    @ValueSource(strings = { "debug", "info", "warn", "error", "DEBUG", "INFO", "WARN", "ERROR" })
+    public void shouldSetAllowedLogLevels(String level) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.LOG_LEVEL, level);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(level.toUpperCase(), jobArguments.getLogLevel().toString().toUpperCase());
     }
 
     @Test
