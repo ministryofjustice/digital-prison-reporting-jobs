@@ -10,7 +10,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.AbstractMap;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +28,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.CONFIG_KEY, "test-config" },
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
+            { JobArguments.TARGET_S3_PATH, "s3://somepath/target" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
             { JobArguments.DOMAIN_NAME, "test_domain_name" },
             { JobArguments.DOMAIN_OPERATION, "insert" },
@@ -67,6 +67,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },
+                { JobArguments.TARGET_S3_PATH, validArguments.getTargetS3Path() },
                 { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, validArguments.getDomainCatalogDatabaseName() },
                 { JobArguments.DOMAIN_NAME, validArguments.getDomainName() },
                 { JobArguments.DOMAIN_OPERATION, validArguments.getDomainOperation() },

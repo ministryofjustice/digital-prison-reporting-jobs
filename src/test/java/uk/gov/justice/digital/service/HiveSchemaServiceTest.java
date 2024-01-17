@@ -55,6 +55,7 @@ public class HiveSchemaServiceTest {
     private static final String RAW_ARCHIVE_BUCKET = "s3://raw-archive";
     private static final String STRUCTURED_ZONE_BUCKET = "s3://structured-zone";
     private static final String CURATED_ZONE_BUCKET = "s3://curated-zone";
+    private static final String TEMP_RELOAD_BUCKET = "s3://temp-reload";
     private static final String RAW_ARCHIVE_DATABASE = "raw_archive";
     private static final String STRUCTURED_DATABASE = "structured";
     private static final String CURATED_DATABASE = "curated";
@@ -69,7 +70,7 @@ public class HiveSchemaServiceTest {
     }
 
     @Test
-    public void shouldFailWhenThereAreNoSchemas() {
+    public void replaceTablesShouldFailWhenThereAreNoSchemas() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
@@ -78,7 +79,7 @@ public class HiveSchemaServiceTest {
     }
 
     @Test
-    public void shouldFailWhenSourceReferenceServiceThrowsAndException() {
+    public void replaceTablesShouldFailWhenSourceReferenceServiceThrowsAndException() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
@@ -87,7 +88,7 @@ public class HiveSchemaServiceTest {
     }
 
     @Test
-    public void shouldReplaceHiveTablesForSchemas() {
+    public void replaceTablesShouldReplaceHiveTablesForSchemas() {
         Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
                 .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
                 .collect(Collectors.toSet());
@@ -170,6 +171,84 @@ public class HiveSchemaServiceTest {
 
         // verify structured, curated and prisons tables are created with symlink format
         verify(mockGlueHiveTableClient, times(6))
+                .createTableWithSymlink(
+                        createSymlinkDatabaseArgCaptor.capture(),
+                        createSymlinkTableArgCaptor.capture(),
+                        createSymlinkPathArgCaptor.capture(),
+                        eq(JSON_DATA_SCHEMA)
+                );
+
+        assertOnCreateTableArgs(
+                expectedCreateSymlinkDatabaseArgs,
+                expectedCreateSymlinkTableArgs,
+                expectedCreateSymlinkPathArgs,
+                createSymlinkDatabaseArgCaptor,
+                createSymlinkTableArgCaptor,
+                createSymlinkPathArgCaptor
+        );
+    }
+
+    @Test
+    public void switchPrisonsTableDataSourceShouldFailWhenThereAreNoSchemas() {
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
+
+        when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
+
+        assertThrows(HiveSchemaServiceException.class, () -> underTest.switchPrisonsTableDataSource(schemaGroup));
+    }
+
+    @Test
+    public void switchPrisonsTableDataSourceShouldFailWhenSourceReferenceServiceThrowsAndException() {
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
+
+        when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
+
+        assertThrows(RuntimeException.class, () -> underTest.switchPrisonsTableDataSource(schemaGroup));
+    }
+
+    @Test
+    public void switchPrisonsTableDataSourceShouldLinkPrisonsTableToSpecifiedSource() {
+        Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
+                .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
+                .collect(Collectors.toSet());
+
+        ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.copyOf(schemaGroupSet);
+
+        List<SourceReference> sourceReferences = new ArrayList<>();
+        sourceReferences.add(createSourceRef(0));
+        sourceReferences.add(createSourceRef(1));
+
+        List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
+        expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
+        expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
+
+        List<String> expectedDeleteTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 1));
+
+        List<String> expectedCreateSymlinkDatabaseArgs = new ArrayList<>();
+        expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
+        expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
+
+        List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 1));
+
+        List<String> expectedCreateSymlinkPathArgs = new ArrayList<>();
+        expectedCreateSymlinkPathArgs.add(createPath(TEMP_RELOAD_BUCKET, 0));
+        expectedCreateSymlinkPathArgs.add(createPath(TEMP_RELOAD_BUCKET, 1));
+
+        when(mockJobArguments.getTargetS3Path()).thenReturn(TEMP_RELOAD_BUCKET);
+        when(mockJobArguments.getPrisonsDatabase()).thenReturn(PRISONS_DATABASE);
+        when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(sourceReferences);
+
+        assertThat((Collection<ImmutablePair<String, String>>) underTest.switchPrisonsTableDataSource(schemaGroup), is(empty()));
+
+        // verify configured Hive tables get deleted
+        verify(mockGlueHiveTableClient, times(2))
+                .deleteTable(deleteDatabaseArgCaptor.capture(), deleteTableArgCaptor.capture());
+
+        assertThat(deleteDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteDatabaseArgs));
+        assertThat(deleteTableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteTableArgs));
+
+        // verify prisons tables are created with symlink format
+        verify(mockGlueHiveTableClient, times(2))
                 .createTableWithSymlink(
                         createSymlinkDatabaseArgCaptor.capture(),
                         createSymlinkTableArgCaptor.capture(),
