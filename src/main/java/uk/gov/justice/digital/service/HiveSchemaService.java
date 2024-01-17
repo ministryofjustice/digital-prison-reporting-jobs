@@ -3,6 +3,7 @@ package uk.gov.justice.digital.service;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.types.StructType;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.GlueHiveTableClient;
@@ -46,13 +47,7 @@ public class HiveSchemaService {
     public Set<ImmutablePair<String, String>> replaceTables(ImmutableSet<ImmutablePair<String, String>> tables) {
 
         Set<ImmutablePair<String, String>> failedTables = new HashSet<>();
-
-        logger.info("Retrieving all schemas in registry");
-        List<SourceReference> sourceReferences = sourceReferenceService.getAllSourceReferences(tables);
-
-        if (sourceReferences.isEmpty()) {
-            throw new HiveSchemaServiceException("No schemas retrieved from registry");
-        }
+        List<SourceReference> sourceReferences = getSourceReferences(tables);
 
         for (SourceReference sourceReference : sourceReferences) {
             String sourceName = sourceReference.getSource();
@@ -77,13 +72,53 @@ public class HiveSchemaService {
 
                 replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, curatedPath, schema);
             } catch (Exception e) {
-                logger.error("Failed to replace Hive table {}", hiveTableName);
+                logger.error("Failed to replace Hive table {}", hiveTableName, e);
                 failedTables.add(ImmutablePair.of(sourceName, tableName));
             }
 
         }
 
         return failedTables;
+    }
+
+    public Set<ImmutablePair<String, String>> switchPrisonsTableDataSource(ImmutableSet<ImmutablePair<String, String>> tables) {
+
+        Set<ImmutablePair<String, String>> failedTables = new HashSet<>();
+        List<SourceReference> sourceReferences = getSourceReferences(tables);
+
+        for (SourceReference sourceReference : sourceReferences) {
+            String sourceName = sourceReference.getSource();
+            String tableName = sourceReference.getTable();
+
+            String hiveTableName = sourceName + "_" + tableName;
+            String targetS3Path = jobArguments.getTargetS3Path();
+
+            logger.info("Processing {}", hiveTableName);
+            try {
+                validateTableName(hiveTableName);
+                StructType schema = sourceReference.getSchema();
+
+                String dataPath = createValidatedPath(targetS3Path, sourceName, tableName);
+
+                replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, dataPath, schema);
+            } catch (Exception e) {
+                logger.error("Failed to point Hive table {} to {}", hiveTableName, targetS3Path, e);
+                failedTables.add(ImmutablePair.of(sourceName, tableName));
+            }
+        }
+
+        return failedTables;
+    }
+
+    @NotNull
+    private List<SourceReference> getSourceReferences(ImmutableSet<ImmutablePair<String, String>> tables) {
+        logger.info("Retrieving all schemas in registry");
+        List<SourceReference> sourceReferences = sourceReferenceService.getAllSourceReferences(tables);
+
+        if (sourceReferences.isEmpty()) {
+            throw new HiveSchemaServiceException("No schemas retrieved from registry");
+        }
+        return sourceReferences;
     }
 
     private void replaceParquetInputTables(String databaseName, String tableName, String dataPath, StructType schema) {

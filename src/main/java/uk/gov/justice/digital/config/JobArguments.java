@@ -34,6 +34,7 @@ public class JobArguments {
     public static final String SCHEMA_CACHE_MAX_SIZE = "dpr.schema.cache.max.size";
     public static final String SCHEMA_CACHE_EXPIRY_IN_MINUTES = "dpr.schema.cache.expiry.days";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
+    public static final String TARGET_S3_PATH = "dpr.target.s3.path";
     public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
     public static final String DOMAIN_NAME = "dpr.domain.name";
     public static final String DOMAIN_OPERATION = "dpr.domain.operation";
@@ -201,6 +202,10 @@ public class JobArguments {
 
     public String getCuratedS3Path() {
         return getArgument(CURATED_S3_PATH);
+    }
+
+    public String getTargetS3Path() {
+        return getArgument(TARGET_S3_PATH);
     }
 
     public String getDomainTargetPath() {
