@@ -4,6 +4,11 @@ import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+
 public class Fixtures {
     public static final String TABLE_NAME = "agency_internal_locations";
     public static final String PRIMARY_KEY_FIELD = "primary-key";
@@ -18,6 +23,12 @@ public class Fixtures {
             .add(NULL_FIELD_KEY, DataTypes.StringType, true)
             .add(NUMBER_FIELD_KEY, DataTypes.FloatType, false)
             .add(ARRAY_FIELD_KEY, new ArrayType(DataTypes.IntegerType, false), false);
+
+    public static final ZoneId utcZoneId = ZoneId.of("UTC");
+
+    public static final LocalDateTime fixedDateTime = LocalDateTime.now();
+
+    public static Clock fixedClock = Clock.fixed(fixedDateTime.toInstant(ZoneOffset.UTC), utcZoneId);
 
 
     // Private constructor to prevent instantiation.
