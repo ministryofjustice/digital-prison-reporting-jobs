@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.config;
 
+import com.google.common.collect.ImmutableSet;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.CommandLinePropertySource;
 import io.micronaut.context.env.Environment;
@@ -16,6 +17,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -54,6 +57,9 @@ class JobArgumentsIntegrationTest {
             { JobArguments.BATCH_MAX_RETRIES, "5" },
             { JobArguments.LOG_LEVEL, "debug" },
             { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, "1" },
+            { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, "dpr-source-bucket" },
+            { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
+            { JobArguments.FILE_TRANSFER_RETENTION_DAYS, "2" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -92,6 +98,9 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.BATCH_MAX_RETRIES, Integer.toString(validArguments.getBatchMaxRetries()) },
                 { JobArguments.LOG_LEVEL, validArguments.getLogLevel().toString().toLowerCase() },
                 { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, Integer.toString(validArguments.getMaintenanceListTableRecurseMaxDepth()) },
+                { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, validArguments.getTransferSourceBucket() },
+                { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
+                { JobArguments.FILE_TRANSFER_RETENTION_DAYS, validArguments.getFileTransferRetentionDays() }
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -211,6 +220,43 @@ class JobArgumentsIntegrationTest {
         HashMap<String, String> args = cloneTestArguments();
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(JobArguments.BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT, jobArguments.getBatchLoadFileGlobPattern());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "1, 1", "0, 0", "12345, 12345", "0123, 123" })
+    public void shouldGetFileTransferRetentionDays(String input, long expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.FILE_TRANSFER_RETENTION_DAYS, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.getFileTransferRetentionDays());
+    }
+
+    @Test
+    public void shouldDefaultFileTransferRetentionDaysToZero() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.FILE_TRANSFER_RETENTION_DAYS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(0L, jobArguments.getFileTransferRetentionDays());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "dpr-delete-bucket-1,dpr-delete-bucket-2",
+            "dpr-delete-bucket-1, dpr-delete-bucket-2",
+            "DPR-DELETE-BUCKET-1,dpr-delete-bucket-2",
+            "dpr-delete-bucket-1,dpr-delete-bucket-2,",
+            "dpr-delete-bucket-1,,dpr-delete-bucket-2,",
+            "dpr-delete-bucket-1, ,dpr-delete-bucket-2,",
+            ",dpr-delete-bucket-1, ,dpr-delete-bucket-2,"
+    })
+    public void shouldGetSetOfBucketsToDeleteFilesFrom(String input) {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.FILE_DELETION_BUCKETS, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThat(
+                jobArguments.getBucketsToDeleteFilesFrom(),
+                containsInAnyOrder(ImmutableSet.of("dpr-delete-bucket-1", "dpr-delete-bucket-2").toArray())
+        );
     }
 
     @Test

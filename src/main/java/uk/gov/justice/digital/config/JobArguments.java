@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.config;
 
+import com.google.common.collect.ImmutableSet;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.CommandLinePropertySource;
 import io.micronaut.context.env.MapPropertySource;
@@ -10,10 +11,8 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -92,6 +91,12 @@ public class JobArguments {
 
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN = "dpr.batch.load.fileglobpattern";
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT = "LOAD*parquet";
+    public static final String FILE_TRANSFER_SOURCE_BUCKET_NAME = "dpr.file.transfer.source.bucket";
+    public static final String FILE_TRANSFER_DESTINATION_BUCKET_NAME = "dpr.file.transfer.destination.bucket";
+    public static final String FILE_TRANSFER_RETENTION_DAYS = "dpr.file.transfer.retention.days";
+    static final Long DEFAULT_FILE_TRANSFER_RETENTION_DAYS = 0L;
+    // A comma separated list of buckets to delete files from
+    static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
 
     private final Map<String, String> config;
 
@@ -290,6 +295,26 @@ public class JobArguments {
 
     public String getBatchLoadFileGlobPattern() {
         return getArgument(BATCH_LOAD_FILE_GLOB_PATTERN, BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT);
+    }
+
+    public String getTransferSourceBucket() {
+        return getArgument(FILE_TRANSFER_SOURCE_BUCKET_NAME);
+    }
+
+    public String getTransferDestinationBucket() {
+        return getArgument(FILE_TRANSFER_DESTINATION_BUCKET_NAME);
+    }
+
+    public Long getFileTransferRetentionDays() {
+        return getArgument(FILE_TRANSFER_RETENTION_DAYS, DEFAULT_FILE_TRANSFER_RETENTION_DAYS);
+    }
+
+    public ImmutableSet<String> getBucketsToDeleteFilesFrom() {
+        Set<String> buckets = Arrays.stream(getArgument(FILE_DELETION_BUCKETS).toLowerCase().split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .collect(Collectors.toSet());
+        return ImmutableSet.copyOf(buckets);
     }
 
     private String getArgument(String argumentName) {
