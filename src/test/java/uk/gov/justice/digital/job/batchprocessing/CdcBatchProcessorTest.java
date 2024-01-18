@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.service.VelocityReportingService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
@@ -51,6 +52,8 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     private SourceReference mockSourceReference;
     @Mock
     private S3DataProvider mockDataProvider;
+    @Mock
+    private VelocityReportingService mockVelocityReportingService;
     @Captor
     private ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor;
     @Captor
@@ -65,7 +68,13 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new CdcBatchProcessor(mockValidationService, mockStructuredZone, mockCuratedZone, mockDataProvider);
+        underTest = new CdcBatchProcessor(
+                mockValidationService,
+                mockStructuredZone,
+                mockCuratedZone,
+                mockDataProvider,
+                mockVelocityReportingService
+        );
     }
 
     @Test

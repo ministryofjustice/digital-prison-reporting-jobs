@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.service.VelocityReportingService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
@@ -35,17 +36,20 @@ public class CdcBatchProcessor {
     private final StructuredZoneCDC structuredZone;
     private final CuratedZoneCDC curatedZone;
     private final S3DataProvider dataProvider;
+    private final VelocityReportingService velocityReportingService;
 
     @Inject
     public CdcBatchProcessor(
             ValidationService validationService,
             StructuredZoneCDC structuredZone,
             CuratedZoneCDC curatedZone,
-            S3DataProvider dataProvider) {
+            S3DataProvider dataProvider,
+            VelocityReportingService velocityReportingService) {
         this.validationService = validationService;
         this.structuredZone = structuredZone;
         this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
+        this.velocityReportingService = velocityReportingService;
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
@@ -60,7 +64,8 @@ public class CdcBatchProcessor {
 
             structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
             curatedZone.process(spark, latestCDCRecordsByPK, sourceReference);
-            logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
+            long batchEndTime = System.currentTimeMillis() - batchStartTime;
+            logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, batchEndTime);
         } else {
             logger.info("Skipping empty batch");
         }

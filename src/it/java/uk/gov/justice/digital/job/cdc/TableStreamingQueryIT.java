@@ -16,12 +16,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import scala.Option;
 import scala.collection.Seq;
+import uk.gov.justice.digital.client.dynamo.DynamoDbVelocityReportingClient;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.VelocityReportingService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
@@ -70,6 +72,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private SourceReference sourceReference;
     @Mock
     private TableDiscoveryService tableDiscoveryService;
+    @Mock
+    private DynamoDbVelocityReportingClient velocityReportingClient;
     private TableStreamingQuery underTest;
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
@@ -391,11 +395,13 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 dataProvider,
                 tableDiscoveryService
         );
+        VelocityReportingService velocityReportingService = new VelocityReportingService(velocityReportingClient);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 new ValidationService(violationService),
                 new StructuredZoneCDC(arguments, violationService, storageService),
                 new CuratedZoneCDC(arguments, violationService, storageService),
-                dataProvider
+                dataProvider,
+                velocityReportingService
         );
         TableStreamingQueryProvider streamingQueryProvider = new TableStreamingQueryProvider(
                 arguments,

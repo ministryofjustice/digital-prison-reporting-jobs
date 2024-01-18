@@ -54,6 +54,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.BATCH_MAX_RETRIES, "5" },
             { JobArguments.LOG_LEVEL, "debug" },
             { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, "1" },
+            { JobArguments.DATA_VELOCITY_REPORTING_DYNAMODB_TABLE_NAME, "some-table" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -91,6 +92,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.BATCH_MAX_RETRIES, Integer.toString(validArguments.getBatchMaxRetries()) },
                 { JobArguments.LOG_LEVEL, validArguments.getLogLevel().toString().toLowerCase() },
                 { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, Integer.toString(validArguments.getMaintenanceListTableRecurseMaxDepth()) },
+                { JobArguments.DATA_VELOCITY_REPORTING_DYNAMODB_TABLE_NAME, validArguments.getDataVelocityTableName() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.dynamo.DynamoDbVelocityReportingClient;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
@@ -53,6 +54,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     private SourceReferenceService sourceReferenceService;
     @Mock
     private ConfigService configService;
+    @Mock
+    private DynamoDbVelocityReportingClient velocityReportingClient;
     private DataHubCdcJob underTest;
     private List<TableStreamingQuery> streamingQueries;
 
@@ -153,7 +156,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         ValidationService validationService = new ValidationService(violationService);
         CuratedZoneCDC curatedZone = new CuratedZoneCDC(arguments, violationService, storageService);
         StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
-        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone, dataProvider);
+        VelocityReportingService velocityReportingService = new VelocityReportingService(velocityReportingClient);
+        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone, dataProvider, velocityReportingService);
         TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(
                 arguments, dataProvider, batchProcessor, sourceReferenceService, violationService
         );

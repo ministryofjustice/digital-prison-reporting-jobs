@@ -92,6 +92,8 @@ public class JobArguments {
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN = "dpr.batch.load.fileglobpattern";
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT = "LOAD*parquet";
 
+    public static final String DATA_VELOCITY_REPORTING_DYNAMODB_TABLE_NAME = "dpr.reporting.velocity.dynamodb.tablename";
+
     private final Map<String, String> config;
 
     @Inject
@@ -285,6 +287,10 @@ public class JobArguments {
 
     public String getBatchLoadFileGlobPattern() {
         return getArgument(BATCH_LOAD_FILE_GLOB_PATTERN, BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT);
+    }
+
+    public String getDataVelocityTableName() {
+        return getArgument(DATA_VELOCITY_REPORTING_DYNAMODB_TABLE_NAME);
     }
 
     private String getArgument(String argumentName) {
