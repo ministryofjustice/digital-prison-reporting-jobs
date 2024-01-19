@@ -11,7 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.glue.GlueHiveTableClient;
+import uk.gov.justice.digital.client.glue.GlueClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -39,7 +39,7 @@ public class HiveSchemaServiceTest {
     @Mock
     private SourceReferenceService mockSourceReferenceService;
     @Mock
-    private GlueHiveTableClient mockGlueHiveTableClient;
+    private GlueClient mockGlueClient;
 
     @Captor
     ArgumentCaptor<String> deleteDatabaseArgCaptor, createArchiveDatabaseArgCaptor, createSymlinkDatabaseArgCaptor;
@@ -66,7 +66,7 @@ public class HiveSchemaServiceTest {
 
     @BeforeEach
     public void setup() {
-        underTest = new HiveSchemaService(mockJobArguments, mockSourceReferenceService, mockGlueHiveTableClient);
+        underTest = new HiveSchemaService(mockJobArguments, mockSourceReferenceService, mockGlueClient);
     }
 
     @Test
@@ -145,14 +145,14 @@ public class HiveSchemaServiceTest {
         assertThat((Collection<ImmutablePair<String, String>>) underTest.replaceTables(schemaGroup), is(empty()));
 
         // verify all Hive tables get deleted
-        verify(mockGlueHiveTableClient, times(8))
+        verify(mockGlueClient, times(8))
                 .deleteTable(deleteDatabaseArgCaptor.capture(), deleteTableArgCaptor.capture());
 
         assertThat(deleteDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteDatabaseArgs));
         assertThat(deleteTableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteTableArgs));
 
         // verify raw_archive tables are created as parquet format
-        verify(mockGlueHiveTableClient, times(2))
+        verify(mockGlueClient, times(2))
                 .createParquetTable(
                         createArchiveDatabaseArgCaptor.capture(),
                         createArchiveTableArgCaptor.capture(),
@@ -170,7 +170,7 @@ public class HiveSchemaServiceTest {
         );
 
         // verify structured, curated and prisons tables are created with symlink format
-        verify(mockGlueHiveTableClient, times(6))
+        verify(mockGlueClient, times(6))
                 .createTableWithSymlink(
                         createSymlinkDatabaseArgCaptor.capture(),
                         createSymlinkTableArgCaptor.capture(),
@@ -241,14 +241,14 @@ public class HiveSchemaServiceTest {
         assertThat((Collection<ImmutablePair<String, String>>) underTest.switchPrisonsTableDataSource(schemaGroup), is(empty()));
 
         // verify configured Hive tables get deleted
-        verify(mockGlueHiveTableClient, times(2))
+        verify(mockGlueClient, times(2))
                 .deleteTable(deleteDatabaseArgCaptor.capture(), deleteTableArgCaptor.capture());
 
         assertThat(deleteDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteDatabaseArgs));
         assertThat(deleteTableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteTableArgs));
 
         // verify prisons tables are created with symlink format
-        verify(mockGlueHiveTableClient, times(2))
+        verify(mockGlueClient, times(2))
                 .createTableWithSymlink(
                         createSymlinkDatabaseArgCaptor.capture(),
                         createSymlinkTableArgCaptor.capture(),

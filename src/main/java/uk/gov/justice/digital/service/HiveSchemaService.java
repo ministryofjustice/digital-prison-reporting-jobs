@@ -6,7 +6,7 @@ import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.glue.GlueHiveTableClient;
+import uk.gov.justice.digital.client.glue.GlueClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -31,17 +31,17 @@ public class HiveSchemaService {
 
     private final JobArguments jobArguments;
     private final SourceReferenceService sourceReferenceService;
-    private final GlueHiveTableClient glueHiveTableClient;
+    private final GlueClient glueClient;
 
     @Inject
     public HiveSchemaService(
             JobArguments jobArguments,
             SourceReferenceService sourceReferenceService,
-            GlueHiveTableClient glueHiveTableClient
+            GlueClient glueClient
     ) {
         this.jobArguments = jobArguments;
         this.sourceReferenceService = sourceReferenceService;
-        this.glueHiveTableClient = glueHiveTableClient;
+        this.glueClient = glueClient;
     }
 
     public Set<ImmutablePair<String, String>> replaceTables(ImmutableSet<ImmutablePair<String, String>> tables) {
@@ -122,13 +122,13 @@ public class HiveSchemaService {
     }
 
     private void replaceParquetInputTables(String databaseName, String tableName, String dataPath, StructType schema) {
-        glueHiveTableClient.deleteTable(databaseName, tableName);
-        glueHiveTableClient.createParquetTable(databaseName, tableName, dataPath, schema);
+        glueClient.deleteTable(databaseName, tableName);
+        glueClient.createParquetTable(databaseName, tableName, dataPath, schema);
     }
 
     private void replaceSymlinkInputTables(String databaseName, String tableName, String curatedPath, StructType schema) {
-        glueHiveTableClient.deleteTable(databaseName, tableName);
-        glueHiveTableClient.createTableWithSymlink(databaseName, tableName, curatedPath, schema);
+        glueClient.deleteTable(databaseName, tableName);
+        glueClient.createTableWithSymlink(databaseName, tableName, curatedPath, schema);
     }
 
     private void validateTableName(String tableName) throws HiveSchemaServiceException {

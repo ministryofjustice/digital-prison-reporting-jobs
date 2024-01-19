@@ -9,18 +9,24 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.exception.GlueClientException;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static uk.gov.justice.digital.client.glue.GlueHiveTableClient.*;
+import static uk.gov.justice.digital.client.glue.GlueClient.*;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 
 @ExtendWith(MockitoExtension.class)
-class GlueHiveTableClientTest {
+class GlueClientTest {
 
     @Mock
     private GlueClientProvider mockClientProvider;
@@ -28,22 +34,47 @@ class GlueHiveTableClientTest {
     @Mock
     private AWSGlue mockGlueClient;
 
+    @Mock
+    private BatchStopJobRunResult mockBatchStopJobRunResult;
+
+    @Mock
+    private GetJobRunsResult mockGetJobRunsResult;
+
+    @Mock
+    private GetJobRunResult mockGetJobRunResult;
+
     @Captor
     ArgumentCaptor<CreateTableRequest> createTableRequestCaptor;
 
     @Captor
     ArgumentCaptor<DeleteTableRequest> deleteTableRequestCaptor;
 
+    @Captor
+    ArgumentCaptor<BatchStopJobRunRequest> stopJobRunRequestCaptor;
+
+    @Captor
+    ArgumentCaptor<GetJobRunsRequest> getJobRunsRequestCaptor;
+
+    @Captor
+    ArgumentCaptor<GetJobRunRequest> getJobRunRequestCaptor;
+
     private static final String TEST_DATABASE = "test-database";
     private static final String TEST_TABLE = "test-table";
+    private static final String TEST_JOB_NAME = "test-job-name";
     private static final String TEST_PATH = "/some/data/path";
 
-    private GlueHiveTableClient underTest;
+    private static final int WAIT_INTERVAL_SECONDS = 1;
+
+    private static final int MAX_ATTEMPTS = 1;
+
+    private GlueClient underTest;
 
     @BeforeEach
     public void setup() {
+        reset(mockClientProvider, mockGlueClient, mockBatchStopJobRunResult, mockGetJobRunsResult, mockGetJobRunResult);
+
         when(mockClientProvider.getClient()).thenReturn(mockGlueClient);
-        underTest = new GlueHiveTableClient(mockClientProvider);
+        underTest = new GlueClient(mockClientProvider);
     }
 
     @Test
@@ -111,5 +142,66 @@ class GlueHiveTableClientTest {
         when(mockGlueClient.deleteTable(any())).thenThrow(new AWSGlueException("failed to delete table"));
 
         assertThrows(AWSGlueException.class, () -> underTest.deleteTable(TEST_DATABASE, TEST_TABLE));
+    }
+
+    @Test
+    public void stopJobShouldStopRunningJobInstanceWhenThereIsOne() {
+        List<JobRun> jobRuns = new ArrayList<>();
+        jobRuns.add(createJobRun("STOPPED"));
+        jobRuns.add(createJobRun("STOPPING"));
+        jobRuns.add(createJobRun("STARTING"));
+        jobRuns.add(createJobRun("SUCCEEDED"));
+        jobRuns.add(createJobRun("FAILED"));
+        jobRuns.add(createJobRun("RUNNING").withId("running-job-id"));
+        jobRuns.add(createJobRun("TIMEOUT"));
+        jobRuns.add(createJobRun("ERROR"));
+        jobRuns.add(createJobRun("WAITING"));
+
+        when(mockGetJobRunsResult.getJobRuns()).thenReturn(jobRuns);
+        when(mockGlueClient.getJobRuns(getJobRunsRequestCaptor.capture())).thenReturn(mockGetJobRunsResult);
+        when(mockGlueClient.batchStopJobRun(stopJobRunRequestCaptor.capture())).thenReturn(mockBatchStopJobRunResult);
+        when(mockGetJobRunResult.getJobRun()).thenReturn(createJobRun("STOPPED"));
+        when(mockGlueClient.getJobRun(getJobRunRequestCaptor.capture())).thenReturn(mockGetJobRunResult);
+
+        underTest.stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
+
+        GetJobRunsRequest getJobRunsRequestCaptorValue = getJobRunsRequestCaptor.getValue();
+        assertThat(getJobRunsRequestCaptorValue.getJobName(), is(equalTo(TEST_JOB_NAME)));
+        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(1000)));
+        assertThat(stopJobRunRequestCaptor.getValue().getJobName(), is(equalTo(TEST_JOB_NAME)));
+        assertThat(getJobRunRequestCaptor.getValue().getJobName(), is(equalTo(TEST_JOB_NAME)));
+    }
+
+    @Test
+    public void stopJobShouldNotFailWhenThereIsNoRunningJobInstance() {
+        List<JobRun> jobRuns = Collections.emptyList();
+
+        when(mockGetJobRunsResult.getJobRuns()).thenReturn(jobRuns);
+        when(mockGlueClient.getJobRuns(getJobRunsRequestCaptor.capture())).thenReturn(mockGetJobRunsResult);
+
+        underTest.stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
+
+        GetJobRunsRequest getJobRunsRequestCaptorValue = getJobRunsRequestCaptor.getValue();
+        assertThat(getJobRunsRequestCaptorValue.getJobName(), is(equalTo(TEST_JOB_NAME)));
+        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(1000)));
+        verifyNoInteractions(mockGetJobRunResult);
+    }
+
+    @Test
+    public void stopJobShouldFailWhenUnableToStopRunningInstance() {
+        List<JobRun> jobRuns = new ArrayList<>();
+        jobRuns.add(createJobRun("RUNNING").withId("running-job-id"));
+
+        when(mockGetJobRunsResult.getJobRuns()).thenReturn(jobRuns);
+        when(mockGlueClient.getJobRuns(any())).thenReturn(mockGetJobRunsResult);
+        when(mockGlueClient.batchStopJobRun(any())).thenReturn(mockBatchStopJobRunResult);
+        when(mockGetJobRunResult.getJobRun()).thenReturn(createJobRun("STOPPING"));
+        when(mockGlueClient.getJobRun(any())).thenReturn(mockGetJobRunResult);
+
+        assertThrows(GlueClientException.class, () -> underTest.stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS));
+    }
+
+    private static JobRun createJobRun(String RUNNING) {
+        return new JobRun().withJobName(TEST_JOB_NAME).withJobRunState(RUNNING);
     }
 }

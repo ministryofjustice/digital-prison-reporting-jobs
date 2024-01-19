@@ -97,6 +97,11 @@ public class JobArguments {
     static final Long DEFAULT_FILE_TRANSFER_RETENTION_DAYS = 0L;
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
+    static final String GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS = "dpr.glue.orchestration.wait.interval.seconds";
+    static final int DEFAULT_GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS = 10;
+    static final String GLUE_ORCHESTRATION_MAX_ATTEMPTS = "dpr.glue.orchestration.max.attempts";
+    static final int DEFAULT_GLUE_ORCHESTRATION_MAX_ATTEMPTS = 20;
+    static final String STOP_GLUE_INSTANCE_JOB_NAME = "dpr.stop.glue.instance.job.name";
 
     private final Map<String, String> config;
 
@@ -315,6 +320,18 @@ public class JobArguments {
                 .filter(item -> !item.isEmpty())
                 .collect(Collectors.toSet());
         return ImmutableSet.copyOf(buckets);
+    }
+
+    public String getStopGlueInstanceJobName() {
+        return getArgument(STOP_GLUE_INSTANCE_JOB_NAME);
+    }
+
+    public int glueOrchestrationWaitIntervalSeconds() {
+        return getArgument(GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, DEFAULT_GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS);
+    }
+
+    public int glueOrchestrationMaxAttempts() {
+        return getArgument(GLUE_ORCHESTRATION_MAX_ATTEMPTS, DEFAULT_GLUE_ORCHESTRATION_MAX_ATTEMPTS);
     }
 
     private String getArgument(String argumentName) {
