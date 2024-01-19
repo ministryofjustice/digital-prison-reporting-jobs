@@ -59,7 +59,9 @@ class JobArgumentsIntegrationTest {
             { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, "1" },
             { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, "dpr-source-bucket" },
             { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
-            { JobArguments.FILE_TRANSFER_RETENTION_DAYS, "2" }
+            { JobArguments.FILE_TRANSFER_RETENTION_DAYS, "2" },
+            { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
+            { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, "10" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -100,7 +102,9 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, Integer.toString(validArguments.getMaintenanceListTableRecurseMaxDepth()) },
                 { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, validArguments.getTransferSourceBucket() },
                 { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
-                { JobArguments.FILE_TRANSFER_RETENTION_DAYS, validArguments.getFileTransferRetentionDays() }
+                { JobArguments.FILE_TRANSFER_RETENTION_DAYS, validArguments.getFileTransferRetentionDays() },
+                { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.glueOrchestrationWaitIntervalSeconds() },
+                { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, validArguments.glueOrchestrationMaxAttempts() }
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -257,6 +261,22 @@ class JobArgumentsIntegrationTest {
                 jobArguments.getBucketsToDeleteFilesFrom(),
                 containsInAnyOrder(ImmutableSet.of("dpr-delete-bucket-1", "dpr-delete-bucket-2").toArray())
         );
+    }
+
+    @Test
+    public void shouldDefaultGlueOrchestrationWaitIntervalSecondsWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(10, jobArguments.glueOrchestrationWaitIntervalSeconds());
+    }
+
+    @Test
+    public void shouldDefaultGlueOrchestrationMaxAttemptsWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(20, jobArguments.glueOrchestrationMaxAttempts());
     }
 
     @Test
