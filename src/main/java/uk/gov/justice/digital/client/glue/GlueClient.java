@@ -26,11 +26,11 @@ public class GlueClient {
     public static final String MAPRED_PARQUET_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat";
     public static final String SYMLINK_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat";
 
-    private final AWSGlue glueClient;
+    private final AWSGlue awsGlue;
 
     @Inject
     public GlueClient(GlueClientProvider glueClientProvider) {
-        this.glueClient = glueClientProvider.getClient();
+        this.awsGlue = glueClientProvider.getClient();
     }
 
     public void createParquetTable(String database, String table, String dataPath, StructType schema) throws AWSGlueException {
@@ -51,7 +51,7 @@ public class GlueClient {
 
         try {
             logger.info("Deleting table {}.{}", database, table);
-            glueClient.deleteTable(deleteTableRequest);
+            awsGlue.deleteTable(deleteTableRequest);
             logger.info("Successfully deleted table {}.{}", database, table);
         } catch (EntityNotFoundException e) {
             logger.info("Did not delete non-existent table {}.{}", database, table);
@@ -66,13 +66,13 @@ public class GlueClient {
                 runId -> {
                     batchStopJobRunRequest.withJobRunIds(runId);
                     logger.info("Stopping job {} with runId {}", jobName, runId);
-                    glueClient.batchStopJobRun(batchStopJobRunRequest);
+                    awsGlue.batchStopJobRun(batchStopJobRunRequest);
 
                     try {
                         ensureState(jobName, runId, "STOPPED", waitIntervalSeconds, maxAttempts);
                     } catch (InterruptedException e) {
-                        logger.error("Error while ensuring job has stopped", e);
-                        throw new GlueClientException(e.getMessage());
+                        logger.error("Error while ensuring job {} has stopped", jobName, e);
+                        Thread.currentThread().interrupt();
                     }
                 }
         );
@@ -82,7 +82,7 @@ public class GlueClient {
         CreateTableRequest createTableRequest = getCreateTableRequest(database, table, storageDescriptor);
 
         logger.info("Creating table {}.{}", database, table);
-        glueClient.createTable(createTableRequest);
+        awsGlue.createTable(createTableRequest);
         logger.info("Successfully created table {}.{}", database, table);
     }
 
@@ -141,7 +141,7 @@ public class GlueClient {
     private Optional<String> getRunningJobId(String jobName) {
         logger.info("Retrieving the Id of the running instance of job {}", jobName);
         GetJobRunsRequest getJobRunsRequest = new GetJobRunsRequest().withJobName(jobName).withMaxResults(1000);
-        List<JobRun> jobRuns = glueClient.getJobRuns(getJobRunsRequest).getJobRuns();
+        List<JobRun> jobRuns = awsGlue.getJobRuns(getJobRunsRequest).getJobRuns();
         return jobRuns.stream()
                 .filter(jobRun -> jobRun.getJobRunState().equalsIgnoreCase("RUNNING"))
                 .map(JobRun::getId)
@@ -155,7 +155,7 @@ public class GlueClient {
         for (int attempts = 0; attempts < maxAttempts; attempts++) {
             logger.info("Ensuring job {} with runId {} is in {} state. Attempt {}", jobName, runId, state, attempts);
             getJobRunRequest = new GetJobRunRequest().withJobName(jobName).withRunId(runId);
-            jobRunState = glueClient.getJobRun(getJobRunRequest).getJobRun().getJobRunState();
+            jobRunState = awsGlue.getJobRun(getJobRunRequest).getJobRun().getJobRunState();
             TimeUnit.SECONDS.sleep(waitIntervalSeconds);
 
             if (jobRunState.equalsIgnoreCase(state)) return;
