@@ -42,6 +42,7 @@ ext {
     sparkVersion = '3.3.0'
     awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
     awsSdkVersion = '1.12.128' // Glue 4.0 uses awsSdkVersion = '1.12.128'
+    prometheusVersion = '0.9.0' // Glue 4.0 uses prometheusVersion = '0.9.0' for most prometheus dependencies (and '0.6.0' for others)
     glueApiVersion = '4.0.0'
     failSafeVersion = '3.3.2'
     systemLambdaVersion = '1.2.1'
@@ -72,6 +73,7 @@ dependencies {
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
     implementation "dev.failsafe:failsafe:$failSafeVersion"
+    implementation "io.prometheus:simpleclient_pushgateway:$prometheusVersion"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
