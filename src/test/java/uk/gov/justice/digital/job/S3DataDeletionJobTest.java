@@ -84,26 +84,10 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDeleteAllFilesWhenNoConfigurationIsGiven() {
-        List<String> objectsToDelete = new ArrayList<>();
-        objectsToDelete.add("schema_1/table_1/file_1.parquet");
-        objectsToDelete.add("schema_1/table_1/file_2.parquet");
-        objectsToDelete.add("schema_2/table_2/file_3.parquet");
+    public void shouldFailWhenNoConfigurationIsGiven() throws Exception {
+        when(mockJobArguments.getConfigKey()).thenThrow(new IllegalStateException("error"));
 
-        when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
-        when(mockJobArguments.getBucketsToDeleteFilesFrom()).thenReturn(bucketsToDeleteFrom);
-        when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.of());
-
-        when(mockS3FileService.listParquetFiles(listObjectsBucketCaptor.capture(), eq(0L)))
-                .thenReturn(objectsToDelete);
-
-        when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture()))
-                .thenReturn(Collections.emptySet());
-
-        assertDoesNotThrow(() -> underTest.run());
-
-        assertThat(listObjectsBucketCaptor.getAllValues(), containsInAnyOrder(bucketsToDeleteFrom.toArray()));
-        assertThat(deleteObjectsBucketCaptor.getAllValues(), containsInAnyOrder(bucketsToDeleteFrom.toArray()));
+        SystemLambda.catchSystemExit(() -> underTest.run());
     }
 
     @Test

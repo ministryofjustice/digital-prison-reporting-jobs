@@ -125,22 +125,22 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void moveObjectsShouldTransferGivenObjectsFromSourceToDestinationBuckets() {
+    public void copyObjectsShouldCopyGivenObjectsFromSourceToDestinationBucketsWhenDeleteCopiedFilesIsFalse() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
         objectKeys.add("file3.parquet");
         objectKeys.add("file4.parquet");
 
-        Set<String> failedObjects = undertest.moveObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET);
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, false);
 
-        verify(mockS3Client, times(objectKeys.size())).moveObject(any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
+        verify(mockS3Client, times(objectKeys.size())).copyObject(any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
 
         assertThat(failedObjects, is(empty()));
     }
 
     @Test
-    public void moveObjectsShouldReturnListOfFailedObjects() {
+    public void copyObjectsShouldReturnListOfFailedObjectsWhenDeleteCopiedFilesIsFalse() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -152,10 +152,69 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file2.parquet");
         expectedFailedObjects.add("file4.parquet");
 
-        doThrow(new AmazonServiceException("failure")).when(mockS3Client).moveObject(any(), any(), any());
-        doNothing().when(mockS3Client).moveObject(eq("file3.parquet"), any(), any());
+        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any());
+        doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any());
 
-        Set<String> failedObjects = undertest.moveObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET);
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, false);
+
+        assertEquals(failedObjects, expectedFailedObjects);
+    }
+
+    @Test
+    public void copyObjectsShouldCopyAndDeleteGivenObjectsFromSourceToDestinationBucketsWhenDeleteCopiedFilesIsTrue() {
+        List<String> objectKeys = new ArrayList<>();
+        objectKeys.add("file1.parquet");
+        objectKeys.add("file2.parquet");
+        objectKeys.add("file3.parquet");
+        objectKeys.add("file4.parquet");
+
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, true);
+
+        verify(mockS3Client, times(objectKeys.size())).copyObject(any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
+        verify(mockS3Client, times(objectKeys.size())).deleteObject(any(), eq(SOURCE_BUCKET));
+
+        assertThat(failedObjects, is(empty()));
+    }
+
+    @Test
+    public void copyObjectsShouldReturnListOfObjectsWhichFailedToBeCopiedWhenDeleteCopiedFilesIsTrue() {
+        List<String> objectKeys = new ArrayList<>();
+        objectKeys.add("file1.parquet");
+        objectKeys.add("file2.parquet");
+        objectKeys.add("file3.parquet");
+        objectKeys.add("file4.parquet");
+
+        Set<String> expectedFailedObjects = new HashSet<>();
+        expectedFailedObjects.add("file1.parquet");
+        expectedFailedObjects.add("file2.parquet");
+        expectedFailedObjects.add("file4.parquet");
+
+        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any());
+        doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any());
+
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, true);
+
+        assertEquals(failedObjects, expectedFailedObjects);
+    }
+
+    @Test
+    public void copyObjectsShouldReturnListOfObjectsWhichFailedToBeDeletedWhenDeleteCopiedFilesIsTrue() {
+        List<String> objectKeys = new ArrayList<>();
+        objectKeys.add("file1.parquet");
+        objectKeys.add("file2.parquet");
+        objectKeys.add("file3.parquet");
+        objectKeys.add("file4.parquet");
+
+        Set<String> expectedFailedObjects = new HashSet<>();
+        expectedFailedObjects.add("file1.parquet");
+        expectedFailedObjects.add("file2.parquet");
+        expectedFailedObjects.add("file4.parquet");
+
+        doNothing().when(mockS3Client).copyObject(any(), any(), any());
+        doThrow(new AmazonServiceException("failure")).when(mockS3Client).deleteObject(any(), any());
+        doNothing().when(mockS3Client).deleteObject(eq("file3.parquet"), any());
+
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, true);
 
         assertEquals(failedObjects, expectedFailedObjects);
     }

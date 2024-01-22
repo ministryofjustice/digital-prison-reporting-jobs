@@ -234,7 +234,7 @@ public class HiveSchemaServiceTest {
         expectedCreateSymlinkPathArgs.add(createPath(TEMP_RELOAD_BUCKET, 0));
         expectedCreateSymlinkPathArgs.add(createPath(TEMP_RELOAD_BUCKET, 1));
 
-        when(mockJobArguments.getTargetS3Path()).thenReturn(TEMP_RELOAD_BUCKET);
+        when(mockJobArguments.getPrisonsDataSwitchTargetS3Path()).thenReturn(TEMP_RELOAD_BUCKET);
         when(mockJobArguments.getPrisonsDatabase()).thenReturn(PRISONS_DATABASE);
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(sourceReferences);
 

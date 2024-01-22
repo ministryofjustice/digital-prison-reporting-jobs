@@ -60,9 +60,8 @@ public class S3FileTransferClient {
         return objectPaths;
     }
 
-    public void moveObject(String objectKey, String sourceBucket, String destinationBucket) {
+    public void copyObject(String objectKey, String sourceBucket, String destinationBucket) {
         s3.copyObject(sourceBucket, objectKey, destinationBucket, objectKey);
-        s3.deleteObject(sourceBucket, objectKey);
     }
 
     public void deleteObject(String objectKey, String sourceBucket) {

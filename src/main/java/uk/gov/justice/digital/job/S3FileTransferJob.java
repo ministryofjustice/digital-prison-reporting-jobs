@@ -14,6 +14,7 @@ import uk.gov.justice.digital.service.S3FileService;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -48,7 +49,7 @@ public class S3FileTransferJob implements Runnable {
         try {
             logger.info("S3FileTransferJob running");
 
-            transferFiles();
+            copyFiles();
 
             logger.info("S3FileTransferJob finished");
         } catch (Exception e) {
@@ -57,26 +58,27 @@ public class S3FileTransferJob implements Runnable {
         }
     }
 
-    private void transferFiles() {
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
-                .getConfiguredTables(jobArguments.getConfigKey());
-
+    private void copyFiles() {
+        Optional<String> optionalConfigKey = jobArguments.getOptionalConfigKey();
         final String sourceBucket = jobArguments.getTransferSourceBucket();
         final String destinationBucket = jobArguments.getTransferDestinationBucket();
         final Long retentionDays = jobArguments.getFileTransferRetentionDays();
+        final boolean deleteCopiedFiles = jobArguments.getFileTransferDeleteCopiedFilesFlag();
 
         List<String> objectKeys = new ArrayList<>();
-        if (configuredTables.isEmpty()) {
+        if (optionalConfigKey.isPresent()) {
+            // When config is provided, only files belonging to the configured tables are archived
+            ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
+                    .getConfiguredTables(optionalConfigKey.get());
+            objectKeys.addAll(s3FileService.listParquetFilesForConfig(sourceBucket, configuredTables, retentionDays));
+        } else {
             // When no config is provided, all files in s3 bucket are archived
             logger.info("Listing files in S3 source location: {}", sourceBucket);
             objectKeys.addAll(s3FileService.listParquetFiles(sourceBucket, retentionDays));
-        } else {
-            // When config is provided, only files belonging to the configured tables are archived
-            objectKeys.addAll(s3FileService.listParquetFilesForConfig(sourceBucket, configuredTables, retentionDays));
         }
 
         logger.info("Moving S3 objects older than {} day(s) from {} to {}", retentionDays, sourceBucket, destinationBucket);
-        Set<String> failedObjects = s3FileService.moveObjects(objectKeys, sourceBucket, destinationBucket);
+        Set<String> failedObjects = s3FileService.copyObjects(objectKeys, sourceBucket, destinationBucket, deleteCopiedFiles);
 
         if (failedObjects.isEmpty()) {
             logger.info("Successfully moved {} S3 files", objectKeys.size());

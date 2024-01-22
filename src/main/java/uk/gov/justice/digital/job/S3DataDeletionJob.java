@@ -55,7 +55,7 @@ public class S3DataDeletionJob implements Runnable {
         }
     }
 
-    public void deleteFiles() {
+    private void deleteFiles() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                 .getConfiguredTables(jobArguments.getConfigKey());
 
@@ -64,15 +64,7 @@ public class S3DataDeletionJob implements Runnable {
         Set<String> failedObjects = new HashSet<>();
 
         for (String bucketToDeleteFilesFrom : bucketsToDeleteFilesFrom) {
-            List<String> objectKeys = new ArrayList<>();
-            if (configuredTables.isEmpty()) {
-                // When no config is provided, all files in s3 bucket are deleted
-                logger.info("Listing files in S3 source location: {}", bucketToDeleteFilesFrom);
-                objectKeys.addAll(s3FileService.listParquetFiles(bucketToDeleteFilesFrom, 0L));
-            } else {
-                // When config is provided, only files belonging to the configured tables are deleted
-                objectKeys.addAll(s3FileService.listParquetFilesForConfig(bucketToDeleteFilesFrom, configuredTables, 0L));
-            }
+            List<String> objectKeys = new ArrayList<>(s3FileService.listParquetFilesForConfig(bucketToDeleteFilesFrom, configuredTables, 0L));
 
             logger.info("Deleting S3 objects from {} ", bucketToDeleteFilesFrom);
             failedObjects = s3FileService.deleteObjects(objectKeys, bucketToDeleteFilesFrom);

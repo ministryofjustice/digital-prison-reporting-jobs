@@ -91,7 +91,7 @@ public class HiveSchemaService {
             String tableName = sourceReference.getTable();
 
             String hiveTableName = sourceName + "_" + tableName;
-            String targetS3Path = jobArguments.getTargetS3Path();
+            String targetS3Path = jobArguments.getPrisonsDataSwitchTargetS3Path();
 
             logger.info("Processing {}", hiveTableName);
             try {
