@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.exception;
 
-public class SecretsManagerClientException extends Exception {
+public class SecretsManagerClientException extends RuntimeException {
 
     private static final long serialVersionUID = 8108611015208162383L;
 

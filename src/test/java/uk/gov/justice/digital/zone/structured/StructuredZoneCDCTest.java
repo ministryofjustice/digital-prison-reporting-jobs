@@ -52,15 +52,15 @@ class StructuredZoneCDCTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldMergeDataIntoTable() throws DataStorageRetriesExhaustedException {
+    public void shouldMergeDataIntoTable() {
         underTest.process(spark, df, sourceReference);
-        verify(storage, times(1)).mergeRecordsCdc(any(), eq(structuredTablePath), any(), eq(PRIMARY_KEY));
+        verify(storage, times(1)).mergeRecords(any(), eq(structuredTablePath), any(), eq(PRIMARY_KEY));
     }
 
     @Test
-    public void shouldHandleRetriesExhausted() throws DataStorageRetriesExhaustedException {
+    public void shouldHandleRetriesExhausted() {
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception());
-        doThrow(thrown).when(storage).mergeRecordsCdc(any(), any(), any(), any());
+        doThrow(thrown).when(storage).mergeRecords(any(), any(), any(), any());
 
         underTest.process(spark, df, sourceReference);
 

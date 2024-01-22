@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import jakarta.inject.Inject;
@@ -68,7 +70,7 @@ public class SourceReferenceService {
         try {
             return objectMapper.readValue(avro, AvroSchema.class);
         }
-        catch (Exception e) {
+        catch (JsonProcessingException e) {
             throw new RuntimeException("Caught exception when parsing avro schema", e);
         }
     }

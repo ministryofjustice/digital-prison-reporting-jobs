@@ -53,7 +53,7 @@ public class MaintenanceService {
      */
     @FunctionalInterface
     private interface MaintenanceOperation {
-        void apply(String path) throws Exception;
+        void apply(String path);
     }
 
     /**

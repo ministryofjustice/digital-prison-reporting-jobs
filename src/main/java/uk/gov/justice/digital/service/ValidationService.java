@@ -16,7 +16,6 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 
 import javax.inject.Singleton;
 import java.util.Arrays;
@@ -39,18 +38,13 @@ public class ValidationService {
     }
 
     public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference, StructType inferredSchema, ViolationService.ZoneName zoneName) {
-        try {
-            val maybeValidRows = validateRows(dataFrame, sourceReference, inferredSchema);
-            val validRows = maybeValidRows.filter(col(ERROR).isNull()).drop(ERROR);
-            val invalidRows = maybeValidRows.filter(col(ERROR).isNotNull());
-            if(!invalidRows.isEmpty()) {
-                violationService.handleViolation(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable(), zoneName);
-            }
-            return validRows;
-        } catch (DataStorageException e) {
-            logger.error("Failed to write invalid rows");
-            throw new RuntimeException(e);
+        val maybeValidRows = validateRows(dataFrame, sourceReference, inferredSchema);
+        val validRows = maybeValidRows.filter(col(ERROR).isNull()).drop(ERROR);
+        val invalidRows = maybeValidRows.filter(col(ERROR).isNotNull());
+        if(!invalidRows.isEmpty()) {
+            violationService.handleViolation(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable(), zoneName);
         }
+        return validRows;
     }
 
     @VisibleForTesting

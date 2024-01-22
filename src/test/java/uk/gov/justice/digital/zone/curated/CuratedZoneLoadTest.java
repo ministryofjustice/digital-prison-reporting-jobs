@@ -10,7 +10,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -52,21 +51,21 @@ class CuratedZoneLoadTest {
     }
 
     @Test
-    public void shouldAppendDistinctRecordsToTable() throws DataStorageException {
+    public void shouldAppendDistinctRecordsToTable() {
         underTest.process(spark, df, sourceReference);
 
         verify(storage, times(1)).appendDistinct("s3://curated/path/source/table", df, PRIMARY_KEY);
     }
 
     @Test
-    public void shouldUpdateDeltaManifest() throws DataStorageException {
+    public void shouldUpdateDeltaManifest() {
         underTest.process(spark, df, sourceReference);
 
         verify(storage, times(1)).updateDeltaManifestForTable(any(), eq("s3://curated/path/source/table"));
     }
 
     @Test
-    public void shouldHandleRetriesExhausted() throws DataStorageException {
+    public void shouldHandleRetriesExhausted() {
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception());
         doThrow(thrown)
                 .when(storage)

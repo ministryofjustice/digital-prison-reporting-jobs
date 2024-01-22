@@ -64,7 +64,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void shouldCreateStandardProcessingQueryUnderNormalCircumstances() throws Exception {
+    public void shouldCreateStandardProcessingQueryUnderNormalCircumstances() {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.of(sourceReference));
         when(dataProvider.getStreamingSourceData(spark, sourceReference)).thenReturn(df);
         underTest.provide(spark, sourceName, tableName);
@@ -73,7 +73,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void shouldCreateNoSchemaFoundQueryWhenNoSourceReference() throws Exception {
+    public void shouldCreateNoSchemaFoundQueryWhenNoSourceReference() {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
         underTest.provide(spark, sourceName, tableName);
 
@@ -81,7 +81,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void shouldDecorateBatchFuncWithIncompatibleSchemaHandling() throws Exception {
+    public void shouldDecorateBatchFuncWithIncompatibleSchemaHandling() {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
         underTest.provide(spark, sourceName, tableName);
 

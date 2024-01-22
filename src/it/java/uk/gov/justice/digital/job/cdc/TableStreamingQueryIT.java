@@ -86,7 +86,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() throws Exception {
+    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -106,7 +106,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredAndCuratedContainForPK("data3", pk3);
     }
     @Test
-    public void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
+    public void shouldHandleMultiplePrimaryKeysAcrossBatches() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -137,7 +137,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() throws Exception {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -174,7 +174,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() throws Exception {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -209,7 +209,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() throws Exception {
+    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -228,7 +228,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
+    public void shouldWriteNullsToViolationsForNonNullableColumns() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -251,7 +251,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() throws Exception {
+    public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() {
         givenMissingSourceReference();
         givenAnInputStreamWithSchemaInference();
         givenTableStreamingQuery();
@@ -286,7 +286,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteSchemaMismatchesToViolationsAcrossMultipleBatches() throws Exception {
+    public void shouldWriteSchemaMismatchesToViolationsAcrossMultipleBatches() {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();

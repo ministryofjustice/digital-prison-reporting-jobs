@@ -97,7 +97,7 @@ public class ViolationServiceIT extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteDataWithIncompatibleSchemasSoThatItCanBeReadBackAgainUsingSpark() throws Exception {
+    public void shouldWriteDataWithIncompatibleSchemasSoThatItCanBeReadBackAgainUsingSpark() {
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
 
         underTest.handleViolation(spark, original, source, table, STRUCTURED_LOAD);

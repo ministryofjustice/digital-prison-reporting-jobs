@@ -20,7 +20,7 @@ public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
         setupNonDeltaFilesAndDirs();
     }
     @Test
-    public void shouldListDeltaTablePathsInRootIgnoringNonDeltaDirsAndFiles() throws Exception {
+    public void shouldListDeltaTablePathsInRootIgnoringNonDeltaDirsAndFiles() {
         int depthLimitToRecurseDeltaTables = 1;
         List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
         // Should ignore non-delta table directories and files in the rootPath
@@ -28,7 +28,7 @@ public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldListDeltaTablePathsWhenRecursingDepth2() throws Exception {
+    public void shouldListDeltaTablePathsWhenRecursingDepth2() {
         int depthLimitToRecurseDeltaTables = 2;
         List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
         // Should find an extra table 1 level deeper
@@ -36,7 +36,7 @@ public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldListDeltaTablePathsWhenRecursingDepth3() throws Exception {
+    public void shouldListDeltaTablePathsWhenRecursingDepth3() {
         int depthLimitToRecurseDeltaTables = 3;
         List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
         // Should find an extra table 1 level deeper and another extra table 2 levels deeper

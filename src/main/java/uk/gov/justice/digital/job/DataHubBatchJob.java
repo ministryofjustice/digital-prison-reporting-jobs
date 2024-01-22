@@ -26,7 +26,6 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -106,7 +105,7 @@ public class DataHubBatchJob implements Runnable {
      * The main entry point for testing a batch job to process raw data for all tables.
      */
     @VisibleForTesting
-    void runJob(SparkSession sparkSession) throws IOException, DataStorageException, SparkException {
+    void runJob(SparkSession sparkSession) throws DataStorageException {
         val startTime = System.currentTimeMillis();
         String rawPath = arguments.getRawS3Path();
         logger.info("Processing Raw {} table by table", rawPath);

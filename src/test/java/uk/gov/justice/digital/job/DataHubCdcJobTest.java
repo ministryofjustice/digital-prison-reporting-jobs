@@ -58,7 +58,7 @@ class DataHubCdcJobTest {
     }
 
     @Test
-    public void shouldRunAQueryPerTable() throws Exception {
+    public void shouldRunAQueryPerTable() {
 
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
@@ -74,7 +74,7 @@ class DataHubCdcJobTest {
     }
 
     @Test
-    public void shouldSkipQueryWhenThereIsNoSchemaAndNoData() throws Exception {
+    public void shouldSkipQueryWhenThereIsNoSchemaAndNoData() {
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
         when(tableStreamingQueryProvider.provide(spark, "source1", "table1")).thenReturn(table1StreamingQuery);
@@ -90,7 +90,7 @@ class DataHubCdcJobTest {
     }
 
     @Test
-    public void shouldNotThrowForNoTables() throws Exception {
+    public void shouldNotThrowForNoTables() {
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(Collections.emptyList());
 
         underTest.runJob(spark);
