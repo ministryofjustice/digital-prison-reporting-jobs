@@ -61,17 +61,18 @@ public class S3FileTransferJobTest extends BaseSparkTest {
         objectsToMove.add("schema_1/table_1/file_2.parquet");
         objectsToMove.add("schema_2/table_2/file_3.parquet");
 
-        when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
         when(mockJobArguments.getFileTransferRetentionDays()).thenReturn(RETENTION_DAYS);
+        when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         when(mockS3FileService.listParquetFilesForConfig(SOURCE_BUCKET, configuredTables, RETENTION_DAYS))
                 .thenReturn(objectsToMove);
 
-        when(mockS3FileService.moveObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET))
+        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET, true))
                 .thenReturn(Collections.emptySet());
 
         assertDoesNotThrow(() -> underTest.run());
@@ -84,17 +85,16 @@ public class S3FileTransferJobTest extends BaseSparkTest {
         objectsToMove.add("schema_1/table_1/file_2.parquet");
         objectsToMove.add("schema_2/table_2/file_3.parquet");
 
-        when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.empty());
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
         when(mockJobArguments.getFileTransferRetentionDays()).thenReturn(RETENTION_DAYS);
-
-        when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.of());
+        when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
 
         when(mockS3FileService.listParquetFiles(SOURCE_BUCKET, RETENTION_DAYS))
                 .thenReturn(objectsToMove);
 
-        when(mockS3FileService.moveObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET))
+        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET, true))
                 .thenReturn(Collections.emptySet());
 
         assertDoesNotThrow(() -> underTest.run());
@@ -119,13 +119,14 @@ public class S3FileTransferJobTest extends BaseSparkTest {
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
         when(mockJobArguments.getFileTransferRetentionDays()).thenReturn(RETENTION_DAYS);
+        when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         when(mockS3FileService.listParquetFilesForConfig(SOURCE_BUCKET, configuredTables, RETENTION_DAYS))
                 .thenReturn(objectsToMove);
 
-        when(mockS3FileService.moveObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET))
+        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET, true))
                 .thenReturn(failedFiles);
 
         SystemLambda.catchSystemExit(() -> underTest.run());
@@ -133,7 +134,7 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
     @Test
     public void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
-        when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new ConfigServiceException("config error"));
 
         SystemLambda.catchSystemExit(() -> underTest.run());

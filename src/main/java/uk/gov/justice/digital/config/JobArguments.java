@@ -33,7 +33,7 @@ public class JobArguments {
     public static final String SCHEMA_CACHE_MAX_SIZE = "dpr.schema.cache.max.size";
     public static final String SCHEMA_CACHE_EXPIRY_IN_MINUTES = "dpr.schema.cache.expiry.days";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
-    public static final String TARGET_S3_PATH = "dpr.target.s3.path";
+    public static final String PRISONS_DATA_SWITCH_TARGET_S3_PATH = "dpr.prisons.data.switch.target.s3.path";
     public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
     public static final String DOMAIN_NAME = "dpr.domain.name";
     public static final String DOMAIN_OPERATION = "dpr.domain.operation";
@@ -95,6 +95,9 @@ public class JobArguments {
     public static final String FILE_TRANSFER_DESTINATION_BUCKET_NAME = "dpr.file.transfer.destination.bucket";
     public static final String FILE_TRANSFER_RETENTION_DAYS = "dpr.file.transfer.retention.days";
     static final Long DEFAULT_FILE_TRANSFER_RETENTION_DAYS = 0L;
+
+    public static final String FILE_TRANSFER_DELETE_COPIED_FILES_FLAG = "dpr.file.transfer.delete.copied.files";
+
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
     static final String GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS = "dpr.glue.orchestration.wait.interval.seconds";
@@ -214,8 +217,8 @@ public class JobArguments {
         return getArgument(CURATED_S3_PATH);
     }
 
-    public String getTargetS3Path() {
-        return getArgument(TARGET_S3_PATH);
+    public String getPrisonsDataSwitchTargetS3Path() {
+        return getArgument(PRISONS_DATA_SWITCH_TARGET_S3_PATH);
     }
 
     public String getDomainTargetPath() {
@@ -260,6 +263,10 @@ public class JobArguments {
 
     public String getConfigKey() {
         return getArgument(CONFIG_KEY);
+    }
+
+    public Optional<String> getOptionalConfigKey() {
+        return Optional.ofNullable(config.get(CONFIG_KEY));
     }
 
     public String getMaintenanceTablesRootPath() {
@@ -312,6 +319,10 @@ public class JobArguments {
 
     public Long getFileTransferRetentionDays() {
         return getArgument(FILE_TRANSFER_RETENTION_DAYS, DEFAULT_FILE_TRANSFER_RETENTION_DAYS);
+    }
+
+    public boolean getFileTransferDeleteCopiedFilesFlag() {
+        return getArgument(FILE_TRANSFER_DELETE_COPIED_FILES_FLAG, false);
     }
 
     public ImmutableSet<String> getBucketsToDeleteFilesFrom() {

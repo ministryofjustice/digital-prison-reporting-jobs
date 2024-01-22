@@ -10,10 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.AbstractMap;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -31,7 +28,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.CONFIG_KEY, "test-config" },
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
-            { JobArguments.TARGET_S3_PATH, "s3://somepath/target" },
+            { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/target" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
             { JobArguments.DOMAIN_NAME, "test_domain_name" },
             { JobArguments.DOMAIN_OPERATION, "insert" },
@@ -75,7 +72,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },
-                { JobArguments.TARGET_S3_PATH, validArguments.getTargetS3Path() },
+                { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, validArguments.getPrisonsDataSwitchTargetS3Path() },
                 { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, validArguments.getDomainCatalogDatabaseName() },
                 { JobArguments.DOMAIN_NAME, validArguments.getDomainName() },
                 { JobArguments.DOMAIN_OPERATION, validArguments.getDomainOperation() },
@@ -277,6 +274,21 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(20, jobArguments.glueOrchestrationMaxAttempts());
+    }
+
+    @Test
+    public void getOptionalConfigKeyShouldDefaultToEmptyOptionWhenNoConfigKeyIsProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.CONFIG_KEY);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(Optional.empty(), jobArguments.getOptionalConfigKey());
+    }
+
+    @Test
+    public void getOptionalConfigKeyShouldReturnOptionalWithConfigKeyPresentWhenConfigKeyIsProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(Optional.of("test-config"), jobArguments.getOptionalConfigKey());
     }
 
     @Test

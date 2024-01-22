@@ -47,16 +47,18 @@ public class S3FileService {
                 .collect(Collectors.toList());
     }
 
-    public Set<String> moveObjects(
+    public Set<String> copyObjects(
             List<String> objectKeys,
             String sourceBucket,
-            String destinationBucket
+            String destinationBucket,
+            boolean deleteCopiedFiles
     ) {
         Set<String> failedObjects = new HashSet<>();
 
         for (String objectKey : objectKeys) {
             try {
-                s3Client.moveObject(objectKey, sourceBucket, destinationBucket);
+                s3Client.copyObject(objectKey, sourceBucket, destinationBucket);
+                if (deleteCopiedFiles) s3Client.deleteObject(objectKey, sourceBucket);
             } catch (AmazonServiceException e) {
                 logger.warn("Failed to move S3 object {}: {}", objectKey, e.getErrorMessage());
                 failedObjects.add(objectKey);
