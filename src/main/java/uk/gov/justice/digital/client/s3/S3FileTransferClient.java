@@ -4,6 +4,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import java.time.Clock;
@@ -13,6 +15,8 @@ import java.util.List;
 
 @Singleton
 public class S3FileTransferClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(S3FileTransferClient.class);
 
     private final AmazonS3 s3;
     public static final String DELIMITER = "/";
@@ -51,6 +55,7 @@ public class S3FileTransferClient {
                 String summaryKey = summary.getKey();
 
                 if (!summaryKey.endsWith(DELIMITER) && summaryKey.endsWith(extension) && isBeforeRetentionPeriod) {
+                    logger.debug("Adding {}", summaryKey);
                     objectPaths.add(summaryKey);
                 }
             }
@@ -61,10 +66,12 @@ public class S3FileTransferClient {
     }
 
     public void copyObject(String objectKey, String sourceBucket, String destinationBucket) {
+        logger.debug("Copying {}", objectKey);
         s3.copyObject(sourceBucket, objectKey, destinationBucket, objectKey);
     }
 
     public void deleteObject(String objectKey, String sourceBucket) {
+        logger.debug("Deleting {}", objectKey);
         s3.deleteObject(sourceBucket, objectKey);
     }
 }
