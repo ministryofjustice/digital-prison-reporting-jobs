@@ -11,7 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -60,14 +59,14 @@ class StructuredZoneLoadTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldAppendDistinctRecordsToTable() throws DataStorageException {
+    public void shouldAppendDistinctRecordsToTable() {
         underTest.process(spark, df, sourceReference);
 
         verify(storage, times(1)).appendDistinct("s3://structured/path/source/table", df, PRIMARY_KEY);
     }
 
     @Test
-    public void shouldReturnDataFrameAfterProcessing() throws DataStorageException {
+    public void shouldReturnDataFrameAfterProcessing() {
         List<Row> result = underTest.process(spark, df, sourceReference).collectAsList();
         List<Row> expected = df.collectAsList();
 
@@ -77,7 +76,7 @@ class StructuredZoneLoadTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldHandleRetriesExhausted() throws DataStorageException {
+    public void shouldHandleRetriesExhausted() {
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception());
         doThrow(thrown)
                 .when(storage)

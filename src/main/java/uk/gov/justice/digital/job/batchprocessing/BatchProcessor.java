@@ -55,16 +55,11 @@ public class BatchProcessor {
 
             val startTime = System.currentTimeMillis();
             dataFrame.persist();
-            try {
-                val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
-                StructType inferredSchema = filteredDf.schema();
-                val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
-                val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-                curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
-            } catch (Exception e) {
-                logger.error("Caught unexpected exception", e);
-                throw new RuntimeException("Unexpected exception", e);
-            }
+            val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
+            StructType inferredSchema = filteredDf.schema();
+            val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
+            val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
+            curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
             dataFrame.unpersist();
 
             logger.info("Processed records {}/{} in {}ms",

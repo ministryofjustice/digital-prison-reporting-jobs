@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import org.apache.spark.SparkException;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,14 +9,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.*;
+import uk.gov.justice.digital.service.ConfigService;
+import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.TableDiscoveryService;
+import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -52,7 +54,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     }
 
     @Test
-    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws Exception {
+    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() {
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);
@@ -88,7 +90,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
     }
 
-    private void whenTheJobRuns() throws IOException, DataStorageException, SparkException {
+    private void whenTheJobRuns() {
         underTest.runJob(spark);
     }
 

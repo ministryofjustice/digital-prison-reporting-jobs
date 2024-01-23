@@ -95,7 +95,7 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    public void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() throws Exception {
+    public void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() {
         stubRawPath();
         stubReadData();
         stubDiscoveredTablePaths();
@@ -138,7 +138,7 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    public void shouldWriteViolationsWhenDataProviderCannotMergeInputData() throws Exception {
+    public void shouldWriteViolationsWhenDataProviderCannotMergeInputData() {
         DataProviderFailedMergingSchemasException thrown = new DataProviderFailedMergingSchemasException("Failed merging schema", new Exception());
         when(dataProvider.getBatchSourceData(any(), anyList())).thenThrow(thrown);
         stubRawPath();
@@ -153,15 +153,15 @@ class DataHubBatchJobTest {
         when(arguments.getRawS3Path()).thenReturn(rawPath);
     }
 
-    private void stubDiscoveredTablePaths() throws IOException {
+    private void stubDiscoveredTablePaths() {
         when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(discoveredPathsByTable);
     }
 
-    private void stubEmptyDiscoveredTablePaths() throws IOException {
+    private void stubEmptyDiscoveredTablePaths() {
         when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(Collections.emptyMap());
     }
 
-    private void stubReadData() throws DataProviderFailedMergingSchemasException {
+    private void stubReadData() {
         when(dataProvider.getBatchSourceData(any(), anyList())).thenReturn(dataFrame);
         when(dataFrame.schema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }

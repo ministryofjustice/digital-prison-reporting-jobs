@@ -81,24 +81,18 @@ public class DataStorageService {
         return hasRecords;
     }
 
-    public void append(String tablePath, Dataset<Row> df) throws DataStorageException {
+    public void append(@NotNull String tablePath, @NotNull Dataset<Row> df) throws DataStorageRetriesExhaustedException {
         logger.debug("Appending schema and data to " + tablePath);
-        if (tablePath != null && df != null) {
-            doWithRetryOnConcurrentModification(() ->
-                    df.write()
-                            .format("delta")
-                            .mode("append")
-                            .option("path", tablePath)
-                            .save()
-            );
-        } else {
-            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
-            logger.error(errorMessage);
-            throw new DataStorageException(errorMessage);
-        }
+        doWithRetryOnConcurrentModification(() ->
+                df.write()
+                        .format("delta")
+                        .mode("append")
+                        .option("path", tablePath)
+                        .save()
+        );
     }
 
-    public void appendDistinct(String tablePath, Dataset<Row> df, SourceReference.PrimaryKey primaryKey) throws DataStorageException {
+    public void appendDistinct(@NotNull String tablePath, @NotNull Dataset<Row> df, @NotNull SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
         if(!df.isEmpty()) {
             val dt = getTable(df.sparkSession(), tablePath);
             if(dt.isPresent()) {
@@ -114,47 +108,8 @@ public class DataStorageService {
             }
         }
     }
+
     public void mergeRecords(
-            SparkSession spark,
-            String tablePath,
-            Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey, List<String> columnsToExclude) throws DataStorageRetriesExhaustedException {
-        val dt = getTable(spark, tablePath);
-
-        val expression = createMergeExpression(dataFrame, columnsToExclude);
-
-        try {
-            if (dt.isPresent()) {
-                val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-                logger.debug("Upsert records from {} using condition: {}", tablePath, condition);
-                doWithRetryOnConcurrentModification(() ->
-                        dt.get().as(SOURCE)
-                                .merge(dataFrame.as(TARGET), condition)
-                                // Multiple whenMatched clauses are evaluated in the order they are specified.
-                                // As such the Delete needs to be specified after the update
-                                .whenMatched(insertMatchCondition)
-                                .updateExpr(expression)
-                                .whenMatched(updateMatchCondition)
-                                .updateExpr(expression)
-                                .whenMatched(deleteMatchCondition)
-                                .delete()
-                                .whenNotMatched()
-                                .insertExpr(expression)
-                                .execute()
-                );
-            } else {
-                logger.error("Failed to upsert table {}. Delta table is not present", tablePath);
-            }
-        } catch (DataStorageRetriesExhaustedException e) {
-            // We don't want to catch this particular Exception so rethrow before the next catch block
-            throw e;
-        } catch (Exception e) {
-            val errorMessage = String.format("Failed to upsert table %s", tablePath);
-            logger.error(errorMessage, e);
-        }
-    }
-
-    public void mergeRecordsCdc(
             SparkSession spark,
             String tablePath,
             Dataset<Row> dataFrame,
@@ -223,73 +178,46 @@ public class DataStorageService {
             SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
         val dt = getTable(spark, tablePath);
 
-        try {
-            if (dt.isPresent()) {
-                val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-                logger.debug("Deleting records from {} using condition: {}", tablePath, condition);
-                doWithRetryOnConcurrentModification(() ->
-                        dt.get().as(SOURCE)
-                                .merge(dataFrame.as(TARGET), condition)
-                                .whenMatched()
-                                .delete()
-                                .execute()
-                );
-            } else {
-                logger.error("Failed to delete table {}. Delta table is not present", tablePath);
-            }
-        } catch (DataStorageRetriesExhaustedException e) {
-            // We don't want to catch this particular Exception so rethrow before the next catch block
-            throw e;
-        } catch (Exception e) {
-            val errorMessage = String.format("Failed to delete table %s", tablePath);
-            logger.error(errorMessage, e);
+        if (dt.isPresent()) {
+            val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
+            logger.debug("Deleting records from {} using condition: {}", tablePath, condition);
+            doWithRetryOnConcurrentModification(() ->
+                    dt.get().as(SOURCE)
+                            .merge(dataFrame.as(TARGET), condition)
+                            .whenMatched()
+                            .delete()
+                            .execute()
+            );
+        } else {
+            logger.error("Failed to delete table {}. Delta table is not present", tablePath);
         }
     }
 
-    public void create(String tablePath, Dataset<Row> df) throws DataStorageException {
+    public void create(@NotNull String tablePath, @NotNull Dataset<Row> df) {
         logger.info("Inserting schema and data to " + tablePath);
-        if (tablePath != null && df != null)
-            df.write()
-                    .format("delta")
-                    .option("path", tablePath)
-                    .save();
-        else {
-            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
-            logger.error(errorMessage);
-            throw new DataStorageException(errorMessage);
-        }
+        df.write()
+                .format("delta")
+                .option("path", tablePath)
+                .save();
     }
 
-    public void replace(String tablePath, Dataset<Row> df) throws DataStorageException {
+    public void replace(@NotNull String tablePath, @NotNull Dataset<Row> df) {
         logger.info("Overwriting schema and data to " + tablePath);
-        if (tablePath != null && df != null)
-            df.write()
-                    .format("delta")
-                    .mode("overwrite")
-                    .option("overwriteSchema", true)
-                    .option("path", tablePath)
-                    .save();
-        else {
-            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
-            logger.error(errorMessage);
-            throw new DataStorageException(errorMessage);
-        }
+        df.write()
+                .format("delta")
+                .mode("overwrite")
+                .option("overwriteSchema", true)
+                .option("path", tablePath)
+                .save();
     }
 
-    public void resync(String tablePath, Dataset<Row> df) throws DataStorageException {
+    public void resync(@NotNull String tablePath, @NotNull Dataset<Row> df) {
         logger.info("Syncing data to " + tablePath);
-        if (tablePath != null && df != null)
-            df.write()
-                    .format("delta")
-                    .mode("overwrite")
-                    .option("path", tablePath)
-                    .save();
-        else {
-            val errorMessage = "Path " + tablePath + " is not set or dataframe is null";
-            logger.error(errorMessage);
-            throw new DataStorageException(errorMessage);
-        }
-
+        df.write()
+                .format("delta")
+                .mode("overwrite")
+                .option("path", tablePath)
+                .save();
     }
 
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
@@ -336,7 +264,7 @@ public class DataStorageService {
         }
     }
 
-    public void endTableUpdates(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
+    public void endTableUpdates(SparkSession spark, TableIdentifier tableId) {
         updateDeltaManifestForTable(spark, tableId.toPath());
     }
 

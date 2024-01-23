@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
@@ -79,14 +78,14 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldSkipProcessingForEmptyDataframe() throws DataStorageException {
+    public void shouldSkipProcessingForEmptyDataframe() {
         underTest.processBatch(spark, sourceReference, spark.emptyDataFrame());
 
         verify(structuredZoneLoad, times(0)).process(any(), any(), any());
         verify(curatedZoneLoad, times(0)).process(any(), any(), any());
     }
     @Test
-    public void shouldProcessStructured() throws DataStorageException {
+    public void shouldProcessStructured() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
@@ -100,7 +99,7 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldProcessCurated() throws DataStorageException {
+    public void shouldProcessCurated() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
@@ -114,7 +113,7 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDelegateValidationOnlyValidatingInserts() throws DataStorageException {
+    public void shouldDelegateValidationOnlyValidatingInserts() {
         Dataset<Row> mixedOperations = validatedDf
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));

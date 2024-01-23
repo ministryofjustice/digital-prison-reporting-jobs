@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
@@ -37,7 +36,7 @@ public class StructuredZoneLoad implements Zone {
         this.violationService = violationService;
     }
 
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) throws DataStorageException {
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();

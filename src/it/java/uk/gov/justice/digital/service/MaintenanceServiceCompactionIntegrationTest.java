@@ -54,7 +54,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldCompactDeltaTablesWhenRecursingWithDepth2() throws Exception {
+    public void shouldCompactDeltaTablesWhenRecursingWithDepth2() {
         int depthLimit = 2;
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
@@ -66,7 +66,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldCompactDeltaTablesWhenRecursingWithDepth3() throws Exception {
+    public void shouldCompactDeltaTablesWhenRecursingWithDepth3() {
         int depthLimit = 3;
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);

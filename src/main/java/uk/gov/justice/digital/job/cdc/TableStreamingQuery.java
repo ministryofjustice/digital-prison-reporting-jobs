@@ -6,6 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.exception.TableStreamingQueryTimeoutDuringStopException;
 
 import java.util.concurrent.TimeoutException;
 
@@ -66,7 +67,11 @@ public class TableStreamingQuery {
         }
     }
 
-    public void stopQuery() throws TimeoutException {
-        query.stop();
+    public void stopQuery() throws TableStreamingQueryTimeoutDuringStopException {
+        try {
+            query.stop();
+        } catch (TimeoutException e) {
+            throw new TableStreamingQueryTimeoutDuringStopException(e);
+        }
     }
 }

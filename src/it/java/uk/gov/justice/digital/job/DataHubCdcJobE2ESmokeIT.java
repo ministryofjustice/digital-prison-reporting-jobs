@@ -10,12 +10,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.*;
+import uk.gov.justice.digital.service.ConfigService;
+import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.TableDiscoveryService;
+import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
@@ -26,7 +30,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
@@ -68,13 +71,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
     @AfterEach
     public void tearDown() {
-        streamingQueries.forEach(query -> {
-            try {
-                query.stopQuery();
-            } catch (TimeoutException e) {
-                // squash
-            }
-        });
+        streamingQueries.forEach(TableStreamingQuery::stopQuery);
     }
 
     @Test
@@ -136,7 +133,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk3);
     }
 
-    private void whenTheJobRuns() throws NoSchemaNoDataException {
+    private void whenTheJobRuns() {
         streamingQueries = underTest.runJob(spark);
         assertFalse(streamingQueries.isEmpty());
     }

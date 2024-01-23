@@ -91,18 +91,11 @@ public class ViolationService {
             String table,
             DataStorageRetriesExhaustedException cause,
             ZoneName zoneName
-    ) {
+    ) throws DataStorageException {
         String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
         logger.warn(violationMessage, cause);
         val invalidRecords = dataFrame.withColumn(ERROR, lit(violationMessage));
-        try {
-            handleViolation(spark, invalidRecords, source, table, zoneName);
-        } catch (DataStorageException e) {
-            String msg = "Could not write violation data";
-            logger.error(msg, e);
-            // This is a serious problem because we could lose data if we don't stop here
-            throw new RuntimeException(msg, e);
-        }
+        handleViolation(spark, invalidRecords, source, table, zoneName);
     }
 
     public void handleNoSchemaFound(
@@ -171,7 +164,7 @@ public class ViolationService {
             String source,
             String table,
             ZoneName zoneName
-    ) throws DataStorageException {
+    ) throws DataStorageRetriesExhaustedException {
         val destinationPath = fullTablePath(source, table, zoneName);
         logger.warn("Violation - for source {}, table {}", source, table);
         logger.info("Appending records to deltalake table: {}", destinationPath);

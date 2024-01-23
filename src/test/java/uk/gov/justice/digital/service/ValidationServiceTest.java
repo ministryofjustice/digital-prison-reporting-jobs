@@ -211,7 +211,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void handleValidationShouldWriteViolationsWithInvalidRows() throws DataStorageException {
+    public void handleValidationShouldWriteViolationsWithInvalidRows() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
@@ -243,7 +243,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void handleValidationShouldWriteWholeBatchAsViolationsForSchemaMisMatch() throws DataStorageException {
+    public void handleValidationShouldWriteWholeBatchAsViolationsForSchemaMisMatch() {
         StructType misMatchingSchema = TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS.add(
                 new StructField("extra-column", DataTypes.IntegerType, false, Metadata.empty())
         );
@@ -279,7 +279,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void handleValidationShouldThrowRTEWhenViolationServiceThrows() throws DataStorageException {
+    public void handleValidationShouldThrowRTEWhenViolationServiceThrows() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));

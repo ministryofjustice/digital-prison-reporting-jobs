@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -41,20 +40,20 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
     }
 
     @Test
-    public void shouldInsertDataWhenNoTableExists() throws DataStorageRetriesExhaustedException {
+    public void shouldInsertDataWhenNoTableExists() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2")
         ), TEST_DATA_SCHEMA);
 
-        underTest.mergeRecordsCdc(spark, tablePath, input, PRIMARY_KEY);
+        underTest.mergeRecords(spark, tablePath, input, PRIMARY_KEY);
 
         assertDeltaTableContainsForPK(tablePath, "data1", pk1);
         assertDeltaTableContainsForPK(tablePath, "data2", pk2);
     }
 
     @Test
-    public void shouldInsertDataWhenTableExists() throws DataStorageRetriesExhaustedException {
+    public void shouldInsertDataWhenTableExists() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1a"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2a")
@@ -62,20 +61,20 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
 
         createTable(input.schema());
 
-        underTest.mergeRecordsCdc(spark, tablePath, input, PRIMARY_KEY);
+        underTest.mergeRecords(spark, tablePath, input, PRIMARY_KEY);
 
         assertDeltaTableContainsForPK(tablePath, "data1a", pk1);
         assertDeltaTableContainsForPK(tablePath, "data2a", pk2);
     }
 
     @Test
-    public void shouldInsertUpdateAndDeleteData() throws DataStorageRetriesExhaustedException {
+    public void shouldInsertUpdateAndDeleteData() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1a"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2a")
         ), TEST_DATA_SCHEMA);
 
-        underTest.mergeRecordsCdc(spark, tablePath, input, PRIMARY_KEY);
+        underTest.mergeRecords(spark, tablePath, input, PRIMARY_KEY);
 
         assertDeltaTableContainsForPK(tablePath, "data1a", pk1);
         assertDeltaTableContainsForPK(tablePath, "data2a", pk2);
@@ -85,20 +84,20 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
                 createRow(pk2, "2023-11-13 10:51:00.123456", Delete, "data2b")
         ), TEST_DATA_SCHEMA);
 
-        underTest.mergeRecordsCdc(spark, tablePath, input2, PRIMARY_KEY);
+        underTest.mergeRecords(spark, tablePath, input2, PRIMARY_KEY);
 
         assertDeltaTableContainsForPK(tablePath, "data1b", pk1);
         assertDeltaTableDoesNotContainPK(tablePath, pk2);
     }
 
     @Test
-    public void shouldOverwriteDataWhenGettingNewInsertsForExistingKey() throws DataStorageRetriesExhaustedException {
+    public void shouldOverwriteDataWhenGettingNewInsertsForExistingKey() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1a"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2a")
         ), TEST_DATA_SCHEMA);
 
-        underTest.mergeRecordsCdc(spark, tablePath, input, PRIMARY_KEY);
+        underTest.mergeRecords(spark, tablePath, input, PRIMARY_KEY);
 
         assertDeltaTableContainsForPK(tablePath, "data1a", pk1);
         assertDeltaTableContainsForPK(tablePath, "data2a", pk2);
@@ -108,20 +107,20 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
                 createRow(pk2, "2023-11-13 10:51:00.123456", Insert, "data2b")
         ), TEST_DATA_SCHEMA);
 
-        underTest.mergeRecordsCdc(spark, tablePath, input2, PRIMARY_KEY);
+        underTest.mergeRecords(spark, tablePath, input2, PRIMARY_KEY);
 
         assertDeltaTableContainsForPK(tablePath, "data1b", pk1);
         assertDeltaTableContainsForPK(tablePath, "data2b", pk2);
     }
 
     @Test
-    public void shouldInsertAnUpdateThatDoesntExistButNotADelete() throws DataStorageRetriesExhaustedException {
+    public void shouldInsertAnUpdateThatDoesntExistButNotADelete() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Update, "data1"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Delete, "data2")
         ), TEST_DATA_SCHEMA);
 
-        underTest.mergeRecordsCdc(spark, tablePath, input, PRIMARY_KEY);
+        underTest.mergeRecords(spark, tablePath, input, PRIMARY_KEY);
 
         assertDeltaTableContainsForPK(tablePath, "data1", pk1);
 

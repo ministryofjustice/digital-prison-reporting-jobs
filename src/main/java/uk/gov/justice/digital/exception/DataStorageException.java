@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.exception;
 
-public class DataStorageException extends Exception {
+public class DataStorageException extends RuntimeException {
 
     private static final long serialVersionUID = 4818463902468617768L;
 
