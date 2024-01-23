@@ -12,6 +12,7 @@ import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import javax.inject.Inject;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +42,7 @@ public class S3FileTransferJob implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job starting");
-        PicocliRunner.run(S3FileTransferJob.class, MicronautContext.withArgs(args));
+        PicocliRunner.run(S3FileTransferJob.class, MicronautContext.withArgs(args).registerSingleton(Clock.class, Clock.systemUTC()));
     }
 
     @Override
