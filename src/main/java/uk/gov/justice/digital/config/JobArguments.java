@@ -100,6 +100,8 @@ public class JobArguments {
 
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
+    // A comma separated list of s3 file extensions. The wildcard '*' includes all extensions.
+    static final String ALLOWED_S3_FILE_EXTENSIONS = "dpr.allowed.s3.file.extensions";
     static final String GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS = "dpr.glue.orchestration.wait.interval.seconds";
     static final int DEFAULT_GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS = 10;
     static final String GLUE_ORCHESTRATION_MAX_ATTEMPTS = "dpr.glue.orchestration.max.attempts";
@@ -330,7 +332,23 @@ public class JobArguments {
                 .map(String::trim)
                 .filter(item -> !item.isEmpty())
                 .collect(Collectors.toSet());
+        if (buckets.isEmpty()) throw new IllegalStateException("Argument " + ALLOWED_S3_FILE_EXTENSIONS + " evaluated to empty set");
         return ImmutableSet.copyOf(buckets);
+    }
+
+    public ImmutableSet<String> getAllowedS3FileExtensions() {
+        Set<String> extensions = Arrays.stream(getArgument(ALLOWED_S3_FILE_EXTENSIONS).toLowerCase().split(","))
+                .map(item -> item.trim().toLowerCase())
+                .filter(item -> !item.isEmpty())
+                .collect(Collectors.toSet());
+
+        if (extensions.isEmpty()) throw new IllegalStateException("Argument " + ALLOWED_S3_FILE_EXTENSIONS + " evaluated to empty set");
+
+        if (extensions.contains("*")) {
+            return ImmutableSet.of("*");
+        } else {
+            return ImmutableSet.copyOf(extensions);
+        }
     }
 
     public String getStopGlueInstanceJobName() {

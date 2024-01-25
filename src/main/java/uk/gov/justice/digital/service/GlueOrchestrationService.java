@@ -5,6 +5,10 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.GlueClient;
 import uk.gov.justice.digital.config.JobArguments;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
 public class GlueOrchestrationService {
 
     private static final Logger logger = LoggerFactory.getLogger(GlueOrchestrationService.class);
@@ -13,6 +17,7 @@ public class GlueOrchestrationService {
 
     private final GlueClient glueClient;
 
+    @Inject
     public GlueOrchestrationService(JobArguments jobArguments, GlueClient glueClient) {
         this.jobArguments = jobArguments;
         this.glueClient = glueClient;

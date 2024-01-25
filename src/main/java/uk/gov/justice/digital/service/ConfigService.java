@@ -5,6 +5,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import uk.gov.justice.digital.client.s3.S3ConfigReaderClient;
 import uk.gov.justice.digital.exception.ConfigServiceException;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 @Singleton
@@ -12,6 +13,7 @@ public class ConfigService {
 
     private final S3ConfigReaderClient configClient;
 
+    @Inject
     public ConfigService(S3ConfigReaderClient configClient) {
         this.configClient = configClient;
     }

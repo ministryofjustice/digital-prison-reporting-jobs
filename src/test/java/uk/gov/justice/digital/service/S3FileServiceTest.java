@@ -21,7 +21,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.client.s3.S3FileTransferClient.DELIMITER;
-import static uk.gov.justice.digital.service.S3FileService.FILE_EXTENSION;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +29,8 @@ class S3FileServiceTest {
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String DESTINATION_BUCKET = "destination-bucket";
     private static final long RETENTION_DAYS = 2L;
+
+    private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
 
     @Mock
     private S3FileTransferClient mockS3Client;
@@ -44,32 +45,32 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void listParquetFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
+    public void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listParquetFiles(SOURCE_BUCKET, RETENTION_DAYS);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, parquetFileExtension, RETENTION_DAYS);
 
         assertThat(result, is(empty()));
     }
 
     @Test
-    public void listParquetFilesShouldReturnListOfParquetFiles() {
+    public void listFilesShouldReturnListOfParquetFiles() {
         List<String> expected = new ArrayList<>();
         expected.add("file1.parquet");
         expected.add("file2.parquet");
         expected.add("file3.parquet");
         expected.add("file4.parquet");
 
-        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, FILE_EXTENSION, RETENTION_DAYS, fixedClock))
+        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, parquetFileExtension, RETENTION_DAYS, fixedClock))
                 .thenReturn(expected);
 
-        List<String> result = undertest.listParquetFiles(SOURCE_BUCKET, RETENTION_DAYS);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, parquetFileExtension, RETENTION_DAYS);
 
         assertThat(result, containsInAnyOrder(expected.toArray()));
     }
 
     @Test
-    public void listParquetFilesForConfigShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
+    public void listFilesForConfigShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -77,13 +78,13 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listParquetFilesForConfig(SOURCE_BUCKET, configuredTables, RETENTION_DAYS);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, configuredTables, parquetFileExtension, RETENTION_DAYS);
 
         assertThat(result, is(empty()));
     }
 
     @Test
-    public void listParquetFilesForConfigShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
+    public void listFilesForConfigShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
         String configuredTable1 = "schema_1/table_1";
         String configuredTable2 = "schema_2/table_2";
 
@@ -104,18 +105,18 @@ class S3FileServiceTest {
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
                 configuredTable1 + DELIMITER,
-                FILE_EXTENSION,
+                parquetFileExtension,
                 RETENTION_DAYS,
                 fixedClock)).thenReturn(expectedFilesForTable1);
 
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
                 configuredTable2 + DELIMITER,
-                FILE_EXTENSION,
+                parquetFileExtension,
                 RETENTION_DAYS,
                 fixedClock)).thenReturn(expectedFilesForTable2);
 
-        List<String> result = undertest.listParquetFilesForConfig(SOURCE_BUCKET, configuredTables, RETENTION_DAYS);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, configuredTables, parquetFileExtension, RETENTION_DAYS);
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);

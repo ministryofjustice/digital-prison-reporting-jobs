@@ -261,6 +261,38 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
+    public void shouldThrowAnExceptionWhenSetOfBucketsToDeleteFilesFromIsEmpty() {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.FILE_DELETION_BUCKETS, "");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalStateException.class, jobArguments::getBucketsToDeleteFilesFrom);
+    }
+
+    @Test
+    public void shouldReturnLowerCasedSetOfAllowedS3FileExtensionsWithoutDuplicates() {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.ALLOWED_S3_FILE_EXTENSIONS, ".parquet,.jpg,.txt,.JPG");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(ImmutableSet.of(".parquet", ".jpg", ".txt"), jobArguments.getAllowedS3FileExtensions());
+    }
+
+    @Test
+    public void shouldThrowAnExceptionWhenSetOfAllowedS3FileExtensionsIsEmpty() {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.ALLOWED_S3_FILE_EXTENSIONS, "");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalStateException.class, jobArguments::getAllowedS3FileExtensions);
+    }
+
+    @Test
+    public void shouldReturnWildcardWhenTheAllowedS3FileExtensionsContainsOne() {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.ALLOWED_S3_FILE_EXTENSIONS, ".parquet,*,.txt");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(ImmutableSet.of("*"), jobArguments.getAllowedS3FileExtensions());
+    }
+
+    @Test
     public void shouldDefaultGlueOrchestrationWaitIntervalSecondsWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS);

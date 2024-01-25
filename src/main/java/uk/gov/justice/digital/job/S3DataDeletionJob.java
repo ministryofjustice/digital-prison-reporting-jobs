@@ -12,10 +12,11 @@ import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import javax.inject.Inject;
+import java.time.Clock;
 import java.util.*;
 
 /**
- * Job that deletes parquet files from a list of bucket(s).
+ * Job that deletes s3 files from a list of bucket(s).
  */
 @CommandLine.Command(name = "S3DataDeletionJob")
 public class S3DataDeletionJob implements Runnable {
@@ -38,7 +39,7 @@ public class S3DataDeletionJob implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job starting");
-        PicocliRunner.run(S3DataDeletionJob.class, MicronautContext.withArgs(args));
+        PicocliRunner.run(S3DataDeletionJob.class, MicronautContext.withArgs(args).registerSingleton(Clock.class, Clock.systemUTC()));
     }
 
     @Override
@@ -60,11 +61,15 @@ public class S3DataDeletionJob implements Runnable {
                 .getConfiguredTables(jobArguments.getConfigKey());
 
         final ImmutableSet<String> bucketsToDeleteFilesFrom = jobArguments.getBucketsToDeleteFilesFrom();
+        final ImmutableSet<String> allowedExtensions = jobArguments.getAllowedS3FileExtensions();
 
         Set<String> failedObjects = new HashSet<>();
 
         for (String bucketToDeleteFilesFrom : bucketsToDeleteFilesFrom) {
-            List<String> objectKeys = new ArrayList<>(s3FileService.listParquetFilesForConfig(bucketToDeleteFilesFrom, configuredTables, 0L));
+            List<String> listedFiles = s3FileService
+                    .listFilesForConfig(bucketToDeleteFilesFrom, configuredTables, allowedExtensions, 0L);
+
+            List<String> objectKeys = new ArrayList<>(listedFiles);
 
             logger.info("Deleting S3 objects from {} ", bucketToDeleteFilesFrom);
             failedObjects = s3FileService.deleteObjects(objectKeys, bucketToDeleteFilesFrom);

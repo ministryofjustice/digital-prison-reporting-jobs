@@ -42,6 +42,8 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
     private final static ImmutableSet<String> bucketsToDeleteFrom = ImmutableSet
             .of("bucket-to-delete-from-1", "bucket-to-delete-from-2");
 
+    private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
+
     private S3DataDeletionJob underTest;
 
     @BeforeEach
@@ -69,10 +71,15 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobArguments.getBucketsToDeleteFilesFrom()).thenReturn(bucketsToDeleteFrom);
+        when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listParquetFilesForConfig(listObjectsBucketCaptor.capture(), eq(configuredTables), eq(0L)))
-                .thenReturn(objectsToDelete);
+        when(mockS3FileService.listFilesForConfig(
+                listObjectsBucketCaptor.capture(),
+                eq(configuredTables),
+                eq(parquetFileExtension),
+                eq(0L)
+        )).thenReturn(objectsToDelete);
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture()))
                 .thenReturn(Collections.emptySet());
@@ -108,9 +115,14 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobArguments.getBucketsToDeleteFilesFrom()).thenReturn(bucketsToDeleteFrom);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
+        when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
 
-        when(mockS3FileService.listParquetFilesForConfig(listObjectsBucketCaptor.capture(), eq(configuredTables), eq(0L)))
-                .thenReturn(objectsToDelete);
+        when(mockS3FileService.listFilesForConfig(
+                listObjectsBucketCaptor.capture(),
+                eq(configuredTables),
+                eq(parquetFileExtension),
+                eq(0L)
+        )).thenReturn(objectsToDelete);
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture())).thenReturn(failedFiles);
 
