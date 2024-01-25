@@ -332,7 +332,7 @@ public class JobArguments {
                 .map(String::trim)
                 .filter(item -> !item.isEmpty())
                 .collect(Collectors.toSet());
-        if (buckets.isEmpty()) throw new IllegalStateException("Argument " + ALLOWED_S3_FILE_EXTENSIONS + " evaluated to empty set");
+        if (buckets.isEmpty()) throw new IllegalStateException("Argument " + FILE_DELETION_BUCKETS + " evaluated to empty set");
         return ImmutableSet.copyOf(buckets);
     }
 
