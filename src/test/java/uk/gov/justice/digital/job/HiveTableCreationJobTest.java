@@ -14,7 +14,7 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
 import uk.gov.justice.digital.service.ConfigService;
-import uk.gov.justice.digital.service.HiveSchemaService;
+import uk.gov.justice.digital.service.HiveTableService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,7 +36,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
     @Mock
     private ConfigService mockConfigService;
     @Mock
-    private HiveSchemaService mockHiveSchemaService;
+    private HiveTableService mockHiveTableService;
     @Mock
     private JobArguments mockJobArguments;
     @Captor
@@ -46,8 +46,8 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
 
     @BeforeEach
     public void setup() {
-        reset(mockConfigService, mockHiveSchemaService, mockJobArguments);
-        underTest = new HiveTableCreationJob(mockConfigService, mockHiveSchemaService, mockJobArguments);
+        reset(mockConfigService, mockHiveTableService, mockJobArguments);
+        underTest = new HiveTableCreationJob(mockConfigService, mockHiveTableService, mockJobArguments);
     }
 
     @Test
@@ -59,7 +59,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(expectedTables));
-        when(mockHiveSchemaService.replaceTables(argumentCaptor.capture())).thenReturn(Collections.emptySet());
+        when(mockHiveTableService.replaceTables(argumentCaptor.capture())).thenReturn(Collections.emptySet());
 
         assertDoesNotThrow(() -> underTest.run());
 
@@ -72,7 +72,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(failedTables));
-        when(mockHiveSchemaService.replaceTables(any())).thenReturn(failedTables);
+        when(mockHiveTableService.replaceTables(any())).thenReturn(failedTables);
 
         SystemLambda.catchSystemExit(() -> underTest.run());
     }
@@ -83,7 +83,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(table));
-        when(mockHiveSchemaService.replaceTables(any())).thenThrow(new HiveSchemaServiceException("Schema service exception"));
+        when(mockHiveTableService.replaceTables(any())).thenThrow(new HiveSchemaServiceException("Schema service exception"));
 
         SystemLambda.catchSystemExit(() -> underTest.run());
     }

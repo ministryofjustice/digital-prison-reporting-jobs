@@ -3,13 +3,15 @@ package uk.gov.justice.digital.job;
 import com.google.common.collect.ImmutableSet;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.job.context.MicronautContext;
+import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
-import uk.gov.justice.digital.service.HiveSchemaService;
+import uk.gov.justice.digital.service.HiveTableService;
 
 import javax.inject.Inject;
 import java.util.Set;
@@ -21,17 +23,20 @@ import java.util.Set;
 public class SwitchHiveTableJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(SwitchHiveTableJob.class);
     private final ConfigService configService;
-    private final HiveSchemaService hiveSchemaService;
+    private final HiveTableService hiveTableService;
+    private final SparkSessionProvider sparkSessionProvider;
     private final JobArguments jobArguments;
 
     @Inject
     public SwitchHiveTableJob(
             ConfigService configService,
-            HiveSchemaService hiveSchemaService,
+            HiveTableService hiveTableService,
+            SparkSessionProvider sparkSessionProvider,
             JobArguments jobArguments
     ) {
         this.configService = configService;
-        this.hiveSchemaService = hiveSchemaService;
+        this.hiveTableService = hiveTableService;
+        this.sparkSessionProvider = sparkSessionProvider;
         this.jobArguments = jobArguments;
     }
 
@@ -44,11 +49,12 @@ public class SwitchHiveTableJob implements Runnable {
     public void run() {
         try {
             logger.info("SwitchHiveTableJob running");
+            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments.getLogLevel());
 
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(jobArguments.getConfigKey());
 
-            Set<ImmutablePair<String, String>> failedTables = hiveSchemaService.switchPrisonsTableDataSource(configuredTables);
+            Set<ImmutablePair<String, String>> failedTables = hiveTableService.switchPrisonsTableDataSource(spark, configuredTables);
 
             if (!failedTables.isEmpty()) {
                 logger.error("Not all schemas were processed");

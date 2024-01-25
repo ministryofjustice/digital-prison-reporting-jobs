@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.service.ConfigService;
-import uk.gov.justice.digital.service.HiveSchemaService;
+import uk.gov.justice.digital.service.HiveTableService;
 
 import javax.inject.Inject;
 import java.util.Set;
@@ -23,17 +23,17 @@ public class HiveTableCreationJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(HiveTableCreationJob.class);
     private final ConfigService configService;
-    private final HiveSchemaService hiveSchemaService;
+    private final HiveTableService hiveTableService;
     private final JobArguments jobArguments;
 
     @Inject
     public HiveTableCreationJob(
             ConfigService configService,
-            HiveSchemaService hiveSchemaService,
+            HiveTableService hiveTableService,
             JobArguments jobArguments
     ) {
         this.configService = configService;
-        this.hiveSchemaService = hiveSchemaService;
+        this.hiveTableService = hiveTableService;
         this.jobArguments = jobArguments;
     }
 
@@ -50,7 +50,7 @@ public class HiveTableCreationJob implements Runnable {
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(jobArguments.getConfigKey());
 
-            Set<ImmutablePair<String, String>> failedTables = hiveSchemaService.replaceTables(configuredTables);
+            Set<ImmutablePair<String, String>> failedTables = hiveTableService.replaceTables(configuredTables);
 
             if (!failedTables.isEmpty()) {
                 logger.error("Not all schemas were processed");
