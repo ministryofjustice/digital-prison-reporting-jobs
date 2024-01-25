@@ -140,7 +140,7 @@ public class GlueClient {
     @NotNull
     private Optional<String> getRunningJobId(String jobName) {
         logger.info("Retrieving the Id of the running instance of job {}", jobName);
-        GetJobRunsRequest getJobRunsRequest = new GetJobRunsRequest().withJobName(jobName).withMaxResults(1000);
+        GetJobRunsRequest getJobRunsRequest = new GetJobRunsRequest().withJobName(jobName).withMaxResults(200);
         List<JobRun> jobRuns = awsGlue.getJobRuns(getJobRunsRequest).getJobRuns();
         return jobRuns.stream()
                 .filter(jobRun -> jobRun.getJobRunState().equalsIgnoreCase("RUNNING"))

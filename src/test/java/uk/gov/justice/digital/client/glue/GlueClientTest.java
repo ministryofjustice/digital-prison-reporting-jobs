@@ -167,7 +167,7 @@ class GlueClientTest {
 
         GetJobRunsRequest getJobRunsRequestCaptorValue = getJobRunsRequestCaptor.getValue();
         assertThat(getJobRunsRequestCaptorValue.getJobName(), is(equalTo(TEST_JOB_NAME)));
-        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(1000)));
+        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(200)));
         assertThat(stopJobRunRequestCaptor.getValue().getJobName(), is(equalTo(TEST_JOB_NAME)));
         assertThat(getJobRunRequestCaptor.getValue().getJobName(), is(equalTo(TEST_JOB_NAME)));
     }
@@ -183,7 +183,7 @@ class GlueClientTest {
 
         GetJobRunsRequest getJobRunsRequestCaptorValue = getJobRunsRequestCaptor.getValue();
         assertThat(getJobRunsRequestCaptorValue.getJobName(), is(equalTo(TEST_JOB_NAME)));
-        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(1000)));
+        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(200)));
         verifyNoInteractions(mockGetJobRunResult);
     }
 

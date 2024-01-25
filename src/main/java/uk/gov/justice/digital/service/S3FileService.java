@@ -22,8 +22,6 @@ public class S3FileService {
     private final S3FileTransferClient s3Client;
     private final Clock clock;
 
-    public static final String FILE_EXTENSION = ".parquet";
-
     @Inject
     public S3FileService(
             S3FileTransferClient s3Client,
@@ -33,17 +31,18 @@ public class S3FileService {
         this.clock = clock;
     }
 
-    public List<String> listParquetFiles(String bucket, Long retentionDays) {
-        return s3Client.getObjectsOlderThan(bucket, FILE_EXTENSION, retentionDays, clock);
+    public List<String> listFiles(String bucket, ImmutableSet<String> allowedExtensions, Long retentionDays) {
+        return s3Client.getObjectsOlderThan(bucket, allowedExtensions, retentionDays, clock);
     }
 
-    public List<String> listParquetFilesForConfig(
+    public List<String> listFilesForConfig(
             String sourceBucket,
             ImmutableSet<ImmutablePair<String, String>> configuredTables,
+            ImmutableSet<String> allowedExtensions,
             Long retentionDays
     ) {
         return configuredTables.stream()
-                .flatMap(configuredTable -> listFilesForTable(sourceBucket, retentionDays, configuredTable).stream())
+                .flatMap(configuredTable -> listFilesForTable(sourceBucket, allowedExtensions, retentionDays, configuredTable).stream())
                 .collect(Collectors.toList());
     }
 
@@ -85,6 +84,7 @@ public class S3FileService {
 
     private List<String> listFilesForTable(
             String sourceBucket,
+            ImmutableSet<String> allowedExtensions,
             Long retentionDays,
             ImmutablePair<String, String> configuredTable
     ) {
@@ -93,7 +93,7 @@ public class S3FileService {
         return s3Client.getObjectsOlderThan(
                 sourceBucket,
                 tableKey,
-                FILE_EXTENSION,
+                allowedExtensions,
                 retentionDays,
                 clock
         );
