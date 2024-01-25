@@ -69,10 +69,8 @@ public class S3DataDeletionJob implements Runnable {
             List<String> listedFiles = s3FileService
                     .listFilesForConfig(bucketToDeleteFilesFrom, configuredTables, allowedExtensions, 0L);
 
-            List<String> objectKeys = new ArrayList<>(listedFiles);
-
             logger.info("Deleting S3 objects from {} ", bucketToDeleteFilesFrom);
-            failedObjects = s3FileService.deleteObjects(objectKeys, bucketToDeleteFilesFrom);
+            failedObjects = s3FileService.deleteObjects(listedFiles, bucketToDeleteFilesFrom);
         }
 
         if (failedObjects.isEmpty()) {
