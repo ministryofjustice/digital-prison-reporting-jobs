@@ -12,6 +12,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -21,8 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
@@ -32,12 +32,14 @@ import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
 import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-public class HiveSchemaServiceTest {
+public class HiveTableServiceTest extends BaseSparkTest {
 
     @Mock
     private JobArguments mockJobArguments;
     @Mock
     private SourceReferenceService mockSourceReferenceService;
+    @Mock
+    private DataStorageService mockStorageService;
     @Mock
     private GlueClient mockGlueClient;
 
@@ -48,9 +50,9 @@ public class HiveSchemaServiceTest {
     ArgumentCaptor<String> deleteTableArgCaptor, createArchiveTableArgCaptor, createSymlinkTableArgCaptor;
 
     @Captor
-    ArgumentCaptor<String> createArchivePathArgCaptor, createSymlinkPathArgCaptor;
+    ArgumentCaptor<String> createArchivePathArgCaptor, createSymlinkPathArgCaptor, updateManifestTablePathCaptor;
 
-    private HiveSchemaService underTest;
+    private HiveTableService underTest;
 
     private static final String RAW_ARCHIVE_BUCKET = "s3://raw-archive";
     private static final String STRUCTURED_ZONE_BUCKET = "s3://structured-zone";
@@ -66,7 +68,8 @@ public class HiveSchemaServiceTest {
 
     @BeforeEach
     public void setup() {
-        underTest = new HiveSchemaService(mockJobArguments, mockSourceReferenceService, mockGlueClient);
+        reset(mockJobArguments, mockSourceReferenceService, mockStorageService, mockGlueClient);
+        underTest = new HiveTableService(mockJobArguments, mockSourceReferenceService, mockStorageService, mockGlueClient);
     }
 
     @Test
@@ -194,7 +197,7 @@ public class HiveSchemaServiceTest {
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
 
-        assertThrows(HiveSchemaServiceException.class, () -> underTest.switchPrisonsTableDataSource(schemaGroup));
+        assertThrows(HiveSchemaServiceException.class, () -> underTest.switchPrisonsTableDataSource(spark, schemaGroup));
     }
 
     @Test
@@ -203,7 +206,7 @@ public class HiveSchemaServiceTest {
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
 
-        assertThrows(RuntimeException.class, () -> underTest.switchPrisonsTableDataSource(schemaGroup));
+        assertThrows(RuntimeException.class, () -> underTest.switchPrisonsTableDataSource(spark, schemaGroup));
     }
 
     @Test
@@ -231,14 +234,17 @@ public class HiveSchemaServiceTest {
         List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 1));
 
         List<String> expectedCreateSymlinkPathArgs = new ArrayList<>();
-        expectedCreateSymlinkPathArgs.add(createPath(TEMP_RELOAD_BUCKET, 0));
-        expectedCreateSymlinkPathArgs.add(createPath(TEMP_RELOAD_BUCKET, 1));
+        String tablePath0 = createPath(TEMP_RELOAD_BUCKET, 0);
+        expectedCreateSymlinkPathArgs.add(tablePath0);
+        String tablePath1 = createPath(TEMP_RELOAD_BUCKET, 1);
+        expectedCreateSymlinkPathArgs.add(tablePath1);
 
         when(mockJobArguments.getPrisonsDataSwitchTargetS3Path()).thenReturn(TEMP_RELOAD_BUCKET);
         when(mockJobArguments.getPrisonsDatabase()).thenReturn(PRISONS_DATABASE);
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(sourceReferences);
+        doNothing().when(mockStorageService).updateDeltaManifestForTable(eq(spark), updateManifestTablePathCaptor.capture());
 
-        assertThat((Collection<ImmutablePair<String, String>>) underTest.switchPrisonsTableDataSource(schemaGroup), is(empty()));
+        assertThat((Collection<ImmutablePair<String, String>>) underTest.switchPrisonsTableDataSource(spark, schemaGroup), is(empty()));
 
         // verify configured Hive tables get deleted
         verify(mockGlueClient, times(2))
@@ -264,6 +270,8 @@ public class HiveSchemaServiceTest {
                 createSymlinkTableArgCaptor,
                 createSymlinkPathArgCaptor
         );
+
+        assertThat(updateManifestTablePathCaptor.getAllValues(), containsInAnyOrder(tablePath0, tablePath1));
     }
 
     private void assertOnCreateTableArgs(

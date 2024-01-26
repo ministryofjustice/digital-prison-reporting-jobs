@@ -2,6 +2,7 @@ package uk.gov.justice.digital.service;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -22,25 +23,28 @@ import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
-public class HiveSchemaService {
+public class HiveTableService {
 
-    private static final Logger logger = LoggerFactory.getLogger(HiveSchemaService.class);
+    private static final Logger logger = LoggerFactory.getLogger(HiveTableService.class);
 
     private static final String TABLE_NAME_PATTERN = "^[a-z_0-9]*$";
     private static final Pattern tableNameRegex = Pattern.compile(TABLE_NAME_PATTERN);
 
     private final JobArguments jobArguments;
     private final SourceReferenceService sourceReferenceService;
+    private final DataStorageService storageService;
     private final GlueClient glueClient;
 
     @Inject
-    public HiveSchemaService(
+    public HiveTableService(
             JobArguments jobArguments,
             SourceReferenceService sourceReferenceService,
+            DataStorageService storageService,
             GlueClient glueClient
     ) {
         this.jobArguments = jobArguments;
         this.sourceReferenceService = sourceReferenceService;
+        this.storageService = storageService;
         this.glueClient = glueClient;
     }
 
@@ -81,7 +85,7 @@ public class HiveSchemaService {
         return failedTables;
     }
 
-    public Set<ImmutablePair<String, String>> switchPrisonsTableDataSource(ImmutableSet<ImmutablePair<String, String>> tables) {
+    public Set<ImmutablePair<String, String>> switchPrisonsTableDataSource(SparkSession spark, ImmutableSet<ImmutablePair<String, String>> tables) {
 
         Set<ImmutablePair<String, String>> failedTables = new HashSet<>();
         List<SourceReference> sourceReferences = getSourceReferences(tables);
@@ -101,6 +105,7 @@ public class HiveSchemaService {
                 String dataPath = createValidatedPath(targetS3Path, sourceName, tableName);
 
                 replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, dataPath, schema);
+                storageService.updateDeltaManifestForTable(spark, dataPath);
             } catch (Exception e) {
                 logger.error("Failed to point Hive table {} to {}", hiveTableName, targetS3Path, e);
                 failedTables.add(ImmutablePair.of(sourceName, tableName));
