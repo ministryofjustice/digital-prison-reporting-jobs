@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.config.JobArguments;
 
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -40,6 +41,8 @@ public class S3FileTransferClientTest {
     AmazonS3 mockS3Client;
     @Mock
     ObjectListing mockObjectListing;
+    @Mock
+    JobArguments mockJobArgs;
     @Captor
     ArgumentCaptor<ListObjectsRequest> listObjectsRequestCaptor;
 
@@ -47,12 +50,16 @@ public class S3FileTransferClientTest {
     private static final String SOURCE_BUCKET = "test-source-bucket";
     private static final String DESTINATION_BUCKET = "test-destination-bucket";
     private static final ImmutableSet<String> allowedExtensions = ImmutableSet.of(".parquet", ".json");
+    private static final Integer MAX_OBJECTS_PER_PAGE = 10;
 
     private S3FileTransferClient underTest;
     @BeforeEach
     public void setUp() {
+        reset(mockS3ClientProvider, mockS3Client, mockObjectListing, mockJobArgs);
+
         when(mockS3ClientProvider.getClient()).thenReturn(mockS3Client);
-        underTest = new S3FileTransferClient(mockS3ClientProvider);
+        when(mockJobArgs.getMaxObjectsPerPage()).thenReturn(MAX_OBJECTS_PER_PAGE);
+        underTest = new S3FileTransferClient(mockS3ClientProvider, mockJobArgs);
     }
 
     @Test
@@ -106,7 +113,44 @@ public class S3FileTransferClientTest {
 
         List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, allowedExtensions, 0L, fixedClock);
 
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
+        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
+    }
+
+    @Test
+    public void getObjectsOlderThanShouldReturnListOfObjectsMatchingAllowedExtensionsWhenObjectsListExceedsOnePage() {
+        ImmutableSet<ImmutablePair<String, String>> firstSetOfObjectKeys = ImmutableSet.of(
+                ImmutablePair.of("file1", ".txt"),
+                ImmutablePair.of("file2", ".parquet"),
+                ImmutablePair.of("file3", ".json"),
+                ImmutablePair.of("file6", ".PARQUET")
+        );
+
+        ImmutableSet<ImmutablePair<String, String>> secondSetOfObjectKeys = ImmutableSet.of(
+                ImmutablePair.of("file7", ".txt"),
+                ImmutablePair.of("file8", ".parquet"),
+                ImmutablePair.of("file9", ".json")
+        );
+
+        List<String> expectedObjectKeys = new ArrayList<>();
+        expectedObjectKeys.add("file2.parquet");
+        expectedObjectKeys.add("file6.PARQUET");
+        expectedObjectKeys.add("file8.parquet");
+
+        Date lastModifiedDate = new Date();
+        lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
+        List<S3ObjectSummary> firstPageSummaries = createObjectSummaries(firstSetOfObjectKeys, lastModifiedDate);
+        List<S3ObjectSummary> secondPageSummaries = createObjectSummaries(secondSetOfObjectKeys, lastModifiedDate);
+
+        givenMultiPageObjectListingSucceeds(firstPageSummaries, secondPageSummaries);
+
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, ImmutableSet.of(".parquet"), 0L, fixedClock);
+
+        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
+        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -212,6 +256,13 @@ public class S3FileTransferClientTest {
     private void givenObjectListingSucceeds(List<S3ObjectSummary> objectSummaries) {
         when(mockObjectListing.getObjectSummaries()).thenReturn(objectSummaries);
         when(mockObjectListing.isTruncated()).thenReturn(false);
+        when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+    }
+
+    @SuppressWarnings({"unchecked", "varargs"})
+    private void givenMultiPageObjectListingSucceeds(List<S3ObjectSummary> firstPage, List<S3ObjectSummary> secondPage) {
+        when(mockObjectListing.getObjectSummaries()).thenReturn(firstPage, secondPage);
+        when(mockObjectListing.isTruncated()).thenReturn(true, false);
         when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
     }
 }

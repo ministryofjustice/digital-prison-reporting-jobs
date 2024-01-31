@@ -34,6 +34,7 @@ public class S3SchemaClient {
     private final AmazonS3 s3;
     private final LoadingCache<String, S3SchemaResponse> cache;
     private final String contractRegistryName;
+    private final Integer maxObjectsPerPage;
 
     static final String SCHEMA_FILE_EXTENSION = ".avsc";
 
@@ -48,6 +49,7 @@ public class S3SchemaClient {
                 .expireAfterWrite(jobArguments.getSchemaCacheExpiryInMinutes(), TimeUnit.MINUTES)
                 .build(getCacheLoader());
         this.contractRegistryName = jobArguments.getContractRegistryName();
+        this.maxObjectsPerPage = jobArguments.getMaxObjectsPerPage();
     }
 
     public Optional<S3SchemaResponse> getSchema(String schemaName) {
@@ -84,7 +86,7 @@ public class S3SchemaClient {
     private List<String> listObjects() throws SdkClientException {
         List<String> objectPaths = new LinkedList<>();
 
-        ListObjectsRequest request = new ListObjectsRequest().withBucketName(contractRegistryName);
+        ListObjectsRequest request = new ListObjectsRequest().withBucketName(contractRegistryName).withMaxKeys(maxObjectsPerPage);
 
         ObjectListing objectList;
         do {
@@ -95,7 +97,7 @@ public class S3SchemaClient {
                     objectPaths.add(summaryKey);
                 }
             }
-            request.setMarker(objectList.getMarker());
+            request.setMarker(objectList.getNextMarker());
         } while (objectList.isTruncated());
 
         return objectPaths;
