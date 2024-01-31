@@ -7,6 +7,8 @@ import com.amazonaws.services.s3.model.*;
 import com.google.common.collect.ImmutableSet;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.hamcrest.core.Is;
+import org.hamcrest.core.IsEqual;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -30,8 +33,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.client.s3.S3SchemaClient.S3SchemaResponse;
 import static uk.gov.justice.digital.client.s3.S3SchemaClient.SCHEMA_FILE_EXTENSION;
-import static uk.gov.justice.digital.config.JobArguments.SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.SCHEMA_CACHE_MAX_SIZE_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.*;
 
 @ExtendWith(MockitoExtension.class)
 public class S3SchemaClientTest {
@@ -40,6 +42,7 @@ public class S3SchemaClientTest {
     private static final String FAKE_SCHEMA_DEFINITION = "This is a fake schema definition";
     private static final String VERSION_ID = UUID.randomUUID().toString();
     private static final String SCHEMA_REGISTRY = "test-contract-registry";
+    private static final Integer MAX_OBJECTS_PER_PAGE = 10;
 
     @Mock
     private S3ClientProvider mockClientProvider;
@@ -137,7 +140,42 @@ public class S3SchemaClientTest {
 
         val result = underTest.getAllSchemas(schemaNames);
 
+        assertThat(listObjectsRequestCaptor.getValue().getMaxKeys(), Is.is(IsEqual.equalTo(MAX_OBJECTS_PER_PAGE)));
         assertThat(result.size(), equalTo(schemaNames.size()));
+    }
+
+    @Test
+    public void shouldRetrieveAllSchemasWhenObjectsListExceedsOnePage() {
+        List<ImmutablePair<String, String>> firstPageSchemaNamesList = new ArrayList<>();
+        firstPageSchemaNamesList.add(ImmutablePair.of("schema1", "some_table"));
+        firstPageSchemaNamesList.add(ImmutablePair.of("schema2", "some_table"));
+        firstPageSchemaNamesList.add(ImmutablePair.of("schema3", "some_table"));
+        val firstPageSchemaNames = ImmutableSet.copyOf(firstPageSchemaNamesList);
+
+        List<ImmutablePair<String, String>> secondPageSchemaNamesList = new ArrayList<>();
+        secondPageSchemaNamesList.add(ImmutablePair.of("schema4", "some_table"));
+        secondPageSchemaNamesList.add(ImmutablePair.of("schema5", "some_table"));
+        secondPageSchemaNamesList.add(ImmutablePair.of("schema6", "some_table"));
+        val secondPageSchemaNames = ImmutableSet.copyOf(secondPageSchemaNamesList);
+
+        val allSchemaList = Stream.concat(firstPageSchemaNamesList.stream(), secondPageSchemaNamesList.stream())
+                .collect(Collectors.toList());
+        val allSchemaNames = ImmutableSet.copyOf(allSchemaList);
+
+        givenMultiPageObjectListingSucceeds(createObjectSummaries(firstPageSchemaNames), createObjectSummaries(secondPageSchemaNames));
+
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema2/some_table" + SCHEMA_FILE_EXTENSION);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema3/some_table" + SCHEMA_FILE_EXTENSION);
+
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema4/some_table" + SCHEMA_FILE_EXTENSION);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema5/some_table" + SCHEMA_FILE_EXTENSION);
+        givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema6/some_table" + SCHEMA_FILE_EXTENSION);
+
+        val result = underTest.getAllSchemas(allSchemaNames);
+
+        assertThat(listObjectsRequestCaptor.getValue().getMaxKeys(), Is.is(IsEqual.equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(result.size(), is(equalTo(allSchemaNames.size())));
     }
 
     @Test
@@ -182,6 +220,7 @@ public class S3SchemaClientTest {
         when(mockArguments.getContractRegistryName()).thenReturn(SCHEMA_REGISTRY);
         when(mockArguments.getSchemaCacheMaxSize()).thenReturn(SCHEMA_CACHE_MAX_SIZE_DEFAULT);
         when(mockArguments.getSchemaCacheExpiryInMinutes()).thenReturn(SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT);
+        when(mockArguments.getMaxObjectsPerPage()).thenReturn(MAX_OBJECTS_PER_PAGE);
     }
 
     private void givenSchemaRetrievalSucceeds(String schemaDefinition, String objectKey) {
@@ -199,6 +238,13 @@ public class S3SchemaClientTest {
     private void givenObjectListingSucceeds(List<S3ObjectSummary> objectSummaries) {
         when(mockObjectListing.getObjectSummaries()).thenReturn(objectSummaries);
         when(mockObjectListing.isTruncated()).thenReturn(false);
+        when(mockClient.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+    }
+
+    @SuppressWarnings({"unchecked", "varargs"})
+    private void givenMultiPageObjectListingSucceeds(List<S3ObjectSummary> firstPage, List<S3ObjectSummary> secondPage) {
+        when(mockObjectListing.getObjectSummaries()).thenReturn(firstPage, secondPage);
+        when(mockObjectListing.isTruncated()).thenReturn(true, false);
         when(mockClient.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
     }
 

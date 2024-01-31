@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobArguments;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -21,15 +22,17 @@ public class S3FileTransferClient {
     private static final Logger logger = LoggerFactory.getLogger(S3FileTransferClient.class);
 
     private final AmazonS3 s3;
+    private final Integer maxObjectsPerPage;
     public static final String DELIMITER = "/";
 
     @Inject
-    public S3FileTransferClient(S3ClientProvider s3ClientProvider) {
+    public S3FileTransferClient(S3ClientProvider s3ClientProvider, JobArguments jobArguments) {
         this.s3 = s3ClientProvider.getClient();
+        this.maxObjectsPerPage = jobArguments.getMaxObjectsPerPage();
     }
 
     public List<String> getObjectsOlderThan(String bucket, ImmutableSet<String> allowedExtensions, Long retentionDays, Clock clock) {
-        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket);
+        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withMaxKeys(maxObjectsPerPage);
         return listObjects(allowedExtensions, retentionDays, clock, request);
     }
 
@@ -40,7 +43,7 @@ public class S3FileTransferClient {
             Long retentionDays,
             Clock clock
     ) {
-        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder);
+        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
         return listObjects(allowedExtensions, retentionDays, clock, request);
     }
 
@@ -50,7 +53,9 @@ public class S3FileTransferClient {
         ObjectListing objectList;
         do {
             objectList = s3.listObjects(request);
-            for (S3ObjectSummary summary : objectList.getObjectSummaries()) {
+            List<S3ObjectSummary> objectSummaries = objectList.getObjectSummaries();
+            logger.info("Listed a total of {} objects", objectSummaries.size());
+            for (S3ObjectSummary summary : objectSummaries) {
 
                 LocalDateTime lastModifiedDate = summary.getLastModified().toInstant().atZone(clock.getZone()).toLocalDateTime();
                 boolean isBeforeRetentionPeriod = lastModifiedDate.isBefore(currentDate.minusDays(retentionDays));
@@ -65,7 +70,7 @@ public class S3FileTransferClient {
                     objectPaths.add(summaryKey);
                 }
             }
-            request.setMarker(objectList.getMarker());
+            request.setMarker(objectList.getNextMarker());
         } while (objectList.isTruncated());
 
         return objectPaths;

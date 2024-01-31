@@ -59,7 +59,7 @@ public class S3FileService {
                 s3Client.copyObject(objectKey, sourceBucket, destinationBucket);
                 if (deleteCopiedFiles) s3Client.deleteObject(objectKey, sourceBucket);
             } catch (AmazonServiceException e) {
-                logger.warn("Failed to move S3 object {}: {}", objectKey, e.getErrorMessage());
+                logger.warn("Failed to move S3 object {}", objectKey, e);
                 failedObjects.add(objectKey);
             }
         }

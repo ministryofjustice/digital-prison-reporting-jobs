@@ -58,7 +58,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
             { JobArguments.FILE_TRANSFER_RETENTION_DAYS, "2" },
             { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
-            { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, "10" }
+            { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, "10" },
+            { JobArguments.MAX_S3_PAGE_SIZE, "100" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -101,7 +102,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
                 { JobArguments.FILE_TRANSFER_RETENTION_DAYS, validArguments.getFileTransferRetentionDays() },
                 { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.glueOrchestrationWaitIntervalSeconds() },
-                { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, validArguments.glueOrchestrationMaxAttempts() }
+                { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, validArguments.glueOrchestrationMaxAttempts() },
+                { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() }
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -306,6 +308,23 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(20, jobArguments.glueOrchestrationMaxAttempts());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "-1", "1001"})
+    public void shouldReturnErrorWhenMaxObjectsPerPageIsInvalid(String value) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.MAX_S3_PAGE_SIZE, value);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::getMaxObjectsPerPage);
+    }
+
+    @Test
+    public void shouldDefaultMaxObjectsPerPageWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.MAX_S3_PAGE_SIZE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(1000, jobArguments.getMaxObjectsPerPage());
     }
 
     @Test

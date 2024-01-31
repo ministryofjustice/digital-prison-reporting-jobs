@@ -107,6 +107,8 @@ public class JobArguments {
     static final String GLUE_ORCHESTRATION_MAX_ATTEMPTS = "dpr.glue.orchestration.max.attempts";
     static final int DEFAULT_GLUE_ORCHESTRATION_MAX_ATTEMPTS = 20;
     static final String STOP_GLUE_INSTANCE_JOB_NAME = "dpr.stop.glue.instance.job.name";
+    static final String MAX_S3_PAGE_SIZE = "dpr.s3.max.page.size";
+    static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
 
     private final Map<String, String> config;
 
@@ -361,6 +363,15 @@ public class JobArguments {
 
     public int glueOrchestrationMaxAttempts() {
         return getArgument(GLUE_ORCHESTRATION_MAX_ATTEMPTS, DEFAULT_GLUE_ORCHESTRATION_MAX_ATTEMPTS);
+    }
+
+    public Integer getMaxObjectsPerPage() {
+        int argument = getArgument(MAX_S3_PAGE_SIZE, DEFAULT_MAX_S3_PAGE_SIZE);
+        if (argument > DEFAULT_MAX_S3_PAGE_SIZE || argument <= 0) {
+            throw new IllegalArgumentException(MAX_S3_PAGE_SIZE + " can only be positive integer less than " + DEFAULT_MAX_S3_PAGE_SIZE);
+        } else {
+            return argument;
+        }
     }
 
     private String getArgument(String argumentName) {
