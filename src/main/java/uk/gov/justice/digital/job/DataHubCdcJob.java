@@ -8,6 +8,8 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.streaming.StreamingQueryException;
@@ -23,6 +25,8 @@ import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
+import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,10 +69,12 @@ public class DataHubCdcJob implements Runnable {
     public void run() {
         try {
             boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
+            String checkpointLocation = arguments.getCheckpointLocation();
             if (runLocal) {
                 logger.info("Running locally");
                 SparkConf sparkConf = new SparkConf().setAppName("DataHubCdcJob local").setMaster("local[*]");
                 SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
+                if (arguments.cleanCdcCheckpoint()) recreateCheckpoint(spark, checkpointLocation);
                 runJob(spark);
                 waitUntilQueryTerminates(spark);
             } else {
@@ -76,6 +82,7 @@ public class DataHubCdcJob implements Runnable {
                 String jobName = properties.getSparkJobName();
                 GlueContext glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
                 SparkSession spark = glueContext.getSparkSession();
+                if (arguments.cleanCdcCheckpoint()) recreateCheckpoint(spark, checkpointLocation);
                 Job.init(jobName, glueContext, arguments.getConfig());
                 runJob(spark);
                 waitUntilQueryTerminates(spark);
@@ -124,5 +131,17 @@ public class DataHubCdcJob implements Runnable {
             logger.error("A streaming query terminated with an Exception", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private static void recreateCheckpoint(SparkSession spark, String checkpointLocation) throws IOException {
+        logger.info("Deleting checkpoint directory: {}", checkpointLocation);
+        val checkpointURI = URI.create(checkpointLocation);
+        try (val fileSystem = FileSystem.get(checkpointURI, spark.sparkContext().hadoopConfiguration())) {
+            val checkpointPath = new Path(checkpointURI);
+            if (fileSystem.exists(checkpointPath)) {
+                fileSystem.delete(checkpointPath, true);
+            }
+        }
+        logger.info("Checkpoint directory deleted");
     }
 }

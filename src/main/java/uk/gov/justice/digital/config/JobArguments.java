@@ -109,6 +109,7 @@ public class JobArguments {
     static final String STOP_GLUE_INSTANCE_JOB_NAME = "dpr.stop.glue.instance.job.name";
     static final String MAX_S3_PAGE_SIZE = "dpr.s3.max.page.size";
     static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
+    static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
 
     private final Map<String, String> config;
 
@@ -372,6 +373,10 @@ public class JobArguments {
         } else {
             return argument;
         }
+    }
+
+    public boolean cleanCdcCheckpoint() {
+        return getArgument(CLEAN_CDC_CHECKPOINT, false);
     }
 
     private String getArgument(String argumentName) {

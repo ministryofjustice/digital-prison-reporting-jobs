@@ -16,8 +16,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -59,7 +58,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.FILE_TRANSFER_RETENTION_DAYS, "2" },
             { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
             { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, "10" },
-            { JobArguments.MAX_S3_PAGE_SIZE, "100" }
+            { JobArguments.MAX_S3_PAGE_SIZE, "100" },
+            { JobArguments.CLEAN_CDC_CHECKPOINT, "false" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -103,7 +103,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.FILE_TRANSFER_RETENTION_DAYS, validArguments.getFileTransferRetentionDays() },
                 { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.glueOrchestrationWaitIntervalSeconds() },
                 { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, validArguments.glueOrchestrationMaxAttempts() },
-                { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() }
+                { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
+                { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() }
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -325,6 +326,14 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.MAX_S3_PAGE_SIZE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(1000, jobArguments.getMaxObjectsPerPage());
+    }
+
+    @Test
+    public void cleanCdcCheckpointShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.CLEAN_CDC_CHECKPOINT);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.cleanCdcCheckpoint());
     }
 
     @Test
