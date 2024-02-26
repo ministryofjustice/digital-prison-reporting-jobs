@@ -276,4 +276,35 @@ public class ValidationServiceSchemasMatchTest {
 
         assertFalse(schemasMatch(inferredSchema, specifiedSchema));
     }
+
+    @Test
+    public void shouldMatchSchemaWithByteInferredIntSpecified() {
+        StructType inferredSchema = new StructType(new StructField[]{
+                new StructField("column 1", DataTypes.ByteType, true, Metadata.empty()),
+                new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
+        });
+
+        StructType specifiedSchema = new StructType(new StructField[]{
+                new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
+                new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
+        });
+
+        assertTrue(schemasMatch(inferredSchema, specifiedSchema));
+    }
+
+    @Test
+    public void shouldNotMatchSchemaWithIntInferredByteSpecified() {
+        StructType inferredSchema = new StructType(new StructField[]{
+                new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
+                new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
+        });
+
+        StructType specifiedSchema = new StructType(new StructField[]{
+                new StructField("column 1", DataTypes.ByteType, true, Metadata.empty()),
+                new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
+        });
+
+        assertFalse(schemasMatch(inferredSchema, specifiedSchema));
+    }
+
 }
