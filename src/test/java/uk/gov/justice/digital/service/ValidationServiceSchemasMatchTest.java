@@ -10,9 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.justice.digital.service.ValidationService.schemasMatch;
 
-public class ValidationServiceSchemasMatchTest {
+class ValidationServiceSchemasMatchTest {
     @Test
-    public void shouldMatchSameObject() {
+    void shouldMatchSameObject() {
         StructType schema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, false, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, true, Metadata.empty()),
@@ -21,7 +21,7 @@ public class ValidationServiceSchemasMatchTest {
         assertTrue(schemasMatch(schema, schema));
     }
     @Test
-    public void shouldMatchIdenticalSchemas() {
+    void shouldMatchIdenticalSchemas() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, false, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, true, Metadata.empty()),
@@ -36,7 +36,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldMatchSameSchemasButWithDifferentNullability() {
+    void shouldMatchSameSchemasButWithDifferentNullability() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, false, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, true, Metadata.empty()),
@@ -51,7 +51,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void ShouldNotMatchSchemaWithExtraColumn() {
+    void ShouldNotMatchSchemaWithExtraColumn() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
@@ -67,7 +67,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldNotMatchSchemaWithMissingColumn() {
+    void shouldNotMatchSchemaWithMissingColumn() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
@@ -83,7 +83,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldNotMatchSameColumnsExceptDifferentDataTypes() {
+    void shouldNotMatchSameColumnsExceptDifferentDataTypes() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.StringType, false, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, true, Metadata.empty()),
@@ -98,7 +98,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldMatchSameColumnsExceptDifferentMetadata() {
+    void shouldMatchSameColumnsExceptDifferentMetadata() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.StringType, false, Metadata.fromJson("{ \"x\": \"y\"}")),
                 new StructField("column 2", DataTypes.StringType, true, Metadata.empty()),
@@ -113,7 +113,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldMatchIdenticalNestedStructs() {
+    void shouldMatchIdenticalNestedStructs() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", new StructType(new StructField[]{
@@ -140,7 +140,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldNotMatchDifferentNestedStructColumnNames() {
+    void shouldNotMatchDifferentNestedStructColumnNames() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", new StructType(new StructField[]{
@@ -167,7 +167,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldNotMatchDifferentNestedStructTypes() {
+    void shouldNotMatchDifferentNestedStructTypes() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", new StructType(new StructField[]{
@@ -194,7 +194,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldMatchDifferentNestedStructNullability() {
+    void shouldMatchDifferentNestedStructNullability() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", new StructType(new StructField[]{
@@ -221,7 +221,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldMatchDifferentNestedStructMetadata() {
+    void shouldMatchDifferentNestedStructMetadata() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", new StructType(new StructField[]{
@@ -248,7 +248,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldMatchSchemaWithShortInferredIntSpecified() {
+    void shouldMatchSchemaWithShortInferredIntSpecified() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.ShortType, true, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
@@ -263,7 +263,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldNotMatchSchemaWithIntInferredShortSpecified() {
+    void shouldNotMatchSchemaWithIntInferredShortSpecified() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
@@ -278,7 +278,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldMatchSchemaWithByteInferredIntSpecified() {
+    void shouldMatchSchemaWithByteInferredIntSpecified() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.ByteType, true, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
@@ -293,7 +293,7 @@ public class ValidationServiceSchemasMatchTest {
     }
 
     @Test
-    public void shouldNotMatchSchemaWithIntInferredByteSpecified() {
+    void shouldNotMatchSchemaWithIntInferredByteSpecified() {
         StructType inferredSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
