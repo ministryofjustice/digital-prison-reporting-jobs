@@ -8,6 +8,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ByteType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.IntegerType;
 import org.apache.spark.sql.types.ShortType;
@@ -80,9 +81,8 @@ public class ValidationService {
                 DataType inferredDataType = inferredField.dataType();
                 DataType specifiedDataType = specifiedField.dataType();
                 boolean sameType = specifiedDataType.getClass().equals(inferredDataType.getClass());
-                // We represent shorts as ints in avro so this difference is allowed
-                boolean allowedDifference = inferredDataType instanceof ShortType && specifiedDataType instanceof IntegerType;
-                if(!sameType && !allowedDifference) {
+
+                if(!sameType && !isAllowedDifference(inferredDataType, specifiedDataType)) {
                     return false;
                 }
                 // If it is a struct then recurse to check the nested types
@@ -97,6 +97,13 @@ public class ValidationService {
             }
         }
         return true;
+    }
+
+    // Handles special cases, e.g. due to minor differences in data types used in Parquet/Spark and Avro schemas
+    private static boolean isAllowedDifference(DataType inferredDataType, DataType specifiedDataType) {
+        // We represent 8 and 16 bit ints as 32 bit ints in avro so this difference is allowed
+        return (inferredDataType instanceof ShortType && specifiedDataType instanceof IntegerType) ||
+                (inferredDataType instanceof ByteType && specifiedDataType instanceof IntegerType);
     }
 
     private static Column pkIsNull(SourceReference sourceReference) {
