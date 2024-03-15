@@ -55,7 +55,7 @@ public class OperationalZoneLoad implements Zone {
         String kinesisStream = kinesisStreamName(sourceName, tableName);
         SourceReference.PrimaryKey primaryKey = sourceReference.getPrimaryKey();
         logger.debug("Processing records for operational zone {}/{} stream: {}", sourceName, tableName, kinesisStream);
-        logger.debug("PK columns are " + primaryKey.getKeyColumnNames());
+        logger.debug("PK columns are {}", primaryKey.getKeyColumnNames());
 
         Column[] pkColumns = primaryKey
                 .getKeyColumnNames()
@@ -114,9 +114,9 @@ public class OperationalZoneLoad implements Zone {
             logger.debug("Writing partition to Kinesis");
             List<PutRecordsRequestEntry> toSend = new ArrayList<>();
             while (partition.hasNext()) {
-                Row record = partition.next();
-                String partitionKey = record.getAs(PARTITION_KEY_COLUMN);
-                String jsonPayload = record.getAs(JSON_PAYLOAD_COLUMN);
+                Row row = partition.next();
+                String partitionKey = row.getAs(PARTITION_KEY_COLUMN);
+                String jsonPayload = row.getAs(JSON_PAYLOAD_COLUMN);
                 ByteBuffer payload = ByteBuffer.wrap(jsonPayload.getBytes(StandardCharsets.UTF_8));
                 toSend.add(
                         new PutRecordsRequestEntry()
