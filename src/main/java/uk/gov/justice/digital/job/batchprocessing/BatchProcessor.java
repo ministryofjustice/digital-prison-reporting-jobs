@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.operational.OperationalZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import javax.inject.Singleton;
@@ -32,17 +33,20 @@ public class BatchProcessor {
 
     private final StructuredZoneLoad structuredZoneLoad;
     private final CuratedZoneLoad curatedZoneLoad;
+    private final OperationalZoneLoad operationalZoneLoad;
     private final ValidationService validationService;
 
     @Inject
     public BatchProcessor(
             StructuredZoneLoad structuredZoneLoad,
             CuratedZoneLoad curatedZoneLoad,
+            OperationalZoneLoad operationalZoneLoad,
             ValidationService validationService) {
         this.validationService = validationService;
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
+        this.operationalZoneLoad = operationalZoneLoad;
         logger.info("S3BatchProcessor initialization complete");
     }
 
@@ -59,7 +63,8 @@ public class BatchProcessor {
             StructType inferredSchema = filteredDf.schema();
             val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
             val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-            curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+            val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+            operationalZoneLoad.process(spark, curatedLoadDf, sourceReference);
             dataFrame.unpersist();
 
             logger.info("Processed records {}/{} in {}ms",

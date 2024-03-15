@@ -14,6 +14,7 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.operational.OperationalZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
@@ -58,6 +59,8 @@ class BatchProcessorTest extends BaseSparkTest {
     @Mock
     private CuratedZoneLoad curatedZoneLoad;
     @Mock
+    private OperationalZoneLoad operationalZoneLoad;
+    @Mock
     private SourceReference sourceReference;
     @Mock
     private ValidationService validationService;
@@ -74,7 +77,7 @@ class BatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
+        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, operationalZoneLoad, validationService);
     }
 
     @Test

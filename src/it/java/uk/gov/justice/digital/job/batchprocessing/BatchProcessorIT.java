@@ -13,6 +13,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.*;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.operational.OperationalZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
@@ -31,6 +32,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     private SourceReference sourceReference;
     @Mock
     private ConfigService configService;
+    @Mock
+    private OperationalZoneLoad operationalZoneLoad;
 
     private BatchProcessor underTest;
 
@@ -203,7 +206,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
+        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, operationalZoneLoad, validationService);
     }
 
     private void givenPathsAreConfigured() {

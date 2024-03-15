@@ -18,6 +18,7 @@ import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.operational.OperationalZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
@@ -43,6 +44,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private SourceReferenceService sourceReferenceService;
     @Mock
     private ConfigService configService;
+    @Mock
+    private OperationalZoneLoad operationalZoneLoad;
     private DataHubBatchJob underTest;
     @BeforeEach
     public void setUp() {
@@ -105,7 +108,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
-        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
+        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, operationalZoneLoad, validationService);
         underTest = new DataHubBatchJob(
                 arguments,
                 properties,

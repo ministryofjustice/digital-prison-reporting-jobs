@@ -1,28 +1,29 @@
-package uk.gov.justice.digital.job;
+package uk.gov.justice.digital.zone.operational;
 
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
+import jakarta.inject.Singleton;
+import lombok.val;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.zone.Zone;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
+import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.concat_ws;
 import static org.apache.spark.sql.functions.lit;
@@ -35,97 +36,60 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
-public class BatchToKinesisSpikeJob {
+@Singleton
+public class OperationalZoneLoad implements Zone {
 
-    private static final String PRIMARY_KEY_COLUMN_1 = "pk1";
-    private static final String PRIMARY_KEY_COLUMN_2 = "pk2";
+    private static final Logger logger = LoggerFactory.getLogger(OperationalZoneLoad.class);
 
-    private static final Column[] pkColumns = {
-            col("data." + PRIMARY_KEY_COLUMN_1),
-            col("data." + PRIMARY_KEY_COLUMN_2),
-    };
-    private static final String DATA_COLUMN_1 = "data1";
-    private static final String DATA_COLUMN_2 = "data2";
+    private static final AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.defaultClient();
 
     private static final String PARTITION_KEY_COLUMN = "partition_key";
     private static final String JSON_PAYLOAD_COLUMN = "json_payload";
+    private static final String MAXWELL_DATA_COLUMN = "data";
+    private static final String MAXWELL_TYPE_COLUMN = "type";
+    @Override
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
+        val startTime = System.currentTimeMillis();
+        String sourceName = sourceReference.getSource();
+        String tableName = sourceReference.getTable();
+        String kinesisStream = kinesisStreamName(sourceName, tableName);
+        SourceReference.PrimaryKey primaryKey = sourceReference.getPrimaryKey();
+        logger.debug("Processing records for operational zone {}/{} stream: {}", sourceName, tableName, kinesisStream);
+        logger.debug("PK columns are " + primaryKey.getKeyColumnNames());
 
-    // Will be instantiated again and used on workers
-    private static final AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.defaultClient();
-    private static final String kinesisStreamName = "spark-to-rising-wave-maxwell-format-1";
+        Column[] pkColumns = primaryKey
+                .getKeyColumnNames()
+                .stream()
+                .map(pk -> format("%s.%s", MAXWELL_DATA_COLUMN, pk))
+                .map(functions::col)
+                .toArray(Column[]::new);
 
-    private static final StructType INPUT_SCHEMA = new StructType(new StructField[]{
-            new StructField(PRIMARY_KEY_COLUMN_1, DataTypes.StringType, false, Metadata.empty()),
-            new StructField(PRIMARY_KEY_COLUMN_2, DataTypes.StringType, false, Metadata.empty()),
-            new StructField(TIMESTAMP, DataTypes.StringType, false, Metadata.empty()),
-            new StructField(OPERATION, DataTypes.StringType, false, Metadata.empty()),
-            new StructField(DATA_COLUMN_1, DataTypes.StringType, true, Metadata.empty()),
-            new StructField(DATA_COLUMN_2, DataTypes.StringType, true, Metadata.empty()),
-    });
+        Dataset<Row> maxwellFormatDf = toMaxwellFormat(dataFrame);
+        Dataset<Row> kinesisEncodedDf = prepareForKinesis(maxwellFormatDf, pkColumns);
 
-    public static void main(String[] args) {
-        SparkSession spark = SparkSession
-                .builder()
-                .appName("BatchToKinesisSpikeJob")
-                .master("local[*]")
-                .getOrCreate();
-
-//        Dataset<Row> initialInserts = spark.createDataFrame(Arrays.asList(
-//                RowFactory.create("x", "x", "2023-11-13 10:50:00.123456", Insert.getName(), "a1", "b1"),
-//                RowFactory.create("y", "y", "2023-11-13 10:50:00.123456", Insert.getName(), "a1", "b1")
-//        ), INPUT_SCHEMA);
-//        transformAndWriteToKinesis(initialInserts);
-
-//        Dataset<Row> updates = spark.createDataFrame(Arrays.asList(
-//                RowFactory.create("x", "x", "2023-11-13 10:50:00.123456", Update.getName(), "a1", "b2"),
-//                RowFactory.create("y", "y", "2023-11-13 10:50:00.123456", Update.getName(), "a2", "b2")
-//        ), INPUT_SCHEMA);
-//        transformAndWriteToKinesis(updates);
-
-        Dataset<Row> deletes = spark.createDataFrame(Collections.singletonList(
-                RowFactory.create("y", "y", "2023-11-13 10:50:00.123456", Delete.getName(), "a2", "b2")
-        ), INPUT_SCHEMA);
-        transformAndWriteToKinesis(deletes);
-
-        spark.stop();
-
-
-    }
-
-    private static void transformAndWriteToKinesis(Dataset<Row> dmsFormat) {
-        dmsFormat.printSchema();
-        dmsFormat.show(false);
-
-        Dataset<Row> input1M = toMaxwellFormat(dmsFormat);
-
-        input1M.printSchema();
-        input1M.show(false);
-
-        Dataset<Row> input1K = prepareForKinesis(input1M, pkColumns);
-
-        input1K.printSchema();
-        input1K.show(false);
-
-        writeToKinesis(input1K);
+        writeToKinesis(kinesisEncodedDf, kinesisStream);
+        logger.info("Processed batch for operational zone {}/{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
+        // Return the original dataframe
+        return dataFrame;
     }
 
     private static Dataset<Row> toMaxwellFormat(Dataset<Row> dmsFormat) {
         Column[] columns = Arrays
                 .stream(dmsFormat.columns())
                 // Remove metadata columns
-                .filter(c -> !"_timestamp".equals(c))
-                .filter(c -> !"Op".equals(c))
+                .filter(c -> !TIMESTAMP.equals(c))
+                .filter(c -> !OPERATION.equals(c))
                 .map(functions::col)
                 .toArray(Column[]::new);
 
         return dmsFormat
-                .withColumn("data", struct(columns))
-                .withColumn("type",
+                .withColumn(MAXWELL_DATA_COLUMN, struct(columns))
+                .withColumn(MAXWELL_TYPE_COLUMN,
                         when(col(OPERATION).equalTo(lit(Insert.getName())), lit("insert"))
                                 .when(col(OPERATION).equalTo(lit(Update.getName())), lit("update"))
                                 .when(col(OPERATION).equalTo(lit(Delete.getName())), lit("delete"))
                 )
-                .select("data", "type");
+                .select(MAXWELL_DATA_COLUMN, MAXWELL_TYPE_COLUMN);
     }
 
     private static Dataset<Row> prepareForKinesis(Dataset<Row> maxwellFormat, Column[] pkColumns) {
@@ -141,8 +105,13 @@ public class BatchToKinesisSpikeJob {
                 .select(JSON_PAYLOAD_COLUMN, PARTITION_KEY_COLUMN);
     }
 
-    private static void writeToKinesis(Dataset<Row> toWrite) {
+    private static String kinesisStreamName(String sourceName, String tableName) {
+        return format("dpr-operational-updates-%s-%s", sourceName, tableName);
+    }
+
+    private static void writeToKinesis(Dataset<Row> toWrite, String kinesisStreamName) {
         toWrite.foreachPartition(partition -> {
+            logger.debug("Writing partition to Kinesis");
             List<PutRecordsRequestEntry> toSend = new ArrayList<>();
             while (partition.hasNext()) {
                 Row record = partition.next();
@@ -161,9 +130,10 @@ public class BatchToKinesisSpikeJob {
             PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
             putRecordsResult.getRecords().forEach(result -> {
                 if (result.getErrorCode() != null) {
+                    logger.error("Failed to write to Kinesis: " + result.getErrorCode());
                     throw new RuntimeException(result.getErrorMessage());
                 } else {
-                    System.out.println("Wrote to shard: " + result.getShardId() + " with sequence number: " + result.getSequenceNumber());
+                    logger.trace("Wrote to shard: " + result.getShardId() + " with sequence number: " + result.getSequenceNumber());
                 }
             });
         });
