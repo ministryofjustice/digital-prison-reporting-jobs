@@ -43,12 +43,11 @@ public class OperationalZoneLoad implements Zone {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalZoneLoad.class);
 
-    private static final AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.defaultClient();
-
     private static final String PARTITION_KEY_COLUMN = "partition_key";
     private static final String JSON_PAYLOAD_COLUMN = "json_payload";
     private static final String MAXWELL_DATA_COLUMN = "data";
     private static final String MAXWELL_TYPE_COLUMN = "type";
+
     @Override
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
@@ -111,7 +110,7 @@ public class OperationalZoneLoad implements Zone {
         return format("dpr-operational-updates-%s-%s", sourceName, tableName);
     }
 
-    private static void send(List<PutRecordsRequestEntry> toSend, String kinesisStreamName) {
+    private static void send(List<PutRecordsRequestEntry> toSend, String kinesisStreamName, AmazonKinesis kinesisClient) {
         PutRecordsRequest putRecordsRequest = new PutRecordsRequest()
                 .withStreamName(kinesisStreamName)
                 .withRecords(toSend);
@@ -137,6 +136,7 @@ public class OperationalZoneLoad implements Zone {
         }, Encoders.bean(PutRecordsRequestEntry.class));
 
         readyToSend.foreachPartition(partition -> {
+            AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.defaultClient();
             logger.info("Writing partition to Kinesis");
             List<PutRecordsRequestEntry> toSend = new ArrayList<>();
 
@@ -149,14 +149,14 @@ public class OperationalZoneLoad implements Zone {
                 batchSizeSoFar++;
                 if (batchSizeSoFar == messageBatchSize) {
                     logger.debug("Sending batch of {} to Kinesis", batchSizeSoFar);
-                    send(toSend, kinesisStreamName);
+                    send(toSend, kinesisStreamName, kinesisClient);
                     logger.debug("Sent batch of {} to Kinesis", batchSizeSoFar);
                     batchSizeSoFar = 0;
                 }
             }
             if (batchSizeSoFar > 0) {
                 logger.debug("Sending batch of {} to Kinesis", batchSizeSoFar);
-                send(toSend, kinesisStreamName);
+                send(toSend, kinesisStreamName, kinesisClient);
                 logger.debug("Sent batch of {} to Kinesis", batchSizeSoFar);
             }
             logger.info("Wrote partition to Kinesis");
