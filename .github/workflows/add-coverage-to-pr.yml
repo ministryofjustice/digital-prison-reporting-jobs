@@ -28,8 +28,8 @@ jobs:
       - name: Calculate test coverage
         id: calculate-test-coverage
         run: |
-          ./gradlew jacocoTestReport > logs.txt
-          grep 'Test Coverage:' logs.txt -A6 > message.txt
+          ./gradlew jacocoTestReport --stacktrace --debug --scan
+#          grep 'Test Coverage:' logs.txt -A6 > message.txt
 
       - name: PR comment
         uses: thollander/actions-comment-pull-request@v2
