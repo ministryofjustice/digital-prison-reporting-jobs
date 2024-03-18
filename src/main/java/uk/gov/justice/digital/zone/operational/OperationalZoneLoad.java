@@ -12,8 +12,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.Encoders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Function1;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.zone.Zone;
 
@@ -109,33 +111,55 @@ public class OperationalZoneLoad implements Zone {
         return format("dpr-operational-updates-%s-%s", sourceName, tableName);
     }
 
-    private static void writeToKinesis(Dataset<Row> toWrite, String kinesisStreamName) {
-        toWrite.foreachPartition(partition -> {
-            logger.debug("Writing partition to Kinesis");
-            List<PutRecordsRequestEntry> toSend = new ArrayList<>();
-            while (partition.hasNext()) {
-                Row row = partition.next();
-                String partitionKey = row.getAs(PARTITION_KEY_COLUMN);
-                String jsonPayload = row.getAs(JSON_PAYLOAD_COLUMN);
-                ByteBuffer payload = ByteBuffer.wrap(jsonPayload.getBytes(StandardCharsets.UTF_8));
-                toSend.add(
-                        new PutRecordsRequestEntry()
-                                .withPartitionKey(partitionKey)
-                                .withData(payload)
-                );
+    private static void send(List<PutRecordsRequestEntry> toSend, String kinesisStreamName) {
+        PutRecordsRequest putRecordsRequest = new PutRecordsRequest()
+                .withStreamName(kinesisStreamName)
+                .withRecords(toSend);
+        PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
+        putRecordsResult.getRecords().forEach(result -> {
+            if (result.getErrorCode() != null) {
+                logger.error("Failed to write to Kinesis: " + result.getErrorCode());
+                throw new RuntimeException(result.getErrorMessage());
+            } else {
+                logger.trace("Wrote to shard: " + result.getShardId() + " with sequence number: " + result.getSequenceNumber());
             }
-            PutRecordsRequest putRecordsRequest = new PutRecordsRequest()
-                    .withStreamName(kinesisStreamName)
-                    .withRecords(toSend);
-            PutRecordsResult putRecordsResult = kinesisClient.putRecords(putRecordsRequest);
-            putRecordsResult.getRecords().forEach(result -> {
-                if (result.getErrorCode() != null) {
-                    logger.error("Failed to write to Kinesis: " + result.getErrorCode());
-                    throw new RuntimeException(result.getErrorMessage());
-                } else {
-                    logger.trace("Wrote to shard: " + result.getShardId() + " with sequence number: " + result.getSequenceNumber());
+        });
+    }
+
+    private static void writeToKinesis(Dataset<Row> toWrite, String kinesisStreamName) {
+        Dataset<PutRecordsRequestEntry> readyToSend = toWrite.map((Function1<Row, PutRecordsRequestEntry>) (Row row) -> {
+            String partitionKey = row.getAs(PARTITION_KEY_COLUMN);
+            String jsonPayload = row.getAs(JSON_PAYLOAD_COLUMN);
+            ByteBuffer payload = ByteBuffer.wrap(jsonPayload.getBytes(StandardCharsets.UTF_8));
+            return new PutRecordsRequestEntry()
+                    .withPartitionKey(partitionKey)
+                    .withData(payload);
+        }, Encoders.bean(PutRecordsRequestEntry.class));
+
+        readyToSend.foreachPartition(partition -> {
+            logger.info("Writing partition to Kinesis");
+            List<PutRecordsRequestEntry> toSend = new ArrayList<>();
+
+            final short messageBatchSize = 20;
+            short batchSizeSoFar = 0;
+
+            while (partition.hasNext()) {
+                PutRecordsRequestEntry record = partition.next();
+                toSend.add(record);
+                batchSizeSoFar++;
+                if (batchSizeSoFar == messageBatchSize) {
+                    logger.debug("Sending batch of {} to Kinesis", batchSizeSoFar);
+                    send(toSend, kinesisStreamName);
+                    logger.debug("Sent batch of {} to Kinesis", batchSizeSoFar);
+                    batchSizeSoFar = 0;
                 }
-            });
+            }
+            if (batchSizeSoFar > 0) {
+                logger.debug("Sending batch of {} to Kinesis", batchSizeSoFar);
+                send(toSend, kinesisStreamName);
+                logger.debug("Sent batch of {} to Kinesis", batchSizeSoFar);
+            }
+            logger.info("Wrote partition to Kinesis");
         });
     }
 }
