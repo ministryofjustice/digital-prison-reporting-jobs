@@ -144,8 +144,8 @@ public class OperationalZoneLoad implements Zone {
             short batchSizeSoFar = 0;
 
             while (partition.hasNext()) {
-                PutRecordsRequestEntry record = partition.next();
-                toSend.add(record);
+                PutRecordsRequestEntry requestEntry = partition.next();
+                toSend.add(requestEntry);
                 batchSizeSoFar++;
                 if (batchSizeSoFar == messageBatchSize) {
                     logger.debug("Sending batch of {} to Kinesis", batchSizeSoFar);
