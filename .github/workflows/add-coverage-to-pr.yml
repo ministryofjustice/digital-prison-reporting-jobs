@@ -28,7 +28,7 @@ jobs:
       - name: Calculate test coverage
         id: calculate-test-coverage
         run: |
-          ./gradlew jacocoTestReport --stacktrace --debug --scan
+          ./gradlew jacocoTestReport --stacktrace --info
 #          grep 'Test Coverage:' logs.txt -A6 > message.txt
 
       - name: PR comment
