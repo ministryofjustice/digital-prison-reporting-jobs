@@ -124,18 +124,8 @@ public class OperationalZoneLoad implements Zone {
             }
         });
     }
-
     private static void writeToKinesis(Dataset<Row> toWrite, String kinesisStreamName) {
-        Dataset<PutRecordsRequestEntry> readyToSend = toWrite.map((Function1<Row, PutRecordsRequestEntry>) (Row row) -> {
-            String partitionKey = row.getAs(PARTITION_KEY_COLUMN);
-            String jsonPayload = row.getAs(JSON_PAYLOAD_COLUMN);
-            ByteBuffer payload = ByteBuffer.wrap(jsonPayload.getBytes(StandardCharsets.UTF_8));
-            return new PutRecordsRequestEntry()
-                    .withPartitionKey(partitionKey)
-                    .withData(payload);
-        }, Encoders.bean(PutRecordsRequestEntry.class));
-
-        readyToSend.foreachPartition(partition -> {
+        toWrite.foreachPartition(partition -> {
             AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.defaultClient();
             logger.info("Writing partition to Kinesis");
             List<PutRecordsRequestEntry> toSend = new ArrayList<>();
@@ -144,7 +134,8 @@ public class OperationalZoneLoad implements Zone {
             short batchSizeSoFar = 0;
 
             while (partition.hasNext()) {
-                PutRecordsRequestEntry requestEntry = partition.next();
+                Row row = partition.next();
+                PutRecordsRequestEntry requestEntry = convert(row);
                 toSend.add(requestEntry);
                 batchSizeSoFar++;
                 if (batchSizeSoFar == messageBatchSize) {
@@ -161,5 +152,15 @@ public class OperationalZoneLoad implements Zone {
             }
             logger.info("Wrote partition to Kinesis");
         });
+    }
+
+
+    private static PutRecordsRequestEntry convert(Row row) {
+        String partitionKey = row.getAs(PARTITION_KEY_COLUMN);
+        String jsonPayload = row.getAs(JSON_PAYLOAD_COLUMN);
+        ByteBuffer payload = ByteBuffer.wrap(jsonPayload.getBytes(StandardCharsets.UTF_8));
+        return new PutRecordsRequestEntry()
+                .withPartitionKey(partitionKey)
+                .withData(payload);
     }
 }
