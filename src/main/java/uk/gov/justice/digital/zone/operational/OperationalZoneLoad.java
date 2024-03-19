@@ -2,6 +2,8 @@ package uk.gov.justice.digital.zone.operational;
 
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
+import com.amazonaws.services.kinesis.model.PutRecordRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
@@ -12,16 +14,13 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.Encoders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Function1;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.zone.Zone;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -128,39 +127,49 @@ public class OperationalZoneLoad implements Zone {
         toWrite.foreachPartition(partition -> {
             AmazonKinesis kinesisClient = AmazonKinesisClientBuilder.defaultClient();
             logger.info("Writing partition to Kinesis");
-            List<PutRecordsRequestEntry> toSend = new ArrayList<>();
-
-            final short messageBatchSize = 20;
-            short batchSizeSoFar = 0;
 
             while (partition.hasNext()) {
                 Row row = partition.next();
-                PutRecordsRequestEntry requestEntry = convert(row);
-                toSend.add(requestEntry);
-                batchSizeSoFar++;
-                if (batchSizeSoFar == messageBatchSize) {
-                    logger.debug("Sending batch of {} to Kinesis", batchSizeSoFar);
-                    send(toSend, kinesisStreamName, kinesisClient);
-                    logger.debug("Sent batch of {} to Kinesis", batchSizeSoFar);
-                    batchSizeSoFar = 0;
-                }
-            }
-            if (batchSizeSoFar > 0) {
-                logger.debug("Sending batch of {} to Kinesis", batchSizeSoFar);
-                send(toSend, kinesisStreamName, kinesisClient);
-                logger.debug("Sent batch of {} to Kinesis", batchSizeSoFar);
+                PutRecordRequest request = convert(row, kinesisStreamName);
+                sendWithRetryBackoff(kinesisClient, request);
             }
             logger.info("Wrote partition to Kinesis");
         });
     }
 
+    private static void sendWithRetryBackoff(AmazonKinesis kinesisClient, PutRecordRequest request) {
+        final int maxRetries = 5;
+        final long backoffMultiplier = 2;
 
-    private static PutRecordsRequestEntry convert(Row row) {
-        String partitionKey = row.getAs(PARTITION_KEY_COLUMN);
-        String jsonPayload = row.getAs(JSON_PAYLOAD_COLUMN);
+        long backoffTimeMs = 1000;
+        int tries = 0;
+        while (true) {
+            tries++;
+            try {
+                kinesisClient.putRecord(request);
+                return;
+            } catch (ProvisionedThroughputExceededException e) {
+                if (tries >= maxRetries) {
+                    throw new RuntimeException(format("Retries exceeded max tries %d", maxRetries), e);
+                }
+                try {
+                    logger.warn("Throughput exceeded, backing off for {}ms", backoffTimeMs);
+                    Thread.sleep(backoffTimeMs);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+                backoffTimeMs *= backoffMultiplier;
+            }
+        }
+    }
+
+    private static PutRecordRequest convert(Row row, String kinesisStreamName) {
+        String partitionKey = (String) row.getAs(PARTITION_KEY_COLUMN);
+        String jsonPayload = (String) row.getAs(JSON_PAYLOAD_COLUMN);
         ByteBuffer payload = ByteBuffer.wrap(jsonPayload.getBytes(StandardCharsets.UTF_8));
-        return new PutRecordsRequestEntry()
+        return new PutRecordRequest()
                 .withPartitionKey(partitionKey)
-                .withData(payload);
+                .withData(payload)
+                .withStreamName(kinesisStreamName);
     }
 }
