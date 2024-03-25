@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -10,6 +11,8 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -23,6 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,12 +41,9 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
-import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
-import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
-import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.MinimalTestData.*;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -188,6 +190,104 @@ class ValidationServiceTest extends BaseSparkTest {
 
         assertEquals(expected.size(), result.size());
         assertTrue(result.containsAll(expected));
+    }
+
+    @Test
+    public void validateRowsShouldConvertTimeFieldsFromStringToTimestamp() {
+        val timestamp = "2023-11-13 10:49:28.000000";
+        
+        val providedSchema = new StructType()
+                .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
+                .add(new StructField("time", DataTypes.TimestampType, false, Metadata.empty()))
+                .add(new StructField("nullable_time", DataTypes.TimestampType, true, Metadata.empty()));
+
+        val inferredSchema = withMetadataFields(
+                new StructType()
+                        .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
+                        .add(new StructField("time", DataTypes.StringType, false, Metadata.empty()))
+                        .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.empty()))
+        );
+
+        when(sourceReference.getSchema()).thenReturn(providedSchema);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
+
+        val input = Arrays.asList(
+                RowFactory.create(1, "09:00:00", "12:30:00", Insert.getName(), timestamp),
+                RowFactory.create(2, "23:59:59", null, Update.getName(), timestamp),
+                RowFactory.create(3, "00:00:00", "08:30:30", Delete.getName(), timestamp)
+        );
+
+        val thisInputDf = spark.createDataFrame(input, inferredSchema);
+
+        val result = underTest.validateRows(thisInputDf, sourceReference, inferredSchema).collectAsList();
+
+        val expected = Arrays.asList(
+                RowFactory.create(1, Insert.getName(), timestamp, null, "1970-01-01 09:00:00", "1970-01-01 12:30:00"),
+                RowFactory.create(2, Update.getName(), timestamp, null, "1970-01-01 23:59:59", null),
+                RowFactory.create(3, Delete.getName(), timestamp, null, "1970-01-01 00:00:00", "1970-01-01 08:30:30")
+        );
+
+        assertEquals(expected.size(), result.size());
+        assertThat(result, containsInAnyOrder(expected.toArray()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            // Single digit field(s)
+            "0:0:0", 
+            "0:00:00",
+            "00:0:00",
+            "00:00:0",
+            // Out of range
+            "24:00:00",
+            "00:00:60",
+            "00:60:00",
+            // Field exceeding two digits
+            "123:00:00",
+            "09:123:00",
+            "09:00:123",
+            // Other cases
+            "09:00",
+            "AB:CD:EF",
+            " "
+    })
+    public void validateRowsShouldReturnInvalidWhenUnableToConvertTimeFieldsToTimestamp(String invalidTime) {
+        val timestamp = "2023-11-13 10:49:28.000000";
+        val validTime = "09:30:00";
+        
+        val providedSchema = new StructType()
+                .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
+                .add(new StructField("underscore_col", DataTypes.TimestampType, false, Metadata.empty()))
+                .add(new StructField("hyphenated-col", DataTypes.TimestampType, true, Metadata.empty()));
+
+        val inferredSchema = withMetadataFields(
+                new StructType()
+                        .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
+                        .add(new StructField("underscore_col", DataTypes.StringType, false, Metadata.empty()))
+                        .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.empty()))
+        );
+
+        when(sourceReference.getSchema()).thenReturn(providedSchema);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
+
+        List<Row> input = Arrays.asList(
+                RowFactory.create(1, invalidTime, invalidTime, Insert.getName(), timestamp),
+                RowFactory.create(2, validTime, null, Update.getName(), timestamp)
+        );
+        
+        Dataset<Row> thisInputDf = spark.createDataFrame(input, inferredSchema);
+
+        List<Row> result = underTest.validateRows(thisInputDf, sourceReference, inferredSchema).collectAsList();
+
+        List<Row> expected = Arrays.asList(
+                RowFactory.create(1, Insert.getName(), timestamp, "underscore_col must have format HH:mm:ss", invalidTime, invalidTime),
+                RowFactory.create(2, Update.getName(), timestamp, null, "1970-01-01 " + validTime, null)
+        );
+
+        assertEquals(expected.size(), result.size());
+        assertThat(result, containsInAnyOrder(expected.toArray()));
     }
 
     @Test

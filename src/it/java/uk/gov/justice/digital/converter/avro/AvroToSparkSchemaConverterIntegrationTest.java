@@ -49,7 +49,7 @@ class AvroToSparkSchemaConverterIntegrationTest {
                 new SimpleEntry<>("timestamp-micros", DataTypes.TimestampType),
                 // Note - spark does not support these types so the schema converter retains the original avro type.
                 new SimpleEntry<>("time-micros",      DataTypes.LongType),
-                new SimpleEntry<>("time-millis",      DataTypes.IntegerType)
+                new SimpleEntry<>("time-millis",      DataTypes.TimestampType)
         ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         typeMappings.forEach((avroType, sparkType) -> {
