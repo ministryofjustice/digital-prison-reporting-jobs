@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.converter.avro;
 
+import com.google.gson.Gson;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.avro.Schema;
@@ -56,7 +57,7 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
                 field.dataType(),
                 field.nullable(),
                 (fieldMetadata.get(field.name()) != null) ?
-                        Metadata.fromJson((String) fieldMetadata.get(field.name())) :
+                        Metadata.fromJson(new Gson().toJson(fieldMetadata.get(field.name()), Map.class)) :
                         Metadata.empty()
         );
     }
@@ -102,13 +103,11 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
                 .map(nullable -> nullable.equals(true))
                 .orElse(false);
 
-        return isNullable
-                ? createNullableAvroField(avroField)
-                : new Schema.Field(avroField.name(), avroField.schema());
+        return isNullable ? createNullableAvroField(avroField) : createNonNullableField(avroField);
     }
 
     private Schema.Field createNullableAvroField(Schema.Field avroField) {
-        return new Schema.Field(
+        Schema.Field nullableField = new Schema.Field(
                 avroField.name(),
                 Schema.createUnion(
                         avroField.schema(),
@@ -117,5 +116,20 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
                 avroField.doc(),
                 (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
         );
+
+        addMetadata(avroField.getObjectProp("metadata"), nullableField);
+        return nullableField;
     }
+
+    @NotNull
+    private static Schema.Field createNonNullableField(Schema.Field avroField) {
+        Schema.Field nonNullableField = new Schema.Field(avroField.name(), avroField.schema());
+        addMetadata(avroField.getObjectProp("metadata"), nonNullableField);
+        return nonNullableField;
+    }
+
+    private static void addMetadata(Object metadataObject, Schema.Field field) {
+        Optional.ofNullable(metadataObject).ifPresent(metadata -> field.addProp("metadata", metadata));
+    }
+
 }

@@ -3,9 +3,7 @@ package uk.gov.justice.digital.converter.avro;
 import lombok.val;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.AbstractMap.SimpleEntry;
@@ -15,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AvroToSparkSchemaConverterIntegrationTest {
 
@@ -108,6 +107,27 @@ class AvroToSparkSchemaConverterIntegrationTest {
                 .add("aField", DataTypes.DateType, nullable);
 
         assertEquals(sparkSchema, underTest.convert(avroSchema));
+    }
+
+    @Test
+    public void shouldIncludeMetadataAfterConversion() {
+        val avroSchemaString = "{" +
+                "  \"type\": \"record\"," +
+                "  \"name\": \"test\"," +
+                "  \"fields\": [" +
+                "    {" +
+                "      \"name\": \"aField\"," +
+                "      \"type\": \"string\"," +
+                "      \"metadata\": {" +
+                "        \"validationType\": \"time\"" +
+                "      }" +
+                "    }" +
+                "  ]" +
+                "}";
+        
+        val result = underTest.convert(avroSchemaString);
+        
+        assertTrue(result.fields()[0].metadata().contains("validationType"));
     }
 
 

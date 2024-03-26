@@ -105,9 +105,9 @@ public class ValidationService {
 
     private Dataset<Row> validateStringFields(Dataset<Row> df, SourceReference sourceReference) {
         val fieldsWithValidationMetadata = Arrays.stream(sourceReference.getSchema().fields())
-                .filter(field -> field.dataType() instanceof StringType && getMetadata(field).contains(VALIDATION_TYPE_KEY))
+                .filter(field -> field.dataType() instanceof StringType && field.metadata().contains(VALIDATION_TYPE_KEY))
                 .distinct()
-                .collect(Collectors.toMap(StructField::name, field -> getMetadata(field).getString(VALIDATION_TYPE_KEY)));
+                .collect(Collectors.toMap(StructField::name, field -> field.metadata().getString(VALIDATION_TYPE_KEY)));
 
         Column[] fieldValidationResults = fieldsWithValidationMetadata
                 .entrySet()
@@ -117,11 +117,6 @@ public class ValidationService {
         
         Column concatenatedErrors = concat_ws("; ", fieldValidationResults);
         return df.withColumn(ERROR, when(concatenatedErrors.eqNullSafe(lit("")), lit(null)).otherwise(concatenatedErrors));
-    }
-
-    private static Metadata getMetadata(StructField field) {
-        Metadata metadata = field.metadata();
-        return metadata.contains("metadata") ? metadata.getMetadata("metadata") : Metadata.empty();
     }
 
     // Handles special cases, e.g. due to minor differences in data types used in Parquet/Spark and Avro schemas

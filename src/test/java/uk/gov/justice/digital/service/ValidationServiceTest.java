@@ -55,7 +55,7 @@ class ValidationServiceTest extends BaseSparkTest {
     private static final String noPkMsg = "Record does not have a primary key";
     private static final String VERSION_ID = UUID.randomUUID().toString();
     private static final String schemaMisMatchMsg = "Record does not match schema version " + VERSION_ID;
-    private static final String METADATA_STRING = "{\"metadata\": {\"validationType\": \"time\"}}";
+    private static final String VALIDATION_TYPE = "{\"validationType\": \"time\"}";
 
     private static Dataset<Row> inputDf;
     @Mock
@@ -199,14 +199,14 @@ class ValidationServiceTest extends BaseSparkTest {
         
         val providedSchema = new StructType()
                 .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
-                .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)));
+                .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
+                .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)));
 
         val inferredSchema = withMetadataFields(
                 new StructType()
                         .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                        .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
-                        .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)))
+                        .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
+                        .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)))
         );
 
         when(sourceReference.getSchema()).thenReturn(providedSchema);
@@ -259,14 +259,14 @@ class ValidationServiceTest extends BaseSparkTest {
 
         val providedSchema = new StructType()
                 .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
-                .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)));
+                .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
+                .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)));
 
         val inferredSchema = withMetadataFields(
                 new StructType()
                         .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                        .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
-                        .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)))
+                        .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
+                        .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)))
         );
 
         when(sourceReference.getSchema()).thenReturn(providedSchema);
