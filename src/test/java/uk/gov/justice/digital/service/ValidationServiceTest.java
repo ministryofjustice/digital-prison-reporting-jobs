@@ -194,7 +194,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldValidateTimeFields() {
+    void validateRowsShouldValidateTimeFields() {
         val timestamp = "2023-11-13 10:49:28.000000";
         
         val providedSchema = new StructType()
@@ -253,7 +253,7 @@ class ValidationServiceTest extends BaseSparkTest {
             "AB:CD:EF",
             " "
     })
-    public void validateRowsShouldRecordErrorWhenGivenInvalidTimeFields(String invalidTime) {
+    void validateRowsShouldRecordErrorWhenGivenInvalidTimeFields(String invalidTime) {
         val timestamp = "2023-11-13 10:49:28.000000";
         val validTime = "09:30:00";
 

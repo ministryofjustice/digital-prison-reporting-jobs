@@ -19,6 +19,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static uk.gov.justice.digital.common.CommonDataFields.METADATA_KEY;
+
 /**
  * Avro Schema to Spark Schema (StructType) converter.
  * <p>
@@ -40,8 +42,8 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
         val avroSchema = toAvroSchema(avroSchemaString);
         val metadata = avroSchema.getFields()
                 .stream()
-                .filter(field -> field.getObjectProp("metadata") != null)
-                .collect(Collectors.toMap(Schema.Field::name, field -> field.getObjectProp("metadata")));
+                .filter(field -> field.getObjectProp(METADATA_KEY) != null)
+                .collect(Collectors.toMap(Schema.Field::name, field -> field.getObjectProp(METADATA_KEY)));
 
         val fields = Arrays.stream(castToStructType(toSparkDataType(avroSchema)).fields())
                 .map(updateMetadataField(metadata))
@@ -117,19 +119,19 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
                 (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
         );
 
-        addMetadata(avroField.getObjectProp("metadata"), nullableField);
+        addMetadata(avroField.getObjectProp(METADATA_KEY), nullableField);
         return nullableField;
     }
 
     @NotNull
     private static Schema.Field createNonNullableField(Schema.Field avroField) {
         Schema.Field nonNullableField = new Schema.Field(avroField.name(), avroField.schema());
-        addMetadata(avroField.getObjectProp("metadata"), nonNullableField);
+        addMetadata(avroField.getObjectProp(METADATA_KEY), nonNullableField);
         return nonNullableField;
     }
 
     private static void addMetadata(Object metadataObject, Schema.Field field) {
-        Optional.ofNullable(metadataObject).ifPresent(metadata -> field.addProp("metadata", metadata));
+        Optional.ofNullable(metadataObject).ifPresent(metadata -> field.addProp(METADATA_KEY, metadata));
     }
 
 }

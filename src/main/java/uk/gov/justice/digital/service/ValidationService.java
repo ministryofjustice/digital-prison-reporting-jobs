@@ -21,8 +21,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.*;
-import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
-import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
+import static uk.gov.justice.digital.common.CommonDataFields.*;
 
 @Singleton
 public class ValidationService {
@@ -30,11 +29,8 @@ public class ValidationService {
     private static final Logger logger = LoggerFactory.getLogger(ValidationService.class);
     private final ViolationService violationService;
 
-    private final String VALIDATION_TYPE_KEY = "validationType";
-    private final String TIME_FORMAT = "^(?:[01]\\d|2[0-3]):(?:[0-5]\\d|5[0-9]):(?:[0-5]\\d|5[0-9])$"; // HH:mm:ss
-
     private final ImmutableMap<String, String> validationFormats = ImmutableMap.<String, String>builder()
-            .put("time", TIME_FORMAT)
+            .put("time", "^(?:[01]\\d|2[0-3]):(?:[0-5]\\d|5[0-9]):(?:[0-5]\\d|5[0-9])$") // HH:mm:ss
             .build();
 
     @Inject
