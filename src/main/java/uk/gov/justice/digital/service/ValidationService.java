@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Inject;
 import lombok.val;
 import org.apache.spark.sql.Column;
@@ -9,15 +10,14 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.*;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
 import javax.inject.Singleton;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.*;
@@ -29,8 +29,13 @@ public class ValidationService {
 
     private static final Logger logger = LoggerFactory.getLogger(ValidationService.class);
     private final ViolationService violationService;
-    
-    private final String validTimeFormat = "^(?:[01]\\d|2[0-3]):(?:[0-5]\\d|5[0-9]):(?:[0-5]\\d|5[0-9])$"; // HH:mm:ss
+
+    private final String VALIDATION_TYPE_KEY = "validationType";
+    private final String TIME_FORMAT = "^(?:[01]\\d|2[0-3]):(?:[0-5]\\d|5[0-9]):(?:[0-5]\\d|5[0-9])$"; // HH:mm:ss
+
+    private final ImmutableMap<String, String> validationFormats = ImmutableMap.<String, String>builder()
+            .put("time", TIME_FORMAT)
+            .build();
 
     @Inject
     public ValidationService(ViolationService violationService) {
@@ -50,9 +55,9 @@ public class ValidationService {
     @VisibleForTesting
     Dataset<Row> validateRows(Dataset<Row> df, SourceReference sourceReference, StructType inferredSchema) {
         StructType schema = withMetadataFields(sourceReference.getSchema());
-        val convertedDf = convertTimestampFields(df, sourceReference);
+        val validatedDf = validateStringFields(df, sourceReference);
         if (schemasMatch(inferredSchema, schema)) {
-            return convertedDf.withColumn(
+            return validatedDf.withColumn(
                     ERROR,
                     // The order of the 'when' clauses determines the validation error message used - first wins.
                     // Null means there is no validation error.
@@ -65,7 +70,7 @@ public class ValidationService {
             logger.warn(msg + " Inferred schema:\n{}\nActual schema:\n{}\nFor {}.{}",
                     inferredSchema, schema, sourceReference.getSource(), sourceReference.getTable()
             );
-            return convertedDf.withColumn(ERROR, concatenateErrors(msg));
+            return validatedDf.withColumn(ERROR, concatenateErrors(msg));
         }
     }
 
@@ -98,48 +103,32 @@ public class ValidationService {
         return true;
     }
 
-    private Dataset<Row> convertTimestampFields(Dataset<Row> df, SourceReference sourceReference) {
-        val timeFields = Arrays.stream(sourceReference.getSchema().fields())
-                .filter(field -> field.dataType() instanceof TimestampType)
+    private Dataset<Row> validateStringFields(Dataset<Row> df, SourceReference sourceReference) {
+        val fieldsWithValidationMetadata = Arrays.stream(sourceReference.getSchema().fields())
+                .filter(field -> field.dataType() instanceof StringType && getMetadata(field).contains(VALIDATION_TYPE_KEY))
                 .distinct()
-                .map(StructField::name)
-                .collect(Collectors.toList());
+                .collect(Collectors.toMap(StructField::name, field -> getMetadata(field).getString(VALIDATION_TYPE_KEY)));
 
-        df.show(false);
-
-        val otherFields = Arrays.stream(df.columns())
-                .filter(field -> !timeFields.contains(field))
-                .map(ValidationService::backtickHyphenatedFields)
-                .collect(Collectors.toList());
-
-        otherFields.add(ERROR);
-
-        val timeFormatValidation = Stream
-                .concat(Stream.of(lit(null)), timeFields.stream().map(this::validateTimeField))
-                .toArray(Column[]::new);
-        // Convert string field of format "HH:mm:ss" to timestamp "yyyy-MM-dd HH:mm:ss.SSSS"
-        val timeFieldSelectExpressions = timeFields
+        Column[] fieldValidationResults = fieldsWithValidationMetadata
+                .entrySet()
                 .stream()
-                .map(ValidationService::backtickHyphenatedFields)
-                .map(fieldName -> convertFieldToTimestamp(fieldName).as(fieldName).expr().sql())
-                .collect(Collectors.toList());
-
-            return df
-                    .withColumn(ERROR, coalesce(timeFormatValidation))
-                    .selectExpr(Stream.concat(otherFields.stream(), timeFieldSelectExpressions.stream()).toArray(String[]::new));
+                .map(entry -> validateField(entry.getKey(), entry.getValue()))
+                .toArray(Column[]::new);
+        
+        Column concatenatedErrors = concat_ws("; ", fieldValidationResults);
+        return df.withColumn(ERROR, when(concatenatedErrors.eqNullSafe(lit("")), lit(null)).otherwise(concatenatedErrors));
     }
 
-    @NotNull
-    private static String backtickHyphenatedFields(String field) {
-        return field.contains("-") ? "`" + field + "`" : field;
+    private static Metadata getMetadata(StructField field) {
+        Metadata metadata = field.metadata();
+        return metadata.contains("metadata") ? metadata.getMetadata("metadata") : Metadata.empty();
     }
 
     // Handles special cases, e.g. due to minor differences in data types used in Parquet/Spark and Avro schemas
     private static boolean isAllowedDifference(DataType inferredDataType, DataType specifiedDataType) {
         // We represent 8 and 16 bit ints as 32 bit ints in avro so this difference is allowed
         return (inferredDataType instanceof ShortType && specifiedDataType instanceof IntegerType) ||
-                (inferredDataType instanceof ByteType && specifiedDataType instanceof IntegerType) ||
-                (inferredDataType instanceof StringType && specifiedDataType instanceof TimestampType);
+                (inferredDataType instanceof ByteType && specifiedDataType instanceof IntegerType);
     }
 
     private static Column pkIsNull(SourceReference sourceReference) {
@@ -162,22 +151,23 @@ public class ValidationService {
                 .orElse(lit(false));
     }
 
-    private Column convertFieldToTimestamp(String fieldName) {
-        val timestampFormat = "yyyy-MM-dd HH:mm:ss.SSSS";
+    private Column validateField(String fieldName, String validationType) {
         return when(
-                col(fieldName).isNotNull().and(col(fieldName).rlike(validTimeFormat)),
-                to_timestamp(concat(lit("1970-01-01 "), col(fieldName), lit(".0000")), timestampFormat)
-        ).otherwise(col(fieldName));
-    }
-
-    private Column validateTimeField(String fieldName) {
-        return when(
-                col(fieldName).isNotNull().and(not(col(fieldName).rlike(validTimeFormat))), 
+                col(fieldName).isNotNull().and(not(col(fieldName).rlike(getValidationFormat(validationType)))),
                 lit(fieldName + " must have format HH:mm:ss")
         );
     }
 
     private static Column concatenateErrors(String errorMsg) {
         return when(col(ERROR).isNull(), lit(errorMsg)).otherwise(concat(col(ERROR), lit("; "), lit(errorMsg)));
+    }
+    
+    private String getValidationFormat(String key) {
+        return Optional.ofNullable(validationFormats.get(key))
+                .orElseThrow(() -> 
+                        new RuntimeException(
+                                String.format("Invalid field validation type %s. Allowed values are: %s", key, validationFormats.keySet())
+                        )
+                );
     }
 }

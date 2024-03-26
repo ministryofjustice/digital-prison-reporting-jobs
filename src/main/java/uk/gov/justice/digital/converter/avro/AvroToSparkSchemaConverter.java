@@ -2,16 +2,20 @@ package uk.gov.justice.digital.converter.avro;
 
 import jakarta.inject.Singleton;
 import lombok.val;
-import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
 import org.apache.spark.sql.avro.SchemaConverters;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import uk.gov.justice.digital.converter.Converter;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -32,13 +36,29 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
 
     @Override
     public StructType convert(String avroSchemaString) {
-        return Optional.of(avroSchemaString)
-                .map(this::toAvroSchema)
-                .map(this::toSparkDataType)
-                .flatMap(this::castToStructType)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Unable to cast DataType to StructType schema: '" + avroSchemaString + "'")
-                );
+        val avroSchema = toAvroSchema(avroSchemaString);
+        val metadata = avroSchema.getFields()
+                .stream()
+                .filter(field -> field.getObjectProp("metadata") != null)
+                .collect(Collectors.toMap(Schema.Field::name, field -> field.getObjectProp("metadata")));
+
+        val fields = Arrays.stream(castToStructType(toSparkDataType(avroSchema)).fields())
+                .map(updateMetadataField(metadata))
+                .toArray(StructField[]::new);
+
+        return new StructType(fields);
+    }
+
+    @NotNull
+    private static Function<StructField, StructField> updateMetadataField(Map<String, Object> fieldMetadata) {
+        return field -> field.copy(
+                field.name(),
+                field.dataType(),
+                field.nullable(),
+                (fieldMetadata.get(field.name()) != null) ?
+                        Metadata.fromJson((String) fieldMetadata.get(field.name())) :
+                        Metadata.empty()
+        );
     }
 
     private Schema toAvroSchema(String avro) {
@@ -46,15 +66,15 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
         // the parser also prevents an existing definition from being updated and will throw a SchemaParseException.
         // This allows us to handle new versions of a schema as and when they are published.
         val parsedAvroSchema = new Schema.Parser().parse(avro);
-        // Convert time fields to timestamp because Spark does not support time data type.
-        val convertedFields = convertTimeFieldsToTimestamp(parsedAvroSchema);
+        // Before returning the schema we must apply our nullable property to any fields declared as nullable.
+        val updatedFields = applyNullablePropertyToFields(parsedAvroSchema);
 
         return Schema.createRecord(
                 parsedAvroSchema.getName(),
                 parsedAvroSchema.getDoc(),
                 parsedAvroSchema.getNamespace(),
                 parsedAvroSchema.isError(),
-                convertedFields
+                updatedFields
         );
     }
 
@@ -64,53 +84,38 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
                 .dataType();
     }
 
-    private Optional<StructType> castToStructType(DataType sparkDataType) {
-        return Optional.of(sparkDataType)
-                .filter(StructType.class::isInstance)
-                .map(StructType.class::cast);
+    private StructType castToStructType(DataType sparkDataType) {
+        return (StructType) sparkDataType;
     }
 
-    private List<Schema.Field> convertTimeFieldsToTimestamp(Schema avroSchema) {
-        return avroSchema.getFields().stream()
-                .map(this::convertTimeToTimestamp)
+    // Ensure our custom nullable: true|false field is represented in the correct avro form (union type with null) so
+    // that conversion to Spark results in a StructType with the correct nullability properties.
+    private List<Schema.Field> applyNullablePropertyToFields(Schema avro) {
+        return avro.getFields().stream()
+                .map(this::applyNullablePropertyToField)
                 .collect(Collectors.toList());
     }
 
-    private Schema.Field convertTimeToTimestamp(Schema.Field avroField) {
-        boolean isIntegerField = avroField.schema().getType().getName().equalsIgnoreCase(Schema.Type.INT.name());
-        boolean logicalTypeIsTimeMillis = avroField.schema().getLogicalType() instanceof LogicalTypes.TimeMillis;
-        boolean isTimeField = isIntegerField && logicalTypeIsTimeMillis;
+    private Schema.Field applyNullablePropertyToField(Schema.Field avroField) {
 
-        return isTimeField ? toTimestampField(avroField) : new Schema.Field(
-                avroField.name(),
-                isNullable(avroField) ? nullableFieldSchema(avroField.schema()) : avroField.schema(),
-                avroField.doc(),
-                (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
-        );
-    }
-
-    private Schema.Field toTimestampField(Schema.Field avroField) {
-        Schema timestampSchema = LogicalTypes.timestampMillis().addToSchema(Schema.create(Schema.Type.LONG));
-        return new Schema.Field(
-                avroField.name(),
-                isNullable(avroField) ? nullableFieldSchema(timestampSchema) : timestampSchema,
-                avroField.doc(),
-                (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
-        );
-    }
-
-    @NotNull
-    private static Schema nullableFieldSchema(Schema fieldSchema) {
-        // Ensure our custom nullable: true|false field is represented in the correct avro form (union type with null) so
-        // that conversion to Spark results in a StructType with the correct nullability properties.
-        return Schema.createUnion(fieldSchema, Schema.create(Schema.Type.NULL));
-    }
-
-    @NotNull
-    private static Boolean isNullable(Schema.Field avroField) {
-        return Optional.ofNullable(avroField.getObjectProp("nullable"))
+        val isNullable = Optional.ofNullable(avroField.getObjectProp("nullable"))
                 .map(nullable -> nullable.equals(true))
                 .orElse(false);
+
+        return isNullable
+                ? createNullableAvroField(avroField)
+                : new Schema.Field(avroField.name(), avroField.schema());
     }
 
+    private Schema.Field createNullableAvroField(Schema.Field avroField) {
+        return new Schema.Field(
+                avroField.name(),
+                Schema.createUnion(
+                        avroField.schema(),
+                        Schema.create(Schema.Type.NULL)
+                ),
+                avroField.doc(),
+                (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
+        );
+    }
 }

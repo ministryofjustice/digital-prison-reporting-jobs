@@ -55,6 +55,7 @@ class ValidationServiceTest extends BaseSparkTest {
     private static final String noPkMsg = "Record does not have a primary key";
     private static final String VERSION_ID = UUID.randomUUID().toString();
     private static final String schemaMisMatchMsg = "Record does not match schema version " + VERSION_ID;
+    private static final String METADATA_STRING = "{\"metadata\": {\"validationType\": \"time\"}}";
 
     private static Dataset<Row> inputDf;
     @Mock
@@ -193,19 +194,19 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldConvertTimeFieldsFromStringToTimestamp() {
+    public void validateRowsShouldValidateTimeFields() {
         val timestamp = "2023-11-13 10:49:28.000000";
         
         val providedSchema = new StructType()
                 .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                .add(new StructField("time", DataTypes.TimestampType, false, Metadata.empty()))
-                .add(new StructField("nullable_time", DataTypes.TimestampType, true, Metadata.empty()));
+                .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
+                .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)));
 
         val inferredSchema = withMetadataFields(
                 new StructType()
                         .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                        .add(new StructField("time", DataTypes.StringType, false, Metadata.empty()))
-                        .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.empty()))
+                        .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
+                        .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)))
         );
 
         when(sourceReference.getSchema()).thenReturn(providedSchema);
@@ -223,9 +224,9 @@ class ValidationServiceTest extends BaseSparkTest {
         val result = underTest.validateRows(thisInputDf, sourceReference, inferredSchema).collectAsList();
 
         val expected = Arrays.asList(
-                RowFactory.create(1, Insert.getName(), timestamp, null, "1970-01-01 09:00:00", "1970-01-01 12:30:00"),
-                RowFactory.create(2, Update.getName(), timestamp, null, "1970-01-01 23:59:59", null),
-                RowFactory.create(3, Delete.getName(), timestamp, null, "1970-01-01 00:00:00", "1970-01-01 08:30:30")
+                RowFactory.create(1, "09:00:00", "12:30:00", Insert.getName(), timestamp, null),
+                RowFactory.create(2, "23:59:59", null, Update.getName(), timestamp, null),
+                RowFactory.create(3, "00:00:00", "08:30:30", Delete.getName(), timestamp, null)
         );
 
         assertEquals(expected.size(), result.size());
@@ -252,20 +253,20 @@ class ValidationServiceTest extends BaseSparkTest {
             "AB:CD:EF",
             " "
     })
-    public void validateRowsShouldReturnInvalidWhenUnableToConvertTimeFieldsToTimestamp(String invalidTime) {
+    public void validateRowsShouldRecordErrorWhenGivenInvalidTimeFields(String invalidTime) {
         val timestamp = "2023-11-13 10:49:28.000000";
         val validTime = "09:30:00";
-        
+
         val providedSchema = new StructType()
                 .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                .add(new StructField("underscore_col", DataTypes.TimestampType, false, Metadata.empty()))
-                .add(new StructField("hyphenated-col", DataTypes.TimestampType, true, Metadata.empty()));
+                .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
+                .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)));
 
         val inferredSchema = withMetadataFields(
                 new StructType()
                         .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
-                        .add(new StructField("underscore_col", DataTypes.StringType, false, Metadata.empty()))
-                        .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.empty()))
+                        .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(METADATA_STRING)))
+                        .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(METADATA_STRING)))
         );
 
         when(sourceReference.getSchema()).thenReturn(providedSchema);
@@ -281,9 +282,10 @@ class ValidationServiceTest extends BaseSparkTest {
 
         List<Row> result = underTest.validateRows(thisInputDf, sourceReference, inferredSchema).collectAsList();
 
+        String validationErrors = "hyphenated-col must have format HH:mm:ss; underscored_col must have format HH:mm:ss";
         List<Row> expected = Arrays.asList(
-                RowFactory.create(1, Insert.getName(), timestamp, "underscore_col must have format HH:mm:ss", invalidTime, invalidTime),
-                RowFactory.create(2, Update.getName(), timestamp, null, "1970-01-01 " + validTime, null)
+                RowFactory.create(1, invalidTime, invalidTime, Insert.getName(), timestamp, validationErrors),
+                RowFactory.create(2, validTime, null, Update.getName(), timestamp, null)
         );
 
         assertEquals(expected.size(), result.size());
