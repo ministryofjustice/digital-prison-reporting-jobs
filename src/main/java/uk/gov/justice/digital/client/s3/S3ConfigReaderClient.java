@@ -49,7 +49,7 @@ public class S3ConfigReaderClient {
             val config = new ObjectMapper().readValue(configString, HashMap.class);
             return ImmutableSet.copyOf(convertToImmutablePairs((ArrayList<String>) config.get("tables")));
         } catch (Exception e) {
-            throw new ConfigReaderClientException("Exception when loading config", e);
+            throw new ConfigReaderClientException("Exception when loading config " + configFileKey, e);
         }
     }
 

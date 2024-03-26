@@ -1,16 +1,25 @@
 package uk.gov.justice.digital.converter.avro;
 
+import com.google.gson.Gson;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.avro.Schema;
 import org.apache.spark.sql.avro.SchemaConverters;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.jetbrains.annotations.NotNull;
 import uk.gov.justice.digital.converter.Converter;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static uk.gov.justice.digital.common.CommonDataFields.METADATA_KEY;
 
 /**
  * Avro Schema to Spark Schema (StructType) converter.
@@ -30,13 +39,29 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
 
     @Override
     public StructType convert(String avroSchemaString) {
-        return Optional.of(avroSchemaString)
-                .map(this::toAvroSchema)
-                .map(this::toSparkDataType)
-                .flatMap(this::castToStructType)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Unable to cast DataType to StructType schema: '" + avroSchemaString + "'")
-                );
+        val avroSchema = toAvroSchema(avroSchemaString);
+        val metadata = avroSchema.getFields()
+                .stream()
+                .filter(field -> field.getObjectProp(METADATA_KEY) != null)
+                .collect(Collectors.toMap(Schema.Field::name, field -> field.getObjectProp(METADATA_KEY)));
+
+        val fields = Arrays.stream(castToStructType(toSparkDataType(avroSchema)).fields())
+                .map(updateMetadataField(metadata))
+                .toArray(StructField[]::new);
+
+        return new StructType(fields);
+    }
+
+    @NotNull
+    private static Function<StructField, StructField> updateMetadataField(Map<String, Object> fieldMetadata) {
+        return field -> field.copy(
+                field.name(),
+                field.dataType(),
+                field.nullable(),
+                (fieldMetadata.get(field.name()) != null) ?
+                        Metadata.fromJson(new Gson().toJson(fieldMetadata.get(field.name()), Map.class)) :
+                        Metadata.empty()
+        );
     }
 
     private Schema toAvroSchema(String avro) {
@@ -56,6 +81,16 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
         );
     }
 
+    private DataType toSparkDataType(Schema avroSchema) {
+        return SchemaConverters
+                .toSqlType(avroSchema)
+                .dataType();
+    }
+
+    private StructType castToStructType(DataType sparkDataType) {
+        return (StructType) sparkDataType;
+    }
+
     // Ensure our custom nullable: true|false field is represented in the correct avro form (union type with null) so
     // that conversion to Spark results in a StructType with the correct nullability properties.
     private List<Schema.Field> applyNullablePropertyToFields(Schema avro) {
@@ -70,33 +105,33 @@ public class AvroToSparkSchemaConverter implements Converter<String, StructType>
                 .map(nullable -> nullable.equals(true))
                 .orElse(false);
 
-        return isNullable
-            ? createNullableAvroField(avroField)
-            : new Schema.Field(avroField.name(), avroField.schema());
-    }
-
-    private DataType toSparkDataType(Schema avroSchema) {
-        return SchemaConverters
-                .toSqlType(avroSchema)
-                .dataType();
-    }
-
-    private Optional<StructType> castToStructType(DataType sparkDataType) {
-        return Optional.of(sparkDataType)
-                .filter(StructType.class::isInstance)
-                .map(StructType.class::cast);
+        return isNullable ? createNullableAvroField(avroField) : createNonNullableField(avroField);
     }
 
     private Schema.Field createNullableAvroField(Schema.Field avroField) {
-        return new Schema.Field(
-            avroField.name(),
-            Schema.createUnion(
-                    avroField.schema(),
-                    Schema.create(Schema.Type.NULL)
-            ),
-            avroField.doc(),
-            (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
+        Schema.Field nullableField = new Schema.Field(
+                avroField.name(),
+                Schema.createUnion(
+                        avroField.schema(),
+                        Schema.create(Schema.Type.NULL)
+                ),
+                avroField.doc(),
+                (avroField.hasDefaultValue()) ? avroField.defaultVal() : null
         );
+
+        addMetadata(avroField.getObjectProp(METADATA_KEY), nullableField);
+        return nullableField;
+    }
+
+    @NotNull
+    private static Schema.Field createNonNullableField(Schema.Field avroField) {
+        Schema.Field nonNullableField = new Schema.Field(avroField.name(), avroField.schema());
+        addMetadata(avroField.getObjectProp(METADATA_KEY), nonNullableField);
+        return nonNullableField;
+    }
+
+    private static void addMetadata(Object metadataObject, Schema.Field field) {
+        Optional.ofNullable(metadataObject).ifPresent(metadata -> field.addProp(METADATA_KEY, metadata));
     }
 
 }
