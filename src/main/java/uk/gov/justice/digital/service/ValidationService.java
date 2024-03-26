@@ -29,6 +29,7 @@ public class ValidationService {
     private static final Logger logger = LoggerFactory.getLogger(ValidationService.class);
     private final ViolationService violationService;
 
+    // This contains a mapping of regex strings used for validating string fields annotated with the validationType metadata
     private final ImmutableMap<String, String> validationFormats = ImmutableMap.<String, String>builder()
             .put("time", "^(?:[01]\\d|2[0-3]):(?:[0-5]\\d|5[0-9]):(?:[0-5]\\d|5[0-9])$") // HH:mm:ss
             .build();
