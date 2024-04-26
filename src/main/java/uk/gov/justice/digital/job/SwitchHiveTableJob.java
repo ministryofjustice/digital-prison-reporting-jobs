@@ -49,7 +49,7 @@ public class SwitchHiveTableJob implements Runnable {
     public void run() {
         try {
             logger.info("SwitchHiveTableJob running");
-            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments.getLogLevel());
+            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments);
 
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(jobArguments.getConfigKey());

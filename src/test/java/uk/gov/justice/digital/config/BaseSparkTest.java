@@ -1,6 +1,6 @@
 package uk.gov.justice.digital.config;
 
-import io.micronaut.logging.LogLevel;
+import com.google.common.collect.ImmutableMap;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -20,10 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT;
-import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.*;
 import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
@@ -49,7 +46,8 @@ public class BaseSparkTest {
 	protected static SparkSession spark;
 
 	private static SparkSession createSparkSession() {
-		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration, LogLevel.INFO);
+		JobArguments arguments = new JobArguments(ImmutableMap.of(LOG_LEVEL, "info"));
+		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration, arguments);
 	}
 
 	@BeforeAll

@@ -31,32 +31,38 @@ public class S3FileService {
         this.clock = clock;
     }
 
-    public List<String> listFiles(String bucket, ImmutableSet<String> allowedExtensions, Long retentionDays) {
-        return s3Client.getObjectsOlderThan(bucket, allowedExtensions, retentionDays, clock);
+    public List<String> listFiles(String bucket, String sourcePrefix, ImmutableSet<String> allowedExtensions, Long retentionDays) {
+        return s3Client.getObjectsOlderThan(bucket, sourcePrefix, allowedExtensions, retentionDays, clock);
     }
 
     public List<String> listFilesForConfig(
             String sourceBucket,
+            String sourcePrefix,
             ImmutableSet<ImmutablePair<String, String>> configuredTables,
             ImmutableSet<String> allowedExtensions,
             Long retentionDays
     ) {
         return configuredTables.stream()
-                .flatMap(configuredTable -> listFilesForTable(sourceBucket, allowedExtensions, retentionDays, configuredTable).stream())
+                .flatMap(configuredTable -> listFilesForTable(sourceBucket, sourcePrefix, allowedExtensions, retentionDays, configuredTable).stream())
                 .collect(Collectors.toList());
     }
 
     public Set<String> copyObjects(
             List<String> objectKeys,
             String sourceBucket,
+            String sourcePrefix,
             String destinationBucket,
+            String destinationPrefix,
             boolean deleteCopiedFiles
     ) {
         Set<String> failedObjects = new HashSet<>();
 
         for (String objectKey : objectKeys) {
             try {
-                s3Client.copyObject(objectKey, sourceBucket, destinationBucket);
+                String destinationKey = destinationPrefix.isEmpty() ?
+                        objectKey.replaceFirst(DELIMITER + sourcePrefix, destinationPrefix) :
+                        objectKey.replaceFirst(sourcePrefix, destinationPrefix);
+                s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket);
                 if (deleteCopiedFiles) s3Client.deleteObject(objectKey, sourceBucket);
             } catch (AmazonServiceException e) {
                 logger.warn("Failed to move S3 object {}", objectKey, e);
@@ -84,11 +90,12 @@ public class S3FileService {
 
     private List<String> listFilesForTable(
             String sourceBucket,
+            String sourcePrefix,
             ImmutableSet<String> allowedExtensions,
             Long retentionDays,
             ImmutablePair<String, String> configuredTable
     ) {
-        String tableKey = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        String tableKey = sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         logger.info("Listing files in S3 source location {} for table {}", sourceBucket, tableKey);
         return s3Client.getObjectsOlderThan(
                 sourceBucket,

@@ -58,10 +58,12 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     private ConfigService configService;
     private DataHubCdcJob underTest;
     private List<TableStreamingQuery> streamingQueries;
+//    protected String processedRawFilesPath;
 
     @BeforeEach
     public void setUp() throws IOException {
         givenPathsAreConfigured(arguments);
+        givenStreamingCleanupArchiveLocationIsConfigured();
         givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
         givenCheckpointsAreConfigured();
@@ -166,6 +168,11 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getCdcFileGlobPattern()).thenReturn("*.parquet");
+    }
+
+    private void givenStreamingCleanupArchiveLocationIsConfigured() {
+//        testRoot.resolve("processed/raw/files/path").toAbsolutePath();
+        when(arguments.getProcessedRawFilesPath()).thenReturn("processed/raw/files/path");
     }
 
     @FunctionalInterface

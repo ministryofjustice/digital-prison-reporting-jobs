@@ -37,6 +37,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
 
     private static final String sourceName = "source";
     private static final String tableName = "table";
+    private static final String processedRawFilesPath = "processed";
     @TempDir
     protected static Path testRootPath;
     protected static List<String> dataFilePaths;
@@ -74,6 +75,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldGetStreamingSourceDataWithSchemaInference() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
 
         Dataset<Row> df = underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
@@ -94,6 +96,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldGetStreamingSourceDataWithSpecifiedSchema() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getSource()).thenReturn(sourceName);

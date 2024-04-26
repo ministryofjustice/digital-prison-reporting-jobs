@@ -44,6 +44,11 @@ public class S3DataProvider {
         String source = sourceReference.getSource();
         String table = sourceReference.getTable();
         String tablePath = tablePath(arguments.getRawS3Path(), source, table);
+        String processedRawFilesLocation = tablePath(
+                ensureEndsWithSlash(arguments.getRawS3Path()) + "/" + arguments.getProcessedRawFilesPath(),
+                source,
+                table
+        );
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
         StructType schema = withMetadataFields(sourceReference.getSchema());
@@ -52,11 +57,18 @@ public class S3DataProvider {
         return sparkSession
                 .readStream()
                 .schema(schema)
+                .option("cleanSource", "archive")
+                .option("sourceArchiveDir", processedRawFilesLocation)
                 .parquet(fileGlobPath);
     }
 
     public Dataset<Row> getStreamingSourceDataWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) throws NoSchemaNoDataException {
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
+        String processedRawFilesLocation = tablePath(
+                ensureEndsWithSlash(arguments.getRawS3Path()) + "/" + arguments.getProcessedRawFilesPath(),
+                sourceName,
+                tableName
+        );
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
         try {
@@ -66,6 +78,8 @@ public class S3DataProvider {
             return sparkSession
                     .readStream()
                     .schema(schema)
+                    .option("cleanSource", "archive")
+                    .option("sourceArchiveDir", processedRawFilesLocation)
                     .parquet(fileGlobPath);
         } catch (Exception e) {
             //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch

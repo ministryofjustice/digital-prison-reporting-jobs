@@ -26,6 +26,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADAT
 public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
     private static final String sourceName = "source";
     private static final String tableName = "table";
+    private static final String processedRawFilesPath = "processed";
 
     @TempDir
     protected Path testRootPath;
@@ -48,6 +49,7 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
         tablePath.toFile().mkdirs();
 
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT);
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
@@ -75,6 +77,7 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
         testRootPath.toFile().mkdirs();
 
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT);
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
@@ -103,6 +106,7 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
         tablePath.toFile().mkdirs();
 
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT);
         assertThrows(NoSchemaNoDataException.class, () -> underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName));
     }

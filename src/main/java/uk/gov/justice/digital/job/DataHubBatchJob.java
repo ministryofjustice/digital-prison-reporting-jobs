@@ -8,7 +8,6 @@ import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkException;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,12 +82,12 @@ public class DataHubBatchJob implements Runnable {
             if(runLocal) {
                 logger.info("Running locally");
                 SparkConf sparkConf = new SparkConf().setAppName("DataHubBatchJob local").setMaster("local[*]");
-                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
+                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments);
                 runJob(spark);
             } else {
                 logger.info("Running in Glue");
                 String jobName = properties.getSparkJobName();
-                val glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
+                val glueContext = sparkSessionProvider.createGlueContext(jobName, arguments);
                 Job.init(jobName, glueContext, arguments.getConfig());
                 SparkSession spark = glueContext.getSparkSession();
                 runJob(spark);

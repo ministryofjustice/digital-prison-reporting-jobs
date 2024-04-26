@@ -76,9 +76,9 @@ public class S3FileTransferClient {
         return objectPaths;
     }
 
-    public void copyObject(String objectKey, String sourceBucket, String destinationBucket) {
-        logger.info("Copying {}", objectKey);
-        s3.copyObject(sourceBucket, objectKey, destinationBucket, objectKey);
+    public void copyObject(String sourceKey, String destinationKey, String sourceBucket, String destinationBucket) {
+        logger.info("Copying {}", sourceKey);
+        s3.copyObject(sourceBucket, sourceKey, destinationBucket, destinationKey);
     }
 
     public void deleteObject(String objectKey, String sourceBucket) {

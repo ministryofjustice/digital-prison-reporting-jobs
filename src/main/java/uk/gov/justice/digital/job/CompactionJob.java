@@ -47,7 +47,7 @@ public class CompactionJob implements Runnable {
     public void run() {
         try {
             logger.info("Compaction running");
-            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments.getLogLevel());
+            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments);
 
             String rootPath = jobArguments.getMaintenanceTablesRootPath();
             int maxDepth = jobArguments.getMaintenanceListTableRecurseMaxDepth();

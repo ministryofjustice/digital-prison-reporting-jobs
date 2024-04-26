@@ -31,7 +31,9 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
     private static final String TEST_CONFIG_KEY = "some-config-key";
     private final static String SOURCE_BUCKET = "source-bucket";
+    private final static String SOURCE_PREFIX = "source-prefix";
     private final static String DESTINATION_BUCKET = "destination-bucket";
+    private final static String DESTINATION_PREFIX = "destination-prefix";
 
     private static final long RETENTION_DAYS = 2L;
 
@@ -64,17 +66,19 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
+        when(mockJobArguments.getSourcePrefix()).thenReturn(SOURCE_PREFIX);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
+        when(mockJobArguments.getTransferDestinationPrefix()).thenReturn(DESTINATION_PREFIX);
         when(mockJobArguments.getFileTransferRetentionDays()).thenReturn(RETENTION_DAYS);
         when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
         when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, configuredTables, parquetFileExtension, RETENTION_DAYS))
+        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS))
                 .thenReturn(objectsToMove);
 
-        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET, true))
+        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(Collections.emptySet());
 
         assertDoesNotThrow(() -> underTest.run());
@@ -89,15 +93,17 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.empty());
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
+        when(mockJobArguments.getSourcePrefix()).thenReturn(SOURCE_PREFIX);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
+        when(mockJobArguments.getTransferDestinationPrefix()).thenReturn(DESTINATION_PREFIX);
         when(mockJobArguments.getFileTransferRetentionDays()).thenReturn(RETENTION_DAYS);
         when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
         when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
 
-        when(mockS3FileService.listFiles(SOURCE_BUCKET, parquetFileExtension, RETENTION_DAYS))
+        when(mockS3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, RETENTION_DAYS))
                 .thenReturn(objectsToMove);
 
-        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET, true))
+        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(Collections.emptySet());
 
         assertDoesNotThrow(() -> underTest.run());
@@ -120,17 +126,19 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
+        when(mockJobArguments.getSourcePrefix()).thenReturn(SOURCE_PREFIX);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
+        when(mockJobArguments.getTransferDestinationPrefix()).thenReturn(DESTINATION_PREFIX);
         when(mockJobArguments.getFileTransferRetentionDays()).thenReturn(RETENTION_DAYS);
         when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
         when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, configuredTables, parquetFileExtension, RETENTION_DAYS))
+        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS))
                 .thenReturn(objectsToMove);
 
-        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, DESTINATION_BUCKET, true))
+        when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(failedFiles);
 
         SystemLambda.catchSystemExit(() -> underTest.run());

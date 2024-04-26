@@ -73,14 +73,14 @@ public class DataHubCdcJob implements Runnable {
             if (runLocal) {
                 logger.info("Running locally");
                 SparkConf sparkConf = new SparkConf().setAppName("DataHubCdcJob local").setMaster("local[*]");
-                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments.getLogLevel());
+                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments);
                 if (arguments.cleanCdcCheckpoint()) recreateCheckpoint(spark, checkpointLocation);
                 runJob(spark);
                 waitUntilQueryTerminates(spark);
             } else {
                 logger.info("Running in Glue");
                 String jobName = properties.getSparkJobName();
-                GlueContext glueContext = sparkSessionProvider.createGlueContext(jobName, arguments.getLogLevel());
+                GlueContext glueContext = sparkSessionProvider.createGlueContext(jobName, arguments);
                 SparkSession spark = glueContext.getSparkSession();
                 if (arguments.cleanCdcCheckpoint()) recreateCheckpoint(spark, checkpointLocation);
                 Job.init(jobName, glueContext, arguments.getConfig());
