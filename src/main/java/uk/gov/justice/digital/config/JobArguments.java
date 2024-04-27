@@ -121,6 +121,7 @@ public class JobArguments {
     static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
     static final String SPARK_BROADCAST_TIMEOUT_SECONDS = "dpr.spark.broadcast.timeout.seconds";
     static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
+    static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
 
     private final Map<String, String> config;
 
@@ -400,6 +401,10 @@ public class JobArguments {
 
     public Integer getBroadcastTimeoutSeconds() {
         return getArgument(SPARK_BROADCAST_TIMEOUT_SECONDS, DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
+    }
+
+    public boolean disableAutoBroadcastJoinThreshold() {
+        return getArgument(DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, false);
     }
 
     public boolean cleanCdcCheckpoint() {

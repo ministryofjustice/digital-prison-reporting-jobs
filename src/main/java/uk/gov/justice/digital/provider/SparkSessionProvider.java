@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.provider;
 
 import com.amazonaws.services.glue.GlueContext;
-import io.micronaut.logging.LogLevel;
 import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
@@ -59,6 +58,12 @@ public class SparkSessionProvider {
                 .set("spark.sql.parquet.int96RebaseModeInRead", "CORRECTED")
                 // Standardise on UTC.
                 .set("spark.sql.session.timeZone", "UTC");
+
+        if (arguments.disableAutoBroadcastJoinThreshold()) {
+            sparkConf
+                    .set("spark.sql.autoBroadcastJoinThreshold", "-1")
+                    .set("spark.sql.adaptive.autoBroadcastJoinThreshold", "-1");
+        }
     }
 
 }
