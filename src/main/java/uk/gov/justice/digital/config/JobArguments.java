@@ -239,7 +239,7 @@ public class JobArguments {
     }
 
     public String getProcessedRawFilesPath() {
-        return getArgument(PROCESSED_RAW_FILES_PATH);
+        return removeLeadingAndTrailingSlashes(getArgument(PROCESSED_RAW_FILES_PATH));
     }
 
     public String getDomainTargetPath() {

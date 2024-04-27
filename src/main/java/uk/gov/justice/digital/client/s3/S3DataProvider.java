@@ -45,7 +45,7 @@ public class S3DataProvider {
         String table = sourceReference.getTable();
         String tablePath = tablePath(arguments.getRawS3Path(), source, table);
         String processedRawFilesLocation = tablePath(
-                ensureEndsWithSlash(arguments.getRawS3Path()) + "/" + arguments.getProcessedRawFilesPath(),
+                ensureEndsWithSlash(arguments.getRawS3Path()) + arguments.getProcessedRawFilesPath(),
                 source,
                 table
         );
@@ -65,7 +65,7 @@ public class S3DataProvider {
     public Dataset<Row> getStreamingSourceDataWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) throws NoSchemaNoDataException {
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
         String processedRawFilesLocation = tablePath(
-                ensureEndsWithSlash(arguments.getRawS3Path()) + "/" + arguments.getProcessedRawFilesPath(),
+                ensureEndsWithSlash(arguments.getRawS3Path()) + arguments.getProcessedRawFilesPath(),
                 sourceName,
                 tableName
         );
