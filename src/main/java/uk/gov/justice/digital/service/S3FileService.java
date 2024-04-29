@@ -60,7 +60,7 @@ public class S3FileService {
         for (String objectKey : objectKeys) {
             try {
                 String destinationKey = destinationPrefix.isEmpty() ?
-                        objectKey.replaceFirst(DELIMITER + sourcePrefix, destinationPrefix) :
+                        objectKey.replaceFirst(sourcePrefix + DELIMITER, destinationPrefix) :
                         objectKey.replaceFirst(sourcePrefix, destinationPrefix);
                 s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket);
                 if (deleteCopiedFiles) s3Client.deleteObject(objectKey, sourceBucket);

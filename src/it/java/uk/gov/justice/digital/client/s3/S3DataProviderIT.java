@@ -23,6 +23,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,7 +76,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     @Test
     public void shouldGetStreamingSourceDataWithSchemaInference() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
-        when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
+        when(arguments.enableStreamingSourceArchiving()).thenReturn(false);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
 
         Dataset<Row> df = underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
@@ -84,18 +85,52 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
                 .queryName("output")
                 .outputMode(OutputMode.Append())
                 .start();
-        try {
-            query.processAllAvailable();
-            Dataset<Row> result = spark.sql("select * from output");
-            assertEquals(3, result.count());
-        } finally {
-            query.stop();
-        }
+
+        assertOnQuery(query);
     }
 
     @Test
     public void shouldGetStreamingSourceDataWithSpecifiedSchema() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.enableStreamingSourceArchiving()).thenReturn(false);
+        when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getSource()).thenReturn(sourceName);
+        when(sourceReference.getTable()).thenReturn(tableName);
+
+        Dataset<Row> df = underTest.getStreamingSourceData(spark, sourceReference);
+
+        StreamingQuery query = df.writeStream()
+                .format("memory")
+                .queryName("output")
+                .outputMode(OutputMode.Append())
+                .start();
+
+        assertOnQuery(query);
+    }
+
+    @Test
+    public void getStreamingSourceDataWithSchemaInferenceShouldConfigureArchivingOfProcessedFilesWhenEnabled() throws Exception {
+        when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.enableStreamingSourceArchiving()).thenReturn(true);
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
+        when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
+
+        Dataset<Row> df = underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
+
+        StreamingQuery query = df.writeStream()
+                .format("memory")
+                .queryName("output")
+                .outputMode(OutputMode.Append())
+                .start();
+
+        assertOnQuery(query);
+    }
+
+    @Test
+    public void getStreamingSourceDataShouldConfigureArchivingOfProcessedFilesWhenEnabled() throws TimeoutException {
+        when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
+        when(arguments.enableStreamingSourceArchiving()).thenReturn(true);
         when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
@@ -109,13 +144,8 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
                 .queryName("output")
                 .outputMode(OutputMode.Append())
                 .start();
-        try {
-            query.processAllAvailable();
-            Dataset<Row> result = spark.sql("select * from output");
-            assertEquals(3, result.count());
-        } finally {
-            query.stop();
-        }
+
+        assertOnQuery(query);
     }
 
     @Test
@@ -123,5 +153,15 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         StructType inferredSchema = underTest.inferSchema(spark, sourceName, tableName);
         assertEquals(TEST_DATA_SCHEMA, inferredSchema);
+    }
+
+    private static void assertOnQuery(StreamingQuery query) throws TimeoutException {
+        try {
+            query.processAllAvailable();
+            Dataset<Row> result = spark.sql("select * from output");
+            assertEquals(3, result.count());
+        } finally {
+            query.stop();
+        }
     }
 }

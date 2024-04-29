@@ -44,43 +44,25 @@ public class S3DataProvider {
         String source = sourceReference.getSource();
         String table = sourceReference.getTable();
         String tablePath = tablePath(arguments.getRawS3Path(), source, table);
-        String processedRawFilesLocation = tablePath(
-                ensureEndsWithSlash(arguments.getRawS3Path()) + arguments.getProcessedRawFilesPath(),
-                source,
-                table
-        );
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
         StructType schema = withMetadataFields(sourceReference.getSchema());
         logger.info("Provided schema for {}.{}: \n{}", source, table, schema.treeString());
         logger.info("Initialising S3 data source for {}.{} with file glob path {}", source, table, fileGlobPath);
-        return sparkSession
-                .readStream()
-                .schema(schema)
-                .option("cleanSource", "archive")
-                .option("sourceArchiveDir", processedRawFilesLocation)
-                .parquet(fileGlobPath);
+
+        return getStreamingDataset(sparkSession, fileGlobPath, schema);
     }
 
     public Dataset<Row> getStreamingSourceDataWithSchemaInference(SparkSession sparkSession, String sourceName, String tableName) throws NoSchemaNoDataException {
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
-        String processedRawFilesLocation = tablePath(
-                ensureEndsWithSlash(arguments.getRawS3Path()) + arguments.getProcessedRawFilesPath(),
-                sourceName,
-                tableName
-        );
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
         try {
             StructType schema = sparkSession.read().parquet(fileGlobPath).schema();
             logger.info("Inferred schema for {}.{}: \n{}", sourceName, tableName, schema.treeString());
             logger.info("Initialising S3 data source for {}.{} with file glob path {}", sourceName, tableName, fileGlobPath);
-            return sparkSession
-                    .readStream()
-                    .schema(schema)
-                    .option("cleanSource", "archive")
-                    .option("sourceArchiveDir", processedRawFilesLocation)
-                    .parquet(fileGlobPath);
+
+            return getStreamingDataset(sparkSession, fileGlobPath, schema);
         } catch (Exception e) {
             //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch
             //  because the Java compiler will complain that AnalysisException isn't declared as thrown due to Scala trickery.
@@ -129,5 +111,22 @@ public class S3DataProvider {
     public StructType inferSchema(SparkSession sparkSession, String sourceName, String tableName) {
         String tablePath = tablePath(arguments.getRawS3Path(), sourceName, tableName);
         return sparkSession.read().parquet(tablePath).schema();
+    }
+
+    private Dataset<Row> getStreamingDataset(SparkSession sparkSession, String fileGlobPath, StructType schema) {
+        if (arguments.enableStreamingSourceArchiving()) {
+            String processedRawFilesLocation = ensureEndsWithSlash(arguments.getRawS3Path()) + arguments.getProcessedRawFilesPath();
+            return sparkSession
+                    .readStream()
+                    .schema(schema)
+                    .option("cleanSource", "archive")
+                    .option("sourceArchiveDir", processedRawFilesLocation)
+                    .parquet(fileGlobPath);
+        } else {
+            return sparkSession
+                    .readStream()
+                    .schema(schema)
+                    .parquet(fileGlobPath);
+        }
     }
 }

@@ -41,6 +41,7 @@ public class JobArguments {
     // Spark structured streaming only allows moving processed files to a location outside the source to avoid recycling the files.
     // It should be noted that the processed files can only be moved to a location within the same s3 bucket.
     public static final String PROCESSED_RAW_FILES_PATH = "dpr.processed.raw.files.path";
+    public static final String ENABLE_STREAMING_SOURCE_ARCHIVING = "dpr.enable.streaming.source.archiving";
     public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
     public static final String DOMAIN_NAME = "dpr.domain.name";
     public static final String DOMAIN_OPERATION = "dpr.domain.operation";
@@ -236,6 +237,10 @@ public class JobArguments {
 
     public String getPrisonsDataSwitchTargetS3Path() {
         return getArgument(PRISONS_DATA_SWITCH_TARGET_S3_PATH);
+    }
+
+    public boolean enableStreamingSourceArchiving() {
+        return getArgument(ENABLE_STREAMING_SOURCE_ARCHIVING, false);
     }
 
     public String getProcessedRawFilesPath() {

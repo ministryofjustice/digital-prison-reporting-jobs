@@ -29,6 +29,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
             { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/target" },
+            { JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, "true" },
             { JobArguments.PROCESSED_RAW_FILES_PATH, "processed/raw/files" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
             { JobArguments.DOMAIN_NAME, "test_domain_name" },
@@ -79,6 +80,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },
                 { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, validArguments.getPrisonsDataSwitchTargetS3Path() },
+                { JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, validArguments.enableStreamingSourceArchiving() },
                 { JobArguments.PROCESSED_RAW_FILES_PATH, validArguments.getProcessedRawFilesPath() },
                 { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, validArguments.getDomainCatalogDatabaseName() },
                 { JobArguments.DOMAIN_NAME, validArguments.getDomainName() },
@@ -368,6 +370,23 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(expected, jobArguments.disableAutoBroadcastJoinThreshold());
+    }
+
+    @Test
+    public void enableStreamingSourceArchivingShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.enableStreamingSourceArchiving());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void enableStreamingSourceArchivingShouldUseProvidedBooleanValue(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.enableStreamingSourceArchiving());
     }
 
     @Test

@@ -143,6 +143,36 @@ class S3FileServiceTest {
     }
 
     @Test
+    public void copyObjectsShouldRemoveSourcePrefixWhenDestinationPrefixIsEmpty() {
+        List<String> objectKeys = new ArrayList<>();
+        String objectKey = SOURCE_PREFIX + "/file1.parquet";
+        objectKeys.add(objectKey);
+
+        Set<String> failedObjects = undertest
+                .copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, "",false);
+
+        verify(mockS3Client, times(objectKeys.size()))
+                .copyObject(eq(objectKey), eq("file1.parquet"), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
+
+        assertThat(failedObjects, is(empty()));
+    }
+
+    @Test
+    public void copyObjectsShouldReplaceSourcePrefixWithDestinationPrefixWhenDestinationPrefixIsNonEmpty() {
+        List<String> objectKeys = new ArrayList<>();
+        String objectKey = SOURCE_PREFIX + "/file1.parquet";
+        objectKeys.add(objectKey);
+
+        Set<String> failedObjects = undertest
+                .copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX,false);
+
+        verify(mockS3Client, times(objectKeys.size()))
+                .copyObject(eq(objectKey), eq(DESTINATION_PREFIX + "/file1.parquet"), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
+
+        assertThat(failedObjects, is(empty()));
+    }
+
+    @Test
     public void copyObjectsShouldReturnListOfFailedObjectsWhenDeleteCopiedFilesIsFalse() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
