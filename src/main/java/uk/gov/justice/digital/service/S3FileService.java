@@ -95,7 +95,9 @@ public class S3FileService {
             Long retentionDays,
             ImmutablePair<String, String> configuredTable
     ) {
-        String tableKey = sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        String tableKey = sourcePrefix.isEmpty() ?
+                configuredTable.left + DELIMITER + configuredTable.right + DELIMITER :
+                sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         logger.info("Listing files in S3 source location {} for table {}", sourceBucket, tableKey);
         return s3Client.getObjectsOlderThan(
                 sourceBucket,

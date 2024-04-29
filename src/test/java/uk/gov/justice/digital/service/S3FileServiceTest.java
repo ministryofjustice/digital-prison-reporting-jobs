@@ -86,6 +86,30 @@ class S3FileServiceTest {
     }
 
     @Test
+    public void listFilesForConfigShouldListFilesInFolderPrefix() {
+        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
+
+        undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS);
+
+        String folder = SOURCE_PREFIX + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        verify(mockS3Client, times(1))
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(RETENTION_DAYS), any());
+    }
+
+    @Test
+    public void listFilesForConfigShouldListFilesWhenNoFolderPrefixIsGiven() {
+        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
+
+        undertest.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileExtension, RETENTION_DAYS);
+
+        String folder = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        verify(mockS3Client, times(1))
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(RETENTION_DAYS), any());
+    }
+
+    @Test
     public void listFilesForConfigShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
         String configuredTable1 = "schema_1/table_1";
         String configuredTable2 = "schema_2/table_2";
