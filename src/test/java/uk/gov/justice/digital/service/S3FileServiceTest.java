@@ -86,7 +86,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void listFilesForConfigShouldListFilesInFolderPrefix() {
+    void listFilesForConfigShouldListFilesInFolderPrefix() {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
@@ -98,7 +98,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void listFilesForConfigShouldListFilesWhenNoFolderPrefixIsGiven() {
+    void listFilesForConfigShouldListFilesWhenNoFolderPrefixIsGiven() {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
@@ -167,33 +167,27 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void copyObjectsShouldRemoveSourcePrefixWhenDestinationPrefixIsEmpty() {
+    void copyObjectsShouldRemoveSourcePrefixWhenDestinationPrefixIsEmpty() {
         List<String> objectKeys = new ArrayList<>();
         String objectKey = SOURCE_PREFIX + "/file1.parquet";
         objectKeys.add(objectKey);
 
-        Set<String> failedObjects = undertest
-                .copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, "",false);
+        undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, "",false);
 
         verify(mockS3Client, times(objectKeys.size()))
-                .copyObject(eq(objectKey), eq("file1.parquet"), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
-
-        assertThat(failedObjects, is(empty()));
+                .copyObject(objectKey, "file1.parquet", SOURCE_BUCKET, DESTINATION_BUCKET);
     }
 
     @Test
-    public void copyObjectsShouldReplaceSourcePrefixWithDestinationPrefixWhenDestinationPrefixIsNonEmpty() {
+    void copyObjectsShouldReplaceSourcePrefixWithDestinationPrefixWhenDestinationPrefixIsNonEmpty() {
         List<String> objectKeys = new ArrayList<>();
         String objectKey = SOURCE_PREFIX + "/file1.parquet";
         objectKeys.add(objectKey);
 
-        Set<String> failedObjects = undertest
-                .copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX,false);
+        undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX,false);
 
         verify(mockS3Client, times(objectKeys.size()))
-                .copyObject(eq(objectKey), eq(DESTINATION_PREFIX + "/file1.parquet"), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
-
-        assertThat(failedObjects, is(empty()));
+                .copyObject(objectKey, DESTINATION_PREFIX + "/file1.parquet", SOURCE_BUCKET, DESTINATION_BUCKET);
     }
 
     @Test
