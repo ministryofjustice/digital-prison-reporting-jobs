@@ -27,6 +27,7 @@ import static org.mockito.Mockito.*;
 public class S3DataDeletionJobTest extends BaseSparkTest {
 
     private static final String TEST_CONFIG_KEY = "some-config-key";
+    private static final String SOURCE_PREFIX = "source-prefix";
 
     @Mock
     private ConfigService mockConfigService;
@@ -71,11 +72,13 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobArguments.getBucketsToDeleteFilesFrom()).thenReturn(bucketsToDeleteFrom);
+        when(mockJobArguments.getSourcePrefix()).thenReturn(SOURCE_PREFIX);
         when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         when(mockS3FileService.listFilesForConfig(
                 listObjectsBucketCaptor.capture(),
+                eq(SOURCE_PREFIX),
                 eq(configuredTables),
                 eq(parquetFileExtension),
                 eq(0L)
@@ -114,11 +117,13 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobArguments.getBucketsToDeleteFilesFrom()).thenReturn(bucketsToDeleteFrom);
+        when(mockJobArguments.getSourcePrefix()).thenReturn(SOURCE_PREFIX);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
         when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
 
         when(mockS3FileService.listFilesForConfig(
                 listObjectsBucketCaptor.capture(),
+                eq(SOURCE_PREFIX),
                 eq(configuredTables),
                 eq(parquetFileExtension),
                 eq(0L)

@@ -8,12 +8,15 @@ import io.micronaut.context.env.PropertySource;
 import io.micronaut.logging.LogLevel;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.stream.Collectors;
+
+import static uk.gov.justice.digital.client.s3.S3FileTransferClient.DELIMITER;
 
 /**
  * Class that defines and provides access to the job arguments that we support.
@@ -34,6 +37,11 @@ public class JobArguments {
     public static final String SCHEMA_CACHE_EXPIRY_IN_MINUTES = "dpr.schema.cache.expiry.days";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
     public static final String PRISONS_DATA_SWITCH_TARGET_S3_PATH = "dpr.prisons.data.switch.target.s3.path";
+    // Raw files that have been processed by the streaming job are moved to this location before being archived.
+    // Spark structured streaming only allows moving processed files to a location outside the source to avoid recycling the files.
+    // It should be noted that the processed files can only be moved to a location within the same s3 bucket.
+    public static final String PROCESSED_RAW_FILES_PATH = "dpr.processed.raw.files.path";
+    public static final String ENABLE_STREAMING_SOURCE_ARCHIVING = "dpr.enable.streaming.source.archiving";
     public static final String DOMAIN_CATALOG_DATABASE_NAME = "dpr.domain.catalog.db";
     public static final String DOMAIN_NAME = "dpr.domain.name";
     public static final String DOMAIN_OPERATION = "dpr.domain.operation";
@@ -92,7 +100,9 @@ public class JobArguments {
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN = "dpr.batch.load.fileglobpattern";
     public static final String BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT = "LOAD*parquet";
     public static final String FILE_TRANSFER_SOURCE_BUCKET_NAME = "dpr.file.transfer.source.bucket";
+    public static final String FILE_SOURCE_PREFIX = "dpr.file.source.prefix";
     public static final String FILE_TRANSFER_DESTINATION_BUCKET_NAME = "dpr.file.transfer.destination.bucket";
+    public static final String FILE_TRANSFER_DESTINATION_PREFIX = "dpr.file.transfer.destination.prefix";
     public static final String FILE_TRANSFER_RETENTION_DAYS = "dpr.file.transfer.retention.days";
     static final Long DEFAULT_FILE_TRANSFER_RETENTION_DAYS = 0L;
 
@@ -110,6 +120,9 @@ public class JobArguments {
     static final String MAX_S3_PAGE_SIZE = "dpr.s3.max.page.size";
     static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
     static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
+    static final String SPARK_BROADCAST_TIMEOUT_SECONDS = "dpr.spark.broadcast.timeout.seconds";
+    static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
+    static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
 
     private final Map<String, String> config;
 
@@ -226,6 +239,14 @@ public class JobArguments {
         return getArgument(PRISONS_DATA_SWITCH_TARGET_S3_PATH);
     }
 
+    public boolean enableStreamingSourceArchiving() {
+        return getArgument(ENABLE_STREAMING_SOURCE_ARCHIVING, false);
+    }
+
+    public String getProcessedRawFilesPath() {
+        return removeLeadingAndTrailingSlashes(getArgument(PROCESSED_RAW_FILES_PATH));
+    }
+
     public String getDomainTargetPath() {
         return getArgument(DOMAIN_TARGET_PATH);
     }
@@ -318,8 +339,16 @@ public class JobArguments {
         return getArgument(FILE_TRANSFER_SOURCE_BUCKET_NAME);
     }
 
+    public String getSourcePrefix() {
+        return removeLeadingAndTrailingSlashes(getArgument(FILE_SOURCE_PREFIX, ""));
+    }
+
     public String getTransferDestinationBucket() {
         return getArgument(FILE_TRANSFER_DESTINATION_BUCKET_NAME);
+    }
+
+    public String getTransferDestinationPrefix() {
+        return removeLeadingAndTrailingSlashes(getArgument(FILE_TRANSFER_DESTINATION_PREFIX, ""));
     }
 
     public Long getFileTransferRetentionDays() {
@@ -373,6 +402,14 @@ public class JobArguments {
         } else {
             return argument;
         }
+    }
+
+    public Integer getBroadcastTimeoutSeconds() {
+        return getArgument(SPARK_BROADCAST_TIMEOUT_SECONDS, DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
+    }
+
+    public boolean disableAutoBroadcastJoinThreshold() {
+        return getArgument(DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, false);
     }
 
     public boolean cleanCdcCheckpoint() {
@@ -454,4 +491,10 @@ public class JobArguments {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
+    @NotNull
+    private static String removeLeadingAndTrailingSlashes(String prefix) {
+        if (prefix.startsWith(DELIMITER)) prefix = prefix.substring(1);
+        if (prefix.endsWith(DELIMITER)) prefix = prefix.substring(0, prefix.length() - 2);
+        return prefix;
+    }
 }

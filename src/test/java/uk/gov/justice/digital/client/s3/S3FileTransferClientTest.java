@@ -46,7 +46,8 @@ public class S3FileTransferClientTest {
     @Captor
     ArgumentCaptor<ListObjectsRequest> listObjectsRequestCaptor;
 
-    private static final String OBJECT_KEY = "test-object-key";
+    private static final String SOURCE_KEY = "test-source-key";
+    private static final String DESTINATION_KEY = "test-destination-key";
     private static final String SOURCE_BUCKET = "test-source-bucket";
     private static final String DESTINATION_BUCKET = "test-destination-bucket";
     private static final ImmutableSet<String> allowedExtensions = ImmutableSet.of(".parquet", ".json");
@@ -64,30 +65,30 @@ public class S3FileTransferClientTest {
 
     @Test
     public void copyObjectShouldDeleteObjects() {
-        underTest.copyObject(OBJECT_KEY, SOURCE_BUCKET, DESTINATION_BUCKET);
+        underTest.copyObject(SOURCE_KEY, DESTINATION_KEY, SOURCE_BUCKET, DESTINATION_BUCKET);
 
-        verify(mockS3Client, times(1)).copyObject(SOURCE_BUCKET, OBJECT_KEY, DESTINATION_BUCKET, OBJECT_KEY);
+        verify(mockS3Client, times(1)).copyObject(SOURCE_BUCKET, SOURCE_KEY, DESTINATION_BUCKET, DESTINATION_KEY);
     }
 
     @Test
     public void copyObjectShouldFailWhenClientThrowsAnException() {
         doThrow(new RuntimeException("client exception")).when(mockS3Client).copyObject(any(), any(), any(), any());
 
-        assertThrows(RuntimeException.class, () -> underTest.copyObject(OBJECT_KEY, SOURCE_BUCKET, DESTINATION_BUCKET));
+        assertThrows(RuntimeException.class, () -> underTest.copyObject(SOURCE_KEY, DESTINATION_KEY, SOURCE_BUCKET, DESTINATION_BUCKET));
     }
 
     @Test
     public void deleteObjectShouldDeleteObjects() {
-        underTest.deleteObject(OBJECT_KEY, SOURCE_BUCKET);
+        underTest.deleteObject(SOURCE_KEY, SOURCE_BUCKET);
 
-        verify(mockS3Client, times(1)).deleteObject(SOURCE_BUCKET, OBJECT_KEY);
+        verify(mockS3Client, times(1)).deleteObject(SOURCE_BUCKET, SOURCE_KEY);
     }
 
     @Test
     public void deleteObjectShouldFailWhenClientThrowsAnException() {
         doThrow(new RuntimeException("client exception")).when(mockS3Client).deleteObject(any(), any());
 
-        assertThrows(RuntimeException.class, () -> underTest.deleteObject(OBJECT_KEY, SOURCE_BUCKET));
+        assertThrows(RuntimeException.class, () -> underTest.deleteObject(SOURCE_KEY, SOURCE_BUCKET));
     }
 
     @Test

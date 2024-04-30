@@ -62,7 +62,9 @@ public class S3FileTransferJob implements Runnable {
     private void copyFiles() {
         Optional<String> optionalConfigKey = jobArguments.getOptionalConfigKey();
         final String sourceBucket = jobArguments.getTransferSourceBucket();
+        final String sourcePrefix = jobArguments.getSourcePrefix();
         final String destinationBucket = jobArguments.getTransferDestinationBucket();
+        final String destinationPrefix = jobArguments.getTransferDestinationPrefix();
         final Long retentionDays = jobArguments.getFileTransferRetentionDays();
         final boolean deleteCopiedFiles = jobArguments.getFileTransferDeleteCopiedFilesFlag();
         final ImmutableSet<String> allowedExtensions = jobArguments.getAllowedS3FileExtensions();
@@ -72,15 +74,16 @@ public class S3FileTransferJob implements Runnable {
             // When config is provided, only files belonging to the configured tables are archived
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(optionalConfigKey.get());
-            objectKeys.addAll(s3FileService.listFilesForConfig(sourceBucket, configuredTables, allowedExtensions, retentionDays));
+            objectKeys.addAll(s3FileService.listFilesForConfig(sourceBucket, sourcePrefix, configuredTables, allowedExtensions, retentionDays));
         } else {
             // When no config is provided, all files in s3 bucket are archived
             logger.info("Listing files in S3 source location: {}", sourceBucket);
-            objectKeys.addAll(s3FileService.listFiles(sourceBucket, allowedExtensions, retentionDays));
+            objectKeys.addAll(s3FileService.listFiles(sourceBucket, sourcePrefix, allowedExtensions, retentionDays));
         }
 
         logger.info("Processing S3 objects older than {} day(s) from {} to {}", retentionDays, sourceBucket, destinationBucket);
-        Set<String> failedObjects = s3FileService.copyObjects(objectKeys, sourceBucket, destinationBucket, deleteCopiedFiles);
+        Set<String> failedObjects = s3FileService
+                .copyObjects(objectKeys, sourceBucket, sourcePrefix, destinationBucket, destinationPrefix, deleteCopiedFiles);
 
         if (failedObjects.isEmpty()) {
             logger.info("Successfully processed {} S3 files", objectKeys.size());

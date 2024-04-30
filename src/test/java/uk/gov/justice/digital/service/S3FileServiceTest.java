@@ -27,7 +27,9 @@ import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 class S3FileServiceTest {
 
     private static final String SOURCE_BUCKET = "source-bucket";
+    private static final String SOURCE_PREFIX = "source-prefix";
     private static final String DESTINATION_BUCKET = "destination-bucket";
+    private static final String DESTINATION_PREFIX = "destination-prefix";
     private static final long RETENTION_DAYS = 2L;
 
     private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
@@ -46,9 +48,9 @@ class S3FileServiceTest {
 
     @Test
     public void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
-        when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any())).thenReturn(Collections.emptyList());
+        when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, RETENTION_DAYS);
 
         assertThat(result, is(empty()));
     }
@@ -61,10 +63,10 @@ class S3FileServiceTest {
         expected.add("file3.parquet");
         expected.add("file4.parquet");
 
-        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, parquetFileExtension, RETENTION_DAYS, fixedClock))
+        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, RETENTION_DAYS, fixedClock))
                 .thenReturn(expected);
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, RETENTION_DAYS);
 
         assertThat(result, containsInAnyOrder(expected.toArray()));
     }
@@ -78,9 +80,33 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, configuredTables, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS);
 
         assertThat(result, is(empty()));
+    }
+
+    @Test
+    void listFilesForConfigShouldListFilesInFolderPrefix() {
+        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
+
+        undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS);
+
+        String folder = SOURCE_PREFIX + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        verify(mockS3Client, times(1))
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(RETENTION_DAYS), any());
+    }
+
+    @Test
+    void listFilesForConfigShouldListFilesWhenNoFolderPrefixIsGiven() {
+        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
+
+        undertest.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileExtension, RETENTION_DAYS);
+
+        String folder = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        verify(mockS3Client, times(1))
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(RETENTION_DAYS), any());
     }
 
     @Test
@@ -104,19 +130,19 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
-                configuredTable1 + DELIMITER,
+                SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
                 parquetFileExtension,
                 RETENTION_DAYS,
                 fixedClock)).thenReturn(expectedFilesForTable1);
 
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
-                configuredTable2 + DELIMITER,
+                SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
                 parquetFileExtension,
                 RETENTION_DAYS,
                 fixedClock)).thenReturn(expectedFilesForTable2);
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, configuredTables, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS);
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);
@@ -133,11 +159,35 @@ class S3FileServiceTest {
         objectKeys.add("file3.parquet");
         objectKeys.add("file4.parquet");
 
-        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, false);
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX,false);
 
-        verify(mockS3Client, times(objectKeys.size())).copyObject(any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
+        verify(mockS3Client, times(objectKeys.size())).copyObject(any(), any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
 
         assertThat(failedObjects, is(empty()));
+    }
+
+    @Test
+    void copyObjectsShouldRemoveSourcePrefixWhenDestinationPrefixIsEmpty() {
+        List<String> objectKeys = new ArrayList<>();
+        String objectKey = SOURCE_PREFIX + "/file1.parquet";
+        objectKeys.add(objectKey);
+
+        undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, "",false);
+
+        verify(mockS3Client, times(objectKeys.size()))
+                .copyObject(objectKey, "file1.parquet", SOURCE_BUCKET, DESTINATION_BUCKET);
+    }
+
+    @Test
+    void copyObjectsShouldReplaceSourcePrefixWithDestinationPrefixWhenDestinationPrefixIsNonEmpty() {
+        List<String> objectKeys = new ArrayList<>();
+        String objectKey = SOURCE_PREFIX + "/file1.parquet";
+        objectKeys.add(objectKey);
+
+        undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX,false);
+
+        verify(mockS3Client, times(objectKeys.size()))
+                .copyObject(objectKey, DESTINATION_PREFIX + "/file1.parquet", SOURCE_BUCKET, DESTINATION_BUCKET);
     }
 
     @Test
@@ -153,10 +203,10 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file2.parquet");
         expectedFailedObjects.add("file4.parquet");
 
-        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any());
-        doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any());
+        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any(), any());
+        doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any(), any());
 
-        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, false);
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, false);
 
         assertEquals(failedObjects, expectedFailedObjects);
     }
@@ -169,9 +219,9 @@ class S3FileServiceTest {
         objectKeys.add("file3.parquet");
         objectKeys.add("file4.parquet");
 
-        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, true);
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true);
 
-        verify(mockS3Client, times(objectKeys.size())).copyObject(any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
+        verify(mockS3Client, times(objectKeys.size())).copyObject(any(), any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
         verify(mockS3Client, times(objectKeys.size())).deleteObject(any(), eq(SOURCE_BUCKET));
 
         assertThat(failedObjects, is(empty()));
@@ -190,10 +240,10 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file2.parquet");
         expectedFailedObjects.add("file4.parquet");
 
-        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any());
-        doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any());
+        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any(), any());
+        doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any(), any());
 
-        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, true);
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true);
 
         assertEquals(failedObjects, expectedFailedObjects);
     }
@@ -211,11 +261,11 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file2.parquet");
         expectedFailedObjects.add("file4.parquet");
 
-        doNothing().when(mockS3Client).copyObject(any(), any(), any());
+        doNothing().when(mockS3Client).copyObject(any(), any(), any(), any());
         doThrow(new AmazonServiceException("failure")).when(mockS3Client).deleteObject(any(), any());
         doNothing().when(mockS3Client).deleteObject(eq("file3.parquet"), any());
 
-        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, true);
+        Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true);
 
         assertEquals(failedObjects, expectedFailedObjects);
     }

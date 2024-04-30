@@ -19,6 +19,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
 
 class JobArgumentsIntegrationTest {
 
@@ -28,6 +29,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
             { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/target" },
+            { JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, "true" },
+            { JobArguments.PROCESSED_RAW_FILES_PATH, "processed/raw/files" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
             { JobArguments.DOMAIN_NAME, "test_domain_name" },
             { JobArguments.DOMAIN_OPERATION, "insert" },
@@ -56,10 +59,13 @@ class JobArgumentsIntegrationTest {
             { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, "dpr-source-bucket" },
             { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
             { JobArguments.FILE_TRANSFER_RETENTION_DAYS, "2" },
+            { JobArguments.FILE_SOURCE_PREFIX, "dpr-source-prefix" },
             { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
             { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, "10" },
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
-            { JobArguments.CLEAN_CDC_CHECKPOINT, "false" }
+            { JobArguments.CLEAN_CDC_CHECKPOINT, "false" },
+            { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, "60" },
+            { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -74,6 +80,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },
                 { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, validArguments.getPrisonsDataSwitchTargetS3Path() },
+                { JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, validArguments.enableStreamingSourceArchiving() },
+                { JobArguments.PROCESSED_RAW_FILES_PATH, validArguments.getProcessedRawFilesPath() },
                 { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, validArguments.getDomainCatalogDatabaseName() },
                 { JobArguments.DOMAIN_NAME, validArguments.getDomainName() },
                 { JobArguments.DOMAIN_OPERATION, validArguments.getDomainOperation() },
@@ -101,10 +109,13 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, validArguments.getTransferSourceBucket() },
                 { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
                 { JobArguments.FILE_TRANSFER_RETENTION_DAYS, validArguments.getFileTransferRetentionDays() },
+                { JobArguments.FILE_SOURCE_PREFIX, validArguments.getSourcePrefix() },
                 { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.glueOrchestrationWaitIntervalSeconds() },
                 { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, validArguments.glueOrchestrationMaxAttempts() },
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
-                { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() }
+                { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() },
+                { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, validArguments.getBroadcastTimeoutSeconds() },
+                { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() }
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -334,6 +345,48 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.CLEAN_CDC_CHECKPOINT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.cleanCdcCheckpoint());
+    }
+
+    @Test
+    public void defaultBroadcastTimeoutSecondsWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(jobArguments.getBroadcastTimeoutSeconds(), DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
+    }
+
+    @Test
+    public void disableAutoBroadcastJoinThresholdShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.disableAutoBroadcastJoinThreshold());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void disableAutoBroadcastJoinThresholdShouldUseProvidedBooleanValue(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.disableAutoBroadcastJoinThreshold());
+    }
+
+    @Test
+    public void enableStreamingSourceArchivingShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.enableStreamingSourceArchiving());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void enableStreamingSourceArchivingShouldUseProvidedBooleanValue(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.enableStreamingSourceArchiving());
     }
 
     @Test

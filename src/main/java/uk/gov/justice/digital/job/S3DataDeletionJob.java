@@ -61,13 +61,14 @@ public class S3DataDeletionJob implements Runnable {
                 .getConfiguredTables(jobArguments.getConfigKey());
 
         final ImmutableSet<String> bucketsToDeleteFilesFrom = jobArguments.getBucketsToDeleteFilesFrom();
+        final String sourcePrefix = jobArguments.getSourcePrefix();
         final ImmutableSet<String> allowedExtensions = jobArguments.getAllowedS3FileExtensions();
 
         Set<String> failedObjects = new HashSet<>();
 
         for (String bucketToDeleteFilesFrom : bucketsToDeleteFilesFrom) {
             List<String> listedFiles = s3FileService
-                    .listFilesForConfig(bucketToDeleteFilesFrom, configuredTables, allowedExtensions, 0L);
+                    .listFilesForConfig(bucketToDeleteFilesFrom, sourcePrefix, configuredTables, allowedExtensions, 0L);
 
             logger.info("Deleting S3 objects from {} ", bucketToDeleteFilesFrom);
             failedObjects = s3FileService.deleteObjects(listedFiles, bucketToDeleteFilesFrom);

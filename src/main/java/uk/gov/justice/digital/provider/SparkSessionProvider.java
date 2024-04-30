@@ -1,11 +1,11 @@
 package uk.gov.justice.digital.provider;
 
 import com.amazonaws.services.glue.GlueContext;
-import io.micronaut.logging.LogLevel;
 import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.SparkSession;
+import uk.gov.justice.digital.config.JobArguments;
 
 import java.time.ZoneOffset;
 import java.util.TimeZone;
@@ -13,32 +13,32 @@ import java.util.TimeZone;
 @Singleton
 public class SparkSessionProvider {
 
-    public GlueContext createGlueContext(String jobName, LogLevel logLevel) {
+    public GlueContext createGlueContext(String jobName, JobArguments arguments) {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
-        SparkSessionProvider.configureSparkConf(sparkConf);
+        SparkSessionProvider.configureSparkConf(sparkConf, arguments);
         SparkContext spark = new SparkContext(sparkConf);
-        spark.setLogLevel(logLevel.name().toUpperCase());
+        spark.setLogLevel(arguments.getLogLevel().name().toUpperCase());
         return new GlueContext(spark);
     }
 
-    public SparkSession getConfiguredSparkSession(SparkConf sparkConf, LogLevel logLevel) {
+    public SparkSession getConfiguredSparkSession(SparkConf sparkConf, JobArguments arguments) {
 
-        configureSparkConf(sparkConf);
+        configureSparkConf(sparkConf, arguments);
 
         SparkSession session = SparkSession.builder()
                                 .config(sparkConf)
                                 .enableHiveSupport()
                                 .getOrCreate();
 
-        session.sparkContext().setLogLevel(logLevel.name());
+        session.sparkContext().setLogLevel(arguments.getLogLevel().name());
 
         return session;
     }
-    public SparkSession getConfiguredSparkSession(LogLevel logLevel) {
-        return getConfiguredSparkSession(new SparkConf(), logLevel);
+    public SparkSession getConfiguredSparkSession(JobArguments arguments) {
+        return getConfiguredSparkSession(new SparkConf(), arguments);
     }
 
-    public static void configureSparkConf(SparkConf sparkConf) {
+    public static void configureSparkConf(SparkConf sparkConf, JobArguments arguments) {
         // We set the overall default timezone to UTC before then configuring the spark session to also use UTC.
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.UTC));
         sparkConf
@@ -46,6 +46,7 @@ public class SparkSessionProvider {
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.databricks.delta.properties.defaults.targetFileSize", "67110000")
+                .set("spark.sql.broadcastTimeout", arguments.getBroadcastTimeoutSeconds().toString())
                 .set("spark.streaming.stopGracefullyOnShutdown", "true")
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
@@ -57,6 +58,12 @@ public class SparkSessionProvider {
                 .set("spark.sql.parquet.int96RebaseModeInRead", "CORRECTED")
                 // Standardise on UTC.
                 .set("spark.sql.session.timeZone", "UTC");
+
+        if (arguments.disableAutoBroadcastJoinThreshold()) {
+            sparkConf
+                    .set("spark.sql.autoBroadcastJoinThreshold", "-1")
+                    .set("spark.sql.adaptive.autoBroadcastJoinThreshold", "-1");
+        }
     }
 
 }
