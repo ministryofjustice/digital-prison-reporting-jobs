@@ -17,7 +17,7 @@ public class SparkSessionProvider {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
         SparkSessionProvider.configureSparkConf(sparkConf, arguments);
         SparkContext spark = new SparkContext(sparkConf);
-        spark.setLogLevel(arguments.getLogLevel().name().toUpperCase());
+//        spark.setLogLevel(arguments.getLogLevel().name().toUpperCase());
         return new GlueContext(spark);
     }
 
@@ -30,7 +30,7 @@ public class SparkSessionProvider {
                                 .enableHiveSupport()
                                 .getOrCreate();
 
-        session.sparkContext().setLogLevel(arguments.getLogLevel().name());
+//        session.sparkContext().setLogLevel(arguments.getLogLevel().name());
 
         return session;
     }
