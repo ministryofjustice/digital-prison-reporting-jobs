@@ -53,7 +53,7 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     public void setup() {
         reset(mockConfigService, mockHiveTableService, mockJobArguments);
 
-        when(mockJobArguments.getLogLevel()).thenReturn(LogLevel.INFO);
+//        when(mockJobArguments.getLogLevel()).thenReturn(LogLevel.INFO);
         underTest = new SwitchHiveTableJob(mockConfigService, mockHiveTableService, sparkSessionProvider, mockJobArguments);
     }
 
