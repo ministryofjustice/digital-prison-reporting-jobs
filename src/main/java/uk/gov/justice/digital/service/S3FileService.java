@@ -58,10 +58,18 @@ public class S3FileService {
         Set<String> failedObjects = new HashSet<>();
 
         for (String objectKey : objectKeys) {
+            String destinationKey;
             try {
-                String destinationKey = destinationPrefix.isEmpty() ?
-                        objectKey.replaceFirst(sourcePrefix + DELIMITER, destinationPrefix) :
-                        objectKey.replaceFirst(sourcePrefix, destinationPrefix);
+                if (!sourcePrefix.isEmpty()) {
+                    destinationKey = destinationPrefix.isEmpty() ?
+                            objectKey.replaceFirst(sourcePrefix + DELIMITER, destinationPrefix) :
+                            objectKey.replaceFirst(sourcePrefix, destinationPrefix);
+                } else {
+                    destinationKey = destinationPrefix.isEmpty() ?
+                            objectKey.replaceFirst(sourcePrefix, destinationPrefix) :
+                            destinationPrefix + DELIMITER + objectKey;
+                }
+
                 s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket);
                 if (deleteCopiedFiles) s3Client.deleteObject(objectKey, sourceBucket);
             } catch (AmazonServiceException e) {
