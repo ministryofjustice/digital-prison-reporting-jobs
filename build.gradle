@@ -170,6 +170,10 @@ jar {
 shadowJar {
     zip64 true
     exclude 'core-site.xml'
+    exclude 'log4j2.properties'
+    exclude 'log4j2.xml'
+    exclude 'log4j2.json'
+    exclude 'log4j2.yaml'
 }
 
 micronaut {
