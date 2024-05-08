@@ -16,23 +16,17 @@ public class SparkSessionProvider {
     public GlueContext createGlueContext(String jobName, JobArguments arguments) {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
         SparkSessionProvider.configureSparkConf(sparkConf, arguments);
-        SparkContext spark = new SparkContext(sparkConf);
-        spark.setLogLevel(arguments.getLogLevel().name().toUpperCase());
-        return new GlueContext(spark);
+        return new GlueContext(new SparkContext(sparkConf));
     }
 
     public SparkSession getConfiguredSparkSession(SparkConf sparkConf, JobArguments arguments) {
 
         configureSparkConf(sparkConf, arguments);
 
-        SparkSession session = SparkSession.builder()
+        return SparkSession.builder()
                                 .config(sparkConf)
                                 .enableHiveSupport()
                                 .getOrCreate();
-
-        session.sparkContext().setLogLevel(arguments.getLogLevel().name());
-
-        return session;
     }
     public SparkSession getConfiguredSparkSession(JobArguments arguments) {
         return getConfiguredSparkSession(new SparkConf(), arguments);

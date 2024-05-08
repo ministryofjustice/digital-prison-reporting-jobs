@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job;
 
 import com.github.stefanbirkner.systemlambda.SystemLambda;
 import com.google.common.collect.ImmutableSet;
-import io.micronaut.logging.LogLevel;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +52,6 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     public void setup() {
         reset(mockConfigService, mockHiveTableService, mockJobArguments);
 
-        when(mockJobArguments.getLogLevel()).thenReturn(LogLevel.INFO);
         underTest = new SwitchHiveTableJob(mockConfigService, mockHiveTableService, sparkSessionProvider, mockJobArguments);
     }
 

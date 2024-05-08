@@ -36,7 +36,7 @@ ext {
     jacksonVersion = '2.14.2'
     junitVersion = '5.8.1'
     hamcrestVersion = '2.2'
-    log4jVersion = '2.20.0'
+    log4jVersion = '2.23.1'
     micronautVersion = '3.8.7'
     mockitoVersion = '4.11.0'
     sparkVersion = '3.3.0'
@@ -110,6 +110,10 @@ sourceSets {
 
 configurations {
     integrationTestImplementation.extendsFrom implementation, testImplementation
+}
+
+configurations.all {
+    exclude group: 'org.slf4j', module: 'slf4j-reload4j'
 }
 
 // Exclude duplicate file from processing
