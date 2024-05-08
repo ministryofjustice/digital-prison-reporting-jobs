@@ -179,6 +179,30 @@ class S3FileServiceTest {
     }
 
     @Test
+    void copyObjectsAndUseDestinationPrefixWhenSourcePrefixIsEmpty() {
+        List<String> objectKeys = new ArrayList<>();
+        String objectKey = "file1.parquet";
+        objectKeys.add(objectKey);
+
+        undertest.copyObjects(objectKeys, SOURCE_BUCKET, "", DESTINATION_BUCKET, DESTINATION_PREFIX,false);
+
+        verify(mockS3Client, times(objectKeys.size()))
+                .copyObject(objectKey, DESTINATION_PREFIX + DELIMITER + objectKey, SOURCE_BUCKET, DESTINATION_BUCKET);
+    }
+
+    @Test
+    void copyObjectsWhenBothDestinationPrefixAndSourcePrefixAreEmpty() {
+        List<String> objectKeys = new ArrayList<>();
+        String objectKey = "file1.parquet";
+        objectKeys.add(objectKey);
+
+        undertest.copyObjects(objectKeys, SOURCE_BUCKET, "", DESTINATION_BUCKET, "",false);
+
+        verify(mockS3Client, times(objectKeys.size()))
+                .copyObject(objectKey, objectKey, SOURCE_BUCKET, DESTINATION_BUCKET);
+    }
+
+    @Test
     void copyObjectsShouldReplaceSourcePrefixWithDestinationPrefixWhenDestinationPrefixIsNonEmpty() {
         List<String> objectKeys = new ArrayList<>();
         String objectKey = SOURCE_PREFIX + "/file1.parquet";
