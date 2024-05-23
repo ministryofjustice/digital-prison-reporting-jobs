@@ -49,6 +49,13 @@ public class MinimalTestData {
     });
     public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
 
+    public static Encoder<Row> encoderWithExtraColumn = RowEncoder.apply(
+            SCHEMA_WITHOUT_METADATA_FIELDS
+                    .add(new StructField(TIMESTAMP, DataTypes.StringType, true, Metadata.empty()))
+                    .add(new StructField(OPERATION, DataTypes.StringType, true, Metadata.empty()))
+                    .add(new StructField("extra_column", DataTypes.StringType, true, Metadata.empty()))
+    );
+
     public static Dataset<Row> inserts(SparkSession spark) {
         return spark.createDataFrame(Arrays.asList(
                 createRow(1, "2023-11-13 10:50:00.123456", Insert, "1"),

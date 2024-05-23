@@ -16,6 +16,7 @@ import uk.gov.justice.digital.exception.ConfigServiceException;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
+import java.time.Duration;
 import java.util.*;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -81,7 +82,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
                 eq(SOURCE_PREFIX),
                 eq(configuredTables),
                 eq(parquetFileExtension),
-                eq(0L)
+                eq(Duration.ZERO)
         )).thenReturn(objectsToDelete);
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture()))
@@ -126,7 +127,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
                 eq(SOURCE_PREFIX),
                 eq(configuredTables),
                 eq(parquetFileExtension),
-                eq(0L)
+                eq(Duration.ZERO)
         )).thenReturn(objectsToDelete);
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture())).thenReturn(failedFiles);

@@ -12,6 +12,8 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.stream.Collectors;
@@ -103,8 +105,11 @@ public class JobArguments {
     public static final String FILE_SOURCE_PREFIX = "dpr.file.source.prefix";
     public static final String FILE_TRANSFER_DESTINATION_BUCKET_NAME = "dpr.file.transfer.destination.bucket";
     public static final String FILE_TRANSFER_DESTINATION_PREFIX = "dpr.file.transfer.destination.prefix";
-    public static final String FILE_TRANSFER_RETENTION_DAYS = "dpr.file.transfer.retention.days";
-    static final Long DEFAULT_FILE_TRANSFER_RETENTION_DAYS = 0L;
+    public static final String FILE_TRANSFER_RETENTION_PERIOD_AMOUNT = "dpr.file.transfer.retention.period.amount";
+    static final Long DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_AMOUNT = 0L;
+
+    public static final String FILE_TRANSFER_RETENTION_PERIOD_UNIT = "dpr.file.transfer.retention.period.unit";
+    static final String DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_UNIT = "days";
 
     public static final String FILE_TRANSFER_DELETE_COPIED_FILES_FLAG = "dpr.file.transfer.delete.copied.files";
 
@@ -351,8 +356,21 @@ public class JobArguments {
         return removeLeadingAndTrailingSlashes(getArgument(FILE_TRANSFER_DESTINATION_PREFIX, ""));
     }
 
-    public Long getFileTransferRetentionDays() {
-        return getArgument(FILE_TRANSFER_RETENTION_DAYS, DEFAULT_FILE_TRANSFER_RETENTION_DAYS);
+    public Duration getFileTransferRetentionPeriod() {
+        long retentionAmount = getArgument(FILE_TRANSFER_RETENTION_PERIOD_AMOUNT, DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
+        String retentionUnit = getArgument(FILE_TRANSFER_RETENTION_PERIOD_UNIT, DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_UNIT);
+
+        switch (retentionUnit.toLowerCase()) {
+            case "minutes":
+                return Duration.of(retentionAmount, ChronoUnit.MINUTES);
+            case "hours":
+                return Duration.of(retentionAmount, ChronoUnit.HOURS);
+            case "days":
+                return Duration.of(retentionAmount, ChronoUnit.DAYS);
+            default:
+                String error = String.format("Unsupported %s=%s. Allowed values are: minutes, hours, days", FILE_TRANSFER_RETENTION_PERIOD_UNIT, retentionUnit);
+                throw new IllegalArgumentException(error);
+        }
     }
 
     public boolean getFileTransferDeleteCopiedFilesFlag() {

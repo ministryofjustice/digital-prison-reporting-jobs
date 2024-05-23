@@ -13,6 +13,7 @@ import uk.gov.justice.digital.service.S3FileService;
 
 import javax.inject.Inject;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
 
 /**
@@ -68,7 +69,7 @@ public class S3DataDeletionJob implements Runnable {
 
         for (String bucketToDeleteFilesFrom : bucketsToDeleteFilesFrom) {
             List<String> listedFiles = s3FileService
-                    .listFilesForConfig(bucketToDeleteFilesFrom, sourcePrefix, configuredTables, allowedExtensions, 0L);
+                    .listFilesForConfig(bucketToDeleteFilesFrom, sourcePrefix, configuredTables, allowedExtensions, Duration.ZERO);
 
             logger.info("Deleting S3 objects from {} ", bucketToDeleteFilesFrom);
             failedObjects = s3FileService.deleteObjects(listedFiles, bucketToDeleteFilesFrom);

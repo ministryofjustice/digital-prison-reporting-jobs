@@ -12,6 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,23 +32,23 @@ public class S3FileTransferClient {
         this.maxObjectsPerPage = jobArguments.getMaxObjectsPerPage();
     }
 
-    public List<String> getObjectsOlderThan(String bucket, ImmutableSet<String> allowedExtensions, Long retentionDays, Clock clock) {
+    public List<String> getObjectsOlderThan(String bucket, ImmutableSet<String> allowedExtensions, Duration retentionPeriod, Clock clock) {
         ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withMaxKeys(maxObjectsPerPage);
-        return listObjects(allowedExtensions, retentionDays, clock, request);
+        return listObjects(allowedExtensions, retentionPeriod, clock, request);
     }
 
     public List<String> getObjectsOlderThan(
             String bucket,
             String folder,
             ImmutableSet<String> allowedExtensions,
-            Long retentionDays,
+            Duration retentionPeriod,
             Clock clock
     ) {
         ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
-        return listObjects(allowedExtensions, retentionDays, clock, request);
+        return listObjects(allowedExtensions, retentionPeriod, clock, request);
     }
 
-    private List<String> listObjects(ImmutableSet<String> allowedExtensions, Long retentionDays, Clock clock, ListObjectsRequest request) {
+    private List<String> listObjects(ImmutableSet<String> allowedExtensions, Duration retentionPeriod, Clock clock, ListObjectsRequest request) {
         LocalDateTime currentDate = LocalDateTime.now(clock);
         List<String> objectPaths = new LinkedList<>();
         ObjectListing objectList;
@@ -58,7 +59,7 @@ public class S3FileTransferClient {
             for (S3ObjectSummary summary : objectSummaries) {
 
                 LocalDateTime lastModifiedDate = summary.getLastModified().toInstant().atZone(clock.getZone()).toLocalDateTime();
-                boolean isBeforeRetentionPeriod = lastModifiedDate.isBefore(currentDate.minusDays(retentionDays));
+                boolean isBeforeRetentionPeriod = lastModifiedDate.isBefore(currentDate.minus(retentionPeriod));
 
                 String summaryKey = summary.getKey();
                 logger.debug("Listed {}", summaryKey);

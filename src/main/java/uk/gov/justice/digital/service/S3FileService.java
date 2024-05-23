@@ -10,6 +10,7 @@ import uk.gov.justice.digital.client.s3.S3FileTransferClient;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -31,8 +32,8 @@ public class S3FileService {
         this.clock = clock;
     }
 
-    public List<String> listFiles(String bucket, String sourcePrefix, ImmutableSet<String> allowedExtensions, Long retentionDays) {
-        return s3Client.getObjectsOlderThan(bucket, sourcePrefix, allowedExtensions, retentionDays, clock);
+    public List<String> listFiles(String bucket, String sourcePrefix, ImmutableSet<String> allowedExtensions, Duration retentionPeriod) {
+        return s3Client.getObjectsOlderThan(bucket, sourcePrefix, allowedExtensions, retentionPeriod, clock);
     }
 
     public List<String> listFilesForConfig(
@@ -40,10 +41,10 @@ public class S3FileService {
             String sourcePrefix,
             ImmutableSet<ImmutablePair<String, String>> configuredTables,
             ImmutableSet<String> allowedExtensions,
-            Long retentionDays
+            Duration retentionPeriod
     ) {
         return configuredTables.stream()
-                .flatMap(configuredTable -> listFilesForTable(sourceBucket, sourcePrefix, allowedExtensions, retentionDays, configuredTable).stream())
+                .flatMap(configuredTable -> listFilesForTable(sourceBucket, sourcePrefix, allowedExtensions, retentionPeriod, configuredTable).stream())
                 .collect(Collectors.toList());
     }
 
@@ -100,7 +101,7 @@ public class S3FileService {
             String sourceBucket,
             String sourcePrefix,
             ImmutableSet<String> allowedExtensions,
-            Long retentionDays,
+            Duration retentionPeriod,
             ImmutablePair<String, String> configuredTable
     ) {
         String tableKey = sourcePrefix.isEmpty() ?
@@ -111,7 +112,7 @@ public class S3FileService {
                 sourceBucket,
                 tableKey,
                 allowedExtensions,
-                retentionDays,
+                retentionPeriod,
                 clock
         );
     }

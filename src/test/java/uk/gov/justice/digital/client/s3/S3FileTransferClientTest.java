@@ -16,7 +16,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 
+import java.time.Duration;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -52,6 +54,7 @@ public class S3FileTransferClientTest {
     private static final String DESTINATION_BUCKET = "test-destination-bucket";
     private static final ImmutableSet<String> allowedExtensions = ImmutableSet.of(".parquet", ".json");
     private static final Integer MAX_OBJECTS_PER_PAGE = 10;
+    private static final Duration zeroDayRetentionPeriod = Duration.of(0L, ChronoUnit.DAYS);
 
     private S3FileTransferClient underTest;
     @BeforeEach
@@ -112,7 +115,7 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, allowedExtensions, 0L, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, allowedExtensions, zeroDayRetentionPeriod, fixedClock);
 
         ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
         assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
@@ -147,7 +150,7 @@ public class S3FileTransferClientTest {
 
         givenMultiPageObjectListingSucceeds(firstPageSummaries, secondPageSummaries);
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, ImmutableSet.of(".parquet"), 0L, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, ImmutableSet.of(".parquet"), zeroDayRetentionPeriod, fixedClock);
 
         ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
         assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
@@ -178,7 +181,7 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, ImmutableSet.of("*"), 0L, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, ImmutableSet.of("*"), zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
@@ -213,7 +216,7 @@ public class S3FileTransferClientTest {
 
         givenObjectListingSucceeds(allObjectSummaries);
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, allowedExtensions, 0L, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, allowedExtensions, zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
@@ -233,7 +236,7 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        underTest.getObjectsOlderThan(SOURCE_BUCKET, folder, allowedExtensions, 0L, fixedClock);
+        underTest.getObjectsOlderThan(SOURCE_BUCKET, folder, allowedExtensions, zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(listObjectsRequestCaptor.getValue().getPrefix(), is(equalTo(folder)));

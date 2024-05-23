@@ -2,8 +2,11 @@ package uk.gov.justice.digital.client.s3;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.spark.SparkException;
+import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.types.StructType;
@@ -18,6 +21,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
@@ -27,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
@@ -46,6 +51,16 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     private JobArguments arguments;
     @Mock
     private SourceReference sourceReference;
+    @Mock
+    SparkSession mockSparkSession;
+    @Mock
+    DataFrameReader mockDataFrameReader;
+    @Mock
+    Dataset<Row> mockRawDataset;
+    @Mock
+    Dataset<Row> mockArchivedDataset;
+    @Mock
+    Dataset<Row> mockProcessedDataset;
 
     private S3DataProvider underTest;
 
@@ -152,6 +167,99 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
     public void shouldInferSchema() {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         StructType inferredSchema = underTest.inferSchema(spark, sourceName, tableName);
+        assertEquals(TEST_DATA_SCHEMA, inferredSchema);
+    }
+
+    @Test
+    public void shouldInferSchemaFromArchiveWhenSchemaInferenceFromRawPathThrowsFileNotFoundException() {
+        String rawPath = "/raw-path";
+        String rawArchivePath = "/raw-archive-path";
+
+        when(arguments.getRawS3Path()).thenReturn(rawPath);
+        when(arguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
+
+        when(mockSparkSession.read()).thenReturn(mockDataFrameReader);
+
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s", rawPath, sourceName, tableName)))
+                .thenReturn(mockRawDataset);
+        when(mockRawDataset.schema())
+                .thenThrow(new RuntimeException(new SparkException("some spark exception", new FileNotFoundException())));
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s", rawArchivePath, sourceName, tableName)))
+                .thenReturn(mockArchivedDataset);
+        when(mockArchivedDataset.schema()).thenReturn(TEST_DATA_SCHEMA);
+
+        StructType inferredSchema = underTest.inferSchema(mockSparkSession, sourceName, tableName);
+
+        assertEquals(TEST_DATA_SCHEMA, inferredSchema);
+    }
+
+    @Test
+    public void shouldThrowExceptionWhenSchemaInferenceThrowsAnotherExceptionInsteadOfFileNotFoundException() {
+        String rawPath = "/raw-path";
+
+        when(arguments.getRawS3Path()).thenReturn(rawPath);
+        when(mockSparkSession.read()).thenReturn(mockDataFrameReader);
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s", rawPath, sourceName, tableName)))
+                .thenReturn(mockRawDataset);
+        when(mockRawDataset.schema())
+                .thenThrow(new RuntimeException(new SparkException("some spark exception", new Exception("not a file-not-found-exception"))));
+
+        assertThrows(Exception.class, () -> underTest.inferSchema(mockSparkSession, sourceName, tableName));
+    }
+
+    @Test
+    public void shouldInferSchemaFromProcessedFilesPathWhenStreamingSourceArchiveIsEnabledAndSchemaInferenceFromRawPathThrowsFileNotFoundException() {
+        String rawPath = "/raw-path";
+        String processedFilesFolder = "processed-files-folder";
+        String rawArchivePath = "/raw-archive-path";
+
+        when(arguments.enableStreamingSourceArchiving()).thenReturn(true);
+        when(arguments.getRawS3Path()).thenReturn(rawPath);
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedFilesFolder);
+        when(arguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
+
+        when(mockSparkSession.read()).thenReturn(mockDataFrameReader);
+
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s", rawPath, sourceName, tableName)))
+                .thenReturn(mockRawDataset);
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s/%s", rawPath, processedFilesFolder, sourceName, tableName)))
+                .thenReturn(mockProcessedDataset);
+        when(mockRawDataset.schema())
+                .thenThrow(new RuntimeException(new SparkException("some spark exception", new FileNotFoundException())));
+        when(mockProcessedDataset.schema()).thenReturn(TEST_DATA_SCHEMA);
+
+        StructType inferredSchema = underTest.inferSchema(mockSparkSession, sourceName, tableName);
+
+        assertEquals(TEST_DATA_SCHEMA, inferredSchema);
+    }
+
+    @Test
+    public void shouldInferSchemaFromArchivePathWhenStreamingSourceArchiveIsEnabledAndSchemaInferenceFromProcessedFilesPathThrowsFileNotFoundException() {
+        String rawPath = "/raw-path";
+        String processedFilesFolder = "processed-files-folder";
+        String rawArchivePath = "/raw-archive-path";
+
+        when(arguments.enableStreamingSourceArchiving()).thenReturn(true);
+        when(arguments.getRawS3Path()).thenReturn(rawPath);
+        when(arguments.getProcessedRawFilesPath()).thenReturn(processedFilesFolder);
+        when(arguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
+
+        when(mockSparkSession.read()).thenReturn(mockDataFrameReader);
+
+        when(mockRawDataset.schema())
+                .thenThrow(new RuntimeException(new SparkException("some spark exception", new FileNotFoundException())));
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s", rawPath, sourceName, tableName)))
+                .thenReturn(mockRawDataset);
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s/%s", rawPath, processedFilesFolder, sourceName, tableName)))
+                .thenReturn(mockProcessedDataset);
+        when(mockProcessedDataset.schema())
+                .thenThrow(new RuntimeException(new SparkException("some spark exception", new FileNotFoundException())));
+        when(mockDataFrameReader.parquet(String.format("%s/%s/%s", rawArchivePath, sourceName, tableName)))
+                .thenReturn(mockArchivedDataset);
+        when(mockArchivedDataset.schema()).thenReturn(TEST_DATA_SCHEMA);
+
+        StructType inferredSchema = underTest.inferSchema(mockSparkSession, sourceName, tableName);
+
         assertEquals(TEST_DATA_SCHEMA, inferredSchema);
     }
 

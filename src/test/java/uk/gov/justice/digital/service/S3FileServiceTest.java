@@ -10,6 +10,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3FileTransferClient;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -30,7 +32,8 @@ class S3FileServiceTest {
     private static final String SOURCE_PREFIX = "source-prefix";
     private static final String DESTINATION_BUCKET = "destination-bucket";
     private static final String DESTINATION_PREFIX = "destination-prefix";
-    private static final long RETENTION_DAYS = 2L;
+    private static final long RETENTION_AMOUNT = 2L;
+    private static final Duration retentionPeriod = Duration.of(RETENTION_AMOUNT, ChronoUnit.DAYS);
 
     private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
 
@@ -50,7 +53,7 @@ class S3FileServiceTest {
     public void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod);
 
         assertThat(result, is(empty()));
     }
@@ -63,10 +66,10 @@ class S3FileServiceTest {
         expected.add("file3.parquet");
         expected.add("file4.parquet");
 
-        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, RETENTION_DAYS, fixedClock))
+        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod, fixedClock))
                 .thenReturn(expected);
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod);
 
         assertThat(result, containsInAnyOrder(expected.toArray()));
     }
@@ -80,7 +83,7 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod);
 
         assertThat(result, is(empty()));
     }
@@ -90,11 +93,11 @@ class S3FileServiceTest {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
-        undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS);
+        undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod);
 
         String folder = SOURCE_PREFIX + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         verify(mockS3Client, times(1))
-                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(RETENTION_DAYS), any());
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(retentionPeriod), any());
     }
 
     @Test
@@ -102,11 +105,11 @@ class S3FileServiceTest {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
-        undertest.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileExtension, RETENTION_DAYS);
+        undertest.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileExtension, retentionPeriod);
 
         String folder = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         verify(mockS3Client, times(1))
-                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(RETENTION_DAYS), any());
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(retentionPeriod), any());
     }
 
     @Test
@@ -132,17 +135,17 @@ class S3FileServiceTest {
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
                 parquetFileExtension,
-                RETENTION_DAYS,
+                retentionPeriod,
                 fixedClock)).thenReturn(expectedFilesForTable1);
 
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
                 parquetFileExtension,
-                RETENTION_DAYS,
+                retentionPeriod,
                 fixedClock)).thenReturn(expectedFilesForTable2);
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, RETENTION_DAYS);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod);
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);

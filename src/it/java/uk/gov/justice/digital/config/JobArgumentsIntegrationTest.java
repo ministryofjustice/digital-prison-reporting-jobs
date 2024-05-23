@@ -10,6 +10,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -58,7 +60,6 @@ class JobArgumentsIntegrationTest {
             { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, "1" },
             { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, "dpr-source-bucket" },
             { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
-            { JobArguments.FILE_TRANSFER_RETENTION_DAYS, "2" },
             { JobArguments.FILE_SOURCE_PREFIX, "dpr-source-prefix" },
             { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
             { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, "10" },
@@ -108,7 +109,6 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, Integer.toString(validArguments.getMaintenanceListTableRecurseMaxDepth()) },
                 { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, validArguments.getTransferSourceBucket() },
                 { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
-                { JobArguments.FILE_TRANSFER_RETENTION_DAYS, validArguments.getFileTransferRetentionDays() },
                 { JobArguments.FILE_SOURCE_PREFIX, validArguments.getSourcePrefix() },
                 { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.glueOrchestrationWaitIntervalSeconds() },
                 { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, validArguments.glueOrchestrationMaxAttempts() },
@@ -239,19 +239,55 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "1, 1", "0, 0", "12345, 12345", "0123, 123" })
-    public void shouldGetFileTransferRetentionDays(String input, long expected) {
+    public void shouldGetFileTransferRetentionPeriodInDaysWhenNoUnitIsProvided(String input, long expected) {
         HashMap<String, String> args = cloneTestArguments();
-        args.put(JobArguments.FILE_TRANSFER_RETENTION_DAYS, input);
+        args.put(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT, input);
+        args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(expected, jobArguments.getFileTransferRetentionDays());
+        assertEquals(Duration.of(expected, ChronoUnit.DAYS), jobArguments.getFileTransferRetentionPeriod());
     }
 
     @Test
-    public void shouldDefaultFileTransferRetentionDaysToZero() {
+    public void shouldDefaultFileTransferRetentionPeriodToZeroDay() {
         HashMap<String, String> args = cloneTestArguments();
-        args.remove(JobArguments.FILE_TRANSFER_RETENTION_DAYS);
+        args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
+        args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(0L, jobArguments.getFileTransferRetentionDays());
+        assertEquals(Duration.of(0L, ChronoUnit.DAYS), jobArguments.getFileTransferRetentionPeriod());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "minutes", "hours", "days" })
+    public void shouldGetFileTransferRetentionPeriodInTheProvidedUnit(String durationUnit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
+        args.put(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT, durationUnit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(Duration.of(0L, ChronoUnit.valueOf(durationUnit.toUpperCase())), jobArguments.getFileTransferRetentionPeriod());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "nanos",
+            "micros",
+            "millis",
+            "seconds",
+            "HalfDays",
+            "Weeks",
+            "Months",
+            "Years",
+            "Decades",
+            "Centuries",
+            "Millennia",
+            "Eras",
+            "Forever"
+    })
+    public void shouldFailToGetFileTransferRetentionPeriodWhenGivenUnsupportedUnit(String unsupportedUnit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
+        args.put(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT, unsupportedUnit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::getFileTransferRetentionPeriod);
     }
 
     @ParameterizedTest

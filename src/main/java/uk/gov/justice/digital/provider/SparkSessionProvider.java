@@ -45,6 +45,8 @@ public class SparkSessionProvider {
                 .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
                 .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
                 .set("spark.sql.legacy.charVarcharAsString", "true")
+                // Do not fail when a file gets deleted/archived after it has been read and converted into a dataframe
+                .set("spark.sql.files.ignoreMissingFiles", "true")
                 // We can write dates as is since we will always be using Spark 3+. See SQLConf for context.
                 .set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
                 .set("spark.sql.parquet.datetimeRebaseModeInRead", "CORRECTED")
