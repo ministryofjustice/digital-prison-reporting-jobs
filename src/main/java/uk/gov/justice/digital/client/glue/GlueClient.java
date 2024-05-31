@@ -10,12 +10,10 @@ import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.GlueClientException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Singleton
@@ -33,14 +31,14 @@ public class GlueClient {
         this.awsGlue = glueClientProvider.getClient();
     }
 
-    public void createParquetTable(String database, String table, String dataPath, StructType schema) throws AWSGlueException {
-        val storageDescriptor = createStorageDescriptor(dataPath, MAPRED_PARQUET_INPUT_FORMAT, schema);
+    public void createParquetTable(String database, String table, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) throws AWSGlueException {
+        val storageDescriptor = createStorageDescriptor(dataPath, MAPRED_PARQUET_INPUT_FORMAT, schema, primaryKey);
         createTable(database, table, storageDescriptor);
     }
 
-    public void createTableWithSymlink(String database, String table, String dataPath, StructType schema) throws AWSGlueException {
+    public void createTableWithSymlink(String database, String table, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) throws AWSGlueException {
         String location = dataPath + "/_symlink_format_manifest";
-        val storageDescriptor = createStorageDescriptor(location, SYMLINK_INPUT_FORMAT, schema);
+        val storageDescriptor = createStorageDescriptor(location, SYMLINK_INPUT_FORMAT, schema, primaryKey);
         createTable(database, table, storageDescriptor);
     }
 
@@ -86,9 +84,9 @@ public class GlueClient {
         logger.info("Successfully created table {}.{}", database, table);
     }
 
-    private StorageDescriptor createStorageDescriptor(String location, String inputFormat, StructType schema) {
+    private StorageDescriptor createStorageDescriptor(String location, String inputFormat, StructType schema, SourceReference.PrimaryKey primaryKey) {
         return new StorageDescriptor()
-                .withColumns(getColumnsAndModifyTypes(schema))
+                .withColumns(getColumnsAndModifyTypes(schema, primaryKey))
                 .withLocation(location)
                 .withInputFormat(inputFormat)
                 .withOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
@@ -113,7 +111,8 @@ public class GlueClient {
                 );
     }
 
-    private List<Column> getColumnsAndModifyTypes(StructType schema) {
+    private List<Column> getColumnsAndModifyTypes(StructType schema, SourceReference.PrimaryKey primaryKey) {
+        Collection<String> keyColumnNames = primaryKey.getKeyColumnNames();
         val columns = new ArrayList<Column>();
         for (StructField field : schema.fields()) {
             val column = new Column().withName(field.name()).withType(field.dataType().typeName());
@@ -132,6 +131,7 @@ public class GlueClient {
                     break;
             }
 
+            if (keyColumnNames.contains(column.getName())) column.setComment("primary_key");
             columns.add(column);
         }
         return columns;

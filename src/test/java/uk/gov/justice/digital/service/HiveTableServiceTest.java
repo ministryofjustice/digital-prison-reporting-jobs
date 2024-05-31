@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
+import static uk.gov.justice.digital.common.CommonDataFields.withScdFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
@@ -51,6 +52,9 @@ public class HiveTableServiceTest extends BaseSparkTest {
 
     @Captor
     ArgumentCaptor<String> createArchivePathArgCaptor, createSymlinkPathArgCaptor, updateManifestTablePathCaptor;
+
+    @Captor
+    ArgumentCaptor<SourceReference.PrimaryKey> createArchivePrimaryKeyCaptor, createSymlinkPrimaryKeyCaptor;
 
     private HiveTableService underTest;
 
@@ -101,6 +105,9 @@ public class HiveTableServiceTest extends BaseSparkTest {
         List<SourceReference> sourceReferences = new ArrayList<>();
         sourceReferences.add(createSourceRef(0));
         sourceReferences.add(createSourceRef(1));
+
+        val expectedRawZonePrimaryKeyArgs = createPrimaryKeys(Stream.of("0", "1"));
+        val expectedSymlinkPrimaryKeyArgs = createPrimaryKeys(Stream.of("0", "0", "0", "1", "1", "1"));
 
         List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
         expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
@@ -160,16 +167,19 @@ public class HiveTableServiceTest extends BaseSparkTest {
                         createArchiveDatabaseArgCaptor.capture(),
                         createArchiveTableArgCaptor.capture(),
                         createArchivePathArgCaptor.capture(),
-                        eq(withMetadataFields(JSON_DATA_SCHEMA))
+                        eq(withScdFields(withMetadataFields(JSON_DATA_SCHEMA))),
+                        createArchivePrimaryKeyCaptor.capture()
                 );
 
         assertOnCreateTableArgs(
                 expectedCreateArchiveDatabaseArgs,
                 expectedCreateArchiveTableArgs,
                 expectedCreateArchivePathArgs,
+                expectedRawZonePrimaryKeyArgs,
                 createArchiveDatabaseArgCaptor,
                 createArchiveTableArgCaptor,
-                createArchivePathArgCaptor
+                createArchivePathArgCaptor,
+                createArchivePrimaryKeyCaptor
         );
 
         // verify structured, curated and prisons tables are created with symlink format
@@ -178,16 +188,19 @@ public class HiveTableServiceTest extends BaseSparkTest {
                         createSymlinkDatabaseArgCaptor.capture(),
                         createSymlinkTableArgCaptor.capture(),
                         createSymlinkPathArgCaptor.capture(),
-                        eq(JSON_DATA_SCHEMA)
+                        eq(JSON_DATA_SCHEMA),
+                        createSymlinkPrimaryKeyCaptor.capture()
                 );
 
         assertOnCreateTableArgs(
                 expectedCreateSymlinkDatabaseArgs,
                 expectedCreateSymlinkTableArgs,
                 expectedCreateSymlinkPathArgs,
+                expectedSymlinkPrimaryKeyArgs,
                 createSymlinkDatabaseArgCaptor,
                 createSymlinkTableArgCaptor,
-                createSymlinkPathArgCaptor
+                createSymlinkPathArgCaptor,
+                createSymlinkPrimaryKeyCaptor
         );
     }
 
@@ -220,6 +233,8 @@ public class HiveTableServiceTest extends BaseSparkTest {
         List<SourceReference> sourceReferences = new ArrayList<>();
         sourceReferences.add(createSourceRef(0));
         sourceReferences.add(createSourceRef(1));
+
+        List<SourceReference.PrimaryKey> expectedPrimaryKeyArgs = createPrimaryKeys(Stream.of("0", "1"));
 
         List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
         expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
@@ -259,16 +274,19 @@ public class HiveTableServiceTest extends BaseSparkTest {
                         createSymlinkDatabaseArgCaptor.capture(),
                         createSymlinkTableArgCaptor.capture(),
                         createSymlinkPathArgCaptor.capture(),
-                        eq(JSON_DATA_SCHEMA)
+                        eq(JSON_DATA_SCHEMA),
+                        createSymlinkPrimaryKeyCaptor.capture()
                 );
 
         assertOnCreateTableArgs(
                 expectedCreateSymlinkDatabaseArgs,
                 expectedCreateSymlinkTableArgs,
                 expectedCreateSymlinkPathArgs,
+                expectedPrimaryKeyArgs,
                 createSymlinkDatabaseArgCaptor,
                 createSymlinkTableArgCaptor,
-                createSymlinkPathArgCaptor
+                createSymlinkPathArgCaptor,
+                createSymlinkPrimaryKeyCaptor
         );
 
         assertThat(updateManifestTablePathCaptor.getAllValues(), containsInAnyOrder(tablePath0, tablePath1));
@@ -278,13 +296,17 @@ public class HiveTableServiceTest extends BaseSparkTest {
             List<String> expectedDatabaseArgs,
             List<String> expectedTableArgs,
             List<String> expectedPathArgs,
+            List<SourceReference.PrimaryKey> expectedPrimaryKeyArgs,
             ArgumentCaptor<String> databaseArgCaptor,
             ArgumentCaptor<String> tableArgCaptor,
-            ArgumentCaptor<String> pathCaptor
+            ArgumentCaptor<String> pathCaptor,
+            ArgumentCaptor<SourceReference.PrimaryKey> primaryKeyCaptor
     ) {
         assertThat(databaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDatabaseArgs));
         assertThat(tableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedTableArgs));
         assertThat(pathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedPathArgs));
+
+        assertPrimaryKeysMatch(primaryKeyCaptor.getAllValues(), expectedPrimaryKeyArgs);
     }
 
     @NotNull
@@ -292,6 +314,11 @@ public class HiveTableServiceTest extends BaseSparkTest {
         List<String> argList = new ArrayList<>();
         schemaIndexes.forEach(schemaIndex -> argList.add(createHiveTableName(schemaIndex)));
         return argList;
+    }
+
+    @NotNull
+    private static List<SourceReference.PrimaryKey> createPrimaryKeys(Stream<String> keys) {
+        return keys.map(SourceReference.PrimaryKey::new).collect(Collectors.toList());
     }
 
     private static String createPath(String bucket, int schemaIndex) {
@@ -332,6 +359,18 @@ public class HiveTableServiceTest extends BaseSparkTest {
         when(mockJobArguments.getStructuredDatabase()).thenReturn(STRUCTURED_DATABASE);
         when(mockJobArguments.getCuratedDatabase()).thenReturn(CURATED_DATABASE);
         when(mockJobArguments.getPrisonsDatabase()).thenReturn(PRISONS_DATABASE);
+    }
+
+    private static void assertPrimaryKeysMatch(List<SourceReference.PrimaryKey> actual, List<SourceReference.PrimaryKey> expected) {
+        assertThat(
+                getPrimaryKeyColumnNames(actual),
+                containsTheSameElementsInOrderAs(getPrimaryKeyColumnNames(expected))
+        );
+    }
+
+    @NotNull
+    private static List<String> getPrimaryKeyColumnNames(List<SourceReference.PrimaryKey> actualPrimaryKeys) {
+        return actualPrimaryKeys.stream().flatMap(primaryKey -> primaryKey.getKeyColumnNames().stream()).collect(Collectors.toList());
     }
 
 }

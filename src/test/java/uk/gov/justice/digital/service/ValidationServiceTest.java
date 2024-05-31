@@ -37,11 +37,10 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.*;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
-import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
-import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 import static uk.gov.justice.digital.test.MinimalTestData.*;
 
@@ -99,20 +98,20 @@ class ValidationServiceTest extends BaseSparkTest {
         List<Row> result = underTest.validateRows(inputDf, sourceReference, TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS).collectAsList();
 
         List<Row> expected = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", null),
-                RowFactory.create(2, "2023-11-13 10:49:28.000000", "D", null, null),
-                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", requiredColumnIsNullMsg),
-                RowFactory.create(4, null, "I", "data", requiredColumnIsNullMsg),
-                RowFactory.create(5, null, null, "data", requiredColumnIsNullMsg),
-                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, requiredColumnIsNullMsg),
-                RowFactory.create(7, null, null, null, requiredColumnIsNullMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", noPkMsg),
-                RowFactory.create(null, null, "U", "data", noPkMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", noPkMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, noPkMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, noPkMsg),
-                RowFactory.create(null, null, "U", null, noPkMsg),
-                RowFactory.create(null, null, null, "data", noPkMsg)
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, null),
+                RowFactory.create(2, "2023-11-13 10:49:28.000000", "D", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, null),
+                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(4, null, "I", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(5, null, null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(7, null, null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, null, "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, null, "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, null, null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg)
         );
 
         assertEquals(expected.size(), result.size());
@@ -136,10 +135,10 @@ class ValidationServiceTest extends BaseSparkTest {
         List<Row> result = underTest.validateRows(thisInputDf, sourceReference, TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS).collectAsList();
 
         List<Row> expected = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", null),
-                RowFactory.create(2, null, "U", null, noPkMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", noPkMsg),
-                RowFactory.create(null, null, "U", "data", noPkMsg)
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, null),
+                RowFactory.create(2, null, "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, null, "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg)
         );
 
         assertEquals(expected.size(), result.size());
@@ -164,8 +163,8 @@ class ValidationServiceTest extends BaseSparkTest {
         List<Row> result = underTest.validateRows(thisInputDf, sourceReference, misMatchingSchema).collectAsList();
 
         List<Row> expected = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", schemaMisMatchMsg),
-                RowFactory.create(2, null, "U", null, schemaMisMatchMsg)
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(2, null, "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg)
         );
 
         assertEquals(expected.size(), result.size());
@@ -186,7 +185,7 @@ class ValidationServiceTest extends BaseSparkTest {
         List<Row> result = underTest.validateRows(thisInputDf, sourceReference, TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS).collectAsList();
 
         List<Row> expected = Collections.singletonList(
-                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", noPkMsg)
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg)
         );
 
         assertEquals(expected.size(), result.size());
@@ -202,21 +201,21 @@ class ValidationServiceTest extends BaseSparkTest {
                 .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
                 .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)));
 
-        val inferredSchema = withMetadataFields(
+        val inferredSchema = withScdFields(withMetadataFields(
                 new StructType()
                         .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
                         .add(new StructField("time", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
                         .add(new StructField("nullable_time", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)))
-        );
+        ));
 
         when(sourceReference.getSchema()).thenReturn(providedSchema);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
 
         val input = Arrays.asList(
-                RowFactory.create(1, "09:00:00", "12:30:00", Insert.getName(), timestamp),
-                RowFactory.create(2, "23:59:59", null, Update.getName(), timestamp),
-                RowFactory.create(3, "00:00:00", "08:30:30", Delete.getName(), timestamp)
+                RowFactory.create(1, "09:00:00", "12:30:00", Insert.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE),
+                RowFactory.create(2, "23:59:59", null, Update.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE),
+                RowFactory.create(3, "00:00:00", "08:30:30", Delete.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE)
         );
 
         val thisInputDf = spark.createDataFrame(input, inferredSchema);
@@ -224,9 +223,9 @@ class ValidationServiceTest extends BaseSparkTest {
         val result = underTest.validateRows(thisInputDf, sourceReference, inferredSchema).collectAsList();
 
         val expected = Arrays.asList(
-                RowFactory.create(1, "09:00:00", "12:30:00", Insert.getName(), timestamp, null),
-                RowFactory.create(2, "23:59:59", null, Update.getName(), timestamp, null),
-                RowFactory.create(3, "00:00:00", "08:30:30", Delete.getName(), timestamp, null)
+                RowFactory.create(1, "09:00:00", "12:30:00", Insert.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, null),
+                RowFactory.create(2, "23:59:59", null, Update.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, null),
+                RowFactory.create(3, "00:00:00", "08:30:30", Delete.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, null)
         );
 
         assertEquals(expected.size(), result.size());
@@ -262,20 +261,20 @@ class ValidationServiceTest extends BaseSparkTest {
                 .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
                 .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)));
 
-        val inferredSchema = withMetadataFields(
+        val inferredSchema = withScdFields(withMetadataFields(
                 new StructType()
                         .add(new StructField(PRIMARY_KEY_COLUMN, DataTypes.IntegerType, false, Metadata.empty()))
                         .add(new StructField("underscored_col", DataTypes.StringType, false, Metadata.fromJson(VALIDATION_TYPE)))
                         .add(new StructField("hyphenated-col", DataTypes.StringType, true, Metadata.fromJson(VALIDATION_TYPE)))
-        );
+        ));
 
         when(sourceReference.getSchema()).thenReturn(providedSchema);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
 
         List<Row> input = Arrays.asList(
-                RowFactory.create(1, invalidTime, invalidTime, Insert.getName(), timestamp),
-                RowFactory.create(2, validTime, null, Update.getName(), timestamp)
+                RowFactory.create(1, invalidTime, invalidTime, Insert.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE),
+                RowFactory.create(2, validTime, null, Update.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE)
         );
         
         Dataset<Row> thisInputDf = spark.createDataFrame(input, inferredSchema);
@@ -284,8 +283,8 @@ class ValidationServiceTest extends BaseSparkTest {
 
         String validationErrors = "hyphenated-col must have format HH:mm:ss; underscored_col must have format HH:mm:ss";
         List<Row> expected = Arrays.asList(
-                RowFactory.create(1, invalidTime, invalidTime, Insert.getName(), timestamp, validationErrors),
-                RowFactory.create(2, validTime, null, Update.getName(), timestamp, null)
+                RowFactory.create(1, invalidTime, invalidTime, Insert.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, validationErrors),
+                RowFactory.create(2, validTime, null, Update.getName(), timestamp, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, null)
         );
 
         assertEquals(expected.size(), result.size());
@@ -323,18 +322,18 @@ class ValidationServiceTest extends BaseSparkTest {
         underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
-                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", requiredColumnIsNullMsg),
-                RowFactory.create(4, null, "I", "data", requiredColumnIsNullMsg),
-                RowFactory.create(5, null, null, "data", requiredColumnIsNullMsg),
-                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, requiredColumnIsNullMsg),
-                RowFactory.create(7, null, null, null, requiredColumnIsNullMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", noPkMsg),
-                RowFactory.create(null, null, "U", "data", noPkMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", noPkMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, noPkMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, noPkMsg),
-                RowFactory.create(null, null, "U", null, noPkMsg),
-                RowFactory.create(null, null, null, "data", noPkMsg)
+                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(4, null, "I", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(5, null, null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(7, null, null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, null, "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, null, "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg),
+                RowFactory.create(null, null, null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, noPkMsg)
         );
 
         verify(violationService, times(1)).handleViolation(any(), argumentCaptor.capture(), eq(source), eq(table), eq(STRUCTURED_LOAD));
@@ -357,20 +356,20 @@ class ValidationServiceTest extends BaseSparkTest {
         underTest.handleValidation(spark, inputDf, sourceReference, misMatchingSchema, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", schemaMisMatchMsg),
-                RowFactory.create(2, "2023-11-13 10:49:28.000000", "D", null, schemaMisMatchMsg),
-                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", schemaMisMatchMsg),
-                RowFactory.create(4, null, "I", "data", schemaMisMatchMsg),
-                RowFactory.create(5, null, null, "data", schemaMisMatchMsg),
-                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, schemaMisMatchMsg),
-                RowFactory.create(7, null, null, null, schemaMisMatchMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", schemaMisMatchMsg),
-                RowFactory.create(null, null, "U", "data", schemaMisMatchMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", schemaMisMatchMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, schemaMisMatchMsg),
-                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, schemaMisMatchMsg),
-                RowFactory.create(null, null, "U", null, schemaMisMatchMsg),
-                RowFactory.create(null, null, null, "data", schemaMisMatchMsg)
+                RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(2, "2023-11-13 10:49:28.000000", "D", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(4, null, "I", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(5, null, null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(7, null, null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(null, null, "U", "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(null, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(null, null, "U", null, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg),
+                RowFactory.create(null, null, null, "data", CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE, schemaMisMatchMsg)
         );
 
         verify(violationService, times(1)).handleViolation(any(), argumentCaptor.capture(), eq(source), eq(table), eq(STRUCTURED_LOAD));

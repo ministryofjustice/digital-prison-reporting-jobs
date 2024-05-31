@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
+import static uk.gov.justice.digital.common.CommonDataFields.withScdFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
@@ -63,18 +64,19 @@ public class HiveTableService {
             try {
                 validateTableName(hiveTableName);
                 StructType schema = sourceReference.getSchema();
+                SourceReference.PrimaryKey primaryKey = sourceReference.getPrimaryKey();
 
                 String rawArchivePath = createValidatedPath(jobArguments.getRawArchiveS3Path(), sourceName, tableName);
-                StructType rawSchema = withMetadataFields(schema);
-                replaceParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema);
+                StructType rawSchema = withScdFields(withMetadataFields(schema));
+                replaceParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema, primaryKey);
 
                 String structuredPath = createValidatedPath(jobArguments.getStructuredS3Path(), sourceName, tableName);
-                replaceSymlinkInputTables(jobArguments.getStructuredDatabase(), hiveTableName, structuredPath, schema);
+                replaceSymlinkInputTables(jobArguments.getStructuredDatabase(), hiveTableName, structuredPath, schema, primaryKey);
 
                 String curatedPath = createValidatedPath(jobArguments.getCuratedS3Path(), sourceName, tableName);
-                replaceSymlinkInputTables(jobArguments.getCuratedDatabase(), hiveTableName, curatedPath, schema);
+                replaceSymlinkInputTables(jobArguments.getCuratedDatabase(), hiveTableName, curatedPath, schema, primaryKey);
 
-                replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, curatedPath, schema);
+                replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, curatedPath, schema, primaryKey);
             } catch (Exception e) {
                 logger.error("Failed to replace Hive table {}", hiveTableName, e);
                 failedTables.add(ImmutablePair.of(sourceName, tableName));
@@ -101,10 +103,11 @@ public class HiveTableService {
             try {
                 validateTableName(hiveTableName);
                 StructType schema = sourceReference.getSchema();
+                SourceReference.PrimaryKey primaryKey = sourceReference.getPrimaryKey();
 
                 String dataPath = createValidatedPath(targetS3Path, sourceName, tableName);
 
-                replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, dataPath, schema);
+                replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, dataPath, schema, primaryKey);
                 storageService.updateDeltaManifestForTable(spark, dataPath);
             } catch (Exception e) {
                 logger.error("Failed to point Hive table {} to {}", hiveTableName, targetS3Path, e);
@@ -126,14 +129,14 @@ public class HiveTableService {
         return sourceReferences;
     }
 
-    private void replaceParquetInputTables(String databaseName, String tableName, String dataPath, StructType schema) {
+    private void replaceParquetInputTables(String databaseName, String tableName, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) {
         glueClient.deleteTable(databaseName, tableName);
-        glueClient.createParquetTable(databaseName, tableName, dataPath, schema);
+        glueClient.createParquetTable(databaseName, tableName, dataPath, schema, primaryKey);
     }
 
-    private void replaceSymlinkInputTables(String databaseName, String tableName, String curatedPath, StructType schema) {
+    private void replaceSymlinkInputTables(String databaseName, String tableName, String curatedPath, StructType schema, SourceReference.PrimaryKey primaryKey) {
         glueClient.deleteTable(databaseName, tableName);
-        glueClient.createTableWithSymlink(databaseName, tableName, curatedPath, schema);
+        glueClient.createTableWithSymlink(databaseName, tableName, curatedPath, schema, primaryKey);
     }
 
     private void validateTableName(String tableName) throws HiveSchemaServiceException {
