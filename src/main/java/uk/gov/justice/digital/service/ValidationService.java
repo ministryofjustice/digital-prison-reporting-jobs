@@ -51,7 +51,7 @@ public class ValidationService {
 
     @VisibleForTesting
     Dataset<Row> validateRows(Dataset<Row> df, SourceReference sourceReference, StructType inferredSchema) {
-        StructType schema = withMetadataFields(sourceReference.getSchema());
+        StructType schema = withScdFields(withMetadataFields(sourceReference.getSchema()));
         val validatedDf = validateStringFields(df, sourceReference);
         if (schemasMatch(inferredSchema, schema)) {
             return validatedDf.withColumn(

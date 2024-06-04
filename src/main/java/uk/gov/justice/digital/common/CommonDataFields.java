@@ -14,6 +14,8 @@ public class CommonDataFields {
     public static final String ERROR_RAW = "raw";
     public static final String METADATA_KEY = "metadata";
     public static final String VALIDATION_TYPE_KEY = "validationType";
+    public static final String CHECKPOINT_COL = "checkpoint_col";
+    public static final String UPDATE_TYPE = "update_type";
 
     /**
      * The possible entries in the operation column
@@ -41,5 +43,14 @@ public class CommonDataFields {
         return schema
                 .add(DataTypes.createStructField(OPERATION, DataTypes.StringType, false))
                 .add(DataTypes.createStructField(TIMESTAMP, DataTypes.StringType, false));
+    }
+
+    /**
+     * Add the SCD fields to the provided schema
+     */
+    public static StructType withScdFields(StructType schema) {
+        return schema
+                .add(DataTypes.createStructField(CHECKPOINT_COL, DataTypes.StringType, true))
+                .add(DataTypes.createStructField(UPDATE_TYPE, DataTypes.StringType, true));
     }
 }

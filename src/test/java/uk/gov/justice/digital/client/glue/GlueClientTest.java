@@ -2,6 +2,7 @@ package uk.gov.justice.digital.client.glue;
 
 import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.model.*;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,13 +10,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.GlueClientException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -24,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.client.glue.GlueClient.*;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
 
 @ExtendWith(MockitoExtension.class)
 class GlueClientTest {
@@ -67,6 +70,8 @@ class GlueClientTest {
 
     private static final int MAX_ATTEMPTS = 1;
 
+    private static final SourceReference.PrimaryKey primaryKeys = new SourceReference.PrimaryKey(PRIMARY_KEY_FIELD);
+
     private GlueClient underTest;
 
     @BeforeEach
@@ -79,13 +84,14 @@ class GlueClientTest {
 
     @Test
     void shouldCreateParquetTable() {
-        underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA);
+        underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys);
 
         verify(mockGlueClient, times(1)).createTable(createTableRequestCaptor.capture());
 
         StorageDescriptor storageDescriptor = createTableRequestCaptor.getValue().getTableInput().getStorageDescriptor();
         assertThat(storageDescriptor.getLocation(), equalTo(TEST_PATH));
         assertThat(storageDescriptor.getInputFormat(), equalTo(MAPRED_PARQUET_INPUT_FORMAT));
+        assertThat(getPrimaryKeys(storageDescriptor), containsInAnyOrder(Collections.singleton(PRIMARY_KEY_FIELD).toArray()));
     }
 
     @Test
@@ -94,19 +100,30 @@ class GlueClientTest {
 
         assertThrows(
                 AWSGlueException.class,
-                () -> underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA)
+                () -> underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys)
         );
     }
 
     @Test
     void shouldCreateTableWithSymlink() {
-        underTest.createTableWithSymlink(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA);
+        underTest.createTableWithSymlink(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys);
 
         verify(mockGlueClient, times(1)).createTable(createTableRequestCaptor.capture());
 
         StorageDescriptor storageDescriptor = createTableRequestCaptor.getValue().getTableInput().getStorageDescriptor();
         assertThat(storageDescriptor.getLocation(), equalTo(TEST_PATH + "/_symlink_format_manifest"));
         assertThat(storageDescriptor.getInputFormat(), equalTo(SYMLINK_INPUT_FORMAT));
+        assertThat(getPrimaryKeys(storageDescriptor), containsInAnyOrder(Collections.singleton(PRIMARY_KEY_FIELD).toArray()));
+    }
+
+    @NotNull
+    private static Set<String> getPrimaryKeys(StorageDescriptor storageDescriptor) {
+        return storageDescriptor
+                .getColumns()
+                .stream()
+                .filter(column -> "primary_key".equals(column.getComment()))
+                .map(Column::getName)
+                .collect(Collectors.toSet());
     }
 
     @Test
@@ -115,7 +132,7 @@ class GlueClientTest {
 
         assertThrows(
                 AWSGlueException.class,
-                () -> underTest.createTableWithSymlink(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA)
+                () -> underTest.createTableWithSymlink(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys)
         );
     }
 
