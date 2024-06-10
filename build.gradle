@@ -45,6 +45,7 @@ ext {
     glueApiVersion = '4.0.0'
     failSafeVersion = '3.3.2'
     systemLambdaVersion = '1.2.1'
+    postgresDriverVersion = '42.7.3'
 }
 
 dependencies {
@@ -72,6 +73,7 @@ dependencies {
     implementation "io.delta:delta-core_2.12:$deltaVersion"
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
     implementation "dev.failsafe:failsafe:$failSafeVersion"
+    implementation "org.postgresql:postgresql:$postgresDriverVersion"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
