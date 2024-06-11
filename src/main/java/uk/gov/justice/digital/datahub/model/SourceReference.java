@@ -16,6 +16,7 @@ public class SourceReference {
     private final PrimaryKey primaryKey;
     private final String versionId;
     private final StructType schema;
+    private final SensitiveColumns sensitiveColumns;
 
     public static class PrimaryKey {
 
@@ -50,6 +51,36 @@ public class SourceReference {
         @Override
         public int hashCode() {
             return Objects.hash(keys);
+        }
+    }
+
+    public static class SensitiveColumns {
+
+        private final Collection<String> columns;
+
+        public SensitiveColumns(Collection<?> o) {
+            columns = o.stream().map(x -> Objects.toString(x, null)).collect(Collectors.toList());
+        }
+
+        public SensitiveColumns(String s) {
+            columns = Collections.singletonList(s);
+        }
+
+        public Collection<String> getSensitiveColumnNames() {
+            return Collections.unmodifiableCollection(columns);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof SensitiveColumns)) return false;
+            SensitiveColumns that = (SensitiveColumns) o;
+            return Objects.equals(columns, that.columns);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(columns);
         }
     }
 }

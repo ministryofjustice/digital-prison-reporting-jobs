@@ -1,19 +1,43 @@
 package uk.gov.justice.digital.client.glue;
 
 import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.model.*;
+import com.amazonaws.services.glue.model.AWSGlueException;
+import com.amazonaws.services.glue.model.BatchStopJobRunRequest;
+import com.amazonaws.services.glue.model.BatchStopJobRunResult;
+import com.amazonaws.services.glue.model.Column;
+import com.amazonaws.services.glue.model.CreateTableRequest;
+import com.amazonaws.services.glue.model.DeleteTableRequest;
+import com.amazonaws.services.glue.model.EntityNotFoundException;
+import com.amazonaws.services.glue.model.GetJobRunRequest;
+import com.amazonaws.services.glue.model.GetJobRunResult;
+import com.amazonaws.services.glue.model.GetJobRunsRequest;
+import com.amazonaws.services.glue.model.GetJobRunsResult;
+import com.amazonaws.services.glue.model.StorageDescriptor;
+import com.amazonaws.services.glue.model.TableInput;
+import com.amazonaws.services.glue.model.JobRun;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.GlueClientException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -22,11 +46,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static uk.gov.justice.digital.client.glue.GlueClient.*;
-import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
+import static uk.gov.justice.digital.client.glue.GlueClient.MAPRED_PARQUET_INPUT_FORMAT;
+import static uk.gov.justice.digital.client.glue.GlueClient.SYMLINK_INPUT_FORMAT;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
+import static uk.gov.justice.digital.test.Fixtures.SENSITIVE_FIELD_1;
+import static uk.gov.justice.digital.test.Fixtures.SENSITIVE_FIELD_2;
+import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 
 @ExtendWith(MockitoExtension.class)
 class GlueClientTest {
@@ -72,10 +99,15 @@ class GlueClientTest {
 
     private static final SourceReference.PrimaryKey primaryKeys = new SourceReference.PrimaryKey(PRIMARY_KEY_FIELD);
 
+    private static final Collection<String> sensitiveFields = new ArrayList<>();
+
     private GlueClient underTest;
 
     @BeforeEach
     public void setup() {
+        sensitiveFields.add(SENSITIVE_FIELD_1);
+        sensitiveFields.add(SENSITIVE_FIELD_2);
+
         reset(mockClientProvider, mockGlueClient, mockBatchStopJobRunResult, mockGetJobRunsResult, mockGetJobRunResult);
 
         when(mockClientProvider.getClient()).thenReturn(mockGlueClient);
@@ -84,23 +116,33 @@ class GlueClientTest {
 
     @Test
     void shouldCreateParquetTable() {
-        underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys);
+        SourceReference.SensitiveColumns sensitiveColumns = new SourceReference.SensitiveColumns(sensitiveFields);
+        underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys, sensitiveColumns);
 
         verify(mockGlueClient, times(1)).createTable(createTableRequestCaptor.capture());
 
-        StorageDescriptor storageDescriptor = createTableRequestCaptor.getValue().getTableInput().getStorageDescriptor();
+        TableInput tableInput = createTableRequestCaptor.getValue().getTableInput();
+        StorageDescriptor storageDescriptor = tableInput.getStorageDescriptor();
         assertThat(storageDescriptor.getLocation(), equalTo(TEST_PATH));
         assertThat(storageDescriptor.getInputFormat(), equalTo(MAPRED_PARQUET_INPUT_FORMAT));
         assertThat(getPrimaryKeys(storageDescriptor), containsInAnyOrder(Collections.singleton(PRIMARY_KEY_FIELD).toArray()));
+
+        Map<String, String> parameters = tableInput.getParameters();
+        assertThat(parameters.get("extraction_timestamp_column_name"), is(equalTo(TIMESTAMP.toLowerCase())));
+        assertThat(parameters.get("extraction_operation_column_name"), is(equalTo(OPERATION.toLowerCase())));
+        assertThat(parameters.get("sensitive_columns"), is(equalTo("['" + SENSITIVE_FIELD_1.toLowerCase() + "','" + SENSITIVE_FIELD_2.toLowerCase() + "']")));
+        assertThat(parameters.get("extraction_key"), is(equalTo(OPERATION.toLowerCase() + "," + TIMESTAMP.toLowerCase())));
+        assertThat(parameters.get("source_primary_key"), is(equalTo(PRIMARY_KEY_FIELD.toLowerCase())));
     }
 
     @Test
     public void shouldThrowAnExceptionIfAnErrorOccursWhenCreatingParquetTable() {
+        SourceReference.SensitiveColumns sensitiveColumns = new SourceReference.SensitiveColumns(sensitiveFields);
         when(mockGlueClient.createTable(any())).thenThrow(new AWSGlueException("failed to create table"));
 
         assertThrows(
                 AWSGlueException.class,
-                () -> underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys)
+                () -> underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys, sensitiveColumns)
         );
     }
 
