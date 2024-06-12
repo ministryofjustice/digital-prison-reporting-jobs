@@ -35,8 +35,8 @@ public class GlueOrchestrationServiceTest {
 
     @Test
     public void stopJobShouldStopGlueJobWithGivenName() {
-        when(mockJobArguments.glueOrchestrationWaitIntervalSeconds()).thenReturn(WAIT_INTERVAL_SECONDS);
-        when(mockJobArguments.glueOrchestrationMaxAttempts()).thenReturn(MAX_ATTEMPTS);
+        when(mockJobArguments.orchestrationWaitIntervalSeconds()).thenReturn(WAIT_INTERVAL_SECONDS);
+        when(mockJobArguments.orchestrationMaxAttempts()).thenReturn(MAX_ATTEMPTS);
 
         underTest.stopJob(TEST_JOB_NAME);
 
@@ -45,8 +45,8 @@ public class GlueOrchestrationServiceTest {
 
     @Test
     public void stopJobShouldFailWhenGlueClientThrowsAnException() {
-        when(mockJobArguments.glueOrchestrationWaitIntervalSeconds()).thenReturn(WAIT_INTERVAL_SECONDS);
-        when(mockJobArguments.glueOrchestrationMaxAttempts()).thenReturn(MAX_ATTEMPTS);
+        when(mockJobArguments.orchestrationWaitIntervalSeconds()).thenReturn(WAIT_INTERVAL_SECONDS);
+        when(mockJobArguments.orchestrationMaxAttempts()).thenReturn(MAX_ATTEMPTS);
 
         doThrow(new GlueClientException("Client error")).when(mockGlueClient)
                 .stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);

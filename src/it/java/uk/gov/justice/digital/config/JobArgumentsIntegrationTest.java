@@ -61,8 +61,10 @@ class JobArgumentsIntegrationTest {
             { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, "dpr-source-bucket" },
             { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
             { JobArguments.FILE_SOURCE_PREFIX, "dpr-source-prefix" },
-            { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
-            { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, "10" },
+            { JobArguments.STOP_GLUE_INSTANCE_JOB_NAME, "dpr-glue-job-name" },
+            { JobArguments.DMS_REPLICATION_TASK_ID, "dpr-dms-task-id" },
+            { JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
+            { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, "10" },
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
             { JobArguments.CLEAN_CDC_CHECKPOINT, "false" },
             { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, "60" },
@@ -110,8 +112,10 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, validArguments.getTransferSourceBucket() },
                 { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
                 { JobArguments.FILE_SOURCE_PREFIX, validArguments.getSourcePrefix() },
-                { JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.glueOrchestrationWaitIntervalSeconds() },
-                { JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS, validArguments.glueOrchestrationMaxAttempts() },
+                { JobArguments.STOP_GLUE_INSTANCE_JOB_NAME, validArguments.getStopGlueInstanceJobName() },
+                { JobArguments.DMS_REPLICATION_TASK_ID, validArguments.getDmsTaskId() },
+                { JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.orchestrationWaitIntervalSeconds() },
+                { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, validArguments.orchestrationMaxAttempts() },
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
                 { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() },
                 { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, validArguments.getBroadcastTimeoutSeconds() },
@@ -343,19 +347,19 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultGlueOrchestrationWaitIntervalSecondsWhenMissing() {
+    public void shouldDefaultOrchestrationWaitIntervalSecondsWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
-        args.remove(JobArguments.GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS);
+        args.remove(JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(10, jobArguments.glueOrchestrationWaitIntervalSeconds());
+        assertEquals(10, jobArguments.orchestrationWaitIntervalSeconds());
     }
 
     @Test
-    public void shouldDefaultGlueOrchestrationMaxAttemptsWhenMissing() {
+    public void shouldDefaultOrchestrationMaxAttemptsWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
-        args.remove(JobArguments.GLUE_ORCHESTRATION_MAX_ATTEMPTS);
+        args.remove(JobArguments.ORCHESTRATION_MAX_ATTEMPTS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(20, jobArguments.glueOrchestrationMaxAttempts());
+        assertEquals(20, jobArguments.orchestrationMaxAttempts());
     }
 
     @ParameterizedTest

@@ -24,8 +24,8 @@ public class GlueOrchestrationService {
     }
 
     public void stopJob(String jobName) {
-        int waitIntervalSeconds = jobArguments.glueOrchestrationWaitIntervalSeconds();
-        int maxAttempts = jobArguments.glueOrchestrationMaxAttempts();
+        int waitIntervalSeconds = jobArguments.orchestrationWaitIntervalSeconds();
+        int maxAttempts = jobArguments.orchestrationMaxAttempts();
 
         logger.info("Stopping Glue job {}", jobName);
         glueClient.stopJob(jobName, waitIntervalSeconds, maxAttempts);
