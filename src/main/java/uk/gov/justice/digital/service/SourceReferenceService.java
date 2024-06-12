@@ -2,7 +2,6 @@ package uk.gov.justice.digital.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import jakarta.inject.Inject;
@@ -12,12 +11,20 @@ import lombok.Getter;
 import lombok.extern.jackson.Jacksonized;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import uk.gov.justice.digital.client.s3.S3SchemaClient;
 import uk.gov.justice.digital.converter.avro.AvroToSparkSchemaConverter;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
-import java.util.*;
+import java.util.Arrays;
 import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+
+import static uk.gov.justice.digital.common.CommonDataFields.SENSITIVE_COLUMN_LABEL_KEY;
 
 @Singleton
 public class SourceReferenceService {
@@ -54,6 +61,12 @@ public class SourceReferenceService {
     private SourceReference createFromAvroSchema(S3SchemaClient.S3SchemaResponse response) {
         val parsedAvro = parseAvroString(response.getAvro());
 
+        StructType schema = converter.convert(response.getAvro());
+        List<String> sensitiveColumnNames = Arrays.stream(schema.fields())
+                .filter(field -> field.metadata().contains(SENSITIVE_COLUMN_LABEL_KEY) && field.metadata().getBoolean(SENSITIVE_COLUMN_LABEL_KEY))
+                .map(StructField::name)
+                .collect(Collectors.toList());
+
         return new SourceReference(
                 response.getId(),
                 parsedAvro.getService(),
@@ -61,7 +74,8 @@ public class SourceReferenceService {
                 parsedAvro.findPrimaryKey()
                         .orElseThrow(() -> new IllegalStateException("No primary key found in schema: " + response)),
                 response.getVersionId(),
-                converter.convert(response.getAvro())
+                schema,
+                new SourceReference.SensitiveColumns(sensitiveColumnNames)
         );
 
     }

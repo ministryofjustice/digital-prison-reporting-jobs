@@ -17,14 +17,27 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.CommonDataFields.withScdFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
@@ -55,6 +68,9 @@ public class HiveTableServiceTest extends BaseSparkTest {
 
     @Captor
     ArgumentCaptor<SourceReference.PrimaryKey> createArchivePrimaryKeyCaptor, createSymlinkPrimaryKeyCaptor;
+
+    @Captor
+    ArgumentCaptor<SourceReference.SensitiveColumns> createArchiveSensitiveColumnsCaptor;
 
     private HiveTableService underTest;
 
@@ -106,8 +122,9 @@ public class HiveTableServiceTest extends BaseSparkTest {
         sourceReferences.add(createSourceRef(0));
         sourceReferences.add(createSourceRef(1));
 
-        val expectedRawZonePrimaryKeyArgs = createPrimaryKeys(Stream.of("0", "1"));
-        val expectedSymlinkPrimaryKeyArgs = createPrimaryKeys(Stream.of("0", "0", "0", "1", "1", "1"));
+        val expectedCreateArchivePrimaryKeyArgs = createPrimaryKeys(Stream.of(0, 1));
+        val expectedCreateArchiveSensitiveColumnsArgs = createSensitiveColumns(Stream.of(0, 1));
+        val expectedSymlinkPrimaryKeyArgs = createPrimaryKeys(Stream.of(0, 0, 0, 1, 1, 1));
 
         List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
         expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
@@ -168,18 +185,21 @@ public class HiveTableServiceTest extends BaseSparkTest {
                         createArchiveTableArgCaptor.capture(),
                         createArchivePathArgCaptor.capture(),
                         eq(withScdFields(withMetadataFields(JSON_DATA_SCHEMA))),
-                        createArchivePrimaryKeyCaptor.capture()
+                        createArchivePrimaryKeyCaptor.capture(),
+                        createArchiveSensitiveColumnsCaptor.capture()
                 );
 
-        assertOnCreateTableArgs(
+        assertOnCreateParquetTableArgs(
                 expectedCreateArchiveDatabaseArgs,
                 expectedCreateArchiveTableArgs,
                 expectedCreateArchivePathArgs,
-                expectedRawZonePrimaryKeyArgs,
+                expectedCreateArchivePrimaryKeyArgs,
+                expectedCreateArchiveSensitiveColumnsArgs,
                 createArchiveDatabaseArgCaptor,
                 createArchiveTableArgCaptor,
                 createArchivePathArgCaptor,
-                createArchivePrimaryKeyCaptor
+                createArchivePrimaryKeyCaptor,
+                createArchiveSensitiveColumnsCaptor
         );
 
         // verify structured, curated and prisons tables are created with symlink format
@@ -192,7 +212,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
                         createSymlinkPrimaryKeyCaptor.capture()
                 );
 
-        assertOnCreateTableArgs(
+        assertOnCreateSymlinkedTableArgs(
                 expectedCreateSymlinkDatabaseArgs,
                 expectedCreateSymlinkTableArgs,
                 expectedCreateSymlinkPathArgs,
@@ -234,7 +254,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
         sourceReferences.add(createSourceRef(0));
         sourceReferences.add(createSourceRef(1));
 
-        List<SourceReference.PrimaryKey> expectedPrimaryKeyArgs = createPrimaryKeys(Stream.of("0", "1"));
+        List<SourceReference.PrimaryKey> expectedPrimaryKeyArgs = createPrimaryKeys(Stream.of(0, 1));
 
         List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
         expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
@@ -278,7 +298,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
                         createSymlinkPrimaryKeyCaptor.capture()
                 );
 
-        assertOnCreateTableArgs(
+        assertOnCreateSymlinkedTableArgs(
                 expectedCreateSymlinkDatabaseArgs,
                 expectedCreateSymlinkTableArgs,
                 expectedCreateSymlinkPathArgs,
@@ -292,7 +312,26 @@ public class HiveTableServiceTest extends BaseSparkTest {
         assertThat(updateManifestTablePathCaptor.getAllValues(), containsInAnyOrder(tablePath0, tablePath1));
     }
 
-    private void assertOnCreateTableArgs(
+    private void assertOnCreateParquetTableArgs(
+            List<String> expectedDatabaseArgs,
+            List<String> expectedTableArgs,
+            List<String> expectedPathArgs,
+            List<SourceReference.PrimaryKey> expectedPrimaryKeyArgs,
+            List<SourceReference.SensitiveColumns> expectedSensitiveColumnsArgs,
+            ArgumentCaptor<String> databaseArgCaptor,
+            ArgumentCaptor<String> tableArgCaptor,
+            ArgumentCaptor<String> pathCaptor,
+            ArgumentCaptor<SourceReference.PrimaryKey> primaryKeyArgCaptor,
+            ArgumentCaptor<SourceReference.SensitiveColumns> sensitiveColumnsArgCaptor
+    ) {
+        assertThat(databaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDatabaseArgs));
+        assertThat(tableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedTableArgs));
+        assertThat(pathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedPathArgs));
+        assertPrimaryKeysMatch(primaryKeyArgCaptor.getAllValues(), expectedPrimaryKeyArgs);
+        assertSensitiveColumnsMatch(sensitiveColumnsArgCaptor.getAllValues(), expectedSensitiveColumnsArgs);
+    }
+
+    private void assertOnCreateSymlinkedTableArgs(
             List<String> expectedDatabaseArgs,
             List<String> expectedTableArgs,
             List<String> expectedPathArgs,
@@ -300,13 +339,12 @@ public class HiveTableServiceTest extends BaseSparkTest {
             ArgumentCaptor<String> databaseArgCaptor,
             ArgumentCaptor<String> tableArgCaptor,
             ArgumentCaptor<String> pathCaptor,
-            ArgumentCaptor<SourceReference.PrimaryKey> primaryKeyCaptor
+            ArgumentCaptor<SourceReference.PrimaryKey> primaryKeyArgCaptor
     ) {
         assertThat(databaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDatabaseArgs));
         assertThat(tableArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedTableArgs));
         assertThat(pathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedPathArgs));
-
-        assertPrimaryKeysMatch(primaryKeyCaptor.getAllValues(), expectedPrimaryKeyArgs);
+        assertPrimaryKeysMatch(primaryKeyArgCaptor.getAllValues(), expectedPrimaryKeyArgs);
     }
 
     @NotNull
@@ -317,8 +355,13 @@ public class HiveTableServiceTest extends BaseSparkTest {
     }
 
     @NotNull
-    private static List<SourceReference.PrimaryKey> createPrimaryKeys(Stream<String> keys) {
-        return keys.map(SourceReference.PrimaryKey::new).collect(Collectors.toList());
+    private static List<SourceReference.PrimaryKey> createPrimaryKeys(Stream<Integer> indices) {
+        return indices.map(index -> new SourceReference.PrimaryKey(String.valueOf(index))).collect(Collectors.toList());
+    }
+
+    @NotNull
+    private static List<SourceReference.SensitiveColumns> createSensitiveColumns(Stream<Integer> indices) {
+        return indices.map(HiveTableServiceTest::createSensitiveColumn).collect(Collectors.toList());
     }
 
     private static String createPath(String bucket, int schemaIndex) {
@@ -344,10 +387,16 @@ public class HiveTableServiceTest extends BaseSparkTest {
     private static SourceReference createSourceRef(int index) {
         String key = String.valueOf(index);
         val primaryKey = new SourceReference.PrimaryKey(key);
+        val sensitiveColumn = createSensitiveColumn(index);
         String source = SCHEMA_NAME + key;
         String table = TABLE + key;
         String versionId = UUID.randomUUID().toString();
-        return new SourceReference(key, source, table, primaryKey, versionId, JSON_DATA_SCHEMA);
+        return new SourceReference(key, source, table, primaryKey, versionId, JSON_DATA_SCHEMA, sensitiveColumn);
+    }
+
+    @NotNull
+    private static SourceReference.SensitiveColumns createSensitiveColumn(Integer index) {
+        return new SourceReference.SensitiveColumns("sensitive_" + index);
     }
 
     private void mockJobArgumentCalls() {
@@ -368,9 +417,23 @@ public class HiveTableServiceTest extends BaseSparkTest {
         );
     }
 
+    private static void assertSensitiveColumnsMatch(List<SourceReference.SensitiveColumns> actual, List<SourceReference.SensitiveColumns> expected) {
+        assertThat(
+                getSensitiveColumnNames(actual),
+                containsTheSameElementsInOrderAs(getSensitiveColumnNames(expected))
+        );
+    }
+
     @NotNull
-    private static List<String> getPrimaryKeyColumnNames(List<SourceReference.PrimaryKey> actualPrimaryKeys) {
-        return actualPrimaryKeys.stream().flatMap(primaryKey -> primaryKey.getKeyColumnNames().stream()).collect(Collectors.toList());
+    private static List<String> getPrimaryKeyColumnNames(List<SourceReference.PrimaryKey> values) {
+        return values.stream().flatMap(primaryKey -> primaryKey.getKeyColumnNames().stream()).collect(Collectors.toList());
+    }
+
+    @NotNull
+    private static List<String> getSensitiveColumnNames(List<SourceReference.SensitiveColumns> values) {
+        return values.stream()
+                .flatMap(sensitiveColumns -> sensitiveColumns.getSensitiveColumnNames().stream())
+                .collect(Collectors.toList());
     }
 
 }

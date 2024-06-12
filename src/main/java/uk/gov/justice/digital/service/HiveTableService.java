@@ -65,10 +65,11 @@ public class HiveTableService {
                 validateTableName(hiveTableName);
                 StructType schema = sourceReference.getSchema();
                 SourceReference.PrimaryKey primaryKey = sourceReference.getPrimaryKey();
+                SourceReference.SensitiveColumns sensitiveColumns = sourceReference.getSensitiveColumns();
 
                 String rawArchivePath = createValidatedPath(jobArguments.getRawArchiveS3Path(), sourceName, tableName);
                 StructType rawSchema = withScdFields(withMetadataFields(schema));
-                replaceParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema, primaryKey);
+                replaceParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema, primaryKey, sensitiveColumns);
 
                 String structuredPath = createValidatedPath(jobArguments.getStructuredS3Path(), sourceName, tableName);
                 replaceSymlinkInputTables(jobArguments.getStructuredDatabase(), hiveTableName, structuredPath, schema, primaryKey);
@@ -129,9 +130,16 @@ public class HiveTableService {
         return sourceReferences;
     }
 
-    private void replaceParquetInputTables(String databaseName, String tableName, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) {
+    private void replaceParquetInputTables(
+            String databaseName,
+            String tableName,
+            String dataPath,
+            StructType schema,
+            SourceReference.PrimaryKey primaryKey,
+            SourceReference.SensitiveColumns sensitiveColumns
+    ) {
         glueClient.deleteTable(databaseName, tableName);
-        glueClient.createParquetTable(databaseName, tableName, dataPath, schema, primaryKey);
+        glueClient.createParquetTable(databaseName, tableName, dataPath, schema, primaryKey, sensitiveColumns);
     }
 
     private void replaceSymlinkInputTables(String databaseName, String tableName, String curatedPath, StructType schema, SourceReference.PrimaryKey primaryKey) {

@@ -12,6 +12,8 @@ import java.time.ZoneOffset;
 public class Fixtures {
     public static final String TABLE_NAME = "agency_internal_locations";
     public static final String PRIMARY_KEY_FIELD = "primary-key";
+    public static final String SENSITIVE_FIELD_1 = "sensitive-column-1";
+    public static final String SENSITIVE_FIELD_2 = "sensitive-column-1";
     public static final String STRING_FIELD_KEY = "string-key";
     public static final String NULL_FIELD_KEY = "null-key";
     public static final String NUMBER_FIELD_KEY = "number-key";

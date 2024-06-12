@@ -1,7 +1,18 @@
 package uk.gov.justice.digital.client.glue;
 
 import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.model.*;
+import com.amazonaws.services.glue.model.AWSGlueException;
+import com.amazonaws.services.glue.model.DeleteTableRequest;
+import com.amazonaws.services.glue.model.BatchStopJobRunRequest;
+import com.amazonaws.services.glue.model.CreateTableRequest;
+import com.amazonaws.services.glue.model.Column;
+import com.amazonaws.services.glue.model.EntityNotFoundException;
+import com.amazonaws.services.glue.model.StorageDescriptor;
+import com.amazonaws.services.glue.model.SerDeInfo;
+import com.amazonaws.services.glue.model.TableInput;
+import com.amazonaws.services.glue.model.GetJobRunsRequest;
+import com.amazonaws.services.glue.model.GetJobRunRequest;
+import com.amazonaws.services.glue.model.JobRun;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -16,9 +27,17 @@ import uk.gov.justice.digital.exception.GlueClientException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 
 @Singleton
 public class GlueClient {
@@ -35,15 +54,47 @@ public class GlueClient {
         this.awsGlue = glueClientProvider.getClient();
     }
 
-    public void createParquetTable(String database, String table, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) throws AWSGlueException {
+    public void createParquetTable(
+            String database,
+            String table,
+            String dataPath,
+            StructType schema,
+            SourceReference.PrimaryKey primaryKey,
+            SourceReference.SensitiveColumns sensitiveColumns
+        ) throws AWSGlueException {
+
         val storageDescriptor = createStorageDescriptor(dataPath, MAPRED_PARQUET_INPUT_FORMAT, schema, primaryKey);
-        createTable(database, table, storageDescriptor);
+
+        String sensitiveColumnsFormatted = sensitiveColumns
+                .getSensitiveColumnNames()
+                .stream()
+                .map(col -> "'" + col.toLowerCase() + "'")
+                .collect(Collectors.joining(",", "[", "]"));
+
+        String extractionKeyFormatted = String.join(",", Stream.of(TIMESTAMP, OPERATION).map(String::toLowerCase)
+                .collect(Collectors.toCollection(HashSet::new)));
+
+        String primaryKeysFormatted = primaryKey.getKeyColumnNames()
+                .stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.joining(","));
+
+        val params = new HashMap<String, String>();
+
+        params.put("classification", "parquet");
+        params.put("extraction_timestamp_column_name", TIMESTAMP.toLowerCase());
+        params.put("extraction_operation_column_name", OPERATION.toLowerCase());
+        params.put("sensitive_columns", sensitiveColumnsFormatted);
+        params.put("extraction_key", extractionKeyFormatted);
+        params.put("source_primary_key", primaryKeysFormatted);
+        createTable(database, table, storageDescriptor, params);
     }
 
     public void createTableWithSymlink(String database, String table, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) throws AWSGlueException {
         String location = dataPath + "/_symlink_format_manifest";
         val storageDescriptor = createStorageDescriptor(location, SYMLINK_INPUT_FORMAT, schema, primaryKey);
-        createTable(database, table, storageDescriptor);
+        val params = Collections.singletonMap("classification", "parquet");
+        createTable(database, table, storageDescriptor, params);
     }
 
     public void deleteTable(String database, String table) throws AWSGlueException {
@@ -80,8 +131,8 @@ public class GlueClient {
         );
     }
 
-    private void createTable(String database, String table, StorageDescriptor storageDescriptor) {
-        CreateTableRequest createTableRequest = getCreateTableRequest(database, table, storageDescriptor);
+    private void createTable(String database, String table, StorageDescriptor storageDescriptor, Map<String, String> params) {
+        CreateTableRequest createTableRequest = getCreateTableRequest(database, table, storageDescriptor, params);
 
         logger.info("Creating table {}.{}", database, table);
         awsGlue.createTable(createTableRequest);
@@ -104,13 +155,13 @@ public class GlueClient {
                 .withStoredAsSubDirectories(false);
     }
 
-    private CreateTableRequest getCreateTableRequest(String database, String table, StorageDescriptor storageDescriptor) {
+    private CreateTableRequest getCreateTableRequest(String database, String table, StorageDescriptor storageDescriptor, Map<String, String> params) {
         return new CreateTableRequest()
                 .withDatabaseName(database)
                 .withTableInput(new TableInput()
                         .withName(table)
                         .withTableType("EXTERNAL_TABLE")
-                        .withParameters(Collections.singletonMap("classification", "parquet"))
+                        .withParameters(params)
                         .withStorageDescriptor(storageDescriptor)
                 );
     }
