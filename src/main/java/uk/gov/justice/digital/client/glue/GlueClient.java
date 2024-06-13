@@ -2,11 +2,13 @@ package uk.gov.justice.digital.client.glue;
 
 import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.model.AWSGlueException;
+import com.amazonaws.services.glue.model.Connection;
 import com.amazonaws.services.glue.model.DeleteTableRequest;
 import com.amazonaws.services.glue.model.BatchStopJobRunRequest;
 import com.amazonaws.services.glue.model.CreateTableRequest;
 import com.amazonaws.services.glue.model.Column;
 import com.amazonaws.services.glue.model.EntityNotFoundException;
+import com.amazonaws.services.glue.model.GetConnectionRequest;
 import com.amazonaws.services.glue.model.StorageDescriptor;
 import com.amazonaws.services.glue.model.SerDeInfo;
 import com.amazonaws.services.glue.model.TableInput;
@@ -52,6 +54,11 @@ public class GlueClient {
     @Inject
     public GlueClient(GlueClientProvider glueClientProvider) {
         this.awsGlue = glueClientProvider.getClient();
+    }
+
+    public Connection getConnection(String connectionName) {
+        GetConnectionRequest request = new GetConnectionRequest().withName(connectionName);
+        return awsGlue.getConnection(request).getConnection();
     }
 
     public void createParquetTable(

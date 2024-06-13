@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.zone.operational;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -8,27 +10,44 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
+import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClientProvider;
+import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.zone.Zone;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Properties;
 
 import static java.lang.String.format;
 
-public class OperationalZoneCDCBulk implements Zone {
+@Singleton
+public class OperationalZoneCDCBulk implements OperationalZone {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalZoneCDCBulk.class);
     private static final String LOADING_SCHEMA = "loading";
 
-    // TODO: From secrets manager?
-    private static final String url = "jdbc:postgresql://localhost:5432/postgres";
-    private static final String user = "postgres";
-    private static final String password = "password";
+    private final String url;
+    private final String user;
+    private final String password;
+
+    @Inject
+    public OperationalZoneCDCBulk(GlueClient glueClient) {
+        com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection("Postgresql connection");
+        Map<String, String> connectionProperties = connection.getConnectionProperties();
+        url = connectionProperties.get("JDBC_CONNECTION_URL");
+        String secretId = connectionProperties.get("SECRET_ID");
+        // TODO Dependency injection, etc.
+        SecretsManagerClient secretsManagerClient = new SecretsManagerClient(new SecretsManagerClientProvider());
+        OperationalDataStoreCredentials creds = secretsManagerClient.getSecret(secretId, OperationalDataStoreCredentials.class);
+        user = creds.getUsername();
+        password = creds.getPassword();
+    }
 
     @Override
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {

@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.GlueClientProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
@@ -28,7 +30,7 @@ public class TempTest extends BaseSparkTest {
 
     @Test
     public void testRecordByRecord() {
-        OperationalZoneCDCRecordByRecord underTest = new OperationalZoneCDCRecordByRecord();
+        OperationalZoneCDCRecordByRecord underTest = new OperationalZoneCDCRecordByRecord(new GlueClient(new GlueClientProvider()));
         StructType schemaWithoutMetadataFields = new StructType(new StructField[]{
                 new StructField("pk", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("data", DataTypes.StringType, true, Metadata.empty())
@@ -57,7 +59,7 @@ public class TempTest extends BaseSparkTest {
 
     @Test
     public void testBulk() {
-        OperationalZoneCDCBulk underTest = new OperationalZoneCDCBulk();
+        OperationalZoneCDCBulk underTest = new OperationalZoneCDCBulk(new GlueClient(new GlueClientProvider()));
         StructType schemaWithoutMetadataFields = new StructType(new StructField[]{
                 new StructField("pk", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("data", DataTypes.StringType, true, Metadata.empty())

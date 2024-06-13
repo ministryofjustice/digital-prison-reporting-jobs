@@ -13,10 +13,14 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
+import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.GlueClientProvider;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
+import uk.gov.justice.digital.zone.operational.OperationalZone;
+import uk.gov.justice.digital.zone.operational.OperationalZoneCDCBulk;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import static org.apache.spark.sql.functions.col;
@@ -34,6 +38,7 @@ public class CdcBatchProcessor {
     private final ValidationService validationService;
     private final StructuredZoneCDC structuredZone;
     private final CuratedZoneCDC curatedZone;
+    private final OperationalZone operationalZone;
     private final S3DataProvider dataProvider;
 
     @Inject
@@ -46,6 +51,8 @@ public class CdcBatchProcessor {
         this.structuredZone = structuredZone;
         this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
+        // TODO: Dependency Injection
+        this.operationalZone = new OperationalZoneCDCBulk(new GlueClient(new GlueClientProvider()));
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
@@ -58,8 +65,9 @@ public class CdcBatchProcessor {
             val validRows = validationService.handleValidation(spark, df, sourceReference, inferredSchema, STRUCTURED_CDC);
             val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
 
-            structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
-            curatedZone.process(spark, latestCDCRecordsByPK, sourceReference);
+            Dataset<Row> afterStructured = structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
+            Dataset<Row> afterCurated = curatedZone.process(spark, afterStructured, sourceReference);
+            operationalZone.process(spark, afterCurated, sourceReference);
             logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
         } else {
             logger.info("Skipping empty batch");
