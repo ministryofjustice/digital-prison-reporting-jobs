@@ -18,7 +18,7 @@ import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.stream.Collectors;
 
-import static uk.gov.justice.digital.client.s3.S3FileTransferClient.DELIMITER;
+import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
 
 /**
  * Class that defines and provides access to the job arguments that we support.
@@ -117,11 +117,12 @@ public class JobArguments {
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
     // A comma separated list of s3 file extensions. The wildcard '*' includes all extensions.
     static final String ALLOWED_S3_FILE_EXTENSIONS = "dpr.allowed.s3.file.extensions";
-    static final String GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS = "dpr.glue.orchestration.wait.interval.seconds";
-    static final int DEFAULT_GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS = 10;
-    static final String GLUE_ORCHESTRATION_MAX_ATTEMPTS = "dpr.glue.orchestration.max.attempts";
-    static final int DEFAULT_GLUE_ORCHESTRATION_MAX_ATTEMPTS = 20;
+    static final String ORCHESTRATION_WAIT_INTERVAL_SECONDS = "dpr.orchestration.wait.interval.seconds";
+    static final int DEFAULT_ORCHESTRATION_WAIT_INTERVAL_SECONDS = 10;
+    static final String ORCHESTRATION_MAX_ATTEMPTS = "dpr.orchestration.max.attempts";
+    static final int DEFAULT_ORCHESTRATION_MAX_ATTEMPTS = 20;
     static final String STOP_GLUE_INSTANCE_JOB_NAME = "dpr.stop.glue.instance.job.name";
+    static final String DMS_REPLICATION_TASK_ID = "dpr.dms.replication.task.id";
     static final String MAX_S3_PAGE_SIZE = "dpr.s3.max.page.size";
     static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
     static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
@@ -405,12 +406,16 @@ public class JobArguments {
         return getArgument(STOP_GLUE_INSTANCE_JOB_NAME);
     }
 
-    public int glueOrchestrationWaitIntervalSeconds() {
-        return getArgument(GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS, DEFAULT_GLUE_ORCHESTRATION_WAIT_INTERVAL_SECONDS);
+    public String getDmsTaskId() {
+        return getArgument(DMS_REPLICATION_TASK_ID);
     }
 
-    public int glueOrchestrationMaxAttempts() {
-        return getArgument(GLUE_ORCHESTRATION_MAX_ATTEMPTS, DEFAULT_GLUE_ORCHESTRATION_MAX_ATTEMPTS);
+    public int orchestrationWaitIntervalSeconds() {
+        return getArgument(ORCHESTRATION_WAIT_INTERVAL_SECONDS, DEFAULT_ORCHESTRATION_WAIT_INTERVAL_SECONDS);
+    }
+
+    public int orchestrationMaxAttempts() {
+        return getArgument(ORCHESTRATION_MAX_ATTEMPTS, DEFAULT_ORCHESTRATION_MAX_ATTEMPTS);
     }
 
     public Integer getMaxObjectsPerPage() {
