@@ -8,9 +8,12 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.GlueClientProvider;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
+import uk.gov.justice.digital.zone.operational.OperationalZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import javax.inject.Singleton;
@@ -32,6 +35,7 @@ public class BatchProcessor {
 
     private final StructuredZoneLoad structuredZoneLoad;
     private final CuratedZoneLoad curatedZoneLoad;
+    private final OperationalZoneLoad operationalZoneLoad;
     private final ValidationService validationService;
 
     @Inject
@@ -43,6 +47,8 @@ public class BatchProcessor {
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
+        // TODO: Dependency Injection
+        this.operationalZoneLoad = new OperationalZoneLoad(new GlueClient(new GlueClientProvider()));
         logger.info("S3BatchProcessor initialization complete");
     }
 
@@ -58,8 +64,10 @@ public class BatchProcessor {
             val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
             StructType inferredSchema = filteredDf.schema();
             val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
-            val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-            curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+
+            Dataset<Row> afterStructured = structuredZoneLoad.process(spark, validRows, sourceReference);
+            Dataset<Row> afterCurated = curatedZoneLoad.process(spark, afterStructured, sourceReference);
+            curatedZoneLoad.process(spark, afterCurated, sourceReference);
             dataFrame.unpersist();
 
             logger.info("Processed records {}/{} in {}ms",

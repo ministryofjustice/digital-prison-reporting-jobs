@@ -16,6 +16,7 @@ import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
 import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClientProvider;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.zone.Zone;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -30,9 +31,9 @@ import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
 
 @Singleton
-public class OperationalZoneCDCBulk implements OperationalZone {
+public class OperationalZoneCDC implements Zone {
 
-    private static final Logger logger = LoggerFactory.getLogger(OperationalZoneCDCBulk.class);
+    private static final Logger logger = LoggerFactory.getLogger(OperationalZoneCDC.class);
     private static final String LOADING_SCHEMA = "loading";
 
     private final String url;
@@ -40,7 +41,7 @@ public class OperationalZoneCDCBulk implements OperationalZone {
     private final String password;
 
     @Inject
-    public OperationalZoneCDCBulk(GlueClient glueClient) {
+    public OperationalZoneCDC(GlueClient glueClient) {
         // TODO: Meaningful connection name and grab it from configuration
         com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection("Postgresql connection");
         Map<String, String> connectionProperties = connection.getConnectionProperties();
@@ -53,7 +54,6 @@ public class OperationalZoneCDCBulk implements OperationalZone {
         password = creds.getPassword();
     }
 
-    @Override
     public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
         String sourceName = sourceReference.getSource();
