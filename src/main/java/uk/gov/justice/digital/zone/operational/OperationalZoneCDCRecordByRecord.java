@@ -3,6 +3,7 @@ package uk.gov.justice.digital.zone.operational;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -29,19 +30,28 @@ import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClientProvider
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 
 @Singleton
-public class OperationalZoneCDCRecordByRecord implements OperationalZone {
+public class OperationalZoneCDCRecordByRecord implements OperationalZone, Serializable {
+
+    private static final long serialVersionUID = -7722232195505893260L;
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalZoneCDCRecordByRecord.class);
 
@@ -51,6 +61,7 @@ public class OperationalZoneCDCRecordByRecord implements OperationalZone {
 
     @Inject
     public OperationalZoneCDCRecordByRecord(GlueClient glueClient) {
+        // TODO: Meaningful connection name and grab it from configuration
         com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection("Postgresql connection");
         Map<String, String> connectionProperties = connection.getConnectionProperties();
         url = connectionProperties.get("JDBC_CONNECTION_URL");
@@ -69,19 +80,24 @@ public class OperationalZoneCDCRecordByRecord implements OperationalZone {
         String tableName = sourceReference.getTable();
         logger.info("Processing records for Operational Data Store table {}.{}", sourceName, tableName);
 
-        StructType schema = sourceReference.getSchema();
-        Collection<String> pkColumns = sourceReference.getPrimaryKey().getKeyColumnNames();
-        String insertColumnNames = String.join(", ", schema.fieldNames());
-        String insertValues = String.join(", ", Arrays.stream(schema.fieldNames()).map(c -> "s." + c).toArray(String[]::new));
-        String updateAssignments = String.join(", ", Arrays.stream(schema.fieldNames()).filter(c -> !pkColumns.contains(c)).map(c -> c + " = s." + c).toArray(String[]::new));
+        // Normalise columns to lower case to avoid having to quote every column due to Postgres lower casing everything in incoming queries
+        Column[] lowerCaseCols = Arrays.stream(dataFrame.columns()).map(colName -> col(colName).as(colName.toLowerCase())).toArray(Column[]::new);
+        Dataset<Row> lowerCaseColsDf = dataFrame.select(lowerCaseCols);
 
-        String joinCondition = sourceReference.getPrimaryKey().getSparkCondition("s", "d");
+        StructType schema = sourceReference.getSchema();
+        Collection<String> pkColumns = sourceReference.getPrimaryKey().getKeyColumnNames().stream().map(String::toLowerCase).collect(Collectors.toSet());
+        String[] lowerCaseFieldNames = Arrays.stream(schema.fieldNames()).map(String::toLowerCase).toArray(String[]::new);
+        String insertColumnNames = String.join(", ", lowerCaseFieldNames);
+        String insertValues = String.join(", ", Arrays.stream(lowerCaseFieldNames).map(c -> "s." + c).toArray(String[]::new));
+        String updateAssignments = String.join(", ", Arrays.stream(lowerCaseFieldNames).filter(c -> !pkColumns.contains(c)).map(c -> c + " = s." + c).toArray(String[]::new));
+
+        String joinCondition = sourceReference.getPrimaryKey().getSparkCondition("s", "d").toLowerCase();
 
         StructField[] fields = withMetadataFields(schema).fields();
-        // TODO: Remove _timestamp column but keep Op column
-        String sourceColumns = String.join(", ", Arrays.stream(fields).map(f -> "? as " + f.name()).toArray(String[]::new));
+        // TODO: Remove _timestamp column but keep op column
+        String sourceColumns = String.join(", ", Arrays.stream(fields).map(f -> "? as " + f.name().toLowerCase()).toArray(String[]::new));
 
-        dataFrame.foreachPartition(partition -> {
+        lowerCaseColsDf.foreachPartition(partition -> {
             val partitionStartTime = System.currentTimeMillis();
             logger.debug("Processing partition for Operational Data Store table {}.{}", sourceName, tableName);
 
@@ -95,9 +111,9 @@ public class OperationalZoneCDCRecordByRecord implements OperationalZone {
             String sql = format("WITH s AS (SELECT %s)\n" +
                             "MERGE INTO %s d\n" +
                             "USING s ON %s\n" +
-                            "    WHEN MATCHED AND Op = 'D' THEN DELETE\n" +
-                            "    WHEN MATCHED AND Op = 'U' THEN UPDATE SET %s\n" +
-                            "WHEN NOT MATCHED AND Op = 'I' THEN INSERT (%s) VALUES (%s)",
+                            "    WHEN MATCHED AND s.op = 'D' THEN DELETE\n" +
+                            "    WHEN MATCHED AND s.op = 'U' THEN UPDATE SET %s\n" +
+                            "WHEN NOT MATCHED AND (s.op = 'I' OR s.op = 'U') THEN INSERT (%s) VALUES (%s)",
                     sourceColumns, targetTableName, joinCondition, updateAssignments, insertColumnNames, insertValues);
             logger.debug("SQL is {}", sql);
             PreparedStatement ps = connection.prepareStatement(sql);
@@ -123,32 +139,95 @@ public class OperationalZoneCDCRecordByRecord implements OperationalZone {
     }
 
     private static void populateFieldInStatement(Row row, DataType dataType, StructField field, PreparedStatement ps, int i) throws SQLException {
+        String fieldName = field.name().toLowerCase();
         if (dataType instanceof StringType) {
-            ps.setString(i, row.getAs(field.name()));
+            String data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.VARCHAR);
+            } else {
+                ps.setString(i, data);
+            }
         } else if (dataType instanceof IntegerType) {
-            ps.setInt(i, row.getAs(field.name()));
+            Integer data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.INTEGER);
+            } else {
+                ps.setInt(i, data);
+            }
         } else if (dataType instanceof LongType) {
-            ps.setLong(i, row.getAs(field.name()));
+            Long data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.BIGINT);
+            } else {
+                ps.setLong(i, data);
+            }
         } else if (dataType instanceof DoubleType) {
-            ps.setDouble(i, row.getAs(field.name()));
+            Double data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.DOUBLE);
+            } else {
+                ps.setDouble(i, data);
+            }
         } else if (dataType instanceof FloatType) {
-            ps.setFloat(i, row.getAs(field.name()));
+            Float data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.FLOAT);
+            } else {
+                ps.setFloat(i, data);
+            }
         } else if (dataType instanceof ShortType) {
-            ps.setShort(i, row.getAs(field.name()));
+            Short data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.SMALLINT);
+            } else {
+                ps.setShort(i, data);
+            }
         } else if (dataType instanceof ByteType) {
-            ps.setByte(i, row.getAs(field.name()));
+            Byte data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.TINYINT);
+            } else {
+                ps.setByte(i, data);
+            }
         } else if (dataType instanceof BooleanType) {
-            ps.setBoolean(i, row.getAs(field.name()));
+            Boolean data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.BOOLEAN);
+            } else {
+                ps.setBoolean(i, data);
+            }
         } else if (dataType instanceof BinaryType) {
-            ps.setBytes(i, row.getAs(field.name()));
+            byte[] data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.BINARY);
+            } else {
+                ps.setBytes(i, data);
+            }
         } else if (dataType instanceof TimestampType) {
-            ps.setTimestamp(i, row.getAs(field.name()));
+            Timestamp data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.TIMESTAMP);
+            } else {
+                ps.setTimestamp(i, data);
+            }
         } else if (dataType instanceof DateType) {
-            ps.setDate(i, row.getAs(field.name()));
+            Date data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.DATE);
+            } else {
+                ps.setDate(i, data);
+            }
         } else if (dataType instanceof DecimalType) {
-            ps.setBigDecimal(i, row.getAs(field.name()));
+            BigDecimal data = row.getAs(fieldName);
+            if (data == null) {
+                ps.setNull(i, Types.BIGINT);
+            } else {
+                ps.setBigDecimal(i, data);
+            }
         } else {
             throw new IllegalStateException(dataType + " is an unrecognized type");
         }
     }
+
+
 }

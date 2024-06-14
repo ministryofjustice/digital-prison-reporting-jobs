@@ -20,7 +20,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.operational.OperationalZone;
-import uk.gov.justice.digital.zone.operational.OperationalZoneCDCBulk;
+import uk.gov.justice.digital.zone.operational.OperationalZoneCDCRecordByRecord;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import static org.apache.spark.sql.functions.col;
@@ -52,7 +52,7 @@ public class CdcBatchProcessor {
         this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
         // TODO: Dependency Injection
-        this.operationalZone = new OperationalZoneCDCBulk(new GlueClient(new GlueClientProvider()));
+        this.operationalZone = new OperationalZoneCDCRecordByRecord(new GlueClient(new GlueClientProvider()));
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {

@@ -3,6 +3,7 @@ package uk.gov.justice.digital.zone.operational;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -23,8 +24,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.apache.spark.sql.functions.col;
 
 @Singleton
 public class OperationalZoneCDCBulk implements OperationalZone {
@@ -38,6 +41,7 @@ public class OperationalZoneCDCBulk implements OperationalZone {
 
     @Inject
     public OperationalZoneCDCBulk(GlueClient glueClient) {
+        // TODO: Meaningful connection name and grab it from configuration
         com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection("Postgresql connection");
         Map<String, String> connectionProperties = connection.getConnectionProperties();
         url = connectionProperties.get("JDBC_CONNECTION_URL");
@@ -61,37 +65,47 @@ public class OperationalZoneCDCBulk implements OperationalZone {
         Properties props = new Properties();
         props.put("user", user);
         props.put("password", password);
-        dataFrame.write().mode(SaveMode.Overwrite).jdbc(url, temporaryTableName, props);
+
+        // Normalise columns to lower case to avoid having to quote every column due to Postgres lower casing everything in incoming queries
+        Column[] lowerCaseCols = Arrays.stream(dataFrame.columns()).map(colName -> col(colName).as(colName.toLowerCase())).toArray(Column[]::new);
+        Dataset<Row> lowerCaseColsDf = dataFrame.select(lowerCaseCols);
+
+        lowerCaseColsDf.write().mode(SaveMode.Overwrite).jdbc(url, temporaryTableName, props);
         logger.debug("Finished loading to temporary table {}", temporaryTableName);
 
         StructType schema = sourceReference.getSchema();
-        Collection<String> pkColumns = sourceReference.getPrimaryKey().getKeyColumnNames();
-        String insertColumnNames = String.join(", ", schema.fieldNames());
-        String insertValues = String.join(", ", Arrays.stream(schema.fieldNames()).map(c -> "s." + c).toArray(String[]::new));
-        String updateAssignments = String.join(", ", Arrays.stream(schema.fieldNames()).filter(c -> !pkColumns.contains(c)).map(c -> c + " = s." + c).toArray(String[]::new));
+        Collection<String> pkColumns = sourceReference.getPrimaryKey().getKeyColumnNames().stream().map(String::toLowerCase).collect(Collectors.toSet());
+        String[] lowerCaseFieldNames = Arrays.stream(schema.fieldNames()).map(String::toLowerCase).toArray(String[]::new);
+        String insertColumnNames = String.join(", ", lowerCaseFieldNames);
+        String insertValues = String.join(", ", Arrays.stream(lowerCaseFieldNames).map(c -> "s." + c).toArray(String[]::new));
+        String updateAssignments = String.join(", ", Arrays.stream(lowerCaseFieldNames).filter(c -> !pkColumns.contains(c)).map(c -> c + " = s." + c).toArray(String[]::new));
 
-        String joinCondition = sourceReference.getPrimaryKey().getSparkCondition("s", "d");
+        String joinCondition = sourceReference.getPrimaryKey().getSparkCondition("s", "d").toLowerCase();
 
         String destinationTableName = sourceName + "." + tableName;
         logger.debug("Merging into destination table {}", destinationTableName);
-        String sql = format("MERGE INTO %s d\n" +
+        String mergeSql = format("MERGE INTO %s d\n" +
                         "USING %s s ON %s\n" +
-                        "    WHEN MATCHED AND s.\"Op\" = 'D' THEN DELETE\n" +
-                        "    WHEN MATCHED AND s.\"Op\" = 'U' THEN UPDATE SET %s\n" +
-                        "WHEN NOT MATCHED AND s.\"Op\" = 'I' THEN INSERT (%s) VALUES (%s)",
+                        "    WHEN MATCHED AND s.op = 'D' THEN DELETE\n" +
+                        "    WHEN MATCHED AND s.op = 'U' THEN UPDATE SET %s\n" +
+                        "    WHEN NOT MATCHED AND (s.op = 'I' OR s.op = 'U') THEN INSERT (%s) VALUES (%s)",
                 destinationTableName, temporaryTableName, joinCondition, updateAssignments, insertColumnNames, insertValues);
-        logger.debug("SQL is {}", sql);
+        logger.debug("Merge SQL is {}", mergeSql);
+        String truncateSql = format("TRUNCATE TABLE %s", temporaryTableName);
+        logger.debug("Truncate SQL is {}", truncateSql);
         // TODO: manage connections?
         try {
             Connection connection = DriverManager.getConnection(url, user, password);
-            connection.createStatement().execute(sql);
+            connection.createStatement().execute(mergeSql);
+            logger.debug("Finished merging into destination table {}", destinationTableName);
+            // Truncation of the temporary loading is not really required since spark will do it on next load.
+            // We do it just to keep space free.
+            connection.createStatement().execute(truncateSql);
+            logger.debug("Finished truncating temporary table {}", temporaryTableName);
         } catch (SQLException e) {
             logger.error("Exception during merge from temporary table to destination", e);
             throw new RuntimeException(e);
         }
-
-
-        logger.debug("Finished merging into destination table {}", destinationTableName);
 
         logger.info("Processed batch for Operational Data Store table {}.{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
         return dataFrame;
