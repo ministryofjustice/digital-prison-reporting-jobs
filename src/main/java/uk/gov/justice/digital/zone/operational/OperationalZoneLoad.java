@@ -63,7 +63,7 @@ public class OperationalZoneLoad implements Zone  {
         // Handle 0x00 null String character which cannot be inserted in to a Postgres text column
         for (StructField field : sourceReference.getSchema().fields()) {
             if (field.dataType() instanceof StringType) {
-                String columnname = field.name();
+                String columnname = field.name().toLowerCase();
                 lowerCaseColsDf = lowerCaseColsDf.withColumn(columnname, regexp_replace(lowerCaseColsDf.col(columnname), null, ""));
             }
         }
