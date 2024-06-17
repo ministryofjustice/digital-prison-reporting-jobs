@@ -67,7 +67,7 @@ public class BatchProcessor {
 
             Dataset<Row> afterStructured = structuredZoneLoad.process(spark, validRows, sourceReference);
             Dataset<Row> afterCurated = curatedZoneLoad.process(spark, afterStructured, sourceReference);
-            curatedZoneLoad.process(spark, afterCurated, sourceReference);
+            operationalZoneLoad.process(spark, afterCurated, sourceReference);
             dataFrame.unpersist();
 
             logger.info("Processed records {}/{} in {}ms",

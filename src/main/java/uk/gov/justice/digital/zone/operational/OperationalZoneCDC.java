@@ -8,6 +8,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StringType;
+import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.regexp_replace;
 
 @Singleton
 public class OperationalZoneCDC implements Zone {
@@ -69,6 +72,14 @@ public class OperationalZoneCDC implements Zone {
         // Normalise columns to lower case to avoid having to quote every column due to Postgres lower casing everything in incoming queries
         Column[] lowerCaseCols = Arrays.stream(dataFrame.columns()).map(colName -> col(colName).as(colName.toLowerCase())).toArray(Column[]::new);
         Dataset<Row> lowerCaseColsDf = dataFrame.select(lowerCaseCols);
+
+        // Handle 0x00 null String character which cannot be inserted in to a Postgres text column
+        for (StructField field : sourceReference.getSchema().fields()) {
+            if (field.dataType() instanceof StringType) {
+                String columnname = field.name();
+                lowerCaseColsDf = lowerCaseColsDf.withColumn(columnname, regexp_replace(lowerCaseColsDf.col(columnname), null, ""));
+            }
+        }
 
         lowerCaseColsDf.write().mode(SaveMode.Overwrite).jdbc(url, temporaryTableName, props);
         logger.debug("Finished loading to temporary table {}", temporaryTableName);
