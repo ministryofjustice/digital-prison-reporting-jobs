@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 
 @Singleton
 public class GlueClient {
@@ -71,7 +72,7 @@ public class GlueClient {
                 .map(col -> "'" + col.toLowerCase() + "'")
                 .collect(Collectors.joining(",", "[", "]"));
 
-        String extractionKeyFormatted = String.join(",", Stream.of(TIMESTAMP, OPERATION).map(String::toLowerCase)
+        String extractionKeyFormatted = String.join(",", Stream.of(TIMESTAMP, CHECKPOINT_COL).map(String::toLowerCase)
                 .collect(Collectors.toCollection(HashSet::new)));
 
         String primaryKeysFormatted = primaryKey.getKeyColumnNames()

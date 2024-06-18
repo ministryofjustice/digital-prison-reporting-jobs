@@ -24,8 +24,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 public class MinimalTestData {
     public static final String PRIMARY_KEY_COLUMN = "pk";
     public static final String DATA_COLUMN = "data";
-    public static final String CHECKPOINT_COL_VALUE = "scn";
-    public static final String UPDATE_TYPE_VALUE = "incremental";
+    public static final String CHECKPOINT_COL_VALUE = "some-database-sequence-number";
 
     public static final SourceReference.PrimaryKey PRIMARY_KEY = new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN);
 
@@ -35,8 +34,7 @@ public class MinimalTestData {
             new StructField(TIMESTAMP, DataTypes.StringType, true, Metadata.empty()),
             new StructField(OPERATION, DataTypes.StringType, true, Metadata.empty()),
             new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
-            new StructField(CHECKPOINT_COL, DataTypes.StringType, true, Metadata.empty()),
-            new StructField(UPDATE_TYPE, DataTypes.StringType, true, Metadata.empty())
+            new StructField(CHECKPOINT_COL, DataTypes.StringType, true, Metadata.empty())
     });
 
     public static final StructType SCHEMA_WITHOUT_METADATA_FIELDS = new StructType(new StructField[]{
@@ -49,8 +47,7 @@ public class MinimalTestData {
             new StructField(TIMESTAMP, DataTypes.StringType, false, Metadata.empty()),
             new StructField(OPERATION, DataTypes.StringType, false, Metadata.empty()),
             new StructField(DATA_COLUMN, DataTypes.StringType, true, Metadata.empty()),
-            new StructField(CHECKPOINT_COL, DataTypes.StringType, false, Metadata.empty()),
-            new StructField(UPDATE_TYPE, DataTypes.StringType, false, Metadata.empty())
+            new StructField(CHECKPOINT_COL, DataTypes.StringType, false, Metadata.empty())
     });
     public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
 
@@ -123,7 +120,7 @@ public class MinimalTestData {
         } else {
             operationName = null;
         }
-        return RowFactory.create(pk, timestamp, operationName, data, CHECKPOINT_COL_VALUE, UPDATE_TYPE_VALUE);
+        return RowFactory.create(pk, timestamp, operationName, data, CHECKPOINT_COL_VALUE);
      }
 
      private MinimalTestData() {}

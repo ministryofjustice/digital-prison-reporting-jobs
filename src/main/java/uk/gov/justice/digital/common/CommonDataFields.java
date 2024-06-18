@@ -16,7 +16,6 @@ public class CommonDataFields {
     public static final String VALIDATION_TYPE_KEY = "validationType";
     public static final String SENSITIVE_COLUMN_LABEL_KEY = "sensitive";
     public static final String CHECKPOINT_COL = "checkpoint_col";
-    public static final String UPDATE_TYPE = "update_type";
 
     /**
      * The possible entries in the operation column
@@ -47,11 +46,9 @@ public class CommonDataFields {
     }
 
     /**
-     * Add the SCD fields to the provided schema
+     * Add the checkpoint required for AP integration
      */
-    public static StructType withScdFields(StructType schema) {
-        return schema
-                .add(DataTypes.createStructField(CHECKPOINT_COL, DataTypes.StringType, true))
-                .add(DataTypes.createStructField(UPDATE_TYPE, DataTypes.StringType, true));
+    public static StructType withCheckpointField(StructType schema) {
+        return schema.add(DataTypes.createStructField(CHECKPOINT_COL, DataTypes.StringType, true));
     }
 }

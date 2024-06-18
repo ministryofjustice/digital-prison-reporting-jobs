@@ -39,7 +39,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
-import static uk.gov.justice.digital.common.CommonDataFields.withScdFields;
+import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
@@ -184,7 +184,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
                         createArchiveDatabaseArgCaptor.capture(),
                         createArchiveTableArgCaptor.capture(),
                         createArchivePathArgCaptor.capture(),
-                        eq(withScdFields(withMetadataFields(JSON_DATA_SCHEMA))),
+                        eq(withCheckpointField(withMetadataFields(JSON_DATA_SCHEMA))),
                         createArchivePrimaryKeyCaptor.capture(),
                         createArchiveSensitiveColumnsCaptor.capture()
                 );

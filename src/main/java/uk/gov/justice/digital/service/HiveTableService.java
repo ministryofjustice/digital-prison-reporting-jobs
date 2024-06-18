@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
-import static uk.gov.justice.digital.common.CommonDataFields.withScdFields;
+import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
@@ -68,7 +68,7 @@ public class HiveTableService {
                 SourceReference.SensitiveColumns sensitiveColumns = sourceReference.getSensitiveColumns();
 
                 String rawArchivePath = createValidatedPath(jobArguments.getRawArchiveS3Path(), sourceName, tableName);
-                StructType rawSchema = withScdFields(withMetadataFields(schema));
+                StructType rawSchema = withCheckpointField(withMetadataFields(schema));
                 replaceParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema, primaryKey, sensitiveColumns);
 
                 String structuredPath = createValidatedPath(jobArguments.getStructuredS3Path(), sourceName, tableName);
