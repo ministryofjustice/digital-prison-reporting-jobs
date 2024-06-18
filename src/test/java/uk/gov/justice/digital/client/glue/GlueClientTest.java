@@ -48,8 +48,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.justice.digital.client.glue.GlueClient.MAPRED_PARQUET_INPUT_FORMAT;
 import static uk.gov.justice.digital.client.glue.GlueClient.SYMLINK_INPUT_FORMAT;
-import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.test.Fixtures.PRIMARY_KEY_FIELD;
 import static uk.gov.justice.digital.test.Fixtures.SENSITIVE_FIELD_1;
 import static uk.gov.justice.digital.test.Fixtures.SENSITIVE_FIELD_2;
@@ -131,7 +132,7 @@ class GlueClientTest {
         assertThat(parameters.get("extraction_timestamp_column_name"), is(equalTo(TIMESTAMP.toLowerCase())));
         assertThat(parameters.get("extraction_operation_column_name"), is(equalTo(OPERATION.toLowerCase())));
         assertThat(parameters.get("sensitive_columns"), is(equalTo("['" + SENSITIVE_FIELD_1.toLowerCase() + "','" + SENSITIVE_FIELD_2.toLowerCase() + "']")));
-        assertThat(parameters.get("extraction_key"), is(equalTo(OPERATION.toLowerCase() + "," + TIMESTAMP.toLowerCase())));
+        assertThat(parameters.get("extraction_key"), is(equalTo(CHECKPOINT_COL.toLowerCase() + "," + TIMESTAMP.toLowerCase())));
         assertThat(parameters.get("source_primary_key"), is(equalTo(PRIMARY_KEY_FIELD.toLowerCase())));
     }
 
