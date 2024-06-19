@@ -28,7 +28,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
@@ -72,8 +71,8 @@ public class GlueClient {
                 .map(col -> "'" + col.toLowerCase() + "'")
                 .collect(Collectors.joining(",", "[", "]"));
 
-        String extractionKeyFormatted = String.join(",", Stream.of(TIMESTAMP, CHECKPOINT_COL).map(String::toLowerCase)
-                .collect(Collectors.toCollection(HashSet::new)));
+        String extractionKeyFormatted = Stream.of(TIMESTAMP, CHECKPOINT_COL).map(String::toLowerCase)
+                .collect(Collectors.joining(","));
 
         String primaryKeysFormatted = primaryKey.getKeyColumnNames()
                 .stream()

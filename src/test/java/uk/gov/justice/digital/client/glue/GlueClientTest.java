@@ -132,7 +132,7 @@ class GlueClientTest {
         assertThat(parameters.get("extraction_timestamp_column_name"), is(equalTo(TIMESTAMP.toLowerCase())));
         assertThat(parameters.get("extraction_operation_column_name"), is(equalTo(OPERATION.toLowerCase())));
         assertThat(parameters.get("sensitive_columns"), is(equalTo("['" + SENSITIVE_FIELD_1.toLowerCase() + "','" + SENSITIVE_FIELD_2.toLowerCase() + "']")));
-        assertThat(parameters.get("extraction_key"), is(equalTo(CHECKPOINT_COL.toLowerCase() + "," + TIMESTAMP.toLowerCase())));
+        assertThat(parameters.get("extraction_key"), is(equalTo(TIMESTAMP.toLowerCase() + "," + CHECKPOINT_COL.toLowerCase())));
         assertThat(parameters.get("source_primary_key"), is(equalTo(PRIMARY_KEY_FIELD.toLowerCase())));
     }
 
