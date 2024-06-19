@@ -77,7 +77,7 @@ public class OperationalZoneCDC implements Zone {
         for (StructField field : sourceReference.getSchema().fields()) {
             if (field.dataType() instanceof StringType) {
                 String columnname = field.name().toLowerCase();
-                lowerCaseColsDf = lowerCaseColsDf.withColumn(columnname, regexp_replace(lowerCaseColsDf.col(columnname), null, ""));
+                lowerCaseColsDf = lowerCaseColsDf.withColumn(columnname, regexp_replace(lowerCaseColsDf.col(columnname), "\u0000", ""));
             }
         }
 

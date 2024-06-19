@@ -64,7 +64,7 @@ public class OperationalZoneLoad implements Zone  {
         for (StructField field : sourceReference.getSchema().fields()) {
             if (field.dataType() instanceof StringType) {
                 String columnname = field.name().toLowerCase();
-                lowerCaseColsDf = lowerCaseColsDf.withColumn(columnname, regexp_replace(lowerCaseColsDf.col(columnname), null, ""));
+                lowerCaseColsDf = lowerCaseColsDf.withColumn(columnname, regexp_replace(lowerCaseColsDf.col(columnname), "\u0000", ""));
             }
         }
 
@@ -73,7 +73,7 @@ public class OperationalZoneLoad implements Zone  {
         props.put("password", password);
 
 
-        lowerCaseColsDf.write().mode(SaveMode.Overwrite).jdbc(url, destinationTableName, props);
+        lowerCaseColsDf.drop("op", "_timestamp").write().mode(SaveMode.Overwrite).jdbc(url, destinationTableName, props);
 
         return dataFrame;
     }
