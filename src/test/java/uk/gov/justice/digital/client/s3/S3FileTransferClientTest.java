@@ -56,14 +56,14 @@ public class S3FileTransferClientTest {
     private static final Integer MAX_OBJECTS_PER_PAGE = 10;
     private static final Duration zeroDayRetentionPeriod = Duration.of(0L, ChronoUnit.DAYS);
 
-    private S3FileTransferClient underTest;
+    private S3ObjectClient underTest;
     @BeforeEach
     public void setUp() {
         reset(mockS3ClientProvider, mockS3Client, mockObjectListing, mockJobArgs);
 
         when(mockS3ClientProvider.getClient()).thenReturn(mockS3Client);
         when(mockJobArgs.getMaxObjectsPerPage()).thenReturn(MAX_OBJECTS_PER_PAGE);
-        underTest = new S3FileTransferClient(mockS3ClientProvider, mockJobArgs);
+        underTest = new S3ObjectClient(mockS3ClientProvider, mockJobArgs);
     }
 
     @Test

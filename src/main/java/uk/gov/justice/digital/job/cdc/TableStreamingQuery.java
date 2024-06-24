@@ -10,8 +10,8 @@ import uk.gov.justice.digital.exception.TableStreamingQueryTimeoutDuringStopExce
 
 import java.util.concurrent.TimeoutException;
 
-import static java.lang.String.format;
-import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
+import static uk.gov.justice.digital.common.StreamingQuery.getQueryCheckpointPath;
+import static uk.gov.justice.digital.common.StreamingQuery.getQueryName;
 
 /**
  * Encapsulates logic for processing a stream of micro-batches of CDC events for a single table.
@@ -46,8 +46,8 @@ public class TableStreamingQuery {
 
     public StreamingQuery runQuery() {
         logger.info("Initialising per batch processing for {}/{}", inputSourceName, inputTableName);
-        String queryName = format("Datahub_CDC_%s.%s", inputSourceName, inputTableName);
-        String queryCheckpointPath = format("%sDataHubCdcJob/%s", ensureEndsWithSlash(checkpointLocation), queryName);
+        String queryName = getQueryName(inputSourceName, inputTableName);
+        String queryCheckpointPath = getQueryCheckpointPath(checkpointLocation, inputSourceName, inputTableName);
 
         logger.info("Initialising query {} with checkpoint path {}", queryName, queryCheckpointPath);
         try {
