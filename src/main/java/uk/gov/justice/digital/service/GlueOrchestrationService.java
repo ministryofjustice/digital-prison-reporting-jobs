@@ -31,4 +31,16 @@ public class GlueOrchestrationService {
         glueClient.stopJob(jobName, waitIntervalSeconds, maxAttempts);
         logger.info("Stopped Glue job {}", jobName);
     }
+
+    public void activateTrigger(String triggerName) {
+        logger.info("Activating Glue trigger {}", triggerName);
+        glueClient.activateTrigger(triggerName);
+        logger.info("Activated Glue trigger {}", triggerName);
+    }
+
+    public void deactivateTrigger(String triggerName) {
+        logger.info("Deactivating Glue trigger {}", triggerName);
+        glueClient.deactivateTrigger(triggerName);
+        logger.info("Deactivated Glue trigger {}", triggerName);
+    }
 }

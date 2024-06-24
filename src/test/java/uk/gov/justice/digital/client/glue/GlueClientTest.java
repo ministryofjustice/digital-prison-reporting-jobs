@@ -15,6 +15,8 @@ import com.amazonaws.services.glue.model.GetJobRunsResult;
 import com.amazonaws.services.glue.model.StorageDescriptor;
 import com.amazonaws.services.glue.model.TableInput;
 import com.amazonaws.services.glue.model.JobRun;
+import com.amazonaws.services.glue.model.StartTriggerRequest;
+import com.amazonaws.services.glue.model.StopTriggerRequest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,6 +91,12 @@ class GlueClientTest {
     @Captor
     ArgumentCaptor<GetJobRunRequest> getJobRunRequestCaptor;
 
+    @Captor
+    ArgumentCaptor<StartTriggerRequest> startTriggerRequestCaptor;
+
+    @Captor
+    ArgumentCaptor<StopTriggerRequest> stopTriggerRequestCaptor;
+
     private static final String TEST_DATABASE = "test-database";
     private static final String TEST_TABLE = "test-table";
     private static final String TEST_JOB_NAME = "test-job-name";
@@ -97,6 +105,7 @@ class GlueClientTest {
     private static final int WAIT_INTERVAL_SECONDS = 1;
 
     private static final int MAX_ATTEMPTS = 1;
+    private static final String TRIGGER_NAME = "some-trigger-name";
 
     private static final SourceReference.PrimaryKey primaryKeys = new SourceReference.PrimaryKey(PRIMARY_KEY_FIELD);
 
@@ -137,7 +146,7 @@ class GlueClientTest {
     }
 
     @Test
-    public void shouldThrowAnExceptionIfAnErrorOccursWhenCreatingParquetTable() {
+    void shouldThrowAnExceptionIfAnErrorOccursWhenCreatingParquetTable() {
         SourceReference.SensitiveColumns sensitiveColumns = new SourceReference.SensitiveColumns(sensitiveFields);
         when(mockGlueClient.createTable(any())).thenThrow(new AWSGlueException("failed to create table"));
 
@@ -159,18 +168,8 @@ class GlueClientTest {
         assertThat(getPrimaryKeys(storageDescriptor), containsInAnyOrder(Collections.singleton(PRIMARY_KEY_FIELD).toArray()));
     }
 
-    @NotNull
-    private static Set<String> getPrimaryKeys(StorageDescriptor storageDescriptor) {
-        return storageDescriptor
-                .getColumns()
-                .stream()
-                .filter(column -> "primary_key".equals(column.getComment()))
-                .map(Column::getName)
-                .collect(Collectors.toSet());
-    }
-
     @Test
-    public void shouldThrowAnExceptionIfAnErrorOccursWhenCreatingSymlinkTable() {
+    void shouldThrowAnExceptionIfAnErrorOccursWhenCreatingSymlinkTable() {
         when(mockGlueClient.createTable(any())).thenThrow(new AWSGlueException("failed to create table"));
 
         assertThrows(
@@ -191,21 +190,21 @@ class GlueClientTest {
     }
 
     @Test
-    public void shouldNotFailWhenAnAttemptIsMadeToDeleteTableThatDoesNotExist() {
+    void shouldNotFailWhenAnAttemptIsMadeToDeleteTableThatDoesNotExist() {
         when(mockGlueClient.deleteTable(any())).thenThrow(new EntityNotFoundException("failed to delete non-existent table"));
 
         assertDoesNotThrow(() -> underTest.deleteTable(TEST_DATABASE, TEST_TABLE));
     }
 
     @Test
-    public void shouldThrowAnExceptionIfAnyOtherErrorOccursWhenDeletingTable() {
+    void shouldThrowAnExceptionIfAnyOtherErrorOccursWhenDeletingTable() {
         when(mockGlueClient.deleteTable(any())).thenThrow(new AWSGlueException("failed to delete table"));
 
         assertThrows(AWSGlueException.class, () -> underTest.deleteTable(TEST_DATABASE, TEST_TABLE));
     }
 
     @Test
-    public void stopJobShouldStopRunningJobInstanceWhenThereIsOne() {
+    void stopJobShouldStopRunningJobInstanceWhenThereIsOne() {
         List<JobRun> jobRuns = new ArrayList<>();
         jobRuns.add(createJobRun("STOPPED"));
         jobRuns.add(createJobRun("STOPPING"));
@@ -233,7 +232,7 @@ class GlueClientTest {
     }
 
     @Test
-    public void stopJobShouldNotFailWhenThereIsNoRunningJobInstance() {
+    void stopJobShouldNotFailWhenThereIsNoRunningJobInstance() {
         List<JobRun> jobRuns = Collections.emptyList();
 
         when(mockGetJobRunsResult.getJobRuns()).thenReturn(jobRuns);
@@ -248,7 +247,7 @@ class GlueClientTest {
     }
 
     @Test
-    public void stopJobShouldFailWhenUnableToStopRunningInstance() {
+    void stopJobShouldFailWhenUnableToStopRunningInstance() {
         List<JobRun> jobRuns = new ArrayList<>();
         jobRuns.add(createJobRun("RUNNING").withId("running-job-id"));
 
@@ -261,7 +260,33 @@ class GlueClientTest {
         assertThrows(GlueClientException.class, () -> underTest.stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS));
     }
 
+    @Test
+    void shouldActivateTrigger() {
+        underTest.activateTrigger(TRIGGER_NAME);
+
+        verify(mockGlueClient, times(1)).startTrigger(startTriggerRequestCaptor.capture());
+        assertThat(startTriggerRequestCaptor.getValue().getName(), is(equalTo(TRIGGER_NAME)));
+    }
+
+    @Test
+    void shouldDeactivateTrigger() {
+        underTest.deactivateTrigger(TRIGGER_NAME);
+
+        verify(mockGlueClient, times(1)).stopTrigger(stopTriggerRequestCaptor.capture());
+        assertThat(stopTriggerRequestCaptor.getValue().getName(), is(equalTo(TRIGGER_NAME)));
+    }
+
     private static JobRun createJobRun(String RUNNING) {
         return new JobRun().withJobName(TEST_JOB_NAME).withJobRunState(RUNNING);
+    }
+
+    @NotNull
+    private static Set<String> getPrimaryKeys(StorageDescriptor storageDescriptor) {
+        return storageDescriptor
+                .getColumns()
+                .stream()
+                .filter(column -> "primary_key".equals(column.getComment()))
+                .map(Column::getName)
+                .collect(Collectors.toSet());
     }
 }

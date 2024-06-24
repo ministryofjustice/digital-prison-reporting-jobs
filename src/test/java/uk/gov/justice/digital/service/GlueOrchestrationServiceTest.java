@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class GlueOrchestrationServiceTest {
+class GlueOrchestrationServiceTest {
 
     @Mock
     private JobArguments mockJobArguments;
@@ -23,6 +23,7 @@ public class GlueOrchestrationServiceTest {
     private static final String TEST_JOB_NAME = "test_glue_job";
     private static final int WAIT_INTERVAL_SECONDS = 2;
     private static final int MAX_ATTEMPTS = 10;
+    private static final String TRIGGER_NAME = "some-trigger-name";
 
     private GlueOrchestrationService underTest;
 
@@ -34,7 +35,7 @@ public class GlueOrchestrationServiceTest {
     }
 
     @Test
-    public void stopJobShouldStopGlueJobWithGivenName() {
+    void stopJobShouldStopGlueJobWithGivenName() {
         when(mockJobArguments.orchestrationWaitIntervalSeconds()).thenReturn(WAIT_INTERVAL_SECONDS);
         when(mockJobArguments.orchestrationMaxAttempts()).thenReturn(MAX_ATTEMPTS);
 
@@ -44,7 +45,7 @@ public class GlueOrchestrationServiceTest {
     }
 
     @Test
-    public void stopJobShouldFailWhenGlueClientThrowsAnException() {
+    void stopJobShouldFailWhenGlueClientThrowsAnException() {
         when(mockJobArguments.orchestrationWaitIntervalSeconds()).thenReturn(WAIT_INTERVAL_SECONDS);
         when(mockJobArguments.orchestrationMaxAttempts()).thenReturn(MAX_ATTEMPTS);
 
@@ -52,5 +53,33 @@ public class GlueOrchestrationServiceTest {
                 .stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
 
         assertThrows(GlueClientException.class, () -> underTest.stopJob(TEST_JOB_NAME));
+    }
+
+    @Test
+    void shouldActivateGlueTrigger() {
+        underTest.activateTrigger(TRIGGER_NAME);
+
+        verify(mockGlueClient, times(1)).activateTrigger(TRIGGER_NAME);
+    }
+
+    @Test
+    void activateTriggerShouldFailWhenGlueClientThrowsAnException() {
+        doThrow(new GlueClientException("Client error")).when(mockGlueClient).activateTrigger(any());
+
+        assertThrows(GlueClientException.class, () -> underTest.activateTrigger(TRIGGER_NAME));
+    }
+
+    @Test
+    void shouldDeactivateGlueTrigger() {
+        underTest.deactivateTrigger(TRIGGER_NAME);
+
+        verify(mockGlueClient, times(1)).deactivateTrigger(TRIGGER_NAME);
+    }
+
+    @Test
+    void deactivateTriggerShouldFailWhenGlueClientThrowsAnException() {
+        doThrow(new GlueClientException("Client error")).when(mockGlueClient).deactivateTrigger(any());
+
+        assertThrows(GlueClientException.class, () -> underTest.deactivateTrigger(TRIGGER_NAME));
     }
 }

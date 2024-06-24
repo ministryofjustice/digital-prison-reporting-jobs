@@ -13,6 +13,8 @@ import com.amazonaws.services.glue.model.TableInput;
 import com.amazonaws.services.glue.model.GetJobRunsRequest;
 import com.amazonaws.services.glue.model.GetJobRunRequest;
 import com.amazonaws.services.glue.model.JobRun;
+import com.amazonaws.services.glue.model.StartTriggerRequest;
+import com.amazonaws.services.glue.model.StopTriggerRequest;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -61,7 +63,7 @@ public class GlueClient {
             StructType schema,
             SourceReference.PrimaryKey primaryKey,
             SourceReference.SensitiveColumns sensitiveColumns
-        ) throws AWSGlueException {
+    ) throws AWSGlueException {
 
         val storageDescriptor = createStorageDescriptor(dataPath, MAPRED_PARQUET_INPUT_FORMAT, schema, primaryKey);
 
@@ -129,6 +131,14 @@ public class GlueClient {
                     }
                 }
         );
+    }
+
+    public void activateTrigger(String triggerName) {
+        awsGlue.startTrigger(new StartTriggerRequest().withName(triggerName));
+    }
+
+    public void deactivateTrigger(String triggerName) {
+        awsGlue.stopTrigger(new StopTriggerRequest().withName(triggerName));
     }
 
     private void createTable(String database, String table, StorageDescriptor storageDescriptor, Map<String, String> params) {

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.s3.S3FileTransferClient;
+import uk.gov.justice.digital.client.s3.S3ObjectClient;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static uk.gov.justice.digital.client.s3.S3FileTransferClient.DELIMITER;
+import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +38,7 @@ class S3FileServiceTest {
     private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
 
     @Mock
-    private S3FileTransferClient mockS3Client;
+    private S3ObjectClient mockS3Client;
 
     private S3FileService undertest;
 

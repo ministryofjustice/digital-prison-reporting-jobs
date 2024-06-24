@@ -129,6 +129,8 @@ public class JobArguments {
     static final String SPARK_BROADCAST_TIMEOUT_SECONDS = "dpr.spark.broadcast.timeout.seconds";
     static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
     static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
+    static final String GLUE_TRIGGER_NAME = "dpr.glue.trigger.name";
+    static final String ACTIVATE_GLUE_TRIGGER = "dpr.glue.trigger.activate";
 
     private final Map<String, String> config;
 
@@ -437,6 +439,14 @@ public class JobArguments {
 
     public boolean cleanCdcCheckpoint() {
         return getArgument(CLEAN_CDC_CHECKPOINT, false);
+    }
+
+    public String getGlueTriggerName() {
+        return getArgument(GLUE_TRIGGER_NAME);
+    }
+
+    public boolean activateGlueTrigger() {
+        return getArgument(ACTIVATE_GLUE_TRIGGER, false);
     }
 
     private String getArgument(String argumentName) {

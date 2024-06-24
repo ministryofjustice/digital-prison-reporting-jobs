@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.s3.S3FileTransferClient;
+import uk.gov.justice.digital.client.s3.S3ObjectClient;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -14,18 +14,18 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static uk.gov.justice.digital.client.s3.S3FileTransferClient.DELIMITER;
+import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
 
 @Singleton
 public class S3FileService {
 
     private static final Logger logger = LoggerFactory.getLogger(S3FileService.class);
-    private final S3FileTransferClient s3Client;
+    private final S3ObjectClient s3Client;
     private final Clock clock;
 
     @Inject
     public S3FileService(
-            S3FileTransferClient s3Client,
+            S3ObjectClient s3Client,
             Clock clock
     ) {
         this.s3Client = s3Client;
