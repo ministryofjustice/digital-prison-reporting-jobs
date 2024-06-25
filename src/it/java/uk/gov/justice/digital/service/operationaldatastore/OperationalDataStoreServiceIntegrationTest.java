@@ -14,14 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.testcontainers.containers.PostgreSQLContainer;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.UUID;
 
 import static org.apache.spark.sql.functions.col;
 import static org.hamcrest.CoreMatchers.not;
@@ -32,18 +33,10 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
-/**
- * This test requires a Docker environment, such as <a href="https://github.com/abiosoft/colima">Colima</a>.
- * To run with Colima
- * export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=${HOME}/.colima/docker.sock
- * export DOCKER_HOST="unix:///${HOME}/.colima/docker.sock"
- */
 @ExtendWith(MockitoExtension.class)
 public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
-    private static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
-            "postgres:16-alpine"
-    );
+    private static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
 
     private static final StructType schema = new StructType(new StructField[]{
             new StructField("PK", DataTypes.StringType, true, Metadata.empty()),
@@ -52,8 +45,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
             new StructField("DATA", DataTypes.StringType, true, Metadata.empty())
     });
 
-    private static final String tableName = "public.my_test_table";
-
     @Mock
     private OperationalDataStoreConnectionDetailsService mockConnectionDetailsService;
     @Mock
@@ -61,27 +52,34 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
     private OperationalDataStoreService underTest;
 
+    private String tableName;
+
     @BeforeAll
-    static void beforeAll() {
-        postgres.start();
+    static void beforeAll() throws Exception {
+        operationalDataStore.start();
     }
 
     @AfterAll
-    static void afterAll() {
-        postgres.stop();
+    static void afterAll() throws Exception {
+        operationalDataStore.stop();
     }
 
     @BeforeEach
     void setUp() {
         // Use the TestContainers Postgres connection details
         OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(postgres.getUsername());
-        credentials.setPassword(postgres.getPassword());
+        credentials.setUsername(operationalDataStore.getUsername());
+        credentials.setPassword(operationalDataStore.getPassword());
 
         when(mockConnectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(postgres.getJdbcUrl(), credentials)
+                new OperationalDataStoreConnectionDetails(operationalDataStore.getJdbcUrl(), credentials)
         );
 
+        // Use a unique table for each test.
+        // We use public schema so that we can skip creating a schema. In reality this would be the 'source', e.g. "nomis".
+        // Postgres table names cannot start with a number, hence the underscore prefix, and cannot contain hyphens/dashes.
+        tableName = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
+        when(sourceReference.getFullyQualifiedTableName()).thenReturn(tableName);
         when(sourceReference.getSchema()).thenReturn(schema);
 
         underTest = new OperationalDataStoreService(
@@ -100,10 +98,10 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         underTest.storeBatchData(df, sourceReference);
 
         Properties jdbcProperties = new Properties();
-        jdbcProperties.put("user", postgres.getUsername());
-        jdbcProperties.put("password", postgres.getPassword());
+        jdbcProperties.put("user", operationalDataStore.getUsername());
+        jdbcProperties.put("password", operationalDataStore.getPassword());
 
-        Dataset<Row> result = spark.read().jdbc(postgres.getJdbcUrl(), tableName, jdbcProperties);
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), tableName, jdbcProperties);
 
         assertEquals(2, result.count());
 
@@ -129,10 +127,10 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         underTest.storeBatchData(df2, sourceReference);
 
         Properties jdbcProperties = new Properties();
-        jdbcProperties.put("user", postgres.getUsername());
-        jdbcProperties.put("password", postgres.getPassword());
+        jdbcProperties.put("user", operationalDataStore.getUsername());
+        jdbcProperties.put("password", operationalDataStore.getPassword());
 
-        Dataset<Row> result = spark.read().jdbc(postgres.getJdbcUrl(), tableName, jdbcProperties);
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), tableName, jdbcProperties);
 
         assertEquals(2, result.count());
 
@@ -154,10 +152,10 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         underTest.storeBatchData(df, sourceReference);
 
         Properties jdbcProperties = new Properties();
-        jdbcProperties.put("user", postgres.getUsername());
-        jdbcProperties.put("password", postgres.getPassword());
+        jdbcProperties.put("user", operationalDataStore.getUsername());
+        jdbcProperties.put("password", operationalDataStore.getPassword());
 
-        Dataset<Row> result = spark.read().jdbc(postgres.getJdbcUrl(), tableName, jdbcProperties);
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), tableName, jdbcProperties);
 
         assertThat(result.columns(), arrayContainingInAnyOrder("pk", "data"));
         assertThat(result.columns(), not(arrayContainingInAnyOrder(OPERATION, OPERATION.toLowerCase(), TIMESTAMP)));
