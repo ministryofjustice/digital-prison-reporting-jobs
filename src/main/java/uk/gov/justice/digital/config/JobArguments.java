@@ -131,6 +131,7 @@ public class JobArguments {
     static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
     static final String GLUE_TRIGGER_NAME = "dpr.glue.trigger.name";
     static final String ACTIVATE_GLUE_TRIGGER = "dpr.glue.trigger.activate";
+    static final String OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME = "dpr.operational.data.store.glue.connection.name";
 
     private final Map<String, String> config;
 
@@ -410,6 +411,10 @@ public class JobArguments {
 
     public String getDmsTaskId() {
         return getArgument(DMS_REPLICATION_TASK_ID);
+    }
+
+    public String getOperationalDataStoreGlueConnectionName() {
+        return getArgument(OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME);
     }
 
     public int orchestrationWaitIntervalSeconds() {

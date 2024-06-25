@@ -68,7 +68,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
             { JobArguments.CLEAN_CDC_CHECKPOINT, "false" },
             { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, "60" },
-            { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" }
+            { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" },
+            { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, "some-connection-name" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -119,7 +120,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
                 { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() },
                 { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, validArguments.getBroadcastTimeoutSeconds() },
-                { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() }
+                { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() },
+                { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, validArguments.getOperationalDataStoreGlueConnectionName() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);

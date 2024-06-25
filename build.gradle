@@ -45,6 +45,7 @@ ext {
     glueApiVersion = '4.0.0'
     failSafeVersion = '3.3.2'
     systemLambdaVersion = '1.2.1'
+    testContainersVersion = '1.19.8'
 }
 
 dependencies {
@@ -56,6 +57,7 @@ dependencies {
 
     implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion"
     implementation "com.amazonaws:aws-java-sdk-dms:$awsSdkVersion"
+    implementation "com.amazonaws:aws-java-sdk-secretsmanager:$awsSdkVersion"
     implementation "org.apache.spark:spark-avro_2.12:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
@@ -96,6 +98,7 @@ dependencies {
     testImplementation "org.hamcrest:hamcrest:$hamcrestVersion"
     testImplementation "com.networknt:json-schema-validator:1.0.81"
     testImplementation "com.github.stefanbirkner:system-lambda:$systemLambdaVersion"
+    testImplementation "org.testcontainers:postgresql:$testContainersVersion"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
