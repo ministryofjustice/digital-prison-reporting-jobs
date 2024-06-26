@@ -66,7 +66,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
     @BeforeEach
     void setUp() {
-        // Use the TestContainers Postgres connection details
         OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
         credentials.setUsername(operationalDataStore.getUsername());
         credentials.setPassword(operationalDataStore.getPassword());

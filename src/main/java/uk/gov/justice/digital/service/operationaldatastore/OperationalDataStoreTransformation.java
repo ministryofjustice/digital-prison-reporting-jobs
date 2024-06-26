@@ -6,6 +6,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StringType;
 import org.apache.spark.sql.types.StructField;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
@@ -20,7 +22,10 @@ import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 @Singleton
 public class OperationalDataStoreTransformation {
 
+    private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreTransformation.class);
+
     Dataset<Row> transform(Dataset<Row> dataFrame) {
+        logger.debug("Setting up data transformations ready for Operational DataStore");
         // We normalise columns to lower case to avoid having to quote every column due to Postgres lower casing everything in incoming queries
         Dataset<Row> lowerCaseColsDf = normaliseColumnsToLowerCase(dataFrame);
         // Handle 0x00 null String character which cannot be inserted in to a Postgres text column

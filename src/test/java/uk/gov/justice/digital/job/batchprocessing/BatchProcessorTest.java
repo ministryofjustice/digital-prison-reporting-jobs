@@ -65,7 +65,7 @@ class BatchProcessorTest extends BaseSparkTest {
     @Mock
     private ValidationService validationService;
     @Mock
-    private OperationalDataStoreService operationalDataStoreService;;
+    private OperationalDataStoreService operationalDataStoreService;
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
@@ -73,8 +73,8 @@ class BatchProcessorTest extends BaseSparkTest {
 
     @BeforeAll
     public static void setupClass() {
-        inputDf =  spark.createDataFrame(inputRows, TEST_DATA_SCHEMA);
-        validatedDf =  spark.createDataFrame(validatedRows, TEST_DATA_SCHEMA);
+        inputDf = spark.createDataFrame(inputRows, TEST_DATA_SCHEMA);
+        validatedDf = spark.createDataFrame(validatedRows, TEST_DATA_SCHEMA);
     }
 
     @BeforeEach
@@ -83,7 +83,7 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldSkipProcessingForEmptyDataframe() {
+    void shouldSkipProcessingForEmptyDataframe() {
         underTest.processBatch(spark, sourceReference, spark.emptyDataFrame());
 
         verify(structuredZoneLoad, times(0)).process(any(), any(), any());
@@ -92,8 +92,8 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldProcessStructured() {
-        when(validationService.handleValidation(any(), any(),  eq(sourceReference),  eq(TEST_DATA_SCHEMA),  eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
+    void shouldProcessStructured() {
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
         underTest.processBatch(spark, sourceReference, inputDf);
@@ -106,7 +106,7 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldProcessCurated() {
+    void shouldProcessCurated() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
@@ -120,7 +120,7 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteCuratedOutputToOperationalDataStore() {
+    void shouldWriteCuratedOutputToOperationalDataStore() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
@@ -132,7 +132,7 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDelegateValidationOnlyValidatingInserts() {
+    void shouldDelegateValidationOnlyValidatingInserts() {
         Dataset<Row> mixedOperations = validatedDf
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));

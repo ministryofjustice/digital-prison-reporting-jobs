@@ -58,6 +58,9 @@ public class GlueClient {
         this.awsGlue = glueClientProvider.getClient();
     }
 
+    /**
+     * Retrieves a Glue Data Connection by name.
+     */
     public Connection getConnection(String connectionName) {
         GetConnectionRequest request = new GetConnectionRequest().withName(connectionName);
         return awsGlue.getConnection(request).getConnection();

@@ -3,6 +3,9 @@ package uk.gov.justice.digital.service.operationaldatastore;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import lombok.val;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.glue.GlueClient;
 import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
 import uk.gov.justice.digital.config.JobArguments;
@@ -16,6 +19,8 @@ import java.util.Map;
  */
 @Singleton
 public class OperationalDataStoreConnectionDetailsService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreConnectionDetailsService.class);
 
     private final GlueClient glueClient;
     private final SecretsManagerClient secretsManagerClient;
@@ -33,6 +38,8 @@ public class OperationalDataStoreConnectionDetailsService {
     }
 
     public OperationalDataStoreConnectionDetails getConnectionDetails() {
+        val startTime = System.currentTimeMillis();
+        logger.debug("Getting connection details for Operational DataStore");
         String connectionName = jobArguments.getOperationalDataStoreGlueConnectionName();
         com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection(connectionName);
         Map<String, String> connectionProperties = connection.getConnectionProperties();
@@ -40,6 +47,8 @@ public class OperationalDataStoreConnectionDetailsService {
         String jdbcDriverClassName = connectionProperties.get("JDBC_DRIVER_CLASS_NAME");
         String secretId = connectionProperties.get("SECRET_ID");
         OperationalDataStoreCredentials credentials = secretsManagerClient.getSecret(secretId, OperationalDataStoreCredentials.class);
-        return new OperationalDataStoreConnectionDetails(url, jdbcDriverClassName, credentials);
+        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(url, jdbcDriverClassName, credentials);
+        logger.debug("Finished getting connection details for Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
+        return connectionDetails;
     }
 }
