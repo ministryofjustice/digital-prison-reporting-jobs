@@ -77,6 +77,7 @@ dependencies {
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
     implementation "dev.failsafe:failsafe:$failSafeVersion"
     implementation "org.postgresql:postgresql:$postgresDriverVersion"
+    implementation "com.h2database:h2:$h2Version"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
@@ -100,7 +101,6 @@ dependencies {
     testImplementation "org.hamcrest:hamcrest:$hamcrestVersion"
     testImplementation "com.networknt:json-schema-validator:1.0.81"
     testImplementation "com.github.stefanbirkner:system-lambda:$systemLambdaVersion"
-    testImplementation "com.h2database:h2:$h2Version"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
