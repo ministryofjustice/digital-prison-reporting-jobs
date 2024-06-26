@@ -31,12 +31,12 @@ class OperationalDataStoreDataAccessTest {
     private OperationalDataStoreDataAccess underTest;
 
     @Test
-    public void shouldRetrieveConnectionDetailsInConstructor() {
+    void shouldRetrieveConnectionDetailsInConstructor() {
         OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
         credentials.setUsername("username");
         credentials.setPassword("password");
         OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", credentials
+                "jdbc-url", "org.postgresql.Driver", credentials
         );
 
         when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
@@ -47,13 +47,13 @@ class OperationalDataStoreDataAccessTest {
     }
 
     @Test
-    public void shouldOverwriteExistingTable() {
+    void shouldOverwriteExistingTable() {
         OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
         credentials.setUsername("username");
         credentials.setPassword("password");
         String destinationTableName = "some.table";
         OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", credentials
+                "jdbc-url", "org.postgresql.Driver", credentials
         );
 
         when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
@@ -66,9 +66,10 @@ class OperationalDataStoreDataAccessTest {
         Properties expectedProperties = new Properties();
         expectedProperties.put("user", "username");
         expectedProperties.put("password", "password");
+        expectedProperties.put("driver", "org.postgresql.Driver");
 
-        verify(dataframeWriter, times(1)).mode(eq(SaveMode.Overwrite));
+        verify(dataframeWriter, times(1)).mode(SaveMode.Overwrite);
         verify(dataframeWriter, times(1))
-                .jdbc(eq("jdbc-url"), eq(destinationTableName), eq(expectedProperties));
+                .jdbc("jdbc-url", destinationTableName, expectedProperties);
     }
 }

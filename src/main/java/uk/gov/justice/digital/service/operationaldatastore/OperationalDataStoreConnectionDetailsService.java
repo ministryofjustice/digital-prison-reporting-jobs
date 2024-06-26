@@ -37,8 +37,9 @@ public class OperationalDataStoreConnectionDetailsService {
         com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection(connectionName);
         Map<String, String> connectionProperties = connection.getConnectionProperties();
         String url = connectionProperties.get("JDBC_CONNECTION_URL");
+        String jdbcDriverClassName = connectionProperties.get("JDBC_DRIVER_CLASS_NAME");
         String secretId = connectionProperties.get("SECRET_ID");
         OperationalDataStoreCredentials credentials = secretsManagerClient.getSecret(secretId, OperationalDataStoreCredentials.class);
-        return new OperationalDataStoreConnectionDetails(url, credentials);
+        return new OperationalDataStoreConnectionDetails(url, jdbcDriverClassName, credentials);
     }
 }

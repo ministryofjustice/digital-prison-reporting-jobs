@@ -2,9 +2,6 @@ package uk.gov.justice.digital.service.operationaldatastore;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.StringType$;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,24 +39,22 @@ class OperationalDataStoreServiceTest {
     }
 
     @Test
-    public void shouldTransformInputDataframe() {
-        StructField[] fields = {new StructField("", StringType$.MODULE$, true, null)};
+    void shouldTransformInputDataframe() {
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);
 
-        verify(mockDataTransformation, times(1)).transform(eq(inputDataframe));
+        verify(mockDataTransformation, times(1)).transform(inputDataframe);
     }
 
     @Test
-    public void shouldWriteTransformedDataframeToDestinationTable() {
-        StructField[] fields = {new StructField("", StringType$.MODULE$, true, null)};
+    void shouldWriteTransformedDataframeToDestinationTable() {
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(1)).overwriteTable(eq(transformedDataframe), eq(destinationTableName));
+        verify(mockDataAccess, times(1)).overwriteTable(transformedDataframe, destinationTableName);
     }
 }

@@ -93,7 +93,7 @@ class BatchProcessorTest extends BaseSparkTest {
 
     @Test
     public void shouldProcessStructured() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
+        when(validationService.handleValidation(any(), any(),  eq(sourceReference),  eq(TEST_DATA_SCHEMA),  eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
         underTest.processBatch(spark, sourceReference, inputDf);
@@ -128,7 +128,7 @@ class BatchProcessorTest extends BaseSparkTest {
 
         underTest.processBatch(spark, sourceReference, inputDf);
 
-        verify(operationalDataStoreService, times(1)).storeBatchData(eq(curatedDfMock), eq(sourceReference));
+        verify(operationalDataStoreService, times(1)).storeBatchData(curatedDfMock, sourceReference);
     }
 
     @Test

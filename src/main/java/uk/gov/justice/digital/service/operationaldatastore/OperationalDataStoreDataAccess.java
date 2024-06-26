@@ -21,6 +21,7 @@ public class OperationalDataStoreDataAccess {
         OperationalDataStoreConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails();
         jdbcUrl = connectionDetails.getUrl();
         jdbcProps = new Properties();
+        jdbcProps.put("driver", connectionDetails.getJdbcDriverClassName());
         jdbcProps.put("user", connectionDetails.getCredentials().getUsername());
         jdbcProps.put("password", connectionDetails.getCredentials().getPassword());
     }

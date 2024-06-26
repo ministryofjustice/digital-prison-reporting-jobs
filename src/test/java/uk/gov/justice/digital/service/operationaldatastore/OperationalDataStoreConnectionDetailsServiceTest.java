@@ -40,8 +40,9 @@ class OperationalDataStoreConnectionDetailsServiceTest {
     }
 
     @Test
-    public void shouldReturnConnectionDetails() {
+    void shouldReturnConnectionDetails() {
         String expectedUrl = "jdbc:postgresql://localhost/test";
+        String expectedDriver = "org.postgresql.Driver";
         String expectedUsername = "user";
         String expectedPassword = "pass";
         String connectionName = "some-connection-name";
@@ -49,6 +50,7 @@ class OperationalDataStoreConnectionDetailsServiceTest {
 
         Map<String, String> connectionProperties = new HashMap<>();
         connectionProperties.put("JDBC_CONNECTION_URL", expectedUrl);
+        connectionProperties.put("JDBC_DRIVER_CLASS_NAME", expectedDriver);
         connectionProperties.put("SECRET_ID", secretId);
 
         OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
@@ -62,6 +64,7 @@ class OperationalDataStoreConnectionDetailsServiceTest {
 
         OperationalDataStoreConnectionDetails result = underTest.getConnectionDetails();
         assertEquals(expectedUrl, result.getUrl());
+        assertEquals(expectedDriver, result.getJdbcDriverClassName());
         assertEquals(expectedUsername, result.getCredentials().getUsername());
         assertEquals(expectedPassword, result.getCredentials().getPassword());
 

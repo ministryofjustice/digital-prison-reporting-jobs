@@ -146,7 +146,11 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         credentials.setPassword(operationalDataStore.getPassword());
 
         when(connectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(operationalDataStore.getJdbcUrl(), credentials)
+                new OperationalDataStoreConnectionDetails(
+                        operationalDataStore.getJdbcUrl(),
+                        operationalDataStore.getDriverClassName(),
+                        credentials
+                )
         );
     }
 }

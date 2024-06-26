@@ -72,7 +72,11 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         credentials.setPassword(operationalDataStore.getPassword());
 
         when(mockConnectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(operationalDataStore.getJdbcUrl(), credentials)
+                new OperationalDataStoreConnectionDetails(
+                        operationalDataStore.getJdbcUrl(),
+                        operationalDataStore.getDriverClassName(),
+                        credentials
+                )
         );
 
         // Use a unique table for each test.

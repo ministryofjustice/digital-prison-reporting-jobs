@@ -46,6 +46,10 @@ public class InMemoryOperationalDataStore {
         return "";
     }
 
+    public String getDriverClassName() {
+        return "org.h2.Driver";
+    }
+
     public Connection getJdbcConnection() throws SQLException {
         Properties jdbcProps = new Properties();
         jdbcProps.put("user", getUsername());

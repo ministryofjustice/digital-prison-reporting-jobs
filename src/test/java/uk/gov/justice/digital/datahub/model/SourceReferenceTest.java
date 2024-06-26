@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SourceReferenceTest {
 
     @Test
-    public void testGetFullyQualifiedTableName() {
+    void testGetFullyQualifiedTableName() {
         SourceReference underTest = new SourceReference(
                 "key",
                 "source",

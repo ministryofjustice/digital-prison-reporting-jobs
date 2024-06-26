@@ -281,7 +281,11 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         credentials.setPassword(operationalDataStore.getPassword());
 
         when(connectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(operationalDataStore.getJdbcUrl(), credentials)
+                new OperationalDataStoreConnectionDetails(
+                        operationalDataStore.getJdbcUrl(),
+                        operationalDataStore.getDriverClassName(),
+                        credentials
+                )
         );
     }
 
