@@ -45,7 +45,6 @@ class OperationalDataStoreServiceTest {
     public void shouldTransformInputDataframe() {
         StructField[] fields = {new StructField("", StringType$.MODULE$, true, null)};
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
-        when(sourceReference.getSchema()).thenReturn(new StructType(fields));
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);
@@ -57,7 +56,6 @@ class OperationalDataStoreServiceTest {
     public void shouldWriteTransformedDataframeToDestinationTable() {
         StructField[] fields = {new StructField("", StringType$.MODULE$, true, null)};
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
-        when(sourceReference.getSchema()).thenReturn(new StructType(fields));
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);

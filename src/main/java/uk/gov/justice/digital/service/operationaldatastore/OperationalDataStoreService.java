@@ -8,6 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
+/**
+ * Entrypoint for access to the Operational DataStore.
+ */
 @Singleton
 public class OperationalDataStoreService {
 

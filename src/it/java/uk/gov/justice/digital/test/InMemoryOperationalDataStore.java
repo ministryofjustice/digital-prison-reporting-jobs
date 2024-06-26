@@ -14,6 +14,7 @@ public class InMemoryOperationalDataStore {
 
     private Server h2Server;
 
+    // use a unique database per instance of the in-memory datastore / test class
     private final String databaseName = "_" + UUID.randomUUID().toString().replaceAll("-", "_");
 
     public void start() throws SQLException {

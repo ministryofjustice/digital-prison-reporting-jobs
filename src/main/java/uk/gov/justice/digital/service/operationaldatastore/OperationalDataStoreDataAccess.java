@@ -8,6 +8,9 @@ import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetail
 
 import java.util.Properties;
 
+/**
+ * Responsible for accessing the Operational DataStore.
+ */
 @Singleton
 public class OperationalDataStoreDataAccess {
 
