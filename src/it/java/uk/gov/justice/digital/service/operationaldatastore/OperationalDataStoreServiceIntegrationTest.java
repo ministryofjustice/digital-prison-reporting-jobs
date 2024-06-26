@@ -80,10 +80,9 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         // Postgres table names cannot start with a number, hence the underscore prefix, and cannot contain hyphens/dashes.
         tableName = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(tableName);
-        when(sourceReference.getSchema()).thenReturn(schema);
 
         underTest = new OperationalDataStoreService(
-                new OperationalDataStoreDataTransformation(),
+                new OperationalDataStoreTransformation(),
                 new OperationalDataStoreDataAccess(mockConnectionDetailsService)
         );
     }

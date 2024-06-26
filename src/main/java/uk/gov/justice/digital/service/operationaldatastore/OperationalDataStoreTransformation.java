@@ -18,13 +18,13 @@ import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
  * Transforms a DataFrame to the format we want to store in the Operational DataStore
  */
 @Singleton
-public class OperationalDataStoreDataTransformation {
+public class OperationalDataStoreTransformation {
 
-    Dataset<Row> transform(Dataset<Row> dataFrame, StructField[] fields) {
+    Dataset<Row> transform(Dataset<Row> dataFrame) {
         // We normalise columns to lower case to avoid having to quote every column due to Postgres lower casing everything in incoming queries
         Dataset<Row> lowerCaseColsDf = normaliseColumnsToLowerCase(dataFrame);
         // Handle 0x00 null String character which cannot be inserted in to a Postgres text column
-        Dataset<Row> withoutNullsDf = stripNullStrings(lowerCaseColsDf, fields);
+        Dataset<Row> withoutNullsDf = stripNullStrings(lowerCaseColsDf);
         // We don't store these metadata columns in the destination table so we remove them
         return withoutNullsDf.drop(OPERATION.toLowerCase(), TIMESTAMP.toLowerCase());
     }
@@ -34,9 +34,9 @@ public class OperationalDataStoreDataTransformation {
         return dataFrame.select(lowerCaseCols);
     }
 
-    private static Dataset<Row> stripNullStrings(Dataset<Row> dataFrame, StructField[] fields) {
+    private static Dataset<Row> stripNullStrings(Dataset<Row> dataFrame) {
         Dataset<Row> result = dataFrame;
-        for (StructField field : fields) {
+        for (StructField field : dataFrame.schema().fields()) {
             if (field.dataType() instanceof StringType) {
                 String columnname = field.name().toLowerCase();
                 result = result.withColumn(columnname, regexp_replace(result.col(columnname), "\u0000", ""));

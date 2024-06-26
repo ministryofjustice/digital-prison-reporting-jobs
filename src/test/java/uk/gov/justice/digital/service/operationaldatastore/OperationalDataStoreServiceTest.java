@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 class OperationalDataStoreServiceTest {
     private static final String destinationTableName = "somesource.sometable";
     @Mock
-    private OperationalDataStoreDataTransformation mockDataTransformation;
+    private OperationalDataStoreTransformation mockDataTransformation;
     @Mock
     private OperationalDataStoreDataAccess mockDataAccess;
 
@@ -46,11 +46,11 @@ class OperationalDataStoreServiceTest {
         StructField[] fields = {new StructField("", StringType$.MODULE$, true, null)};
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(sourceReference.getSchema()).thenReturn(new StructType(fields));
-        when(mockDataTransformation.transform(any(), any())).thenReturn(transformedDataframe);
+        when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);
 
-        verify(mockDataTransformation, times(1)).transform(eq(inputDataframe), eq(fields));
+        verify(mockDataTransformation, times(1)).transform(eq(inputDataframe));
     }
 
     @Test
@@ -58,7 +58,7 @@ class OperationalDataStoreServiceTest {
         StructField[] fields = {new StructField("", StringType$.MODULE$, true, null)};
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(sourceReference.getSchema()).thenReturn(new StructType(fields));
-        when(mockDataTransformation.transform(any(), any())).thenReturn(transformedDataframe);
+        when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);
 

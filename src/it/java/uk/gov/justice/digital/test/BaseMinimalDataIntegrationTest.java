@@ -17,8 +17,8 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected static final int pk5 = 5;
     protected static final int pk6 = 6;
 
-    protected static final String inputSchemaName = "my-schema";
-    protected static final String inputTableName = "my-table";
+    protected static final String inputSchemaName = "my_schema";
+    protected static final String inputTableName = "my_table";
 
     @TempDir
     protected Path testRoot;

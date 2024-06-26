@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
@@ -54,6 +55,8 @@ class BatchProcessorTest extends BaseSparkTest {
     private static Dataset<Row> validatedDf;
 
     @Mock
+    private Dataset<Row> curatedDfMock;
+    @Mock
     private StructuredZoneLoad structuredZoneLoad;
     @Mock
     private CuratedZoneLoad curatedZoneLoad;
@@ -61,6 +64,8 @@ class BatchProcessorTest extends BaseSparkTest {
     private SourceReference sourceReference;
     @Mock
     private ValidationService validationService;
+    @Mock
+    private OperationalDataStoreService operationalDataStoreService;;
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
@@ -74,7 +79,7 @@ class BatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
+        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
     }
 
     @Test
@@ -83,7 +88,9 @@ class BatchProcessorTest extends BaseSparkTest {
 
         verify(structuredZoneLoad, times(0)).process(any(), any(), any());
         verify(curatedZoneLoad, times(0)).process(any(), any(), any());
+        verify(operationalDataStoreService, times(0)).storeBatchData(any(), any());
     }
+
     @Test
     public void shouldProcessStructured() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
@@ -110,6 +117,18 @@ class BatchProcessorTest extends BaseSparkTest {
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(validatedRows.size(), result.size());
         assertTrue(result.containsAll(validatedRows));
+    }
+
+    @Test
+    public void shouldWriteCuratedOutputToOperationalDataStore() {
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+                .thenReturn(validatedDf);
+        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
+        when(curatedZoneLoad.process(any(), any(), any())).thenReturn(curatedDfMock);
+
+        underTest.processBatch(spark, sourceReference, inputDf);
+
+        verify(operationalDataStoreService, times(1)).storeBatchData(eq(curatedDfMock), eq(sourceReference));
     }
 
     @Test

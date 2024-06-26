@@ -21,7 +21,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 
-class OperationalDataStoreDataTransformationTest extends BaseSparkTest {
+class OperationalDataStoreTransformationTest extends BaseSparkTest {
 
     private static final StructType schema = new StructType(new StructField[]{
             new StructField("PK", DataTypes.StringType, true, Metadata.empty()),
@@ -30,7 +30,7 @@ class OperationalDataStoreDataTransformationTest extends BaseSparkTest {
             new StructField("DATA", DataTypes.StringType, true, Metadata.empty())
     });
 
-    private final OperationalDataStoreDataTransformation underTest = new OperationalDataStoreDataTransformation();
+    private final OperationalDataStoreTransformation underTest = new OperationalDataStoreTransformation();
 
     @Test
     public void shouldNormaliseColumnNamesToLowercase() {
@@ -39,7 +39,7 @@ class OperationalDataStoreDataTransformationTest extends BaseSparkTest {
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "some other data")
         ), schema);
 
-        Dataset<Row> result = underTest.transform(df, schema.fields());
+        Dataset<Row> result = underTest.transform(df);
 
         assertThat(result.columns(), not(hasItemInArray("PK")));
         assertThat(result.columns(), hasItemInArray("pk"));
@@ -59,7 +59,7 @@ class OperationalDataStoreDataTransformationTest extends BaseSparkTest {
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "some other data")
         ), schema);
 
-        Dataset<Row> result = underTest.transform(df, schema.fields());
+        Dataset<Row> result = underTest.transform(df);
 
         assertThat(result.columns(), not(hasItemInArray(OPERATION)));
         assertThat(result.columns(), not(hasItemInArray(TIMESTAMP)));
@@ -74,7 +74,7 @@ class OperationalDataStoreDataTransformationTest extends BaseSparkTest {
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "\u0000some\u0000 other\u0000 data\u0000")
         ), schema);
 
-        Dataset<Row> result = underTest.transform(df, schema.fields());
+        Dataset<Row> result = underTest.transform(df);
 
         assertEquals(0, result.where(col("pk").contains("\u0000")).count());
         assertEquals(0, result.where(col("data").contains("\u0000")).count());
@@ -82,7 +82,4 @@ class OperationalDataStoreDataTransformationTest extends BaseSparkTest {
         assertEquals(1, result.where(col("pk").contains("pk1")).count());
         assertEquals(1, result.where(col("data").contains("some other data")).count());
     }
-
-    // TODO: Unhappy path, e.g. provided schema and dataframe schema don't match
-
 }
