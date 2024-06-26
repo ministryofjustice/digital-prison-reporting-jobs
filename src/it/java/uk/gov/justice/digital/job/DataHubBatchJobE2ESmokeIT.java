@@ -101,8 +101,6 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 2);
         thenStructuredViolationsContainsForPK(offendersTable, "1", 1);
         thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
-
-
     }
 
     private void whenTheJobRuns() {
