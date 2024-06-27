@@ -52,7 +52,7 @@ public class OperationalDataStoreConnectionDetailsService {
             logger.debug("Finished getting connection details for Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
             return connectionDetails;
         } else {
-            logger.debug("Setting empty connection details for Operational DataStore since this feature is disabled");
+            logger.info("Setting empty connection details for Operational DataStore since this feature is disabled");
             OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
             credentials.setUsername("");
             credentials.setPassword("");

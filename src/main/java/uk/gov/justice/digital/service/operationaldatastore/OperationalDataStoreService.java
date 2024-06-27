@@ -16,7 +16,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
  */
 @Singleton
 @Requires(property = "dpr.operational.data.store.write.enabled", value = "true")
-public class OperationalDataStoreService implements OperationalDataStoreServiceI {
+public class OperationalDataStoreService {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreService.class);
 

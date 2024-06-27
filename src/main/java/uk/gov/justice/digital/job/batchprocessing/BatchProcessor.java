@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceI;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
@@ -35,14 +34,14 @@ public class BatchProcessor {
     private final StructuredZoneLoad structuredZoneLoad;
     private final CuratedZoneLoad curatedZoneLoad;
     private final ValidationService validationService;
-    private final OperationalDataStoreServiceI operationalDataStoreService;
+    private final OperationalDataStoreService operationalDataStoreService;
 
     @Inject
     public BatchProcessor(
             StructuredZoneLoad structuredZoneLoad,
             CuratedZoneLoad curatedZoneLoad,
             ValidationService validationService,
-            OperationalDataStoreServiceI operationalDataStoreService) {
+            OperationalDataStoreService operationalDataStoreService) {
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
