@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -49,6 +50,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     private OperationalDataStoreConnectionDetailsService mockConnectionDetailsService;
     @Mock
     private SourceReference sourceReference;
+    @Mock
+    private JobArguments jobArguments;
 
     private OperationalDataStoreService underTest;
 
@@ -84,7 +87,10 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         tableName = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(tableName);
 
+        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
+
         underTest = new OperationalDataStoreService(
+                jobArguments,
                 new OperationalDataStoreTransformation(),
                 new OperationalDataStoreDataAccess(mockConnectionDetailsService)
         );

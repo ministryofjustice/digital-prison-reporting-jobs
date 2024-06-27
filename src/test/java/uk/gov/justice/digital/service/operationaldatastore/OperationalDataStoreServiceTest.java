@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -29,16 +30,18 @@ class OperationalDataStoreServiceTest {
     @Mock
     private SourceReference sourceReference;
     @Mock
+    private JobArguments jobArguments;
 
     private OperationalDataStoreService underTest;
 
     @BeforeEach
     public void setup() {
-        underTest = new OperationalDataStoreService(mockDataTransformation, mockDataAccess);
+        underTest = new OperationalDataStoreService(jobArguments, mockDataTransformation, mockDataAccess);
     }
 
     @Test
     void shouldTransformInputDataframe() {
+        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
@@ -49,11 +52,22 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void shouldWriteTransformedDataframeToDestinationTable() {
+        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);
 
         verify(mockDataAccess, times(1)).overwriteTable(transformedDataframe, destinationTableName);
+    }
+
+    @Test
+    void shouldNotTransformOrWriteWhenDisabled() {
+        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(false);
+        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
+        underTest.storeBatchData(inputDataframe, sourceReference);
+
+        verify(mockDataTransformation, times(0)).transform(any());
+        verify(mockDataAccess, times(0)).overwriteTable(any(), any());
     }
 }

@@ -57,6 +57,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
     @BeforeEach
     public void setUp() throws SQLException {
+        givenOperationalDataStoreWriteIsEnabled();
         givenDatastoreCredentials();
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
@@ -121,7 +122,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         OperationalDataStoreDataAccess operationalDataStoreDataAccess = new OperationalDataStoreDataAccess(connectionDetailsService);
         OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreService(operationalDataStoreTransformation, operationalDataStoreDataAccess);
+                new OperationalDataStoreService(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
         underTest = new DataHubBatchJob(
                 arguments,
@@ -138,6 +139,10 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("part-*parquet");
+    }
+
+    private void givenOperationalDataStoreWriteIsEnabled() {
+        when(arguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
     }
 
     private void givenDatastoreCredentials() {
