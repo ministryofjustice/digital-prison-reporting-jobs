@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service.operationaldatastore;
 
+import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -14,7 +15,8 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
  * Entrypoint for access to the Operational DataStore.
  */
 @Singleton
-public class OperationalDataStoreService {
+@Requires(property = "dpr.operational.data.store.write.enabled", value = "true")
+public class OperationalDataStoreService implements OperationalDataStoreServiceI {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreService.class);
 
