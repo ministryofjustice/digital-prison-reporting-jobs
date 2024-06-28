@@ -68,7 +68,9 @@ class JobArgumentsIntegrationTest {
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
             { JobArguments.CLEAN_CDC_CHECKPOINT, "false" },
             { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, "60" },
-            { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" }
+            { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" },
+            { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, "some-connection-name" },
+            { JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, "true" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -119,7 +121,9 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
                 { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() },
                 { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, validArguments.getBroadcastTimeoutSeconds() },
-                { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() }
+                { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() },
+                { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, validArguments.getOperationalDataStoreGlueConnectionName() },
+                { JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, validArguments.isOperationalDataStoreWriteEnabled() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -385,6 +389,23 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.CLEAN_CDC_CHECKPOINT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.cleanCdcCheckpoint());
+    }
+
+    @Test
+    public void operationalDataStoreWriteEnabledShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.isOperationalDataStoreWriteEnabled());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void operationalDataStoreWriteEnabledShouldUseProvidedBooleanValue(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.isOperationalDataStoreWriteEnabled());
     }
 
     @Test

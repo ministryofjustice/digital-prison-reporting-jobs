@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
+
 @Data
 public class SourceReference {
     private final String key;
@@ -17,6 +19,10 @@ public class SourceReference {
     private final String versionId;
     private final StructType schema;
     private final SensitiveColumns sensitiveColumns;
+
+    public String getFullyQualifiedTableName() {
+        return format("%s.%s", source, table);
+    }
 
     public static class PrimaryKey {
 

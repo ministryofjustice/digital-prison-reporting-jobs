@@ -4,31 +4,47 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 
+import static java.lang.String.format;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 public class E2ETestBase extends BaseSparkTest {
+
+    protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
+    private static Connection testQueryConnection;
 
     protected static final String inputSchemaName = "nomis";
     protected static final String agencyInternalLocationsTable = "agency_internal_locations";
@@ -47,6 +63,18 @@ public class E2ETestBase extends BaseSparkTest {
     protected String violationsPath;
 
     protected String checkpointPath;
+
+    @BeforeAll
+    static void beforeAll() throws Exception {
+        operationalDataStore.start();
+        testQueryConnection = operationalDataStore.getJdbcConnection();
+    }
+
+    @AfterAll
+    static void afterAll() throws Exception {
+        testQueryConnection.close();
+        operationalDataStore.stop();
+    }
 
     protected void givenPathsAreConfigured(JobArguments arguments) {
         rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
@@ -78,6 +106,7 @@ public class E2ETestBase extends BaseSparkTest {
         when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.of(sourceReference));
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
+        lenient().when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
@@ -125,8 +154,18 @@ public class E2ETestBase extends BaseSparkTest {
         whenDataIsAddedToRawForTable(table, input);
     }
 
+    protected void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey) throws SQLException {
+        thenStructuredAndCuratedForTableContainForPK(table, data, primaryKey);
+        thenOperationalDataStoreContainsForPK(table, data, primaryKey);
+    }
+
     protected void thenStructuredAndCuratedForTableContainForPK(String table, String data, int primaryKey) {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
+    }
+
+    protected void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey) throws SQLException {
+        thenStructuredAndCuratedForTableDoNotContainPK(table, primaryKey);
+        thenOperationalDataStoreDoesNotContainPK(table, primaryKey);
     }
 
     protected void thenStructuredAndCuratedForTableDoNotContainPK(String table, int primaryKey) {
@@ -136,6 +175,46 @@ public class E2ETestBase extends BaseSparkTest {
     protected void thenStructuredViolationsContainsForPK(String table, String data, int primaryKey) {
         String violationsTablePath = Paths.get(violationsPath).resolve("structured").resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
         assertViolationsTableContainsForPK(violationsTablePath, data, primaryKey);
+    }
+
+    protected void givenSchemaExists(String schemaName) throws SQLException {
+        Properties jdbcProps = new Properties();
+        jdbcProps.put("user", operationalDataStore.getUsername());
+        jdbcProps.put("password", operationalDataStore.getPassword());
+        try(Statement statement = testQueryConnection.createStatement()) {
+            statement.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+        }
+    }
+
+    protected void thenOperationalDataStoreContainsForPK(String table, String data, int primaryKey) throws SQLException {
+        String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d AND %s = '%s'",
+                inputSchemaName, table, PRIMARY_KEY_COLUMN, primaryKey, DATA_COLUMN, data);
+        try(Statement statement = testQueryConnection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery(sql);
+            if(resultSet.next()) {
+                int count = resultSet.getInt(1);
+                assertEquals(1, count);
+            }
+        }
+    }
+
+    protected void thenOperationalDataStoreDoesNotContainPK(String table, int primaryKey) throws SQLException {
+        try {
+            String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d",
+                    inputSchemaName, table, PRIMARY_KEY_COLUMN, primaryKey);
+            try (Statement statement = testQueryConnection.createStatement()) {
+                ResultSet resultSet = statement.executeQuery(sql);
+                if (resultSet.next()) {
+                    int count = resultSet.getInt(1);
+                    assertEquals(0, count);
+                }
+            }
+        } catch (SQLException e) {
+            // If the table doesn't exist then that is fine and it doesn't contain the primary key
+            if(!(e.getMessage().contains("Table") && e.getMessage().contains("not found"))) {
+                throw e;
+            }
+        }
     }
 
 }

@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
@@ -54,6 +55,8 @@ class BatchProcessorTest extends BaseSparkTest {
     private static Dataset<Row> validatedDf;
 
     @Mock
+    private Dataset<Row> curatedDfMock;
+    @Mock
     private StructuredZoneLoad structuredZoneLoad;
     @Mock
     private CuratedZoneLoad curatedZoneLoad;
@@ -61,6 +64,8 @@ class BatchProcessorTest extends BaseSparkTest {
     private SourceReference sourceReference;
     @Mock
     private ValidationService validationService;
+    @Mock
+    private OperationalDataStoreService operationalDataStoreService;
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
@@ -68,24 +73,26 @@ class BatchProcessorTest extends BaseSparkTest {
 
     @BeforeAll
     public static void setupClass() {
-        inputDf =  spark.createDataFrame(inputRows, TEST_DATA_SCHEMA);
-        validatedDf =  spark.createDataFrame(validatedRows, TEST_DATA_SCHEMA);
+        inputDf = spark.createDataFrame(inputRows, TEST_DATA_SCHEMA);
+        validatedDf = spark.createDataFrame(validatedRows, TEST_DATA_SCHEMA);
     }
 
     @BeforeEach
     public void setUp() {
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
+        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
     }
 
     @Test
-    public void shouldSkipProcessingForEmptyDataframe() {
+    void shouldSkipProcessingForEmptyDataframe() {
         underTest.processBatch(spark, sourceReference, spark.emptyDataFrame());
 
         verify(structuredZoneLoad, times(0)).process(any(), any(), any());
         verify(curatedZoneLoad, times(0)).process(any(), any(), any());
+        verify(operationalDataStoreService, times(0)).storeBatchData(any(), any());
     }
+
     @Test
-    public void shouldProcessStructured() {
+    void shouldProcessStructured() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
@@ -99,7 +106,7 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldProcessCurated() {
+    void shouldProcessCurated() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
@@ -113,7 +120,19 @@ class BatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDelegateValidationOnlyValidatingInserts() {
+    void shouldWriteCuratedOutputToOperationalDataStore() {
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+                .thenReturn(validatedDf);
+        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
+        when(curatedZoneLoad.process(any(), any(), any())).thenReturn(curatedDfMock);
+
+        underTest.processBatch(spark, sourceReference, inputDf);
+
+        verify(operationalDataStoreService, times(1)).storeBatchData(curatedDfMock, sourceReference);
+    }
+
+    @Test
+    void shouldDelegateValidationOnlyValidatingInserts() {
         Dataset<Row> mixedOperations = validatedDf
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));

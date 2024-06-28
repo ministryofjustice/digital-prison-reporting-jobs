@@ -9,6 +9,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
+import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
@@ -17,9 +19,14 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,18 +50,25 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private SourceReferenceService sourceReferenceService;
     @Mock
     private ConfigService configService;
+    @Mock
+    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
     private DataHubBatchJob underTest;
+
+
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws SQLException {
+        givenOperationalDataStoreWriteIsEnabled();
+        givenDatastoreCredentials();
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
+        givenSchemaExists(inputSchemaName);
     }
 
     @Test
-    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() {
+    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws SQLException {
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);
@@ -72,20 +86,20 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1", 1);
-        thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1", 1);
-        thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "1", 1);
-        thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "1", 1);
-        thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "1", 1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1", 1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1", 1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1", 1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1", 1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1", 1);
 
-        thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "2", 2);
-        thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "2", 2);
-        thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "2", 2);
-        thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "2", 2);
-        thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "2", 2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2", 2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2", 2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2", 2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2", 2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2", 2);
 
-        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, 1);
-        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, 2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 2);
         thenStructuredViolationsContainsForPK(offendersTable, "1", 1);
         thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
     }
@@ -105,7 +119,11 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
-        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService);
+        OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
+        OperationalDataStoreDataAccess operationalDataStoreDataAccess = new OperationalDataStoreDataAccess(connectionDetailsService);
+        OperationalDataStoreService operationalDataStoreService =
+                new OperationalDataStoreService(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
+        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
         underTest = new DataHubBatchJob(
                 arguments,
                 properties,
@@ -121,5 +139,23 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("part-*parquet");
+    }
+
+    private void givenOperationalDataStoreWriteIsEnabled() {
+        when(arguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
+    }
+
+    private void givenDatastoreCredentials() {
+        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
+        credentials.setUsername(operationalDataStore.getUsername());
+        credentials.setPassword(operationalDataStore.getPassword());
+
+        when(connectionDetailsService.getConnectionDetails()).thenReturn(
+                new OperationalDataStoreConnectionDetails(
+                        operationalDataStore.getJdbcUrl(),
+                        operationalDataStore.getDriverClassName(),
+                        credentials
+                )
+        );
     }
 }

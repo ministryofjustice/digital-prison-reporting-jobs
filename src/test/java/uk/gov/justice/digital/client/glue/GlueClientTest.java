@@ -5,9 +5,11 @@ import com.amazonaws.services.glue.model.AWSGlueException;
 import com.amazonaws.services.glue.model.BatchStopJobRunRequest;
 import com.amazonaws.services.glue.model.BatchStopJobRunResult;
 import com.amazonaws.services.glue.model.Column;
+import com.amazonaws.services.glue.model.Connection;
 import com.amazonaws.services.glue.model.CreateTableRequest;
 import com.amazonaws.services.glue.model.DeleteTableRequest;
 import com.amazonaws.services.glue.model.EntityNotFoundException;
+import com.amazonaws.services.glue.model.GetConnectionResult;
 import com.amazonaws.services.glue.model.GetJobRunRequest;
 import com.amazonaws.services.glue.model.GetJobRunResult;
 import com.amazonaws.services.glue.model.GetJobRunsRequest;
@@ -22,7 +24,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -76,6 +81,12 @@ class GlueClientTest {
     @Mock
     private GetJobRunResult mockGetJobRunResult;
 
+    @Mock
+    private GetConnectionResult mockGetConnectionResult;
+
+    @Mock
+    private Connection mockConnection;
+
     @Captor
     ArgumentCaptor<CreateTableRequest> createTableRequestCaptor;
 
@@ -122,6 +133,17 @@ class GlueClientTest {
 
         when(mockClientProvider.getClient()).thenReturn(mockGlueClient);
         underTest = new GlueClient(mockClientProvider);
+    }
+
+    @Test
+    void shouldGetAndReturnConnection() {
+        when(mockGlueClient.getConnection(any())).thenReturn(mockGetConnectionResult);
+        when(mockGetConnectionResult.getConnection()).thenReturn(mockConnection);
+
+        Connection actualConnection = underTest.getConnection("some-connection-name");
+        assertEquals(mockConnection, actualConnection);
+
+        verify(mockGlueClient, times(1)).getConnection(any());
     }
 
     @Test

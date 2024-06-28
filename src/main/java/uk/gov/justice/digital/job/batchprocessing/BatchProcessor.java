@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
@@ -33,16 +34,19 @@ public class BatchProcessor {
     private final StructuredZoneLoad structuredZoneLoad;
     private final CuratedZoneLoad curatedZoneLoad;
     private final ValidationService validationService;
+    private final OperationalDataStoreService operationalDataStoreService;
 
     @Inject
     public BatchProcessor(
             StructuredZoneLoad structuredZoneLoad,
             CuratedZoneLoad curatedZoneLoad,
-            ValidationService validationService) {
-        this.validationService = validationService;
+            ValidationService validationService,
+            OperationalDataStoreService operationalDataStoreService) {
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
+        this.validationService = validationService;
+        this.operationalDataStoreService = operationalDataStoreService;
         logger.info("S3BatchProcessor initialization complete");
     }
 
@@ -59,7 +63,8 @@ public class BatchProcessor {
             StructType inferredSchema = filteredDf.schema();
             val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
             val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-            curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+            val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+            operationalDataStoreService.storeBatchData(curatedLoadDf, sourceReference);
             dataFrame.unpersist();
 
             logger.info("Processed records {}/{} in {}ms",
