@@ -17,6 +17,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItemInArray;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
@@ -27,6 +28,7 @@ class OperationalDataStoreTransformationTest extends BaseSparkTest {
             new StructField("PK", DataTypes.StringType, true, Metadata.empty()),
             new StructField(TIMESTAMP, DataTypes.StringType, true, Metadata.empty()),
             new StructField(OPERATION, DataTypes.StringType, true, Metadata.empty()),
+            new StructField(CHECKPOINT_COL, DataTypes.StringType, true, Metadata.empty()),
             new StructField("DATA", DataTypes.StringType, true, Metadata.empty())
     });
 
@@ -35,8 +37,8 @@ class OperationalDataStoreTransformationTest extends BaseSparkTest {
     @Test
     public void shouldNormaliseColumnNamesToLowercase() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
-                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
-                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "some other data")
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "", "some data"),
+                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "some other data")
         ), schema);
 
         Dataset<Row> result = underTest.transform(df);
@@ -53,25 +55,27 @@ class OperationalDataStoreTransformationTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRemoveOperationAndTimestampColumns() {
+    public void shouldMetadataColumns() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
-                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
-                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "some other data")
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "", "some data"),
+                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "some other data")
         ), schema);
 
         Dataset<Row> result = underTest.transform(df);
 
         assertThat(result.columns(), not(hasItemInArray(OPERATION)));
         assertThat(result.columns(), not(hasItemInArray(TIMESTAMP)));
+        assertThat(result.columns(), not(hasItemInArray(CHECKPOINT_COL)));
         assertThat(result.columns(), not(hasItemInArray(OPERATION.toLowerCase())));
         assertThat(result.columns(), not(hasItemInArray(TIMESTAMP.toLowerCase())));
+        assertThat(result.columns(), not(hasItemInArray(CHECKPOINT_COL.toLowerCase())));
     }
 
     @Test
     public void shouldStripNullStringCharacters() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
-                RowFactory.create("pk1\u0000", "2023-11-13 10:49:28.123458", "I", "some data"),
-                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "\u0000some\u0000 other\u0000 data\u0000")
+                RowFactory.create("pk1\u0000", "2023-11-13 10:49:28.123458", "I", "", "some data"),
+                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "\u0000some\u0000 other\u0000 data\u0000")
         ), schema);
 
         Dataset<Row> result = underTest.transform(df);
