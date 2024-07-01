@@ -41,7 +41,7 @@ class OperationalDataStoreConnectionDetailsServiceTest {
     }
 
     @Test
-    void shouldReturnConnectionDetailsWhenEnabled() {
+    void shouldReturnConnectionDetails() {
         String expectedUrl = "jdbc:postgresql://localhost/test";
         String expectedDriver = "org.postgresql.Driver";
         String expectedUsername = "user";
@@ -58,7 +58,6 @@ class OperationalDataStoreConnectionDetailsServiceTest {
         credentials.setUsername(expectedUsername);
         credentials.setPassword(expectedPassword);
 
-        when(mockJobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
         when(mockJobArguments.getOperationalDataStoreGlueConnectionName()).thenReturn(connectionName);
         when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);
         when(mockConnection.getConnectionProperties()).thenReturn(connectionProperties);
@@ -73,19 +72,4 @@ class OperationalDataStoreConnectionDetailsServiceTest {
         verify(mockGlueClient, times(1)).getConnection(connectionName);
         verify(mockSecretsManagerClient, times(1)).getSecret(secretId, OperationalDataStoreCredentials.class);
     }
-
-    @Test
-    void shouldReturnBlankConnectionDetailsWhenDisabled() {
-        when(mockJobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(false);
-
-        OperationalDataStoreConnectionDetails result = underTest.getConnectionDetails();
-        assertEquals("", result.getUrl());
-        assertEquals("", result.getJdbcDriverClassName());
-        assertEquals("", result.getCredentials().getUsername());
-        assertEquals("", result.getCredentials().getPassword());
-
-        verify(mockGlueClient, times(0)).getConnection(any());
-        verify(mockSecretsManagerClient, times(0)).getSecret(any(), any());
-    }
-
 }

@@ -22,6 +22,7 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
@@ -81,7 +82,6 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        givenOperationalDataStoreWriteIsEnabled();
         givenDatastoreCredentials();
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
@@ -254,7 +254,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         OperationalDataStoreDataAccess operationalDataStoreDataAccess = new OperationalDataStoreDataAccess(connectionDetailsService);
         OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreService(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
+                new OperationalDataStoreServiceImpl(operationalDataStoreTransformation, operationalDataStoreDataAccess);
         underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
     }
 
@@ -288,10 +288,6 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                         credentials
                 )
         );
-    }
-
-    private void givenOperationalDataStoreWriteIsEnabled() {
-        when(arguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
     }
 
     private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String data, int primaryKey) throws SQLException {
