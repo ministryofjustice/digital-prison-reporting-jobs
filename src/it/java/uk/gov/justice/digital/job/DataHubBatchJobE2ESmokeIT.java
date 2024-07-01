@@ -22,7 +22,7 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
@@ -57,7 +57,6 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
     @BeforeEach
     public void setUp() throws SQLException {
-        givenOperationalDataStoreWriteIsEnabled();
         givenDatastoreCredentials();
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
@@ -121,8 +120,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         OperationalDataStoreDataAccess operationalDataStoreDataAccess = new OperationalDataStoreDataAccess(connectionDetailsService);
-        OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreService(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
+        OperationalDataStoreServiceImpl operationalDataStoreService =
+                new OperationalDataStoreServiceImpl(operationalDataStoreTransformation, operationalDataStoreDataAccess);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
         underTest = new DataHubBatchJob(
                 arguments,
@@ -139,10 +138,6 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("part-*parquet");
-    }
-
-    private void givenOperationalDataStoreWriteIsEnabled() {
-        when(arguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
     }
 
     private void givenDatastoreCredentials() {

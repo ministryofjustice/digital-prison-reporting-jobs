@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service.operationaldatastore;
 
 
+import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -18,6 +19,7 @@ import java.util.Map;
  * Responsible for retrieving details for connecting to the Operational DataStore.
  */
 @Singleton
+@Requires(property = "dpr.operational.data.store.write.enabled")
 public class OperationalDataStoreConnectionDetailsService {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreConnectionDetailsService.class);
@@ -38,25 +40,17 @@ public class OperationalDataStoreConnectionDetailsService {
     }
 
     public OperationalDataStoreConnectionDetails getConnectionDetails() {
-        if(jobArguments.isOperationalDataStoreWriteEnabled()) {
-            val startTime = System.currentTimeMillis();
-            logger.debug("Getting connection details for Operational DataStore");
-            String connectionName = jobArguments.getOperationalDataStoreGlueConnectionName();
-            com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection(connectionName);
-            Map<String, String> connectionProperties = connection.getConnectionProperties();
-            String url = connectionProperties.get("JDBC_CONNECTION_URL");
-            String jdbcDriverClassName = connectionProperties.get("JDBC_DRIVER_CLASS_NAME");
-            String secretId = connectionProperties.get("SECRET_ID");
-            OperationalDataStoreCredentials credentials = secretsManagerClient.getSecret(secretId, OperationalDataStoreCredentials.class);
-            OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(url, jdbcDriverClassName, credentials);
-            logger.debug("Finished getting connection details for Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
-            return connectionDetails;
-        } else {
-            logger.info("Setting empty connection details for Operational DataStore since this feature is disabled");
-            OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-            credentials.setUsername("");
-            credentials.setPassword("");
-            return new OperationalDataStoreConnectionDetails("", "", credentials);
-        }
+        val startTime = System.currentTimeMillis();
+        logger.debug("Getting connection details for Operational DataStore");
+        String connectionName = jobArguments.getOperationalDataStoreGlueConnectionName();
+        com.amazonaws.services.glue.model.Connection connection = glueClient.getConnection(connectionName);
+        Map<String, String> connectionProperties = connection.getConnectionProperties();
+        String url = connectionProperties.get("JDBC_CONNECTION_URL");
+        String jdbcDriverClassName = connectionProperties.get("JDBC_DRIVER_CLASS_NAME");
+        String secretId = connectionProperties.get("SECRET_ID");
+        OperationalDataStoreCredentials credentials = secretsManagerClient.getSecret(secretId, OperationalDataStoreCredentials.class);
+        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(url, jdbcDriverClassName, credentials);
+        logger.debug("Finished getting connection details for Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
+        return connectionDetails;
     }
 }

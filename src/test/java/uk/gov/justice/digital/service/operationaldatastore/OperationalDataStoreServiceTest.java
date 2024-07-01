@@ -29,19 +29,16 @@ class OperationalDataStoreServiceTest {
     private Dataset<Row> transformedDataframe;
     @Mock
     private SourceReference sourceReference;
-    @Mock
-    private JobArguments jobArguments;
 
-    private OperationalDataStoreService underTest;
+    private OperationalDataStoreServiceImpl underTest;
 
     @BeforeEach
     public void setup() {
-        underTest = new OperationalDataStoreService(jobArguments, mockDataTransformation, mockDataAccess);
+        underTest = new OperationalDataStoreServiceImpl(mockDataTransformation, mockDataAccess);
     }
 
     @Test
     void shouldTransformInputDataframe() {
-        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
@@ -52,22 +49,11 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void shouldWriteTransformedDataframeToDestinationTable() {
-        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
 
         underTest.storeBatchData(inputDataframe, sourceReference);
 
         verify(mockDataAccess, times(1)).overwriteTable(transformedDataframe, destinationTableName);
-    }
-
-    @Test
-    void shouldNotTransformOrWriteWhenDisabled() {
-        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(false);
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
-        underTest.storeBatchData(inputDataframe, sourceReference);
-
-        verify(mockDataTransformation, times(0)).transform(any());
-        verify(mockDataAccess, times(0)).overwriteTable(any(), any());
     }
 }

@@ -53,7 +53,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     @Mock
     private JobArguments jobArguments;
 
-    private OperationalDataStoreService underTest;
+    private OperationalDataStoreServiceImpl underTest;
 
     private String tableName;
 
@@ -87,10 +87,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         tableName = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(tableName);
 
-        when(jobArguments.isOperationalDataStoreWriteEnabled()).thenReturn(true);
-
-        underTest = new OperationalDataStoreService(
-                jobArguments,
+        underTest = new OperationalDataStoreServiceImpl(
                 new OperationalDataStoreTransformation(),
                 new OperationalDataStoreDataAccess(mockConnectionDetailsService)
         );
