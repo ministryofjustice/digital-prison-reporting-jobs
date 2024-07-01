@@ -53,7 +53,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     @Mock
     private JobArguments jobArguments;
 
-    private OperationalDataStoreServiceImpl underTest;
+    private OperationalDataStoreService underTest;
 
     private String tableName;
 

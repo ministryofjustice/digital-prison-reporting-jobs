@@ -13,7 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
@@ -65,7 +65,7 @@ class BatchProcessorTest extends BaseSparkTest {
     @Mock
     private ValidationService validationService;
     @Mock
-    private OperationalDataStoreServiceImpl operationalDataStoreService;
+    private OperationalDataStoreService operationalDataStoreService;
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 

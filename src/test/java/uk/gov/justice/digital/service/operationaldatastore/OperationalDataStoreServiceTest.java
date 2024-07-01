@@ -30,7 +30,7 @@ class OperationalDataStoreServiceTest {
     @Mock
     private SourceReference sourceReference;
 
-    private OperationalDataStoreServiceImpl underTest;
+    private OperationalDataStoreService underTest;
 
     @BeforeEach
     public void setup() {
