@@ -5,5 +5,6 @@ import org.apache.spark.sql.Row;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
 public interface OperationalDataStoreService {
-    void storeBatchData(Dataset<Row> dataFrame, SourceReference sourceReference);
+    void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference);
+    void mergeData(Dataset<Row> dataFrame, SourceReference sourceReference);
 }

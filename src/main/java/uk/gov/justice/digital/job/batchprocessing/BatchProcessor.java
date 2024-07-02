@@ -64,7 +64,7 @@ public class BatchProcessor {
             val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
             val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
             val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
-            operationalDataStoreService.storeBatchData(curatedLoadDf, sourceReference);
+            operationalDataStoreService.overwriteData(curatedLoadDf, sourceReference);
             dataFrame.unpersist();
 
             logger.info("Processed records {}/{} in {}ms",

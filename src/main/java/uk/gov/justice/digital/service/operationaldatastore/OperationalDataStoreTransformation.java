@@ -13,9 +13,6 @@ import java.util.Arrays;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.regexp_replace;
-import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
-import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
-import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 /**
  * Transforms a DataFrame to the format we want to store in the Operational DataStore
@@ -30,9 +27,7 @@ public class OperationalDataStoreTransformation {
         // We normalise columns to lower case to avoid having to quote every column due to Postgres lower casing everything in incoming queries
         Dataset<Row> lowerCaseColsDf = normaliseColumnsToLowerCase(dataFrame);
         // Handle 0x00 null String character which cannot be inserted in to a Postgres text column
-        Dataset<Row> withoutNullsDf = stripNullStrings(lowerCaseColsDf);
-        // We don't store these metadata columns in the destination table so we remove them
-        return withoutNullsDf.drop(OPERATION.toLowerCase(), TIMESTAMP.toLowerCase(), CHECKPOINT_COL.toLowerCase());
+        return stripNullStrings(lowerCaseColsDf);
     }
 
     private static Dataset<Row> normaliseColumnsToLowerCase(Dataset<Row> dataFrame) {

@@ -88,7 +88,7 @@ class BatchProcessorTest extends BaseSparkTest {
 
         verify(structuredZoneLoad, times(0)).process(any(), any(), any());
         verify(curatedZoneLoad, times(0)).process(any(), any(), any());
-        verify(operationalDataStoreService, times(0)).storeBatchData(any(), any());
+        verify(operationalDataStoreService, times(0)).overwriteData(any(), any());
     }
 
     @Test
@@ -128,7 +128,7 @@ class BatchProcessorTest extends BaseSparkTest {
 
         underTest.processBatch(spark, sourceReference, inputDf);
 
-        verify(operationalDataStoreService, times(1)).storeBatchData(curatedDfMock, sourceReference);
+        verify(operationalDataStoreService, times(1)).overwriteData(curatedDfMock, sourceReference);
     }
 
     @Test
