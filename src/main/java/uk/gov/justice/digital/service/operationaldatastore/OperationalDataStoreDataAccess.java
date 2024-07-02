@@ -85,9 +85,7 @@ public class OperationalDataStoreDataAccess {
                 logger.debug("Finished running TRUNCATE on temporary table {}", temporaryTableName);
             }
         } catch (SQLException e) {
-            String message = "Exception during merge from temporary table to destination";
-            logger.error(message, e);
-            throw new OperationalDataStoreException(message, e);
+            throw new OperationalDataStoreException("Exception during merge from temporary table to destination", e);
         }
 
         logger.debug("Finished merging into destination table {} in {}ms", destinationTableName, System.currentTimeMillis() - startTime);
