@@ -19,6 +19,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.operationaldatastore.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
@@ -120,7 +121,9 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
-        OperationalDataStoreDataAccess operationalDataStoreDataAccess = new OperationalDataStoreDataAccess(connectionDetailsService);
+        ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
+        OperationalDataStoreDataAccess operationalDataStoreDataAccess =
+                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(operationalDataStoreTransformation, operationalDataStoreDataAccess);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);

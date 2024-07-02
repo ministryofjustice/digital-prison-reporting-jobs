@@ -87,9 +87,10 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         tableName = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(tableName);
 
+        ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         underTest = new OperationalDataStoreServiceImpl(
                 new OperationalDataStoreTransformation(),
-                new OperationalDataStoreDataAccess(mockConnectionDetailsService)
+                new OperationalDataStoreDataAccess(mockConnectionDetailsService, connectionPoolProvider)
         );
     }
 
@@ -100,7 +101,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
         ), schema);
 
-        underTest.storeBatchData(df, sourceReference);
+        underTest.overwriteData(df, sourceReference);
 
         Properties jdbcProperties = new Properties();
         jdbcProperties.put("user", operationalDataStore.getUsername());
@@ -128,8 +129,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other new data")
         ), schema);
 
-        underTest.storeBatchData(df1, sourceReference);
-        underTest.storeBatchData(df2, sourceReference);
+        underTest.overwriteData(df1, sourceReference);
+        underTest.overwriteData(df2, sourceReference);
 
         Properties jdbcProperties = new Properties();
         jdbcProperties.put("user", operationalDataStore.getUsername());
@@ -154,7 +155,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
         ), schema);
 
-        underTest.storeBatchData(df, sourceReference);
+        underTest.overwriteData(df, sourceReference);
 
         Properties jdbcProperties = new Properties();
         jdbcProperties.put("user", operationalDataStore.getUsername());

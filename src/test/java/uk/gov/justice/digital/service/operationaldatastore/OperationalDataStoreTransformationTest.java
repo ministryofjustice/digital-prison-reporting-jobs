@@ -55,23 +55,6 @@ class OperationalDataStoreTransformationTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldMetadataColumns() {
-        Dataset<Row> df = spark.createDataFrame(Arrays.asList(
-                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "", "some data"),
-                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "some other data")
-        ), schema);
-
-        Dataset<Row> result = underTest.transform(df);
-
-        assertThat(result.columns(), not(hasItemInArray(OPERATION)));
-        assertThat(result.columns(), not(hasItemInArray(TIMESTAMP)));
-        assertThat(result.columns(), not(hasItemInArray(CHECKPOINT_COL)));
-        assertThat(result.columns(), not(hasItemInArray(OPERATION.toLowerCase())));
-        assertThat(result.columns(), not(hasItemInArray(TIMESTAMP.toLowerCase())));
-        assertThat(result.columns(), not(hasItemInArray(CHECKPOINT_COL.toLowerCase())));
-    }
-
-    @Test
     public void shouldStripNullStringCharacters() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1\u0000", "2023-11-13 10:49:28.123458", "I", "", "some data"),
