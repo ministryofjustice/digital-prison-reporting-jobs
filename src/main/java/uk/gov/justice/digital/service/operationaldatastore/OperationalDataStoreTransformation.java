@@ -13,9 +13,6 @@ import java.util.Arrays;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.regexp_replace;
-import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
-import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
-import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 /**
  * Transforms a DataFrame to the format we want to store in the Operational DataStore

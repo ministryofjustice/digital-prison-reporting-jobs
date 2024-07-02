@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.OperationalDataStoreException;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -84,8 +85,9 @@ public class OperationalDataStoreDataAccess {
                 logger.debug("Finished running TRUNCATE on temporary table {}", temporaryTableName);
             }
         } catch (SQLException e) {
-            logger.error("Exception during merge from temporary table to destination", e);
-            throw new RuntimeException(e);
+            String message = "Exception during merge from temporary table to destination";
+            logger.error(message, e);
+            throw new OperationalDataStoreException(message, e);
         }
 
         logger.debug("Finished merging into destination table {} in {}ms", destinationTableName, System.currentTimeMillis() - startTime);

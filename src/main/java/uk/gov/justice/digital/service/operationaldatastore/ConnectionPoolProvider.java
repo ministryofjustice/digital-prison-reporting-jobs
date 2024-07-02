@@ -9,7 +9,7 @@ import javax.sql.DataSource;
 @Singleton
 public class ConnectionPoolProvider {
 
-    private static final int maxHikariPoolSize = 10;
+    private static final int MAX_HIKARI_POOL_SIZE = 10;
 
     DataSource getConnectionPool(
             String jdbcUrl,
@@ -22,7 +22,7 @@ public class ConnectionPoolProvider {
         hikariConfig.setDriverClassName(jdbcDriverClassName);
         hikariConfig.setUsername(username);
         hikariConfig.setPassword(password);
-        hikariConfig.setMaximumPoolSize(maxHikariPoolSize);
+        hikariConfig.setMaximumPoolSize(MAX_HIKARI_POOL_SIZE);
         return new HikariDataSource(hikariConfig);
     }
 }

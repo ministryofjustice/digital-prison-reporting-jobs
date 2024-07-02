@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.OperationalDataStoreException;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -194,7 +195,7 @@ class OperationalDataStoreDataAccessTest {
         when(primaryKey.getKeyColumnNames()).thenReturn(Arrays.asList("column1"));
 
         underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
-        assertThrows(RuntimeException.class, () -> {
+        assertThrows(OperationalDataStoreException.class, () -> {
             underTest.merge(temporaryTableName, destinationTableName, sourceReference);
         });
 
