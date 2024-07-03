@@ -231,7 +231,7 @@ class OperationalDataStoreDataAccessTest {
         String expectedSql = "MERGE INTO some.table d\n" +
                 "USING loading.table s ON s.pk_col = d.pk_col\n" +
                 "    WHEN MATCHED AND s.op = 'D' THEN DELETE\n" +
-                "    WHEN MATCHED AND s.op = 'U' THEN UPDATE SET column2 = s.column2\n" +
+                "    WHEN MATCHED AND s.op = 'U' THEN UPDATE SET d.column2 = s.column2\n" +
                 "    WHEN NOT MATCHED AND (s.op = 'I' OR s.op = 'U') THEN INSERT (pk_col, column2) VALUES (s.pk_col, s.column2)";
         assertEquals(resultSql, expectedSql);
 

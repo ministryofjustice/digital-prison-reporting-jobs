@@ -9,9 +9,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
+import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
 import java.nio.file.Path;
@@ -46,6 +49,7 @@ public class E2ETestBase extends BaseSparkTest {
     protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
     private static Connection testQueryConnection;
 
+    protected static final String loadingSchemaName = "loading";
     protected static final String inputSchemaName = "nomis";
     protected static final String agencyInternalLocationsTable = "agency_internal_locations";
     protected static final String agencyLocationsTable = "agency_locations";
@@ -124,6 +128,15 @@ public class E2ETestBase extends BaseSparkTest {
         whenDataIsAddedToRawForTable(offendersTable, initialDataEveryTable);
     }
 
+    protected void givenDestinationTableExists(String tableName) throws SQLException {
+        Properties jdbcProps = new Properties();
+        jdbcProps.put("user", operationalDataStore.getUsername());
+        jdbcProps.put("password", operationalDataStore.getPassword());
+        try(Statement statement = testQueryConnection.createStatement()) {
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (pk INTEGER, data VARCHAR)", inputSchemaName, tableName));
+        }
+    }
+
     protected void whenDataIsAddedToRawForTable(String table, List<Row> inputData) {
         String tablePath = Paths.get(rawPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
         spark
@@ -184,6 +197,20 @@ public class E2ETestBase extends BaseSparkTest {
         try(Statement statement = testQueryConnection.createStatement()) {
             statement.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
         }
+    }
+
+    void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService) {
+        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
+        credentials.setUsername(operationalDataStore.getUsername());
+        credentials.setPassword(operationalDataStore.getPassword());
+
+        when(connectionDetailsService.getConnectionDetails()).thenReturn(
+                new OperationalDataStoreConnectionDetails(
+                        operationalDataStore.getJdbcUrl(),
+                        operationalDataStore.getDriverClassName(),
+                        credentials
+                )
+        );
     }
 
     protected void thenOperationalDataStoreContainsForPK(String table, String data, int primaryKey) throws SQLException {

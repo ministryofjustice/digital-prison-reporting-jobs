@@ -20,17 +20,27 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.operationaldatastore.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
@@ -56,17 +66,29 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     private SourceReferenceService sourceReferenceService;
     @Mock
     private ConfigService configService;
+    @Mock
+    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
     private DataHubCdcJob underTest;
     private List<TableStreamingQuery> streamingQueries;
 
     @BeforeEach
-    public void setUp() throws IOException {
+    public void setUp() throws Exception {
+        givenDatastoreCredentials(connectionDetailsService);
+        givenSchemaExists(loadingSchemaName);
+        givenSchemaExists(inputSchemaName);
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
         givenCheckpointsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
+        givenLoadingSchemaIsConfigured();
         givenDependenciesAreInjected();
+
+        givenDestinationTableExists(agencyInternalLocationsTable);
+        givenDestinationTableExists(agencyLocationsTable);
+        givenDestinationTableExists(movementReasonsTable);
+        givenDestinationTableExists(offenderBookingsTable);
+        givenDestinationTableExists(offenderExternalMovementsTable);
     }
 
     @AfterEach
@@ -94,17 +116,17 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1a", pk1));
 
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2a", pk2));
 
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "1a", pk1));
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "2a", pk2));
@@ -118,19 +140,19 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         whenInsertOccursForTableAndPK(offenderExternalMovementsTable, pk3, "3a", "2023-11-13 10:01:00.000000");
         whenInsertOccursForTableAndPK(offendersTable, pk3, "3a", "2023-11-13 10:01:00.000000");
 
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1b", pk1));
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1b", pk1));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1b", pk1));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1b", pk1));
 
-        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(movementReasonsTable, pk2));
-        thenEventually(() -> thenStructuredAndCuratedForTableDoNotContainPK(offenderBookingsTable, pk2));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(movementReasonsTable, pk2));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offenderBookingsTable, pk2));
 
-        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "3a", pk3));
+        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "3a", pk3));
 
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "3a", pk3));
 
-        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk1);
-        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk2);
-        thenStructuredAndCuratedForTableDoNotContainPK(offendersTable, pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk3);
     }
 
     private void whenTheJobRuns() {
@@ -150,7 +172,19 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         ValidationService validationService = new ValidationService(violationService);
         CuratedZoneCDC curatedZone = new CuratedZoneCDC(arguments, violationService, storageService);
         StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
-        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(validationService, structuredZone, curatedZone, dataProvider);
+        OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
+        ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
+        OperationalDataStoreDataAccess operationalDataStoreDataAccess =
+                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
+        OperationalDataStoreService operationalDataStoreService =
+                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
+        CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
+                validationService,
+                structuredZone,
+                curatedZone,
+                dataProvider,
+                operationalDataStoreService
+        );
         TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(
                 arguments, dataProvider, batchProcessor, sourceReferenceService, violationService
         );
@@ -166,6 +200,10 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getCdcFileGlobPattern()).thenReturn("*.parquet");
+    }
+
+    protected void givenLoadingSchemaIsConfigured() {
+        when(arguments.getOperationalDataStoreLoadingSchemaName()).thenReturn(loadingSchemaName);
     }
 
     @FunctionalInterface

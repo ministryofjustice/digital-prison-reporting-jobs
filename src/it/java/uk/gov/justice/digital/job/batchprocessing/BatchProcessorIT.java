@@ -257,7 +257,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
                 new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreServiceImpl(operationalDataStoreTransformation, operationalDataStoreDataAccess);
+                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
     }
 

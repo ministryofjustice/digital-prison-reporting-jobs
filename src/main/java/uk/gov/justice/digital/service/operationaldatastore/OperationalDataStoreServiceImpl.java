@@ -8,6 +8,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
 import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
@@ -22,16 +23,18 @@ import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 public class OperationalDataStoreServiceImpl implements OperationalDataStoreService {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreServiceImpl.class);
-    private static final String LOADING_SCHEMA = "loading";
 
+    private final String loadingSchema;
     private final OperationalDataStoreTransformation transformer;
     private final OperationalDataStoreDataAccess operationalDataStoreDataAccess;
 
     @Inject
     public OperationalDataStoreServiceImpl(
+            JobArguments jobArguments,
             OperationalDataStoreTransformation transformer,
             OperationalDataStoreDataAccess operationalDataStoreDataAccess
     ) {
+        this.loadingSchema = jobArguments.getOperationalDataStoreLoadingSchemaName();
         this.transformer = transformer;
         this.operationalDataStoreDataAccess = operationalDataStoreDataAccess;
     }
@@ -58,7 +61,7 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
         String destinationTableName = sourceReference.getFullyQualifiedTableName();
         logger.info("Processing records to merge into Operational Data Store table {}", destinationTableName);
 
-        String temporaryLoadingTableName = LOADING_SCHEMA + "." + sourceReference.getTable();
+        String temporaryLoadingTableName = loadingSchema + "." + sourceReference.getTable();
         logger.debug("Loading to temporary table {}", temporaryLoadingTableName);
 
         Dataset<Row> transformedDf = transformer

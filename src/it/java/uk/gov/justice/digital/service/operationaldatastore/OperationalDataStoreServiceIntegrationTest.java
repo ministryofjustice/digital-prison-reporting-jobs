@@ -3,6 +3,7 @@ package uk.gov.justice.digital.service.operationaldatastore;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import scala.reflect.ClassTag;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
@@ -21,10 +23,15 @@ import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
 
+import static java.lang.String.format;
 import static org.apache.spark.sql.functions.col;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,6 +45,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
     private static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
+    private static Connection testQueryConnection;
 
     private static final StructType schema = new StructType(new StructField[]{
             new StructField("PK", DataTypes.StringType, true, Metadata.empty()),
@@ -55,15 +63,19 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
     private OperationalDataStoreService underTest;
 
-    private String tableName;
+    private String destinationTableNameWithSchema;
+    private String loadingTableName;
+    private Properties jdbcProperties;
 
     @BeforeAll
     static void beforeAll() throws Exception {
         operationalDataStore.start();
+        testQueryConnection = operationalDataStore.getJdbcConnection();
     }
 
     @AfterAll
     static void afterAll() throws Exception {
+        testQueryConnection.close();
         operationalDataStore.stop();
     }
 
@@ -81,21 +93,29 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
                 )
         );
 
-        // Use a unique table for each test.
-        // We use public schema so that we can skip creating a schema. In reality this would be the 'source', e.g. "nomis".
+        jdbcProperties = new Properties();
+        jdbcProperties.put("user", operationalDataStore.getUsername());
+        jdbcProperties.put("password", operationalDataStore.getPassword());
+
+        // Use unique tables for each test.
+        // We use public schema so that we can skip creating a schema. In reality this would be the 'source', e.g. "nomis",
+        // for the destination table and the loading schema for the loading table.
         // Postgres table names cannot start with a number, hence the underscore prefix, and cannot contain hyphens/dashes.
-        tableName = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(tableName);
+        destinationTableNameWithSchema = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
+        loadingTableName = "loading" + UUID.randomUUID().toString().replaceAll("-", "_");
+        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("public");
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         underTest = new OperationalDataStoreServiceImpl(
+                jobArguments,
                 new OperationalDataStoreTransformation(),
                 new OperationalDataStoreDataAccess(mockConnectionDetailsService, connectionPoolProvider)
         );
     }
 
     @Test
-    public void shouldInsertData() {
+    public void overwriteDataShouldInsertData() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
@@ -103,11 +123,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         underTest.overwriteData(df, sourceReference);
 
-        Properties jdbcProperties = new Properties();
-        jdbcProperties.put("user", operationalDataStore.getUsername());
-        jdbcProperties.put("password", operationalDataStore.getPassword());
-
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), tableName, jdbcProperties);
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
 
         assertEquals(2, result.count());
 
@@ -118,7 +134,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldOverwriteExistingData() {
+    public void overwriteDataShouldOverwriteExistingData() {
         Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
@@ -132,11 +148,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         underTest.overwriteData(df1, sourceReference);
         underTest.overwriteData(df2, sourceReference);
 
-        Properties jdbcProperties = new Properties();
-        jdbcProperties.put("user", operationalDataStore.getUsername());
-        jdbcProperties.put("password", operationalDataStore.getPassword());
-
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), tableName, jdbcProperties);
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
 
         assertEquals(2, result.count());
 
@@ -149,7 +161,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldCreateTableWithLowercaseColumnsWithoutOpAndTimestamp() {
+    public void overwriteDataShouldCreateTableWithLowercaseColumnsWithoutOpAndTimestamp() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
@@ -157,13 +169,164 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         underTest.overwriteData(df, sourceReference);
 
-        Properties jdbcProperties = new Properties();
-        jdbcProperties.put("user", operationalDataStore.getUsername());
-        jdbcProperties.put("password", operationalDataStore.getPassword());
-
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), tableName, jdbcProperties);
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
 
         assertThat(result.columns(), arrayContainingInAnyOrder("pk", "data"));
         assertThat(result.columns(), not(arrayContainingInAnyOrder(OPERATION, OPERATION.toLowerCase(), TIMESTAMP)));
+    }
+
+    // todo
+    @Test
+    public void mergeDataShouldInsertWhenOpIsInsertOrUpdateAndPkNotPresent() throws Exception {
+        Dataset<Row> df = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
+                RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "some other data")
+        ), schema);
+        Dataset<Row> dfWithoutMetadataCols = df.drop(TIMESTAMP, OPERATION);
+        StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
+
+        when(sourceReference.getTable()).thenReturn(loadingTableName);
+        when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
+
+        // Create the empty table (in reality this is done by the batch job)
+        createDestinationTable();
+
+        underTest.mergeData(df, sourceReference);
+
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+
+        assertEquals(2, result.count());
+
+        assertEquals(1, result.where(col("pk").contains("pk1")).count());
+        assertEquals(1, result.where(col("pk").contains("pk2")).count());
+        assertEquals(1, result.where(col("data").contains("some data")).count());
+        assertEquals(1, result.where(col("data").contains("some other data")).count());
+    }
+
+    @Test
+    public void mergeDataShouldUpdateWhenOpIsUpdateAndPkPresent() throws Exception {
+        Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "initial data")
+        ), schema);
+        Dataset<Row> df2 = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "U", "updated data")
+        ), schema);
+        Dataset<Row> dfWithoutMetadataCols = df1.drop(TIMESTAMP, OPERATION);
+        StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
+
+        when(sourceReference.getTable()).thenReturn(loadingTableName);
+        when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
+
+        // Create the table with initial data
+        createDestinationTable();
+        underTest.mergeData(df1, sourceReference);
+        // Check our test preconditions
+        Dataset<Row> dataInTableBeforeMerge = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        assertEquals(1, dataInTableBeforeMerge.where(col("pk").contains("pk1")).count());
+        assertEquals(1, dataInTableBeforeMerge.where(col("data").contains("initial data")).count());
+        // Run the merge
+        underTest.mergeData(df2, sourceReference);
+
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+
+        assertEquals(1, result.count());
+
+        assertEquals(1, result.where(col("pk").contains("pk1")).count());
+        assertEquals(0, result.where(col("data").contains("initial data")).count());
+        assertEquals(1, result.where(col("data").contains("updated data")).count());
+    }
+
+    @Test
+    public void mergeDataShouldDeleteWhenOpIsDeleteAndPkPresent() throws Exception {
+        Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "initial data")
+        ), schema);
+        Dataset<Row> df2 = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "D", "updated data")
+        ), schema);
+        Dataset<Row> dfWithoutMetadataCols = df1.drop(TIMESTAMP, OPERATION);
+        StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
+
+        when(sourceReference.getTable()).thenReturn(loadingTableName);
+        when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
+
+        // Create the table with initial data
+        createDestinationTable();
+        underTest.mergeData(df1, sourceReference);
+        // Check our test preconditions
+        Dataset<Row> dataInTableBeforeMerge = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        assertEquals(1, dataInTableBeforeMerge.where(col("pk").contains("pk1")).count());
+        assertEquals(1, dataInTableBeforeMerge.where(col("data").contains("initial data")).count());
+        // Run the merge
+        underTest.mergeData(df2, sourceReference);
+
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+
+        assertEquals(0, result.count());
+    }
+
+    @Test
+    public void mergeDataShouldDoNothingWhenOpIsInsertAndPkIsPresent() throws Exception {
+        Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "initial data")
+        ), schema);
+        Dataset<Row> df2 = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "updated data")
+        ), schema);
+        Dataset<Row> dfWithoutMetadataCols = df1.drop(TIMESTAMP, OPERATION);
+        StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
+
+        when(sourceReference.getTable()).thenReturn(loadingTableName);
+        when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
+
+        // Create the table with initial data
+        createDestinationTable();
+        underTest.mergeData(df1, sourceReference);
+        // Check our test preconditions
+        Dataset<Row> dataInTableBeforeMerge = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        assertEquals(1, dataInTableBeforeMerge.where(col("pk").contains("pk1")).count());
+        assertEquals(1, dataInTableBeforeMerge.where(col("data").contains("initial data")).count());
+        // Run the merge
+        underTest.mergeData(df2, sourceReference);
+
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+
+        assertEquals(1, result.count());
+
+        assertEquals(1, result.where(col("pk").contains("pk1")).count());
+        assertEquals(1, result.where(col("data").contains("initial data")).count());
+        assertEquals(0, result.where(col("data").contains("updated data")).count());
+    }
+
+    @Test
+    public void mergeDataShouldDoNothingWhenOpIsDeleteAndPkNotPresent() throws Exception {
+        Dataset<Row> df = spark.createDataFrame(Arrays.asList(
+                RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "D", "initial data")
+        ), schema);
+        Dataset<Row> dfWithoutMetadataCols = df.drop(TIMESTAMP, OPERATION);
+        StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
+
+        when(sourceReference.getTable()).thenReturn(loadingTableName);
+        when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
+
+        // Create the table with initial data
+        createDestinationTable();
+        // Run the merge
+        underTest.mergeData(df, sourceReference);
+
+        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+
+        assertEquals(0, result.count());
+    }
+
+    private void createDestinationTable() throws SQLException {
+        try(Statement statement = testQueryConnection.createStatement()) {
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s (pk VARCHAR, data VARCHAR)", destinationTableNameWithSchema));
+        }
     }
 }

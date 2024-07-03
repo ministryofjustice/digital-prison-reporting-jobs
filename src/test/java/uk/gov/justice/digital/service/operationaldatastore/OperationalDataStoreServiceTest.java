@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -37,6 +38,8 @@ class OperationalDataStoreServiceTest {
     private OperationalDataStoreTransformation mockDataTransformation;
     @Mock
     private OperationalDataStoreDataAccess mockDataAccess;
+    @Mock
+    private JobArguments jobArguments;
 
     @Mock
     private Dataset<Row> inputDataframe;
@@ -51,7 +54,8 @@ class OperationalDataStoreServiceTest {
 
     @BeforeEach
     public void setup() {
-        underTest = new OperationalDataStoreServiceImpl(mockDataTransformation, mockDataAccess);
+        when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
+        underTest = new OperationalDataStoreServiceImpl(jobArguments, mockDataTransformation, mockDataAccess);
     }
 
     @Test

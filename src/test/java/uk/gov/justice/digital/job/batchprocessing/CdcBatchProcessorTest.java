@@ -14,6 +14,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +53,12 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     private SourceReference mockSourceReference;
     @Mock
     private S3DataProvider mockDataProvider;
+    @Mock
+    private OperationalDataStoreService mockOperationalDataStoreService;
+    @Mock
+    private Dataset<Row> outputOfStructuredDf;
+    @Mock
+    private Dataset<Row> outputOfCuratedDf;
     @Captor
     private ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor;
     @Captor
@@ -65,20 +73,27 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
     @BeforeEach
     public void setUp() {
-        underTest = new CdcBatchProcessor(mockValidationService, mockStructuredZone, mockCuratedZone, mockDataProvider);
+        underTest = new CdcBatchProcessor(
+                mockValidationService,
+                mockStructuredZone,
+                mockCuratedZone,
+                mockDataProvider,
+                mockOperationalDataStoreService
+        );
     }
 
     @Test
-    public void shouldSkipEmptyBatches() {
+    void shouldSkipEmptyBatches() {
         underTest.processBatch(mockSourceReference, spark, spark.emptyDataFrame(), batchId);
 
         verify(mockValidationService, times(0)).handleValidation(any(), any(), any(), any(), any());
         verify(mockStructuredZone, times(0)).process(any(), any(), any());
         verify(mockCuratedZone, times(0)).process(any(), any(), any());
+        verify(mockOperationalDataStoreService, times(0)).mergeData(any(), any());
     }
 
     @Test
-    public void shouldDelegateValidation() {
+    void shouldDelegateValidation() {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
@@ -92,7 +107,7 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldPassDataForStructuredZoneProcessing() {
+    void shouldPassDataForStructuredZoneProcessing() {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
@@ -109,44 +124,51 @@ class CdcBatchProcessorTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldPassDataForCuratedZoneProcessing() {
+    void shouldCallCuratedWithOutputOfStructured() {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
-        verify(mockCuratedZone, times(1)).process(any(), curatedArgumentCaptor.capture(), eq(mockSourceReference));
-
-        List<Row> expected = rowPerPk.collectAsList();
-        List<Row> result = curatedArgumentCaptor.getValue().collectAsList();
-        assertEquals(expected.size(), result.size());
-        assertTrue(result.containsAll(expected));
+        verify(mockCuratedZone, times(1)).process(any(), eq(outputOfStructuredDf), eq(mockSourceReference));
     }
 
     @Test
-    public void shouldWriteLatestRecordsByPK() {
+    void shouldCallStructuredWithLatestRecordsByPK() {
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(manyRowsPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(manyRowsPerPk);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
 
         verify(mockStructuredZone, times(1)).process(any(), structuredArgumentCaptor.capture(), eq(mockSourceReference));
-        verify(mockCuratedZone, times(1)).process(any(), curatedArgumentCaptor.capture(), eq(mockSourceReference));
 
         List<Row> expected = manyRowsPerPkSameTimestampLatest();
 
         List<Row> structuredActual = structuredArgumentCaptor.getValue().collectAsList();
         assertEquals(expected.size(), structuredActual.size());
         assertTrue(structuredActual.containsAll(expected));
+    }
 
-        List<Row> curatedActual = curatedArgumentCaptor.getValue().collectAsList();
-        assertEquals(expected.size(), curatedActual.size());
-        assertTrue(curatedActual.containsAll(expected));
+    @Test
+    void shouldMergeOutputOfCuratedToOperationalDataStore() {
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
+        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
+
+        underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
+
+        verify(mockOperationalDataStoreService, times(1)).mergeData(outputOfCuratedDf, mockSourceReference);
     }
 }

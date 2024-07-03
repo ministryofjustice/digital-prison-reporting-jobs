@@ -59,7 +59,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
     @BeforeEach
     public void setUp() throws SQLException {
-        givenDatastoreCredentials();
+        givenDatastoreCredentials(connectionDetailsService);
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
@@ -125,7 +125,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
                 new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreServiceImpl(operationalDataStoreTransformation, operationalDataStoreDataAccess);
+                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
         underTest = new DataHubBatchJob(
                 arguments,
@@ -142,19 +142,5 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("part-*parquet");
-    }
-
-    private void givenDatastoreCredentials() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(operationalDataStore.getUsername());
-        credentials.setPassword(operationalDataStore.getPassword());
-
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(
-                        operationalDataStore.getJdbcUrl(),
-                        operationalDataStore.getDriverClassName(),
-                        credentials
-                )
-        );
     }
 }

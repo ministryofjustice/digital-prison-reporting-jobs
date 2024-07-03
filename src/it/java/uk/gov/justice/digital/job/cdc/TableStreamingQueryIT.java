@@ -8,7 +8,9 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +20,8 @@ import scala.Option;
 import scala.collection.Seq;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
+import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
@@ -26,15 +30,29 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.operationaldatastore.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
+import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
+import static java.lang.String.format;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -42,6 +60,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
@@ -59,6 +78,8 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
  */
 @ExtendWith(MockitoExtension.class)
 public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
+    protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
+    private static Connection testQueryConnection;
 
     @Mock
     private JobArguments arguments;
@@ -70,12 +91,29 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private SourceReference sourceReference;
     @Mock
     private TableDiscoveryService tableDiscoveryService;
+    @Mock
+    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
     private TableStreamingQuery underTest;
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
 
+    @BeforeAll
+    static void beforeAll() throws Exception {
+        operationalDataStore.start();
+        testQueryConnection = operationalDataStore.getJdbcConnection();
+    }
+
+    @AfterAll
+    static void afterAll() throws Exception {
+        testQueryConnection.close();
+        operationalDataStore.stop();
+    }
+
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
+        givenDatastoreCredentials();
+        givenSchemas();
+        givenEmptyDestinationTableExists();
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
     }
@@ -86,7 +124,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() {
+    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -101,12 +139,12 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data1", pk1);
-        thenStructuredAndCuratedContainForPK("data2", pk2);
-        thenStructuredAndCuratedContainForPK("data3", pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3);
     }
     @Test
-    public void shouldHandleMultiplePrimaryKeysAcrossBatches() {
+    public void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -121,9 +159,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data1a", pk1);
-        thenStructuredAndCuratedContainForPK("data2a", pk2);
-        thenStructuredAndCuratedContainForPK("data3a", pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1a", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2a", pk2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3a", pk3);
 
         whenUpdateOccursForPK(pk1, "data1b", "2023-11-13 10:01:01.000000");
         whenUpdateOccursForPK(pk2, "data2b", "2023-11-13 10:01:01.000000");
@@ -131,13 +169,13 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data1b", pk1);
-        thenStructuredAndCuratedContainForPK("data2b", pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1b", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2b", pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -167,14 +205,14 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedDoNotContainPK(pk1);
-        thenStructuredAndCuratedContainForPK("data2c", pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
-        thenStructuredAndCuratedContainForPK("data4b", pk4);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2c", pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data4b", pk4);
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() {
+    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -187,29 +225,29 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data1", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
 
         whenUpdateOccursForPK(pk1, "data2", "2023-11-13 10:02:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data2", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk1);
 
         whenUpdateOccursForPK(pk1, "data3", "2023-11-13 10:03:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data3", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk1);
 
         whenDeleteOccursForPK(pk1, "2023-11-13 10:04:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedDoNotContainPK(pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
     }
 
     @Test
-    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() {
+    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -223,12 +261,12 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data1", pk1);
-        thenStructuredAndCuratedDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
     }
 
     @Test
-    public void shouldWriteNullsToViolationsForNonNullableColumns() {
+    public void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -243,15 +281,15 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredAndCuratedContainForPK("data1", pk1);
-        thenStructuredAndCuratedContainForPK("data3", pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3);
 
-        thenStructuredAndCuratedDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
         thenStructuredViolationsContainsForPK("data2", pk2);
     }
 
     @Test
-    public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() {
+    public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() throws Exception {
         givenMissingSourceReference();
         givenAnInputStreamWithSchemaInference();
         givenTableStreamingQuery();
@@ -267,9 +305,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data1", pk1);
         thenStructuredViolationsContainsForPK("data2", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredAndCuratedDoNotContainPK(pk1);
-        thenStructuredAndCuratedDoNotContainPK(pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
 
         whenInsertOccursForPK(pk1, "data4", "2023-11-13 10:00:01.000000");
         whenUpdateOccursForPK(pk2, "data5", "2023-11-13 10:00:01.000000");
@@ -280,13 +318,13 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data4", pk1);
         thenStructuredViolationsContainsForPK("data5", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredAndCuratedDoNotContainPK(pk1);
-        thenStructuredAndCuratedDoNotContainPK(pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
     }
 
     @Test
-    public void shouldWriteSchemaMismatchesToViolationsAcrossMultipleBatches() {
+    public void shouldWriteSchemaMismatchesToViolationsAcrossMultipleBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -304,9 +342,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data1", pk1);
         thenStructuredViolationsContainsForPK("data2", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredAndCuratedDoNotContainPK(pk1);
-        thenStructuredAndCuratedDoNotContainPK(pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
 
         whenInsertOccursForPK(pk1, "data4", "2023-11-13 10:00:01.000000");
         whenUpdateOccursForPK(pk2, "data5", "2023-11-13 10:00:01.000000");
@@ -317,9 +355,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data4", pk1);
         thenStructuredViolationsContainsForPK("data5", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredAndCuratedDoNotContainPK(pk1);
-        thenStructuredAndCuratedDoNotContainPK(pk2);
-        thenStructuredAndCuratedDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
     }
 
     private void givenAMatchingSchema() {
@@ -369,6 +407,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 .thenReturn(Optional.of(sourceReference));
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
+        when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
     }
 
     private void givenASourceReferenceSchema() {
@@ -378,9 +417,46 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void givenASourceReferencePrimaryKey() {
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN));
     }
+
     private void givenMissingSourceReference() {
         when(sourceReferenceService.getSourceReference(inputSchemaName, inputTableName))
                 .thenReturn(Optional.empty());
+    }
+
+    private void givenDatastoreCredentials() {
+        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
+        credentials.setUsername(operationalDataStore.getUsername());
+        credentials.setPassword(operationalDataStore.getPassword());
+
+        when(connectionDetailsService.getConnectionDetails()).thenReturn(
+                new OperationalDataStoreConnectionDetails(
+                        operationalDataStore.getJdbcUrl(),
+                        operationalDataStore.getDriverClassName(),
+                        credentials
+                )
+        );
+    }
+
+    private void givenSchemas() throws SQLException {
+        when(arguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
+        givenSchemaExists("loading");
+        givenSchemaExists(inputSchemaName);
+    }
+
+    private void givenSchemaExists(String schemaName) throws SQLException {
+        Properties jdbcProps = new Properties();
+        jdbcProps.put("user", operationalDataStore.getUsername());
+        jdbcProps.put("password", operationalDataStore.getPassword());
+        try(Statement statement = testQueryConnection.createStatement()) {
+            statement.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+        }
+    }
+
+    private void givenEmptyDestinationTableExists() throws SQLException {
+        try(Statement statement = testQueryConnection.createStatement()) {
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (pk INTEGER, data VARCHAR)", inputSchemaName, inputTableName));
+            statement.execute(format("TRUNCATE TABLE %s.%s", inputSchemaName, inputTableName));
+        }
     }
 
     private void givenTableStreamingQuery() throws NoSchemaNoDataException {
@@ -391,11 +467,18 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 dataProvider,
                 tableDiscoveryService
         );
+        OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
+        ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
+        OperationalDataStoreDataAccess operationalDataStoreDataAccess =
+                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
+        OperationalDataStoreService operationalDataStoreService =
+                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 new ValidationService(violationService),
                 new StructuredZoneCDC(arguments, violationService, storageService),
                 new CuratedZoneCDC(arguments, violationService, storageService),
-                dataProvider
+                dataProvider,
+                operationalDataStoreService
         );
         TableStreamingQueryProvider streamingQueryProvider = new TableStreamingQueryProvider(
                 arguments,
@@ -435,5 +518,46 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void whenDataIsAddedToTheInputStream(List<Row> inputData) {
         Seq<Row> input = convertListToSeq(inputData);
         inputStream.addData(input);
+    }
+
+    private void thenOperationalDataStoreContainsForPK(String data, int primaryKey) throws SQLException {
+        String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d AND %s = '%s'",
+                inputSchemaName, inputTableName, PRIMARY_KEY_COLUMN, primaryKey, DATA_COLUMN, data);
+        try(Statement statement = testQueryConnection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery(sql);
+            if(resultSet.next()) {
+                int count = resultSet.getInt(1);
+                assertEquals(1, count);
+            }
+        }
+    }
+
+    private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String data, int primaryKey) throws SQLException {
+        thenStructuredAndCuratedContainForPK(data, primaryKey);
+        thenOperationalDataStoreContainsForPK(data, primaryKey);
+    }
+
+    private void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(int primaryKey) throws SQLException {
+        thenStructuredAndCuratedDoNotContainPK(primaryKey);
+        thenOperationalDataStoreDoesNotContainPK(primaryKey);
+    }
+
+    private void thenOperationalDataStoreDoesNotContainPK(int primaryKey) throws SQLException {
+        try {
+            String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d",
+                    inputSchemaName, inputTableName, PRIMARY_KEY_COLUMN, primaryKey);
+            try (Statement statement = testQueryConnection.createStatement()) {
+                ResultSet resultSet = statement.executeQuery(sql);
+                if (resultSet.next()) {
+                    int count = resultSet.getInt(1);
+                    assertEquals(0, count);
+                }
+            }
+        } catch (SQLException e) {
+            // If the table doesn't exist then that is fine and it doesn't contain the primary key
+            if(!(e.getMessage().contains("Table") && e.getMessage().contains("not found"))) {
+                throw e;
+            }
+        }
     }
 }
