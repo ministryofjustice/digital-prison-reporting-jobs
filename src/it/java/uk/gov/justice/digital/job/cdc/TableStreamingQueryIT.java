@@ -60,8 +60,6 @@ import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADAT
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
-import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
-import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
@@ -137,9 +135,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk2);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
     }
     @Test
     public void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
@@ -157,9 +155,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1a", pk1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2a", pk2);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3a", pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1a", pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2a", pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3a", pk3, testQueryConnection);
 
         whenUpdateOccursForPK(pk1, "data1b", "2023-11-13 10:01:01.000000");
         whenUpdateOccursForPK(pk2, "data2b", "2023-11-13 10:01:01.000000");
@@ -167,9 +165,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1b", pk1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2b", pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1b", pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2b", pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     @Test
@@ -203,10 +201,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2c", pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data4b", pk4);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2c", pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data4b", pk4, testQueryConnection);
     }
 
     @Test
@@ -223,25 +221,25 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
 
         whenUpdateOccursForPK(pk1, "data2", "2023-11-13 10:02:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk1, testQueryConnection);
 
         whenUpdateOccursForPK(pk1, "data3", "2023-11-13 10:03:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk1, testQueryConnection);
 
         whenDeleteOccursForPK(pk1, "2023-11-13 10:04:00.000000");
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
     }
 
     @Test
@@ -259,8 +257,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
     }
 
     @Test
@@ -279,10 +277,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
         whenTheNextBatchIsProcessed();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
 
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
         thenStructuredViolationsContainsForPK("data2", pk2);
     }
 
@@ -303,9 +301,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data1", pk1);
         thenStructuredViolationsContainsForPK("data2", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
 
         whenInsertOccursForPK(pk1, "data4", "2023-11-13 10:00:01.000000");
         whenUpdateOccursForPK(pk2, "data5", "2023-11-13 10:00:01.000000");
@@ -316,9 +314,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data4", pk1);
         thenStructuredViolationsContainsForPK("data5", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     @Test
@@ -340,9 +338,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data1", pk1);
         thenStructuredViolationsContainsForPK("data2", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
 
         whenInsertOccursForPK(pk1, "data4", "2023-11-13 10:00:01.000000");
         whenUpdateOccursForPK(pk2, "data5", "2023-11-13 10:00:01.000000");
@@ -353,9 +351,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredViolationsContainsForPK("data4", pk1);
         thenStructuredViolationsContainsForPK("data5", pk2);
         thenStructuredViolationsContainsForPK(null, pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     private void givenAMatchingSchema() {
@@ -494,23 +492,5 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void whenDataIsAddedToTheInputStream(List<Row> inputData) {
         Seq<Row> input = convertListToSeq(inputData);
         inputStream.addData(input);
-    }
-
-    private void thenOperationalDataStoreContainsForPK(String data, int primaryKey) throws SQLException {
-        assertOperationalDataStoreContainsForPK(inputSchemaName, inputTableName, data, primaryKey, testQueryConnection);
-    }
-
-    private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String data, int primaryKey) throws SQLException {
-        thenStructuredAndCuratedContainForPK(data, primaryKey);
-        thenOperationalDataStoreContainsForPK(data, primaryKey);
-    }
-
-    private void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(int primaryKey) throws SQLException {
-        thenStructuredAndCuratedDoNotContainPK(primaryKey);
-        thenOperationalDataStoreDoesNotContainPK(primaryKey);
-    }
-
-    private void thenOperationalDataStoreDoesNotContainPK(int primaryKey) throws SQLException {
-        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, inputTableName, primaryKey, testQueryConnection);
     }
 }

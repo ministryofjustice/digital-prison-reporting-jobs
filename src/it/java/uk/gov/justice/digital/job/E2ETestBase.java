@@ -7,13 +7,9 @@ import org.apache.spark.sql.SaveMode;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
-import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,8 +31,6 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
-import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
-import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 
 public class E2ETestBase extends BaseSparkTest {
     protected static final String loadingSchemaName = "loading";
@@ -142,25 +136,8 @@ public class E2ETestBase extends BaseSparkTest {
         whenDataIsAddedToRawForTable(table, input);
     }
 
-    protected void thenStructuredAndCuratedForTableContainForPK(String table, String data, int primaryKey) {
-        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
-    }
-
-    protected void thenStructuredAndCuratedForTableDoNotContainPK(String table, int primaryKey) {
-        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
-    }
-
     protected void thenStructuredViolationsContainsForPK(String table, String data, int primaryKey) {
         String violationsTablePath = Paths.get(violationsPath).resolve("structured").resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
         assertViolationsTableContainsForPK(violationsTablePath, data, primaryKey);
     }
-
-    protected void thenOperationalDataStoreContainsForPK(String table, String data, int primaryKey, Connection testQueryConnection) throws SQLException {
-        assertOperationalDataStoreContainsForPK(inputSchemaName, table, data, primaryKey, testQueryConnection);
-    }
-
-    protected void thenOperationalDataStoreDoesNotContainPK(String table, int primaryKey, Connection testQueryConnection) throws SQLException {
-        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, table, primaryKey, testQueryConnection);
-    }
-
 }

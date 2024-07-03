@@ -37,6 +37,8 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 
@@ -163,12 +165,12 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     }
 
     private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey) throws SQLException {
-        thenStructuredAndCuratedForTableContainForPK(table, data, primaryKey);
-        thenOperationalDataStoreContainsForPK(table, data, primaryKey, testQueryConnection);
+        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
+        assertOperationalDataStoreContainsForPK(inputSchemaName, table, data, primaryKey, testQueryConnection);
     }
 
     private void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey) throws SQLException {
-        thenStructuredAndCuratedForTableDoNotContainPK(table, primaryKey);
-        thenOperationalDataStoreDoesNotContainPK(table, primaryKey, testQueryConnection);
+        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
+        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, table, primaryKey, testQueryConnection);
     }
 }
