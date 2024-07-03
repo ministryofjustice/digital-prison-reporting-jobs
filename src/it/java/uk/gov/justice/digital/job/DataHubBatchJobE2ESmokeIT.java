@@ -37,6 +37,8 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.

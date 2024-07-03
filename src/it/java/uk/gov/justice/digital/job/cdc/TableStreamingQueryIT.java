@@ -20,8 +20,6 @@ import scala.Option;
 import scala.collection.Seq;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
@@ -42,17 +40,14 @@ import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 
 import static java.lang.String.format;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -60,12 +55,15 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
-import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 
@@ -111,7 +109,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        givenDatastoreCredentials();
+        givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemas();
         givenEmptyDestinationTableExists();
         givenPathsAreConfigured();
@@ -423,38 +421,16 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 .thenReturn(Optional.empty());
     }
 
-    private void givenDatastoreCredentials() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(operationalDataStore.getUsername());
-        credentials.setPassword(operationalDataStore.getPassword());
-
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(
-                        operationalDataStore.getJdbcUrl(),
-                        operationalDataStore.getDriverClassName(),
-                        credentials
-                )
-        );
-    }
-
     private void givenSchemas() throws SQLException {
         when(arguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
-        givenSchemaExists("loading");
-        givenSchemaExists(inputSchemaName);
-    }
-
-    private void givenSchemaExists(String schemaName) throws SQLException {
-        Properties jdbcProps = new Properties();
-        jdbcProps.put("user", operationalDataStore.getUsername());
-        jdbcProps.put("password", operationalDataStore.getPassword());
-        try(Statement statement = testQueryConnection.createStatement()) {
-            statement.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
-        }
+        givenSchemaExists("loading", testQueryConnection);
+        givenSchemaExists(inputSchemaName, testQueryConnection);
     }
 
     private void givenEmptyDestinationTableExists() throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
             statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (pk INTEGER, data VARCHAR)", inputSchemaName, inputTableName));
+            // Truncate the table in case another test in this class might have already used this table
             statement.execute(format("TRUNCATE TABLE %s.%s", inputSchemaName, inputTableName));
         }
     }
@@ -521,15 +497,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     private void thenOperationalDataStoreContainsForPK(String data, int primaryKey) throws SQLException {
-        String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d AND %s = '%s'",
-                inputSchemaName, inputTableName, PRIMARY_KEY_COLUMN, primaryKey, DATA_COLUMN, data);
-        try(Statement statement = testQueryConnection.createStatement()) {
-            ResultSet resultSet = statement.executeQuery(sql);
-            if(resultSet.next()) {
-                int count = resultSet.getInt(1);
-                assertEquals(1, count);
-            }
-        }
+        assertOperationalDataStoreContainsForPK(inputSchemaName, inputTableName, data, primaryKey, testQueryConnection);
     }
 
     private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String data, int primaryKey) throws SQLException {
@@ -543,21 +511,6 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     private void thenOperationalDataStoreDoesNotContainPK(int primaryKey) throws SQLException {
-        try {
-            String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d",
-                    inputSchemaName, inputTableName, PRIMARY_KEY_COLUMN, primaryKey);
-            try (Statement statement = testQueryConnection.createStatement()) {
-                ResultSet resultSet = statement.executeQuery(sql);
-                if (resultSet.next()) {
-                    int count = resultSet.getInt(1);
-                    assertEquals(0, count);
-                }
-            }
-        } catch (SQLException e) {
-            // If the table doesn't exist then that is fine and it doesn't contain the primary key
-            if(!(e.getMessage().contains("Table") && e.getMessage().contains("not found"))) {
-                throw e;
-            }
-        }
+        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, inputTableName, primaryKey, testQueryConnection);
     }
 }

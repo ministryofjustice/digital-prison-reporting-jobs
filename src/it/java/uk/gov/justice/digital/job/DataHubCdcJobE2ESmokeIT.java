@@ -46,6 +46,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.
@@ -158,14 +160,11 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1b", pk1));
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1b", pk1));
-        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyInternalLocationsTable, "1b", pk1, testQueryConnection));
-        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyLocationsTable, "1b", pk1, testQueryConnection));
 
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(movementReasonsTable, pk2));
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offenderBookingsTable, pk2));
 
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "3a", pk3));
-        thenEventually(() -> thenOperationalDataStoreContainsForPK(offenderExternalMovementsTable, "3a", pk3, testQueryConnection));
 
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "3a", pk3));
 
