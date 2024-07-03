@@ -33,8 +33,9 @@ public class OperationalDataStoreDataAccess {
     private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreDataAccess.class);
 
     private final String jdbcUrl;
-    // Used by Spark to write to the DataStore
+    // Used by Spark to access the DataStore
     private final Properties jdbcProps;
+    // Used by JDBC to access the DataStore
     private final DataSource dataSource;
 
     @Inject
@@ -100,14 +101,12 @@ public class OperationalDataStoreDataAccess {
         String insertColumnNames = buildInsertColumnNames(lowerCaseFieldNames);
         String insertValues = buildInsertValues(lowerCaseFieldNames);
 
-        // 'd' is the destination table we merge into.
-        // 's' is the source table we merge from.
-        return format("MERGE INTO %s d\n" +
-                        "USING %s s ON %s\n" +
-                        "    WHEN MATCHED AND s.op = 'D' THEN DELETE\n" +
-                        "    WHEN MATCHED AND s.op = 'U' THEN UPDATE SET %s\n" +
-                        "    WHEN NOT MATCHED AND (s.op = 'I' OR s.op = 'U') THEN INSERT (%s) VALUES (%s)",
-                destinationTableName, temporaryTableName, joinCondition, updateAssignments, insertColumnNames, insertValues);
+        return "MERGE INTO " + destinationTableName + " destination\n" +
+                        "USING " + temporaryTableName +  " source ON " + joinCondition + "\n" +
+                        "    WHEN MATCHED AND source.op = 'D' THEN DELETE\n" +
+                        "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + updateAssignments + "\n" +
+                        "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U')" +
+                        " THEN INSERT (" + insertColumnNames + ") VALUES (" + insertValues + ")";
     }
 
     private String[] fieldNamesToLowerCase(SourceReference sourceReference) {
@@ -115,12 +114,12 @@ public class OperationalDataStoreDataAccess {
     }
 
     private String buildJoinCondition(SourceReference sourceReference) {
-        return sourceReference.getPrimaryKey().getSparkCondition("s", "d").toLowerCase();
+        return sourceReference.getPrimaryKey().getSparkCondition("source", "destination").toLowerCase();
     }
 
     private String buildUpdateAssignments(SourceReference sourceReference, String[] lowerCaseFieldNames) {
         Set<String> pkColumns = sourceReference.getPrimaryKey().getKeyColumnNames().stream().map(String::toLowerCase).collect(Collectors.toSet());
-        return String.join(", ", Arrays.stream(lowerCaseFieldNames).filter(c -> !pkColumns.contains(c)).map(c -> "d." + c + " = s." + c).toArray(String[]::new));
+        return String.join(", ", Arrays.stream(lowerCaseFieldNames).filter(c -> !pkColumns.contains(c)).map(c -> "destination." + c + " = source." + c).toArray(String[]::new));
     }
 
     private String buildInsertColumnNames(String[] lowerCaseFieldNames) {
@@ -128,6 +127,6 @@ public class OperationalDataStoreDataAccess {
     }
 
     private String buildInsertValues(String[] lowerCaseFieldNames) {
-        return String.join(", ", Arrays.stream(lowerCaseFieldNames).map(c -> "s." + c).toArray(String[]::new));
+        return String.join(", ", Arrays.stream(lowerCaseFieldNames).map(c -> "source." + c).toArray(String[]::new));
     }
 }

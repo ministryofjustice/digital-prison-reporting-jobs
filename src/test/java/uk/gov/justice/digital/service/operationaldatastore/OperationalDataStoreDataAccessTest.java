@@ -219,21 +219,19 @@ class OperationalDataStoreDataAccessTest {
         when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
 
         when(sourceReference.getSchema()).thenReturn(schema);
-        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("pk_col"));
         when(schema.fieldNames()).thenReturn(new String[]{"pk_col", "column2"});
-        when(primaryKey.getSparkCondition(any(), any())).thenReturn("s.pk_col = d.pk_col");
-        when(primaryKey.getKeyColumnNames()).thenReturn(Arrays.asList("pk_col"));
 
         underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
 
         String resultSql = underTest.buildMergeSql(temporaryTableName, destinationTableName, sourceReference);
         System.out.println(resultSql);
-        String expectedSql = "MERGE INTO some.table d\n" +
-                "USING loading.table s ON s.pk_col = d.pk_col\n" +
-                "    WHEN MATCHED AND s.op = 'D' THEN DELETE\n" +
-                "    WHEN MATCHED AND s.op = 'U' THEN UPDATE SET d.column2 = s.column2\n" +
-                "    WHEN NOT MATCHED AND (s.op = 'I' OR s.op = 'U') THEN INSERT (pk_col, column2) VALUES (s.pk_col, s.column2)";
-        assertEquals(resultSql, expectedSql);
+        String expectedSql = "MERGE INTO some.table destination\n" +
+                "USING loading.table source ON source.pk_col = destination.pk_col\n" +
+                "    WHEN MATCHED AND source.op = 'D' THEN DELETE\n" +
+                "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET destination.column2 = source.column2\n" +
+                "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U') THEN INSERT (pk_col, column2) VALUES (source.pk_col, source.column2)";
+        assertEquals(expectedSql, resultSql);
 
     }
 

@@ -31,7 +31,6 @@ import java.util.Properties;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
@@ -110,7 +109,7 @@ public class E2ETestBase extends BaseSparkTest {
         when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.of(sourceReference));
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
-        lenient().when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
+        when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
