@@ -4,8 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
@@ -26,7 +24,6 @@ import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,10 +41,6 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_N
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 public class E2ETestBase extends BaseSparkTest {
-
-    protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
-    private static Connection testQueryConnection;
-
     protected static final String loadingSchemaName = "loading";
     protected static final String inputSchemaName = "nomis";
     protected static final String agencyInternalLocationsTable = "agency_internal_locations";
@@ -66,18 +59,6 @@ public class E2ETestBase extends BaseSparkTest {
     protected String violationsPath;
 
     protected String checkpointPath;
-
-    @BeforeAll
-    static void beforeAll() throws Exception {
-        operationalDataStore.start();
-        testQueryConnection = operationalDataStore.getJdbcConnection();
-    }
-
-    @AfterAll
-    static void afterAll() throws Exception {
-        testQueryConnection.close();
-        operationalDataStore.stop();
-    }
 
     protected void givenPathsAreConfigured(JobArguments arguments) {
         rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
@@ -127,10 +108,7 @@ public class E2ETestBase extends BaseSparkTest {
         whenDataIsAddedToRawForTable(offendersTable, initialDataEveryTable);
     }
 
-    protected void givenDestinationTableExists(String tableName) throws SQLException {
-        Properties jdbcProps = new Properties();
-        jdbcProps.put("user", operationalDataStore.getUsername());
-        jdbcProps.put("password", operationalDataStore.getPassword());
+    protected void givenDestinationTableExists(String tableName, Connection testQueryConnection) throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
             statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (pk INTEGER, data VARCHAR)", inputSchemaName, tableName));
         }
@@ -166,18 +144,8 @@ public class E2ETestBase extends BaseSparkTest {
         whenDataIsAddedToRawForTable(table, input);
     }
 
-    protected void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey) throws SQLException {
-        thenStructuredAndCuratedForTableContainForPK(table, data, primaryKey);
-        thenOperationalDataStoreContainsForPK(table, data, primaryKey);
-    }
-
     protected void thenStructuredAndCuratedForTableContainForPK(String table, String data, int primaryKey) {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
-    }
-
-    protected void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey) throws SQLException {
-        thenStructuredAndCuratedForTableDoNotContainPK(table, primaryKey);
-        thenOperationalDataStoreDoesNotContainPK(table, primaryKey);
     }
 
     protected void thenStructuredAndCuratedForTableDoNotContainPK(String table, int primaryKey) {
@@ -189,16 +157,13 @@ public class E2ETestBase extends BaseSparkTest {
         assertViolationsTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 
-    protected void givenSchemaExists(String schemaName) throws SQLException {
-        Properties jdbcProps = new Properties();
-        jdbcProps.put("user", operationalDataStore.getUsername());
-        jdbcProps.put("password", operationalDataStore.getPassword());
+    protected void givenSchemaExists(String schemaName, Connection testQueryConnection) throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
             statement.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
         }
     }
 
-    void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService) {
+    protected void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
         OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
         credentials.setUsername(operationalDataStore.getUsername());
         credentials.setPassword(operationalDataStore.getPassword());
@@ -212,7 +177,7 @@ public class E2ETestBase extends BaseSparkTest {
         );
     }
 
-    protected void thenOperationalDataStoreContainsForPK(String table, String data, int primaryKey) throws SQLException {
+    protected void thenOperationalDataStoreContainsForPK(String table, String data, int primaryKey, Connection testQueryConnection) throws SQLException {
         String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d AND %s = '%s'",
                 inputSchemaName, table, PRIMARY_KEY_COLUMN, primaryKey, DATA_COLUMN, data);
         try(Statement statement = testQueryConnection.createStatement()) {
@@ -224,7 +189,7 @@ public class E2ETestBase extends BaseSparkTest {
         }
     }
 
-    protected void thenOperationalDataStoreDoesNotContainPK(String table, int primaryKey) throws SQLException {
+    protected void thenOperationalDataStoreDoesNotContainPK(String table, int primaryKey, Connection testQueryConnection) throws SQLException {
         try {
             String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d",
                     inputSchemaName, table, PRIMARY_KEY_COLUMN, primaryKey);
