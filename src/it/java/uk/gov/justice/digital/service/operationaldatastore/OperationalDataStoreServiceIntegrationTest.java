@@ -3,7 +3,6 @@ package uk.gov.justice.digital.service.operationaldatastore;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -15,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import scala.reflect.ClassTag;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
@@ -26,7 +24,6 @@ import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.UUID;
@@ -123,7 +120,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         underTest.overwriteData(df, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertEquals(2, result.count());
 
@@ -148,7 +145,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         underTest.overwriteData(df1, sourceReference);
         underTest.overwriteData(df2, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertEquals(2, result.count());
 
@@ -169,13 +166,12 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         underTest.overwriteData(df, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertThat(result.columns(), arrayContainingInAnyOrder("pk", "data"));
         assertThat(result.columns(), not(arrayContainingInAnyOrder(OPERATION, OPERATION.toLowerCase(), TIMESTAMP)));
     }
 
-    // todo
     @Test
     public void mergeDataShouldInsertWhenOpIsInsertOrUpdateAndPkNotPresent() throws Exception {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
@@ -194,7 +190,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         underTest.mergeData(df, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertEquals(2, result.count());
 
@@ -223,13 +219,13 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         createDestinationTable();
         underTest.mergeData(df1, sourceReference);
         // Check our test preconditions
-        Dataset<Row> dataInTableBeforeMerge = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> dataInTableBeforeMerge = retrieveAlDataInTable();
         assertEquals(1, dataInTableBeforeMerge.where(col("pk").contains("pk1")).count());
         assertEquals(1, dataInTableBeforeMerge.where(col("data").contains("initial data")).count());
         // Run the merge
         underTest.mergeData(df2, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertEquals(1, result.count());
 
@@ -257,13 +253,13 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         createDestinationTable();
         underTest.mergeData(df1, sourceReference);
         // Check our test preconditions
-        Dataset<Row> dataInTableBeforeMerge = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> dataInTableBeforeMerge = retrieveAlDataInTable();
         assertEquals(1, dataInTableBeforeMerge.where(col("pk").contains("pk1")).count());
         assertEquals(1, dataInTableBeforeMerge.where(col("data").contains("initial data")).count());
         // Run the merge
         underTest.mergeData(df2, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertEquals(0, result.count());
     }
@@ -287,13 +283,13 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         createDestinationTable();
         underTest.mergeData(df1, sourceReference);
         // Check our test preconditions
-        Dataset<Row> dataInTableBeforeMerge = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> dataInTableBeforeMerge = retrieveAlDataInTable();
         assertEquals(1, dataInTableBeforeMerge.where(col("pk").contains("pk1")).count());
         assertEquals(1, dataInTableBeforeMerge.where(col("data").contains("initial data")).count());
         // Run the merge
         underTest.mergeData(df2, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertEquals(1, result.count());
 
@@ -319,7 +315,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         // Run the merge
         underTest.mergeData(df, sourceReference);
 
-        Dataset<Row> result = spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
+        Dataset<Row> result = retrieveAlDataInTable();
 
         assertEquals(0, result.count());
     }
@@ -328,5 +324,9 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         try(Statement statement = testQueryConnection.createStatement()) {
             statement.execute(format("CREATE TABLE IF NOT EXISTS %s (pk VARCHAR, data VARCHAR)", destinationTableNameWithSchema));
         }
+    }
+
+    private Dataset<Row> retrieveAlDataInTable() {
+        return spark.read().jdbc(operationalDataStore.getJdbcUrl(), destinationTableNameWithSchema, jdbcProperties);
     }
 }
