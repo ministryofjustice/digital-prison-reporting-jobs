@@ -116,17 +116,29 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1a", pk1));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "1a", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "1a", pk1));
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2a", pk2));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(movementReasonsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "2a", pk2));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderBookingsTable, "2a", pk2));
+
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyInternalLocationsTable, "1a", pk1));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyLocationsTable, "1a", pk1));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(movementReasonsTable, "1a", pk1));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(offenderExternalMovementsTable, "1a", pk1));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(offenderBookingsTable, "1a", pk1));
+
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyInternalLocationsTable, "2a", pk2));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyLocationsTable, "2a", pk2));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(movementReasonsTable, "2a", pk2));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(offenderExternalMovementsTable, "2a", pk2));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(offenderBookingsTable, "2a", pk2));
 
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "1a", pk1));
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "2a", pk2));
@@ -140,13 +152,16 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         whenInsertOccursForTableAndPK(offenderExternalMovementsTable, pk3, "3a", "2023-11-13 10:01:00.000000");
         whenInsertOccursForTableAndPK(offendersTable, pk3, "3a", "2023-11-13 10:01:00.000000");
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1b", pk1));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1b", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyInternalLocationsTable, "1b", pk1));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(agencyLocationsTable, "1b", pk1));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyInternalLocationsTable, "1b", pk1));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(agencyLocationsTable, "1b", pk1));
 
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(movementReasonsTable, pk2));
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offenderBookingsTable, pk2));
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "3a", pk3));
+        thenEventually(() -> thenStructuredAndCuratedForTableContainForPK(offenderExternalMovementsTable, "3a", pk3));
+        thenEventually(() -> thenOperationalDataStoreContainsForPK(offenderExternalMovementsTable, "3a", pk3));
 
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "3a", pk3));
 
