@@ -119,7 +119,7 @@ public class OperationalDataStoreDataAccess {
 
     private String buildUpdateAssignments(SourceReference sourceReference, String[] lowerCaseFieldNames) {
         Set<String> pkColumns = sourceReference.getPrimaryKey().getKeyColumnNames().stream().map(String::toLowerCase).collect(Collectors.toSet());
-        return String.join(", ", Arrays.stream(lowerCaseFieldNames).filter(c -> !pkColumns.contains(c)).map(c -> "destination." + c + " = source." + c).toArray(String[]::new));
+        return String.join(", ", Arrays.stream(lowerCaseFieldNames).filter(c -> !pkColumns.contains(c)).map(c -> c + " = source." + c).toArray(String[]::new));
     }
 
     private String buildInsertColumnNames(String[] lowerCaseFieldNames) {
