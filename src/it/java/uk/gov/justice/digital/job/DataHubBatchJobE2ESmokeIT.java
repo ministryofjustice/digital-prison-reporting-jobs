@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.job;
 
 import org.apache.spark.sql.Row;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,8 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
@@ -19,14 +19,17 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.operationaldatastore.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
+import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -34,6 +37,10 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.
@@ -45,6 +52,9 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
  */
 @ExtendWith(MockitoExtension.class)
 class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
+    protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
+    private static Connection testQueryConnection;
+
     @Mock
     private JobArguments arguments;
     @Mock
@@ -55,16 +65,27 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private OperationalDataStoreConnectionDetailsService connectionDetailsService;
     private DataHubBatchJob underTest;
 
+    @BeforeAll
+    static void beforeAll() throws Exception {
+        operationalDataStore.start();
+        testQueryConnection = operationalDataStore.getJdbcConnection();
+    }
+
+    @AfterAll
+    static void afterAll() throws Exception {
+        testQueryConnection.close();
+        operationalDataStore.stop();
+    }
 
     @BeforeEach
     public void setUp() throws SQLException {
-        givenDatastoreCredentials();
+        givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenDependenciesAreInjected();
-        givenSchemaExists(inputSchemaName);
+        givenSchemaExists(inputSchemaName, testQueryConnection);
     }
 
     @Test
@@ -120,9 +141,11 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
-        OperationalDataStoreDataAccess operationalDataStoreDataAccess = new OperationalDataStoreDataAccess(connectionDetailsService);
+        ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
+        OperationalDataStoreDataAccess operationalDataStoreDataAccess =
+                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreServiceImpl(operationalDataStoreTransformation, operationalDataStoreDataAccess);
+                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
         underTest = new DataHubBatchJob(
                 arguments,
@@ -141,17 +164,13 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("part-*parquet");
     }
 
-    private void givenDatastoreCredentials() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(operationalDataStore.getUsername());
-        credentials.setPassword(operationalDataStore.getPassword());
+    private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey) throws SQLException {
+        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
+        assertOperationalDataStoreContainsForPK(inputSchemaName, table, data, primaryKey, testQueryConnection);
+    }
 
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(
-                        operationalDataStore.getJdbcUrl(),
-                        operationalDataStore.getDriverClassName(),
-                        credentials
-                )
-        );
+    private void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey) throws SQLException {
+        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
+        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, table, primaryKey, testQueryConnection);
     }
 }

@@ -18,7 +18,12 @@ public class DisabledOperationalDataStoreService implements OperationalDataStore
     }
 
     @Override
-    public void storeBatchData(Dataset<Row> dataFrame, SourceReference sourceReference) {
-        logger.info("Operational DataStore functionality is disabled, skipping table {}.{}", sourceReference.getSource(), sourceReference.getTable());
+    public void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference) {
+        logger.info("Operational DataStore functionality is disabled, Skipping overwrite data to table {}.{}", sourceReference.getSource(), sourceReference.getTable());
+    }
+
+    @Override
+    public void mergeData(Dataset<Row> dataFrame, SourceReference sourceReference) {
+        logger.info("Operational DataStore functionality is disabled, Skipping merge into table {}.{}", sourceReference.getSource(), sourceReference.getTable());
     }
 }

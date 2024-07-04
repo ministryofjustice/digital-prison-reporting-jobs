@@ -5,9 +5,11 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.SQLException;
 
-import static org.apache.spark.sql.functions.lit;
-import static uk.gov.justice.digital.test.MinimalTestData.inserts;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 
 public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected static final int pk1 = 1;
@@ -27,10 +29,6 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected String curatedPath;
     protected String violationsPath;
     protected String checkpointPath;
-
-    protected void thenStructuredAndCuratedContainForPK(String data, int primaryKey) {
-        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, inputTableName, data, primaryKey);
-    }
 
     protected void thenStructuredViolationsContainsPK(int primaryKey) {
         String violationsTablePath = Paths.get(violationsPath)
@@ -52,9 +50,13 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
         assertViolationsTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 
-    protected void thenStructuredAndCuratedDoNotContainPK(int primaryKey) {
-        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, inputTableName, primaryKey);
+    protected void thenStructuredCuratedAndOperationalDataStoreContainForPK(String data, int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, inputTableName, data, primaryKey);
+        assertOperationalDataStoreContainsForPK(inputSchemaName, inputTableName, data, primaryKey, testQueryConnection);
     }
 
-
+    protected void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, inputTableName, primaryKey);
+        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, inputTableName, primaryKey, testQueryConnection);
+    }
 }

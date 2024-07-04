@@ -16,6 +16,7 @@ import scala.collection.JavaConverters;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
@@ -35,17 +36,21 @@ public class CdcBatchProcessor {
     private final StructuredZoneCDC structuredZone;
     private final CuratedZoneCDC curatedZone;
     private final S3DataProvider dataProvider;
+    private final OperationalDataStoreService operationalDataStoreService;
 
     @Inject
     public CdcBatchProcessor(
             ValidationService validationService,
             StructuredZoneCDC structuredZone,
             CuratedZoneCDC curatedZone,
-            S3DataProvider dataProvider) {
+            S3DataProvider dataProvider,
+            OperationalDataStoreService operationalDataStoreService
+    ) {
         this.validationService = validationService;
         this.structuredZone = structuredZone;
         this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
+        this.operationalDataStoreService = operationalDataStoreService;
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
@@ -58,8 +63,9 @@ public class CdcBatchProcessor {
             val validRows = validationService.handleValidation(spark, df, sourceReference, inferredSchema, STRUCTURED_CDC);
             val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
 
-            structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
-            curatedZone.process(spark, latestCDCRecordsByPK, sourceReference);
+            val structuredDf = structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
+            val curatedDf = curatedZone.process(spark, structuredDf, sourceReference);
+            operationalDataStoreService.mergeData(curatedDf, sourceReference);
             logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
         } else {
             logger.info("Skipping empty batch");

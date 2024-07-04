@@ -133,6 +133,8 @@ public class JobArguments {
     static final String ACTIVATE_GLUE_TRIGGER = "dpr.glue.trigger.activate";
     static final String OPERATIONAL_DATA_STORE_WRITE_ENABLED = "dpr.operational.data.store.write.enabled";
     static final String OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME = "dpr.operational.data.store.glue.connection.name";
+    static final String OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME = "dpr.operational.data.store.loading.schema.name";
+    static final String OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME_DEFAULT = "loading";
 
     private final Map<String, String> config;
 
@@ -420,6 +422,10 @@ public class JobArguments {
 
     public String getOperationalDataStoreGlueConnectionName() {
         return getArgument(OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME);
+    }
+
+    public String getOperationalDataStoreLoadingSchemaName() {
+        return getArgument(OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME_DEFAULT);
     }
 
     public int orchestrationWaitIntervalSeconds() {
