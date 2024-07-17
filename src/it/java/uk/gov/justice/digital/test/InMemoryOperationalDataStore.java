@@ -11,6 +11,7 @@ import java.util.UUID;
 import static java.lang.String.format;
 
 public class InMemoryOperationalDataStore {
+    private static final String DRIVER_CLASS_NAME = "org.h2.Driver";
 
     private Server h2Server;
 
@@ -26,6 +27,13 @@ public class InMemoryOperationalDataStore {
                 // Squash on purpose since this is a best effort attempt to not leave around orphaned resources
             }
         }));
+        try {
+            // We shouldn't need to explicitly load the class like this, but we get intermittent test failures
+            // due to "java.sql.SQLException: No suitable driver found" if we don't.
+            Class.forName(DRIVER_CLASS_NAME);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void stop() {
@@ -47,7 +55,7 @@ public class InMemoryOperationalDataStore {
     }
 
     public String getDriverClassName() {
-        return "org.h2.Driver";
+        return DRIVER_CLASS_NAME;
     }
 
     public Connection getJdbcConnection() throws SQLException {
