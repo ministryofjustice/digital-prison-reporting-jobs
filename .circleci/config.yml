@@ -19,12 +19,12 @@ workflows:
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store
           sync_args: "--exclude '*' --include '*-all*jar'"
-          deploy_script: true
-          deploy_to_test: true # Deploy to Test Environment
-          notify_jira: true
-          notify_slack: true
+          deploy_script: false
+          deploy_to_test: false # Deploy to Test Environment
+          notify_jira: false
+          notify_slack: false
           channel: dpr_cicd_alerts
-          command: jar shadowJar # Skip tests when building jar, they've already run
+          command: build -x test
           filters:
             branches:
               only: /.*/
