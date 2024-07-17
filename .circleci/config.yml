@@ -24,7 +24,7 @@ workflows:
           notify_jira: false
           notify_slack: false
           channel: dpr_cicd_alerts
-          command: build -x test
+          command: clean build -x test
           filters:
             branches:
               only: /.*/
