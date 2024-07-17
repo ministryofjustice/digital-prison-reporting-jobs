@@ -28,8 +28,8 @@ public class InMemoryOperationalDataStore {
             }
         }));
         try {
-            // We shouldn't need to explicitly load the class like this, but we get intermittent test failures
-            // due to "java.sql.SQLException: No suitable driver found" if we don't.
+            // We shouldn't need to explicitly load the class like this, but we get intermittent test failures when
+            // running integration tests in parallel due to "java.sql.SQLException: No suitable driver found" if we don't
             Class.forName(DRIVER_CLASS_NAME);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
