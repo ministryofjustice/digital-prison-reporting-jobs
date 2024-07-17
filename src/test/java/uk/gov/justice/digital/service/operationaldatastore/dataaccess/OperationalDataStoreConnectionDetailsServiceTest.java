@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.operationaldatastore;
+package uk.gov.justice.digital.service.operationaldatastore.dataaccess;
 
 import com.amazonaws.services.glue.model.Connection;
 import org.junit.jupiter.api.BeforeEach;

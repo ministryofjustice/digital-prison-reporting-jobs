@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.operationaldatastore;
+package uk.gov.justice.digital.service.operationaldatastore.dataaccess;
 
 import com.google.common.annotations.VisibleForTesting;
 import jakarta.inject.Inject;
@@ -9,6 +9,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 
 /**
- * Responsible for accessing the Operational DataStore.
+ * Hub for accessing the Operational DataStore.
  */
 @Singleton
 public class OperationalDataStoreDataAccess {
@@ -37,11 +38,18 @@ public class OperationalDataStoreDataAccess {
     private final Properties jdbcProps;
     // Used by JDBC to access the DataStore
     private final DataSource dataSource;
+    // Maps tables to domain classes and vice-versa
+    private final OperationalDataStoreRepository operationalDataStoreRepository;
+    // The set of tables managed by the Operational DataStore. Only these tables should be written to the ODS.
+    // Loaded on app startup and refreshed when the app is restarted. This should only ever be in the order of
+    // 100s and so should not grow too large.
+    private final Set<DataHubOperationalDataStoreManagedTable> managedTables;
 
     @Inject
     public OperationalDataStoreDataAccess(
             OperationalDataStoreConnectionDetailsService connectionDetailsService,
-            ConnectionPoolProvider connectionPoolProvider
+            ConnectionPoolProvider connectionPoolProvider,
+            OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider
     ) {
         logger.debug("Retrieving connection details for Operational DataStore");
         OperationalDataStoreConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails();
@@ -57,9 +65,13 @@ public class OperationalDataStoreDataAccess {
                 connectionDetails.getCredentials().getPassword()
         );
         logger.debug("Finished retrieving connection details for Operational DataStore");
+        logger.debug("Retrieving Operational DataStore managed tables");
+        operationalDataStoreRepository = operationalDataStoreRepositoryProvider.getOperationalDataStoreRepository(dataSource);
+        managedTables = operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables();
+        logger.debug("Finished retrieving Operational DataStore managed tables");
     }
 
-    void overwriteTable(Dataset<Row> dataframe, String destinationTableName) {
+    public void overwriteTable(Dataset<Row> dataframe, String destinationTableName) {
         val startTime = System.currentTimeMillis();
         logger.debug("Writing data to Operational DataStore");
         dataframe.write()
@@ -68,7 +80,7 @@ public class OperationalDataStoreDataAccess {
         logger.debug("Finished writing data to Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
     }
 
-    void merge(String temporaryTableName, String destinationTableName, SourceReference sourceReference) {
+    public void merge(String temporaryTableName, String destinationTableName, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
         logger.debug("Merging into destination table {}", destinationTableName);
         String mergeSql = buildMergeSql(temporaryTableName, destinationTableName, sourceReference);
@@ -90,6 +102,12 @@ public class OperationalDataStoreDataAccess {
         }
 
         logger.debug("Finished merging into destination table {} in {}ms", destinationTableName, System.currentTimeMillis() - startTime);
+    }
+
+    public boolean isOperationalDataStoreManagedTable(SourceReference sourceReference) {
+        DataHubOperationalDataStoreManagedTable thisTable =
+                new DataHubOperationalDataStoreManagedTable(sourceReference.getSource(), sourceReference.getTable());
+        return managedTables.contains(thisTable);
     }
 
     @VisibleForTesting

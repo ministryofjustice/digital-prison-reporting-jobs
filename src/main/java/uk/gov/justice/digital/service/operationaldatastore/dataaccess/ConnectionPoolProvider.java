@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.operationaldatastore;
+package uk.gov.justice.digital.service.operationaldatastore.dataaccess;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;

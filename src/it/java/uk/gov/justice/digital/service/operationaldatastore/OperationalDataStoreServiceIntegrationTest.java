@@ -19,6 +19,10 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepositoryProvider;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
 import java.sql.Connection;
@@ -104,10 +108,11 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("public");
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
+        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider();
         underTest = new OperationalDataStoreServiceImpl(
                 jobArguments,
                 new OperationalDataStoreTransformation(),
-                new OperationalDataStoreDataAccess(mockConnectionDetailsService, connectionPoolProvider)
+                new OperationalDataStoreDataAccess(mockConnectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider)
         );
     }
 

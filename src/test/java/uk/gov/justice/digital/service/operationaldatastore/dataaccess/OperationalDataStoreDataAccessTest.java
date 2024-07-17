@@ -1,14 +1,16 @@
-package uk.gov.justice.digital.service.operationaldatastore;
+package uk.gov.justice.digital.service.operationaldatastore.dataaccess;
 
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.types.StructType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -19,10 +21,14 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,6 +36,12 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OperationalDataStoreDataAccessTest {
+
+    private static final Set<DataHubOperationalDataStoreManagedTable> managedTables = new HashSet<>(Arrays.asList(
+            new DataHubOperationalDataStoreManagedTable("nomis", "activities"),
+            new DataHubOperationalDataStoreManagedTable("nomis", "prisoners"),
+            new DataHubOperationalDataStoreManagedTable("nomis", "external_movements")
+    ));
     @Mock
     private OperationalDataStoreConnectionDetailsService connectionDetailsService;
     @Mock
@@ -38,6 +50,10 @@ class OperationalDataStoreDataAccessTest {
     private DataFrameWriter<Row> dataframeWriter;
     @Mock
     private ConnectionPoolProvider connectionPoolProvider;
+    @Mock
+    private OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider;
+    @Mock
+    private OperationalDataStoreRepository operationalDataStoreRepository;
     @Mock
     private DataSource dataSource;
     @Mock
@@ -53,35 +69,28 @@ class OperationalDataStoreDataAccessTest {
 
     private OperationalDataStoreDataAccess underTest;
 
-    @Test
-    void shouldRetrieveConnectionDetailsInConstructor() {
+    @BeforeEach
+    public void setup() {
         OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
         credentials.setUsername("username");
         credentials.setPassword("password");
         OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
                 "jdbc-url", "org.postgresql.Driver", credentials
         );
-
         when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
+        when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
+        when(operationalDataStoreRepositoryProvider.getOperationalDataStoreRepository(any())).thenReturn(operationalDataStoreRepository);
+        when(operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables()).thenReturn(managedTables);
+        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider);
+    }
 
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
-
+    @Test
+    void shouldRetrieveConnectionDetailsInConstructor() {
         verify(connectionDetailsService, times(1)).getConnectionDetails();
     }
 
     @Test
     void shouldInitialiseConnectionPoolInConstructor() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername("username");
-        credentials.setPassword("password");
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", "org.postgresql.Driver", credentials
-        );
-
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
-
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
-
         verify(connectionPoolProvider, times(1)).getConnectionPool(
                 "jdbc-url",
                 "org.postgresql.Driver",
@@ -91,20 +100,17 @@ class OperationalDataStoreDataAccessTest {
     }
 
     @Test
-    void shouldOverwriteExistingTable() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername("username");
-        credentials.setPassword("password");
-        String destinationTableName = "some.table";
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", "org.postgresql.Driver", credentials
-        );
+    void shouldRetrieveManagedTablesInConstructor() {
+        verify(operationalDataStoreRepository, times(1)).getDataHubOperationalDataStoreManagedTables();
+    }
 
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
+    @Test
+    void shouldOverwriteExistingTable() {
+        String destinationTableName = "some.table";
+
         when(dataframe.write()).thenReturn(dataframeWriter);
         when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
 
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         underTest.overwriteTable(dataframe, destinationTableName);
 
         Properties expectedProperties = new Properties();
@@ -119,17 +125,9 @@ class OperationalDataStoreDataAccessTest {
 
     @Test
     void shouldMerge() throws Exception {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername("username");
-        credentials.setPassword("password");
         String temporaryTableName = "loading.table";
         String destinationTableName = "some.table";
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", "org.postgresql.Driver", credentials
-        );
 
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
-        when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
         when(sourceReference.getSchema()).thenReturn(schema);
@@ -138,25 +136,16 @@ class OperationalDataStoreDataAccessTest {
         when(primaryKey.getSparkCondition(any(), any())).thenReturn("s.column1 = d.column1");
         when(primaryKey.getKeyColumnNames()).thenReturn(Arrays.asList("column1"));
 
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         underTest.merge(temporaryTableName, destinationTableName, sourceReference);
 
         verify(statement, times(2)).execute(any());
     }
 
     @Test
-    void shouldCloseResources() throws Exception {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername("username");
-        credentials.setPassword("password");
+    void mergeShouldCloseResources() throws Exception {
         String temporaryTableName = "loading.table";
         String destinationTableName = "some.table";
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", "org.postgresql.Driver", credentials
-        );
 
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
-        when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
         when(sourceReference.getSchema()).thenReturn(schema);
@@ -165,7 +154,6 @@ class OperationalDataStoreDataAccessTest {
         when(primaryKey.getSparkCondition(any(), any())).thenReturn("s.column1 = d.column1");
         when(primaryKey.getKeyColumnNames()).thenReturn(Arrays.asList("column1"));
 
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         underTest.merge(temporaryTableName, destinationTableName, sourceReference);
 
         verify(connection, times(1)).close();
@@ -173,18 +161,10 @@ class OperationalDataStoreDataAccessTest {
     }
 
     @Test
-    void shouldCloseResourcesWhenSqlExecutionThrows() throws Exception {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername("username");
-        credentials.setPassword("password");
+    void mergeShouldCloseResourcesWhenSqlExecutionThrows() throws Exception {
         String temporaryTableName = "loading.table";
         String destinationTableName = "some.table";
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", "org.postgresql.Driver", credentials
-        );
 
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
-        when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
         when(statement.execute(any())).thenThrow(new SQLException());
@@ -194,7 +174,6 @@ class OperationalDataStoreDataAccessTest {
         when(primaryKey.getSparkCondition(any(), any())).thenReturn("s.column1 = d.column1");
         when(primaryKey.getKeyColumnNames()).thenReturn(Arrays.asList("column1"));
 
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
         assertThrows(OperationalDataStoreException.class, () -> {
             underTest.merge(temporaryTableName, destinationTableName, sourceReference);
         });
@@ -209,20 +188,9 @@ class OperationalDataStoreDataAccessTest {
         String temporaryTableName = "loading.table";
         String destinationTableName = "some.table";
 
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername("username");
-        credentials.setPassword("password");
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
-                "jdbc-url", "org.postgresql.Driver", credentials
-        );
-
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
-
         when(sourceReference.getSchema()).thenReturn(schema);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("pk_col"));
         when(schema.fieldNames()).thenReturn(new String[]{"pk_col", "column2"});
-
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
 
         String resultSql = underTest.buildMergeSql(temporaryTableName, destinationTableName, sourceReference);
         System.out.println(resultSql);
@@ -232,7 +200,26 @@ class OperationalDataStoreDataAccessTest {
                 "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET column2 = source.column2\n" +
                 "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U') THEN INSERT (pk_col, column2) VALUES (source.pk_col, source.column2)";
         assertEquals(expectedSql, resultSql);
-
     }
 
+    @Test
+    void isOperationalDataStoreManagedTableShouldReturnTrueForManagedTables() {
+        when(sourceReference.getSource()).thenReturn("nomis");
+        when(sourceReference.getTable()).thenReturn("activities");
+        assertTrue(underTest.isOperationalDataStoreManagedTable(sourceReference));
+    }
+
+    @Test
+    void isOperationalDataStoreManagedTableShouldReturnFalseForNonManagedSource() {
+        when(sourceReference.getSource()).thenReturn("source_not_in_managed_tables");
+        when(sourceReference.getTable()).thenReturn("activities");
+        assertFalse(underTest.isOperationalDataStoreManagedTable(sourceReference));
+    }
+
+    @Test
+    void isOperationalDataStoreManagedTableShouldReturnFalseForNonManagedTable() {
+        when(sourceReference.getSource()).thenReturn("nomis");
+        when(sourceReference.getTable()).thenReturn("table_not_in_managed_tables");
+        assertFalse(underTest.isOperationalDataStoreManagedTable(sourceReference));
+    }
 }

@@ -2,7 +2,7 @@ package uk.gov.justice.digital.test;
 
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
