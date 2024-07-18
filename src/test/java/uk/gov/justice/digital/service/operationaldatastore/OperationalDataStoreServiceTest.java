@@ -84,7 +84,7 @@ class OperationalDataStoreServiceTest {
     }
 
     @Test
-    void overwriteDataShouldSkipOverwriteForUnmanagedTables() {
+    void overwriteDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
 
         underTest.overwriteData(inputDataframe, sourceReference);
@@ -131,7 +131,7 @@ class OperationalDataStoreServiceTest {
     }
 
     @Test
-    void mergeDataShouldSkipOverwriteForUnmanagedTables() {
+    void mergeDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
 
         underTest.mergeData(inputDataframe, sourceReference);

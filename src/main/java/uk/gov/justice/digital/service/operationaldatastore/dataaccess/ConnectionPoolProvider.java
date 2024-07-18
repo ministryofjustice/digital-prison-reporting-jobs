@@ -11,7 +11,7 @@ public class ConnectionPoolProvider {
 
     private static final int MAX_HIKARI_POOL_SIZE = 10;
 
-    DataSource getConnectionPool(
+    public DataSource getConnectionPool(
             String jdbcUrl,
             String jdbcDriverClassName,
             String username,

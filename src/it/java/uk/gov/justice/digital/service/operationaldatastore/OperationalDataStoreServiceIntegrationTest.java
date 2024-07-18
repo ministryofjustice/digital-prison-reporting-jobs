@@ -118,7 +118,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void overwriteDataShouldInsertData() {
+    void overwriteDataShouldInsertData() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
@@ -137,7 +137,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void overwriteDataShouldOverwriteExistingData() {
+    void overwriteDataShouldOverwriteExistingData() {
         Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
@@ -164,7 +164,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void overwriteDataShouldCreateTableWithLowercaseColumnsWithoutOpAndTimestamp() {
+    void overwriteDataShouldCreateTableWithLowercaseColumnsWithoutOpAndTimestamp() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other data")
@@ -179,7 +179,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void mergeDataShouldInsertWhenOpIsInsertOrUpdateAndPkNotPresent() throws Exception {
+    void mergeDataShouldInsertWhenOpIsInsertOrUpdateAndPkNotPresent() throws Exception {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "some other data")
@@ -206,7 +206,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void mergeDataShouldUpdateWhenOpIsUpdateAndPkPresent() throws Exception {
+    void mergeDataShouldUpdateWhenOpIsUpdateAndPkPresent() throws Exception {
         Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "initial data")
         ), schema);
@@ -239,7 +239,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void mergeDataShouldDeleteWhenOpIsDeleteAndPkPresent() throws Exception {
+    void mergeDataShouldDeleteWhenOpIsDeleteAndPkPresent() throws Exception {
         Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "initial data")
         ), schema);
@@ -268,7 +268,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void mergeDataShouldDoNothingWhenOpIsInsertAndPkIsPresent() throws Exception {
+    void mergeDataShouldDoNothingWhenOpIsInsertAndPkIsPresent() throws Exception {
         Dataset<Row> df1 = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "initial data")
         ), schema);
@@ -301,7 +301,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    public void mergeDataShouldDoNothingWhenOpIsDeleteAndPkNotPresent() throws Exception {
+    void mergeDataShouldDoNothingWhenOpIsDeleteAndPkNotPresent() throws Exception {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "D", "initial data")
         ), schema);

@@ -14,6 +14,9 @@ import java.util.Set;
 
 public class OperationalDataStoreRepository {
 
+    private static final String SOURCE_COL_NAME = "source";
+    private static final String TABLE_NAME_COL_NAME = "table_name";
+
     private final DataSource dataSource;
     private final JobArguments jobArguments;
 
@@ -22,15 +25,15 @@ public class OperationalDataStoreRepository {
         this.jobArguments = jobArguments;
     }
 
+    @SuppressWarnings("java:S2077")
     Set<DataHubOperationalDataStoreManagedTable> getDataHubOperationalDataStoreManagedTables() {
-        // If our requirements for this class become more complicated we might consider replacing JDBC with an ORM
         Set<DataHubOperationalDataStoreManagedTable> data = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
-            try(Statement s = connection.createStatement()) {
-                try(ResultSet rs = s.executeQuery("SELECT source, table_name FROM " + jobArguments.getOperationalDataStoreTablesToWriteTableName())) {
+            try (Statement s = connection.createStatement()) {
+                try (ResultSet rs = s.executeQuery("SELECT source, table_name FROM " + jobArguments.getOperationalDataStoreTablesToWriteTableName())) {
                     while (rs.next()) {
-                        String source = rs.getString("source");
-                        String tableName = rs.getString("table_name");
+                        String source = rs.getString(SOURCE_COL_NAME);
+                        String tableName = rs.getString(TABLE_NAME_COL_NAME);
                         data.add(new DataHubOperationalDataStoreManagedTable(source, tableName));
                     }
                     return data;

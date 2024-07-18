@@ -40,9 +40,9 @@ public class OperationalDataStoreDataAccess {
     private final DataSource dataSource;
     // Maps tables to domain classes and vice-versa
     private final OperationalDataStoreRepository operationalDataStoreRepository;
-    // The set of tables managed by the Operational DataStore. Only these tables should be written to the ODS.
-    // Loaded on app startup and refreshed when the app is restarted. This should only ever be in the order of
-    // 100s and so should not grow too large.
+    // The set DataHub of tables managed by the Operational DataStore. Only these tables should be written to the ODS.
+    // Loaded on app startup and refreshed when the app is restarted. This should only ever at maximum be in the order of
+    // 100s and so should not grow too large to stay loaded in memory.
     private final Set<DataHubOperationalDataStoreManagedTable> managedTables;
 
     @Inject
@@ -89,7 +89,7 @@ public class OperationalDataStoreDataAccess {
         logger.debug("truncate SQL is {}", truncateSql);
 
         try (Connection connection = dataSource.getConnection()) {
-            try(Statement statement = connection.createStatement()) {
+            try (Statement statement = connection.createStatement()) {
                 statement.execute(mergeSql);
                 logger.debug("Finished running MERGE into destination table {}", destinationTableName);
                 // Truncation of the temporary loading table is not really required since spark will truncate it
@@ -120,11 +120,11 @@ public class OperationalDataStoreDataAccess {
         String insertValues = buildInsertValues(lowerCaseFieldNames);
 
         return "MERGE INTO " + destinationTableName + " destination\n" +
-                        "USING " + temporaryTableName +  " source ON " + joinCondition + "\n" +
-                        "    WHEN MATCHED AND source.op = 'D' THEN DELETE\n" +
-                        "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + updateAssignments + "\n" +
-                        "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U')" +
-                        " THEN INSERT (" + insertColumnNames + ") VALUES (" + insertValues + ")";
+                "USING " + temporaryTableName + " source ON " + joinCondition + "\n" +
+                "    WHEN MATCHED AND source.op = 'D' THEN DELETE\n" +
+                "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + updateAssignments + "\n" +
+                "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U')" +
+                " THEN INSERT (" + insertColumnNames + ") VALUES (" + insertValues + ")";
     }
 
     private String[] fieldNamesToLowerCase(SourceReference sourceReference) {

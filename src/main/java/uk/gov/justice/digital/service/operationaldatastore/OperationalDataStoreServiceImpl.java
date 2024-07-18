@@ -56,7 +56,7 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
             logger.info("Finished processing records to write to Operational Data Store table {} in {}ms",
                     destinationTableName, System.currentTimeMillis() - startTime);
         } else {
-            logger.info("Skipping write to Operational Data Store for table {}", destinationTableName);
+            logger.info("Skipping write to Operational Data Store for non-managed table {}", destinationTableName);
         }
     }
 
@@ -85,7 +85,7 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
             logger.info("Finished processing records to merge into Operational Data Store table {} in {}ms",
                     destinationTableName, System.currentTimeMillis() - startTime);
         } else {
-            logger.info("Skipping merge to Operational Data Store for table {}", destinationTableName);
+            logger.info("Skipping merge to Operational Data Store for non-managed table {}", destinationTableName);
         }
     }
 }
