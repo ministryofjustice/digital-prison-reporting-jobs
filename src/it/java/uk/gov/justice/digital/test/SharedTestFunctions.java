@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.test;
 
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
@@ -37,7 +38,11 @@ public class SharedTestFunctions {
         }
     }
 
-    public static void givenDataHubManagedTableIsConfigured(String configSchema, String configTable, String schemaName, String tableName, Connection testQueryConnection) throws SQLException {
+    public static void givenTablesToWriteTableNameIsConfigured(JobArguments arguments, String fullTableName) {
+        when(arguments.getOperationalDataStoreTablesToWriteTableName()).thenReturn(fullTableName);
+    }
+
+    public static void givenTablesToWriteContains(String configSchema, String configTable, String schemaName, String tableName, Connection testQueryConnection) throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
             statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (source VARCHAR, table_name VARCHAR)", configSchema, configTable));
             statement.execute(format("INSERT INTO %s.%s VALUES ('%s', '%s')", configSchema, configTable, schemaName, tableName));

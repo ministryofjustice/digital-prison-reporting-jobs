@@ -49,9 +49,10 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenDataHubManagedTableIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.
@@ -105,11 +106,12 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         givenCheckpointsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenLoadingSchemaIsConfigured();
-        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, agencyInternalLocationsTable, testQueryConnection);
-        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, agencyLocationsTable, testQueryConnection);
-        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, movementReasonsTable, testQueryConnection);
-        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, offenderBookingsTable, testQueryConnection);
-        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
+        givenTablesToWriteTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
+        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, agencyInternalLocationsTable, testQueryConnection);
+        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, agencyLocationsTable, testQueryConnection);
+        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, movementReasonsTable, testQueryConnection);
+        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, offenderBookingsTable, testQueryConnection);
+        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
         givenDependenciesAreInjected();
 
         givenDestinationTableExists(agencyInternalLocationsTable, testQueryConnection);
@@ -202,7 +204,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
-        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider();
+        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider(arguments);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
                 new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider);
         OperationalDataStoreService operationalDataStoreService =

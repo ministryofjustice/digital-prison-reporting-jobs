@@ -39,9 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenDataHubManagedTableIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
 
 @ExtendWith(MockitoExtension.class)
 public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
@@ -102,12 +103,13 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         givenSchemaExists(configurationSchema, testQueryConnection);
         givenSchemaExists(loadingSchemaName, testQueryConnection);
         givenSchemaExists(inputSchemaName, testQueryConnection);
-        givenDataHubManagedTableIsConfigured(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
+        givenTablesToWriteTableNameIsConfigured(jobArguments, configurationSchema + "." + configurationTable);
+        givenTablesToWriteContains(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
-        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider();
+        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider(jobArguments);
         underTest = new OperationalDataStoreServiceImpl(
                 jobArguments,
                 new OperationalDataStoreTransformation(),

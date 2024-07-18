@@ -44,9 +44,10 @@ import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADAT
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenDataHubManagedTableIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
 
 @ExtendWith(MockitoExtension.class)
 class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
@@ -83,7 +84,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         givenRetrySettingsAreConfigured(arguments);
         givenSchemaExists(inputSchemaName, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
-        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
+        givenTablesToWriteTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
+        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
         givenS3BatchProcessorDependenciesAreInjected();
         givenASourceReference();
     }
@@ -251,7 +253,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
-        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider();
+        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider(arguments);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
                 new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider);
         OperationalDataStoreService operationalDataStoreService =

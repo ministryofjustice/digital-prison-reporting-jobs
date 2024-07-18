@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service.operationaldatastore.dataaccess;
 
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
 
@@ -14,21 +15,19 @@ import java.util.Set;
 public class OperationalDataStoreRepository {
 
     private final DataSource dataSource;
+    private final JobArguments jobArguments;
 
-    public OperationalDataStoreRepository(DataSource dataSource) {
+    public OperationalDataStoreRepository(DataSource dataSource, JobArguments jobArguments) {
         this.dataSource = dataSource;
+        this.jobArguments = jobArguments;
     }
 
     Set<DataHubOperationalDataStoreManagedTable> getDataHubOperationalDataStoreManagedTables() {
-        // TODO: Managed table name from configuration
-        String managedTablesTableName = "configuration.datahub_managed_tables";
-        String sql = "SELECT source, table_name FROM " + managedTablesTableName;
-
         // If our requirements for this class become more complicated we might consider replacing JDBC with an ORM
         Set<DataHubOperationalDataStoreManagedTable> data = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
             try(Statement s = connection.createStatement()) {
-                try(ResultSet rs = s.executeQuery(sql)) {
+                try(ResultSet rs = s.executeQuery("SELECT source, table_name FROM " + jobArguments.getOperationalDataStoreTablesToWriteTableName())) {
                     while (rs.next()) {
                         String source = rs.getString("source");
                         String tableName = rs.getString("table_name");
