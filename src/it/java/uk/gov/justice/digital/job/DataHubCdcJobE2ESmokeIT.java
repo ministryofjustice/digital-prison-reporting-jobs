@@ -49,6 +49,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDataHubManagedTableIsConfigured;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 
@@ -97,12 +98,18 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemaExists(loadingSchemaName, testQueryConnection);
         givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(configurationSchemaName, testQueryConnection);
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenGlobPatternIsConfigured();
         givenCheckpointsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
         givenLoadingSchemaIsConfigured();
+        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, agencyInternalLocationsTable, testQueryConnection);
+        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, agencyLocationsTable, testQueryConnection);
+        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, movementReasonsTable, testQueryConnection);
+        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, offenderBookingsTable, testQueryConnection);
+        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
         givenDependenciesAreInjected();
 
         givenDestinationTableExists(agencyInternalLocationsTable, testQueryConnection);

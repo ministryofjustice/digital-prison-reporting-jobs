@@ -44,6 +44,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADAT
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDataHubManagedTableIsConfigured;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 
@@ -80,9 +81,11 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
+        givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(configurationSchemaName, testQueryConnection);
+        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
         givenS3BatchProcessorDependenciesAreInjected();
         givenASourceReference();
-        givenSchemaExists(inputSchemaName, testQueryConnection);
     }
 
     @Test

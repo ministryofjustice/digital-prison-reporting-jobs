@@ -33,8 +33,10 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_N
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 public class E2ETestBase extends BaseSparkTest {
+    protected static final String configurationSchemaName = "configuration";
     protected static final String loadingSchemaName = "loading";
     protected static final String inputSchemaName = "nomis";
+    protected static final String configurationTableName = "datahub_managed_tables";
     protected static final String agencyInternalLocationsTable = "agency_internal_locations";
     protected static final String agencyLocationsTable = "agency_locations";
     protected static final String movementReasonsTable = "movement_reasons";

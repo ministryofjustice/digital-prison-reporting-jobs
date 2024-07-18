@@ -37,6 +37,13 @@ public class SharedTestFunctions {
         }
     }
 
+    public static void givenDataHubManagedTableIsConfigured(String configSchema, String configTable, String schemaName, String tableName, Connection testQueryConnection) throws SQLException {
+        try(Statement statement = testQueryConnection.createStatement()) {
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (source VARCHAR, table_name VARCHAR)", configSchema, configTable));
+            statement.execute(format("INSERT INTO %s.%s VALUES ('%s', '%s')", configSchema, configTable, schemaName, tableName));
+        }
+    }
+
     public static void assertOperationalDataStoreContainsForPK(String schemaName, String table, String data, int primaryKey, Connection testQueryConnection) throws SQLException {
         String sql = format("SELECT COUNT(1) AS cnt FROM %s.%s WHERE %s = %d AND %s = '%s'",
                 schemaName, table, PRIMARY_KEY_COLUMN, primaryKey, DATA_COLUMN, data);

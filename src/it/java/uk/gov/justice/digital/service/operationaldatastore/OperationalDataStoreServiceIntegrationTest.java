@@ -16,8 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
@@ -41,6 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDataHubManagedTableIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 
 @ExtendWith(MockitoExtension.class)
 public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
@@ -65,7 +66,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     private OperationalDataStoreService underTest;
 
     private String destinationTableNameWithSchema;
-    private String loadingTableName;
     private Properties jdbcProperties;
 
     @BeforeAll
@@ -81,31 +81,30 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @BeforeEach
-    void setUp() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(operationalDataStore.getUsername());
-        credentials.setPassword(operationalDataStore.getPassword());
-
-        when(mockConnectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(
-                        operationalDataStore.getJdbcUrl(),
-                        operationalDataStore.getDriverClassName(),
-                        credentials
-                )
-        );
+    void setUp() throws Exception {
+        givenDatastoreCredentials(mockConnectionDetailsService, operationalDataStore);
 
         jdbcProperties = new Properties();
         jdbcProperties.put("user", operationalDataStore.getUsername());
         jdbcProperties.put("password", operationalDataStore.getPassword());
 
         // Use unique tables for each test.
-        // We use public schema so that we can skip creating a schema. In reality this would be the 'source', e.g. "nomis",
-        // for the destination table and the loading schema for the loading table.
         // Postgres table names cannot start with a number, hence the underscore prefix, and cannot contain hyphens/dashes.
-        destinationTableNameWithSchema = "public._" + UUID.randomUUID().toString().replaceAll("-", "_");
-        loadingTableName = "loading" + UUID.randomUUID().toString().replaceAll("-", "_");
+        String configurationSchema = "configuration";
+        String inputSchemaName = "nomis";
+        String loadingSchemaName = "loading";
+        String inputTableName = "_" + UUID.randomUUID().toString().replaceAll("-", "_");
+        destinationTableNameWithSchema = inputSchemaName + "." + inputTableName;
+        String configurationTable = "datahub_managed_tables";
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
-        when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("public");
+        when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn(loadingSchemaName);
+
+        givenSchemaExists(configurationSchema, testQueryConnection);
+        givenSchemaExists(loadingSchemaName, testQueryConnection);
+        givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenDataHubManagedTableIsConfigured(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
+        when(sourceReference.getSource()).thenReturn(inputSchemaName);
+        when(sourceReference.getTable()).thenReturn(inputTableName);
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider();
@@ -186,7 +185,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         Dataset<Row> dfWithoutMetadataCols = df.drop(TIMESTAMP, OPERATION);
         StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
 
-        when(sourceReference.getTable()).thenReturn(loadingTableName);
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
 
@@ -216,7 +214,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         Dataset<Row> dfWithoutMetadataCols = df1.drop(TIMESTAMP, OPERATION);
         StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
 
-        when(sourceReference.getTable()).thenReturn(loadingTableName);
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
 
@@ -250,7 +247,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         Dataset<Row> dfWithoutMetadataCols = df1.drop(TIMESTAMP, OPERATION);
         StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
 
-        when(sourceReference.getTable()).thenReturn(loadingTableName);
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
 
@@ -280,7 +276,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         Dataset<Row> dfWithoutMetadataCols = df1.drop(TIMESTAMP, OPERATION);
         StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
 
-        when(sourceReference.getTable()).thenReturn(loadingTableName);
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
 
@@ -311,7 +306,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         Dataset<Row> dfWithoutMetadataCols = df.drop(TIMESTAMP, OPERATION);
         StructType schemaWithoutMetadataCols = dfWithoutMetadataCols.schema();
 
-        when(sourceReference.getTable()).thenReturn(loadingTableName);
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
 
@@ -326,7 +320,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     private void createDestinationTable() throws SQLException {
-        try(Statement statement = testQueryConnection.createStatement()) {
+        try (Statement statement = testQueryConnection.createStatement()) {
             statement.execute(format("CREATE TABLE IF NOT EXISTS %s (pk VARCHAR, data VARCHAR)", destinationTableNameWithSchema));
         }
     }

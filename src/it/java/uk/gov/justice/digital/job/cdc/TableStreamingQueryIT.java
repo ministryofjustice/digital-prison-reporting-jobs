@@ -61,6 +61,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADAT
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDataHubManagedTableIsConfigured;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
@@ -110,6 +111,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     public void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemas();
+        givenDataHubManagedTableIsConfigured(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
         givenEmptyDestinationTableExists();
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
@@ -424,6 +426,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         when(arguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
         givenSchemaExists("loading", testQueryConnection);
         givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(configurationSchemaName, testQueryConnection);
     }
 
     private void givenEmptyDestinationTableExists() throws SQLException {

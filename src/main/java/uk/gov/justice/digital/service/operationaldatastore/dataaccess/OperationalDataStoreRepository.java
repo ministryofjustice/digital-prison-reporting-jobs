@@ -5,9 +5,9 @@ import uk.gov.justice.digital.exception.OperationalDataStoreException;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,8 +27,8 @@ public class OperationalDataStoreRepository {
         // If our requirements for this class become more complicated we might consider replacing JDBC with an ORM
         Set<DataHubOperationalDataStoreManagedTable> data = new HashSet<>();
         try (Connection connection = dataSource.getConnection()) {
-            try(PreparedStatement ps = connection.prepareStatement(sql)) {
-                try(ResultSet rs = ps.executeQuery(sql)) {
+            try(Statement s = connection.createStatement()) {
+                try(ResultSet rs = s.executeQuery(sql)) {
                     while (rs.next()) {
                         String source = rs.getString("source");
                         String tableName = rs.getString("table_name");
