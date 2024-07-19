@@ -42,7 +42,7 @@ public class OperationalDataStoreDataAccess {
     private final OperationalDataStoreRepository operationalDataStoreRepository;
     // The set DataHub of tables managed by the Operational DataStore. Only these tables should be written to the ODS.
     // Loaded on app startup and refreshed when the app is restarted. This should only ever at maximum be in the order of
-    // 100s and so should not grow too large to stay loaded in memory.
+    // hundreds and so should not grow too large to stay loaded in memory.
     private final Set<DataHubOperationalDataStoreManagedTable> managedTables;
 
     @Inject
@@ -54,10 +54,7 @@ public class OperationalDataStoreDataAccess {
         logger.debug("Retrieving connection details for Operational DataStore");
         OperationalDataStoreConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails();
         jdbcUrl = connectionDetails.getUrl();
-        jdbcProps = new Properties();
-        jdbcProps.put("driver", connectionDetails.getJdbcDriverClassName());
-        jdbcProps.put("user", connectionDetails.getCredentials().getUsername());
-        jdbcProps.put("password", connectionDetails.getCredentials().getPassword());
+        jdbcProps = connectionDetails.toSparkJdbcProperties();
         dataSource = connectionPoolProvider.getConnectionPool(
                 jdbcUrl,
                 connectionDetails.getJdbcDriverClassName(),

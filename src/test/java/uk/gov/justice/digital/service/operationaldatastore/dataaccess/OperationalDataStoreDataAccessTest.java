@@ -71,9 +71,7 @@ class OperationalDataStoreDataAccessTest {
 
     @BeforeEach
     public void setup() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername("username");
-        credentials.setPassword("password");
+        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials("username", "password");
         OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
                 "jdbc-url", "org.postgresql.Driver", credentials
         );

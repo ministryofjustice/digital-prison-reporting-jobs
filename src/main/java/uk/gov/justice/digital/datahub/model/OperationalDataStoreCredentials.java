@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class OperationalDataStoreCredentials {
-    private String username;
-    private String password;
+    private final String username;
+    private final String password;
 }

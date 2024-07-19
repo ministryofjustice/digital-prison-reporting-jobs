@@ -19,9 +19,10 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 public class SharedTestFunctions {
 
     public static void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(operationalDataStore.getUsername());
-        credentials.setPassword(operationalDataStore.getPassword());
+        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials(
+                operationalDataStore.getUsername(),
+                operationalDataStore.getPassword()
+        );
 
         when(connectionDetailsService.getConnectionDetails()).thenReturn(
                 new OperationalDataStoreConnectionDetails(
