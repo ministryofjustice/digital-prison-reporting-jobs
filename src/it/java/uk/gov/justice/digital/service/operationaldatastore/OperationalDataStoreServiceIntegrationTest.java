@@ -44,8 +44,8 @@ import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
 
 @ExtendWith(MockitoExtension.class)
 public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
@@ -113,8 +113,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         givenSchemaExists(configurationSchema, testQueryConnection);
         givenSchemaExists(loadingSchemaName, testQueryConnection);
         givenSchemaExists(inputSchemaName, testQueryConnection);
-        givenTablesToWriteTableNameIsConfigured(jobArguments, configurationSchema + "." + configurationTable);
-        givenTablesToWriteContains(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
+        givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(jobArguments, configurationSchema + "." + configurationTable);
+        givenTablesToWriteToOperationalDataStore(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =

@@ -46,8 +46,8 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_N
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
 
 @ExtendWith(MockitoExtension.class)
 class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
@@ -84,8 +84,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         givenRetrySettingsAreConfigured(arguments);
         givenSchemaExists(inputSchemaName, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
-        givenTablesToWriteTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
-        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
+        givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
         givenS3BatchProcessorDependenciesAreInjected();
         givenASourceReference();
     }

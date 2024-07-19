@@ -42,8 +42,8 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalD
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.
@@ -89,12 +89,12 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenRetrySettingsAreConfigured(arguments);
         givenSchemaExists(inputSchemaName, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
-        givenTablesToWriteTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
-        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, agencyInternalLocationsTable, testQueryConnection);
-        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, agencyLocationsTable, testQueryConnection);
-        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, movementReasonsTable, testQueryConnection);
-        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, offenderBookingsTable, testQueryConnection);
-        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
+        givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, agencyInternalLocationsTable, testQueryConnection);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, agencyLocationsTable, testQueryConnection);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, movementReasonsTable, testQueryConnection);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, offenderBookingsTable, testQueryConnection);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
         givenDependenciesAreInjected();
     }
 

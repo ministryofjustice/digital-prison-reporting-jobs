@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
 
 @ExtendWith(MockitoExtension.class)
 public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest {
@@ -62,7 +62,7 @@ public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest
         String tableName = "operationaldatastorerepositoryintegrationtest";
 
         givenSchemaExists(schemaName, testQueryConnection);
-        givenTablesToWriteContains(schemaName, tableName, "my_source", "my_table_name", testQueryConnection);
+        givenTablesToWriteToOperationalDataStore(schemaName, tableName, "my_source", "my_table_name", testQueryConnection);
 
         when(jobArguments.getOperationalDataStoreTablesToWriteTableName()).thenReturn(schemaName + "." + tableName);
 

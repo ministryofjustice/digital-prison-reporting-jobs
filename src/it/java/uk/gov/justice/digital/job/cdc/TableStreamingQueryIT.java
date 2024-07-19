@@ -63,8 +63,8 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 
@@ -112,8 +112,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     public void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemas();
-        givenTablesToWriteTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
-        givenTablesToWriteContains(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
+        givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
         givenEmptyDestinationTableExists();
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
