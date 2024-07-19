@@ -15,8 +15,8 @@ public class SparkSessionProvider {
 
     public GlueContext createGlueContext(String jobName, JobArguments arguments) {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
-        SparkSessionProvider.configureSparkConf(sparkConf, arguments);
-        return new GlueContext(new SparkContext(sparkConf));
+        SparkSession sparkSession = getConfiguredSparkSession(sparkConf, arguments);
+        return new GlueContext(sparkSession.sparkContext());
     }
 
     public SparkSession getConfiguredSparkSession(SparkConf sparkConf, JobArguments arguments) {
