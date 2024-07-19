@@ -51,8 +51,6 @@ class OperationalDataStoreDataAccessTest {
     @Mock
     private ConnectionPoolProvider connectionPoolProvider;
     @Mock
-    private OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider;
-    @Mock
     private OperationalDataStoreRepository operationalDataStoreRepository;
     @Mock
     private DataSource dataSource;
@@ -77,9 +75,8 @@ class OperationalDataStoreDataAccessTest {
         );
         when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
-        when(operationalDataStoreRepositoryProvider.getOperationalDataStoreRepository(any())).thenReturn(operationalDataStoreRepository);
         when(operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables()).thenReturn(managedTables);
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider);
+        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
     }
 
     @Test

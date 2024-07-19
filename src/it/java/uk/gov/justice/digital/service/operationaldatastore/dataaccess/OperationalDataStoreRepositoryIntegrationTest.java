@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
@@ -19,17 +20,20 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 
 @ExtendWith(MockitoExtension.class)
-public class OperationalDataStoreRepositoryIntegrationTest {
+public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest {
     private static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
     private static Connection testQueryConnection;
     private static DataSource dataSource;
 
     @Mock
     private JobArguments jobArguments;
+    @Mock
+    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
 
     private OperationalDataStoreRepository underTest;
 
@@ -48,7 +52,8 @@ public class OperationalDataStoreRepositoryIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        underTest = new OperationalDataStoreRepository(dataSource, jobArguments);
+        givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
+        underTest = new OperationalDataStoreRepository(jobArguments, connectionDetailsService, sparkSessionProvider);
     }
 
     @Test

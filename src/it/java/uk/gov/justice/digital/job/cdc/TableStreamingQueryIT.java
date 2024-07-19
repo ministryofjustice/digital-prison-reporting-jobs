@@ -28,13 +28,13 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepositoryProvider;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
@@ -61,9 +61,9 @@ import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADAT
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
@@ -449,9 +449,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         );
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
-        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider(arguments);
+        OperationalDataStoreRepository operationalDataStoreRepository =
+                new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider);
+                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(

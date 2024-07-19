@@ -19,13 +19,13 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepositoryProvider;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
@@ -40,9 +40,9 @@ import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteContains;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteTableNameIsConfigured;
 
 /**
@@ -152,9 +152,10 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
-        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider(arguments);
+        OperationalDataStoreRepository operationalDataStoreRepository =
+                new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider);
+                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);

@@ -19,18 +19,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 public class SharedTestFunctions {
 
     public static void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials(
-                operationalDataStore.getUsername(),
-                operationalDataStore.getPassword()
-        );
-
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(
-                        operationalDataStore.getJdbcUrl(),
-                        operationalDataStore.getDriverClassName(),
-                        credentials
-                )
-        );
+        when(connectionDetailsService.getConnectionDetails()).thenReturn(operationalDataStore.getConnectionDetails());
     }
 
     public static void givenSchemaExists(String schemaName, Connection testQueryConnection) throws SQLException {

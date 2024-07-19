@@ -26,7 +26,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
 public class BaseSparkTest {
 
-	private static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
+	protected static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
 
 	private static final SparkConf sparkTestConfiguration = new SparkConf()
 			.setAppName("test")

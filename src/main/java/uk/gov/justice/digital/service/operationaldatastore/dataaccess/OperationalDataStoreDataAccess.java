@@ -38,8 +38,6 @@ public class OperationalDataStoreDataAccess {
     private final Properties jdbcProps;
     // Used by JDBC to access the DataStore
     private final DataSource dataSource;
-    // Maps tables to domain classes and vice-versa
-    private final OperationalDataStoreRepository operationalDataStoreRepository;
     // The set DataHub of tables managed by the Operational DataStore. Only these tables should be written to the ODS.
     // Loaded on app startup and refreshed when the app is restarted. This should only ever at maximum be in the order of
     // hundreds and so should not grow too large to stay loaded in memory.
@@ -49,7 +47,7 @@ public class OperationalDataStoreDataAccess {
     public OperationalDataStoreDataAccess(
             OperationalDataStoreConnectionDetailsService connectionDetailsService,
             ConnectionPoolProvider connectionPoolProvider,
-            OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider
+            OperationalDataStoreRepository operationalDataStoreRepository
     ) {
         logger.debug("Retrieving connection details for Operational DataStore");
         OperationalDataStoreConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails();
@@ -63,7 +61,6 @@ public class OperationalDataStoreDataAccess {
         );
         logger.debug("Finished retrieving connection details for Operational DataStore");
         logger.debug("Retrieving Operational DataStore managed tables");
-        operationalDataStoreRepository = operationalDataStoreRepositoryProvider.getOperationalDataStoreRepository(dataSource);
         managedTables = operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables();
         logger.debug("Finished retrieving Operational DataStore managed tables");
     }

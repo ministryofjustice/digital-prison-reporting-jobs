@@ -20,7 +20,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepositoryProvider;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
 import java.sql.Connection;
@@ -97,7 +97,6 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     @BeforeEach
     void setUp() throws Exception {
         givenDatastoreCredentials(mockConnectionDetailsService, operationalDataStore);
-
         jdbcProperties = new Properties();
         jdbcProperties.put("user", operationalDataStore.getUsername());
         jdbcProperties.put("password", operationalDataStore.getPassword());
@@ -118,11 +117,12 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         givenTablesToWriteContains(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
-        OperationalDataStoreRepositoryProvider operationalDataStoreRepositoryProvider = new OperationalDataStoreRepositoryProvider(jobArguments);
+        OperationalDataStoreRepository operationalDataStoreRepository =
+                new OperationalDataStoreRepository(jobArguments, mockConnectionDetailsService, sparkSessionProvider);
         underTest = new OperationalDataStoreServiceImpl(
                 jobArguments,
                 new OperationalDataStoreTransformation(),
-                new OperationalDataStoreDataAccess(mockConnectionDetailsService, connectionPoolProvider, operationalDataStoreRepositoryProvider)
+                new OperationalDataStoreDataAccess(mockConnectionDetailsService, connectionPoolProvider, operationalDataStoreRepository)
         );
     }
 
