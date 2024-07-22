@@ -12,7 +12,6 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -28,7 +27,6 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWrite
 public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest {
     private static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
     private static Connection testQueryConnection;
-    private static DataSource dataSource;
 
     @Mock
     private JobArguments jobArguments;
@@ -41,7 +39,6 @@ public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest
     static void beforeAll() throws Exception {
         operationalDataStore.start();
         testQueryConnection = operationalDataStore.getJdbcConnection();
-        dataSource = operationalDataStore.getConnectionPool();
     }
 
     @AfterAll
