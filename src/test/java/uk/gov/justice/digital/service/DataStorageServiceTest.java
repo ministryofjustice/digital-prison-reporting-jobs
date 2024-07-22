@@ -458,7 +458,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
 
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
-        when(mockDataFrameWriter.mode(eq(SaveMode.Overwrite))).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.mode(SaveMode.Overwrite)).thenReturn(mockDataFrameWriter);
         String path = "some-path";
 
         dataStorageService.writeParquet(path, mockDataSet);

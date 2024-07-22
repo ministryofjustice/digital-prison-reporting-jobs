@@ -174,11 +174,11 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
                 TEST_DATA_SCHEMA
         );
 
-        when(dataProvider.getBatchSourceData(eq(spark), eq(Collections.singletonList("raw-t1-file1")))).thenReturn(rawDataset1);
-        when(dataProvider.getBatchSourceData(eq(spark), eq(Arrays.asList("raw-t2-file1", "raw-t2-file2")))).thenReturn(rawDataset2);
-        when(dataProvider.getBatchSourceData(eq(spark), eq(Collections.singletonList("raw-t3-file1")))).thenReturn(rawDataset3);
-        when(dataProvider.getBatchSourceData(eq(spark), eq(Collections.singletonList("archive-t1-file1")))).thenReturn(archiveDataset1);
-        when(dataProvider.getBatchSourceData(eq(spark), eq(Collections.singletonList("archive-t2-file1")))).thenReturn(archiveDataset2);
+        when(dataProvider.getBatchSourceData(spark, Collections.singletonList("raw-t1-file1"))).thenReturn(rawDataset1);
+        when(dataProvider.getBatchSourceData(spark, Arrays.asList("raw-t2-file1", "raw-t2-file2"))).thenReturn(rawDataset2);
+        when(dataProvider.getBatchSourceData(spark, Collections.singletonList("raw-t3-file1"))).thenReturn(rawDataset3);
+        when(dataProvider.getBatchSourceData(spark, Collections.singletonList("archive-t1-file1"))).thenReturn(archiveDataset1);
+        when(dataProvider.getBatchSourceData(spark, Collections.singletonList("archive-t2-file1"))).thenReturn(archiveDataset2);
 
         underTest.runJob(spark);
 
@@ -232,7 +232,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
                 TEST_DATA_SCHEMA
         );
 
-        when(dataProvider.getBatchSourceData(eq(spark), eq(Collections.singletonList("raw-t1-file1")))).thenReturn(dataset);
+        when(dataProvider.getBatchSourceData(spark, Collections.singletonList("raw-t1-file1"))).thenReturn(dataset);
 
         underTest.runJob(spark);
 

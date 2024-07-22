@@ -31,10 +31,9 @@ import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 @Singleton
 public class ReloadDiffProcessor {
 
-    private static final Logger logger = LoggerFactory.getLogger(CdcBatchProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReloadDiffProcessor.class);
     private static final String RANK_COL = "rank";
     private static final String DATE_TIME_PATTERN = "yyyyMMddHHmmss";
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_TIME_PATTERN);
     private final DataStorageService storageService;
 
     @Inject
@@ -44,7 +43,7 @@ public class ReloadDiffProcessor {
 
 
     public void createDiff(SourceReference sourceReference, String outputBasePath, Dataset<Row> raw, Dataset<Row> archive, Date reloadTime) {
-        String formattedStartTime = dateFormat.format(reloadTime);
+        String formattedStartTime = new SimpleDateFormat(DATE_TIME_PATTERN).format(reloadTime);
         val windowFunction = Window.partitionBy(getKeyColumnsAsSeq(sourceReference)).orderBy(col(CHECKPOINT_COL).desc());
 
         Dataset<Row> latestArchiveRecords = archive

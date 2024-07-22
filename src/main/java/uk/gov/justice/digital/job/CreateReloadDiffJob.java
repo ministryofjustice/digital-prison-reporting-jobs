@@ -15,7 +15,6 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.batchprocessing.ReloadDiffProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -102,7 +101,7 @@ public class CreateReloadDiffJob implements Runnable {
     }
 
     @VisibleForTesting
-    void runJob(SparkSession sparkSession) throws DataStorageException {
+    void runJob(SparkSession sparkSession) throws RuntimeException {
         val dmsStartTime = dmsOrchestrationService.getTaskStartTime(jobArguments.getDmsTaskId());
         val rawFilesPathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(jobArguments.getRawS3Path(), sparkSession);
         val rawArchiveFilesPathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(jobArguments.getRawArchiveS3Path(), sparkSession);

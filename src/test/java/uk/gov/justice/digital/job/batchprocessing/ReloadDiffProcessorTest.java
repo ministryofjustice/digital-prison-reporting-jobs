@@ -54,7 +54,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
     private static final String OUTPUT_BASE_PATH = "s3://bucket/output-folder";
     private static final String LOAD_CHECKPOINT_VALUE = "";
     private static final Date reloadTime = Date.from(Instant.now());
-    private static final String formattedReloadTime = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(reloadTime);
+    private static final String FORMATTED_RELOAD_TIME = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(reloadTime);
 
     private ReloadDiffProcessor underTest;
 
@@ -91,7 +91,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
                 RowFactory.create(3, "2023-11-13 10:50:00.123456", Insert.getName(), "3", LOAD_CHECKPOINT_VALUE)
         ), TEST_DATA_SCHEMA);
 
-        Dataset<Row> expectedDatasetToInsert = rawDataset.withColumn(CHECKPOINT_COL, lit(formattedReloadTime));
+        Dataset<Row> expectedDatasetToInsert = rawDataset.withColumn(CHECKPOINT_COL, lit(FORMATTED_RELOAD_TIME));
 
         mockSourceReferenceCall();
 
@@ -126,8 +126,8 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         ), TEST_DATA_SCHEMA);
 
         List<Row> expectedDatasetToDelete = Arrays.asList(
-                RowFactory.create(2, "2023-11-14 10:50:00.123456", Delete.getName(), "2a", formattedReloadTime),
-                RowFactory.create(3, "2023-11-13 10:50:00.123456", Delete.getName(), "3", formattedReloadTime)
+                RowFactory.create(2, "2023-11-14 10:50:00.123456", Delete.getName(), "2a", FORMATTED_RELOAD_TIME),
+                RowFactory.create(3, "2023-11-13 10:50:00.123456", Delete.getName(), "3", FORMATTED_RELOAD_TIME)
         );
 
         mockSourceReferenceCall();
@@ -162,8 +162,8 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         ), TEST_DATA_SCHEMA);
 
         List<Row> expectedDatasetToInsert = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "1", formattedReloadTime),
-                RowFactory.create(3, "2023-11-13 10:50:00.123456", Insert.getName(), "3", formattedReloadTime)
+                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "1", FORMATTED_RELOAD_TIME),
+                RowFactory.create(3, "2023-11-13 10:50:00.123456", Insert.getName(), "3", FORMATTED_RELOAD_TIME)
         );
 
         mockSourceReferenceCall();
@@ -203,9 +203,9 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         ), TEST_DATA_SCHEMA);
 
         List<Row> expectedDatasetToInsert = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:50:00.123456", Update.getName(), "4", formattedReloadTime),
-                RowFactory.create(2, "2023-11-13 10:50:00.123456", Update.getName(), "5", formattedReloadTime),
-                RowFactory.create(3, "2023-11-13 10:50:00.123456", Update.getName(), "6", formattedReloadTime)
+                RowFactory.create(1, "2023-11-13 10:50:00.123456", Update.getName(), "4", FORMATTED_RELOAD_TIME),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Update.getName(), "5", FORMATTED_RELOAD_TIME),
+                RowFactory.create(3, "2023-11-13 10:50:00.123456", Update.getName(), "6", FORMATTED_RELOAD_TIME)
         );
 
         mockSourceReferenceCall();
