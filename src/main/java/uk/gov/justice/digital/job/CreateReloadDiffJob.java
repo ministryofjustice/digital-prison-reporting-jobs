@@ -15,6 +15,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.SchemaNotFoundException;
 import uk.gov.justice.digital.job.batchprocessing.ReloadDiffProcessor;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -130,7 +131,7 @@ public class CreateReloadDiffJob implements Runnable {
                 } else {
                     String errorMessage = String.format("Unable to retrieve schema for %s.%s", schema, table);
                     logger.warn(errorMessage);
-                    throw new RuntimeException(errorMessage);
+                    throw new SchemaNotFoundException(errorMessage);
                 }
             } else {
                 logger.warn("No raw file paths found for table {}.{}", schema, table);

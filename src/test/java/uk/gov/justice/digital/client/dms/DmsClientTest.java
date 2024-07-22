@@ -16,7 +16,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.exception.DmsClientException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -79,7 +83,6 @@ class DmsClientTest {
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
     }
 
-//    @SuppressWarnings("unchecked")
     @Test
     void stopTaskShouldNotFailWhenTaskIsAlreadyStopped() {
         List<ReplicationTask> stoppedTasks = new ArrayList<>();

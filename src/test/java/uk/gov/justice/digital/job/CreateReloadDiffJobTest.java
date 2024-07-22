@@ -18,6 +18,7 @@ import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.SchemaNotFoundException;
 import uk.gov.justice.digital.exception.TableDiscoveryException;
 import uk.gov.justice.digital.job.batchprocessing.ReloadDiffProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -281,7 +282,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
         when(tableDiscoveryService.discoverBatchFilesToLoad(ARCHIVE_PATH, spark)).thenReturn(discoveredArchivePathsByTable);
         when(sourceReferenceService.getSourceReference(any(), any())).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> underTest.runJob(spark));
+        assertThrows(SchemaNotFoundException.class, () -> underTest.runJob(spark));
     }
 
     @Test
