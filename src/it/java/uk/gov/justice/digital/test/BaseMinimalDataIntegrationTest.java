@@ -19,6 +19,8 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected static final int pk5 = 5;
     protected static final int pk6 = 6;
 
+    protected static final String configurationSchemaName = "configuration";
+    protected static final String configurationTableName = "datahub_managed_tables";
     protected static final String inputSchemaName = "my_schema";
     protected static final String inputTableName = "my_table";
 

@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.operationaldatastore;
+package uk.gov.justice.digital.service.operationaldatastore.dataaccess;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -11,7 +11,7 @@ public class ConnectionPoolProvider {
 
     private static final int MAX_HIKARI_POOL_SIZE = 10;
 
-    DataSource getConnectionPool(
+    public DataSource getConnectionPool(
             String jdbcUrl,
             String jdbcDriverClassName,
             String username,

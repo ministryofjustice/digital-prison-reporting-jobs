@@ -28,12 +28,13 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.operationaldatastore.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreDataAccess;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
@@ -62,6 +63,8 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
 import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
 
 
@@ -109,6 +112,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     public void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemas();
+        givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
+        givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
         givenEmptyDestinationTableExists();
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
@@ -423,6 +428,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         when(arguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
         givenSchemaExists("loading", testQueryConnection);
         givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(configurationSchemaName, testQueryConnection);
     }
 
     private void givenEmptyDestinationTableExists() throws SQLException {
@@ -443,8 +449,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         );
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
+        OperationalDataStoreRepository operationalDataStoreRepository =
+                new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider);
+                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(

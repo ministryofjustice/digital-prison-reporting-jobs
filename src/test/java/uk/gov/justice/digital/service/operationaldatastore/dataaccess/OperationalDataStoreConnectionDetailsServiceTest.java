@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.operationaldatastore;
+package uk.gov.justice.digital.service.operationaldatastore.dataaccess;
 
 import com.amazonaws.services.glue.model.Connection;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,9 +54,7 @@ class OperationalDataStoreConnectionDetailsServiceTest {
         connectionProperties.put("JDBC_DRIVER_CLASS_NAME", expectedDriver);
         connectionProperties.put("SECRET_ID", secretId);
 
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(expectedUsername);
-        credentials.setPassword(expectedPassword);
+        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials(expectedUsername, expectedPassword);
 
         when(mockJobArguments.getOperationalDataStoreGlueConnectionName()).thenReturn(connectionName);
         when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);

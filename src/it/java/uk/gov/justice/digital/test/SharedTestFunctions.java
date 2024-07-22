@@ -1,8 +1,7 @@
 package uk.gov.justice.digital.test;
 
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
-import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -18,22 +17,23 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 public class SharedTestFunctions {
 
     public static void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials();
-        credentials.setUsername(operationalDataStore.getUsername());
-        credentials.setPassword(operationalDataStore.getPassword());
-
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(
-                new OperationalDataStoreConnectionDetails(
-                        operationalDataStore.getJdbcUrl(),
-                        operationalDataStore.getDriverClassName(),
-                        credentials
-                )
-        );
+        when(connectionDetailsService.getConnectionDetails()).thenReturn(operationalDataStore.getConnectionDetails());
     }
 
     public static void givenSchemaExists(String schemaName, Connection testQueryConnection) throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
             statement.execute("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+        }
+    }
+
+    public static void givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(JobArguments arguments, String fullTableName) {
+        when(arguments.getOperationalDataStoreTablesToWriteTableName()).thenReturn(fullTableName);
+    }
+
+    public static void givenTablesToWriteToOperationalDataStore(String configSchema, String configTable, String schemaName, String tableName, Connection testQueryConnection) throws SQLException {
+        try(Statement statement = testQueryConnection.createStatement()) {
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (source VARCHAR, table_name VARCHAR)", configSchema, configTable));
+            statement.execute(format("INSERT INTO %s.%s VALUES ('%s', '%s')", configSchema, configTable, schemaName, tableName));
         }
     }
 

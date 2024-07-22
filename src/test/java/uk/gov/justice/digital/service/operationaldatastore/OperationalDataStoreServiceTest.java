@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -62,6 +63,7 @@ class OperationalDataStoreServiceTest {
     void overwriteDataShouldTransformInputDataframe() {
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
@@ -73,6 +75,7 @@ class OperationalDataStoreServiceTest {
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
@@ -81,9 +84,19 @@ class OperationalDataStoreServiceTest {
     }
 
     @Test
+    void overwriteDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
+
+        underTest.overwriteData(inputDataframe, sourceReference);
+
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, destinationTableName);
+    }
+
+    @Test
     void mergeDataShouldTransformInputDataframe() {
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
 
         underTest.mergeData(inputDataframe, sourceReference);
 
@@ -96,6 +109,7 @@ class OperationalDataStoreServiceTest {
         when(sourceReference.getTable()).thenReturn("some_table");
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
 
         underTest.mergeData(inputDataframe, sourceReference);
 
@@ -109,9 +123,19 @@ class OperationalDataStoreServiceTest {
         when(sourceReference.getTable()).thenReturn("some_table");
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
 
         underTest.mergeData(inputDataframe, sourceReference);
 
         verify(mockDataAccess, times(1)).merge("loading.some_table", destinationTableName, sourceReference);
+    }
+
+    @Test
+    void mergeDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
+
+        underTest.mergeData(inputDataframe, sourceReference);
+
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, destinationTableName);
     }
 }
