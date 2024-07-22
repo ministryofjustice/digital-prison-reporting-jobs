@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DmsClientException;
 
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -49,6 +50,16 @@ public class DmsClient {
                     }
                 }
         );
+    }
+
+    public Date getTaskStartTime(String taskId) {
+        Optional<ReplicationTask> optionalTask = getTask(taskId);
+        if (optionalTask.isPresent()) {
+            return Optional.ofNullable(optionalTask.get().getReplicationTaskStartDate())
+                    .orElseThrow(() -> new DmsClientException("Start time was null for DMS task with Id: " + taskId));
+        } else {
+            throw new DmsClientException("Failed to get DMS task with Id: " + taskId);
+        }
     }
 
     private void ensureState(String taskId, String state, int waitIntervalSeconds, int maxAttempts) throws InterruptedException {

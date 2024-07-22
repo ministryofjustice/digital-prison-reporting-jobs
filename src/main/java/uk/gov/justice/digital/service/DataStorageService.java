@@ -12,6 +12,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.delta.DeltaConcurrentModificationException;
 import org.jetbrains.annotations.NotNull;
@@ -266,6 +267,10 @@ public class DataStorageService {
 
     public void endTableUpdates(SparkSession spark, TableIdentifier tableId) {
         updateDeltaManifestForTable(spark, tableId.toPath());
+    }
+
+    public void writeParquet(String path, Dataset<Row> dataset) {
+        dataset.write().mode(SaveMode.Overwrite).parquet(path);
     }
 
     protected void updateManifest(DeltaTable dt) {
