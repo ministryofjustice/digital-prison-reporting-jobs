@@ -6,12 +6,13 @@ import org.apache.avro.Schema;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
 public class AvroToPostgresSchema {
 
-    private static final Map<Schema.Type, String> AVRO_TO_POSTGRES_TYPE = new HashMap<>();
+    private static final Map<Schema.Type, String> AVRO_TO_POSTGRES_TYPE = new EnumMap<>(Schema.Type.class);
 
     static {
         AVRO_TO_POSTGRES_TYPE.put(Schema.Type.STRING, "text");
@@ -23,6 +24,7 @@ public class AvroToPostgresSchema {
 
     }
 
+    @SuppressWarnings({"java:S112", "java:S106"})
     public static void main(String[] args) throws IOException {
         String avroSchemaFile = args[0];
         String tableName = args[1];
