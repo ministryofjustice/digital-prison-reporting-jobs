@@ -70,6 +70,8 @@ public class OperationalDataStoreDataAccess {
         logger.debug("Writing data to Operational DataStore");
         dataframe.write()
                 .mode(SaveMode.Overwrite)
+                // We truncate instead of dropping and recreating the table since DDL is managed in the Transfer Component
+                .option("truncate", "true")
                 .jdbc(jdbcUrl, destinationTableName, jdbcProps);
         logger.debug("Finished writing data to Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
     }
