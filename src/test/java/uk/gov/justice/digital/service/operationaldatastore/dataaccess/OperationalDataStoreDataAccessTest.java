@@ -105,6 +105,7 @@ class OperationalDataStoreDataAccessTest {
 
         when(dataframe.write()).thenReturn(dataframeWriter);
         when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), any())).thenReturn(dataframeWriter);
 
         underTest.overwriteTable(dataframe, destinationTableName);
 
@@ -116,6 +117,24 @@ class OperationalDataStoreDataAccessTest {
         verify(dataframeWriter, times(1)).mode(SaveMode.Overwrite);
         verify(dataframeWriter, times(1))
                 .jdbc("jdbc-url", destinationTableName, expectedProperties);
+    }
+
+    @Test
+    void overwriteTableShouldTruncateRatherThanDrop() {
+        String destinationTableName = "some.table";
+
+        when(dataframe.write()).thenReturn(dataframeWriter);
+        when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), any())).thenReturn(dataframeWriter);
+
+        underTest.overwriteTable(dataframe, destinationTableName);
+
+        Properties expectedProperties = new Properties();
+        expectedProperties.put("user", "username");
+        expectedProperties.put("password", "password");
+        expectedProperties.put("driver", "org.postgresql.Driver");
+
+        verify(dataframeWriter, times(1)).option("truncate", "true");
     }
 
     @Test
