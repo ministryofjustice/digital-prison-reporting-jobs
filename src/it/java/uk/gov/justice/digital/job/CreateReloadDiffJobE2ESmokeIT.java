@@ -67,7 +67,7 @@ public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
     }
 
     @Test
-    void shouldCreateReloadDiffs() {
+    void shouldCreateReloadDiffsForDiscoveredTables() {
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);
@@ -108,24 +108,34 @@ public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
                 RowFactory.create(2, "2023-11-13 10:50:00.123456", Update.getName(), "record_2_update", formatDate(dmsTaskStartTime))
         );
 
-        String toDelete = getPathForDiffs("toDelete");
-        List<Row> actualDiffsToDelete = spark.read().parquet(toDelete).collectAsList();
-        assertThat(actualDiffsToDelete, Matchers.containsInAnyOrder(expectedDiffsToDelete.toArray()));
+        List<String> tables = Arrays.asList(agencyInternalLocationsTable,
+                agencyLocationsTable,
+                movementReasonsTable,
+                offenderBookingsTable,
+                offenderExternalMovementsTable,
+                offendersTable
+        );
 
-        List<Row> actualDiffsToInsert = spark.read().parquet(getPathForDiffs("toInsert")).collectAsList();
-        assertThat(actualDiffsToInsert, Matchers.containsInAnyOrder(expectedDiffsToInsert.toArray()));
+        tables.forEach(table -> {
+            String toDelete = getPathForDiffs("toDelete", table);
+            List<Row> actualDiffsToDelete = spark.read().parquet(toDelete).collectAsList();
+            assertThat(actualDiffsToDelete, Matchers.containsInAnyOrder(expectedDiffsToDelete.toArray()));
 
-        List<Row> actualDiffsToUpdate = spark.read().parquet(getPathForDiffs("toUpdate")).collectAsList();
-        assertThat(actualDiffsToUpdate, Matchers.containsInAnyOrder(expectedDiffsToUpdate.toArray()));
+            List<Row> actualDiffsToInsert = spark.read().parquet(getPathForDiffs("toInsert", table)).collectAsList();
+            assertThat(actualDiffsToInsert, Matchers.containsInAnyOrder(expectedDiffsToInsert.toArray()));
+
+            List<Row> actualDiffsToUpdate = spark.read().parquet(getPathForDiffs("toUpdate", table)).collectAsList();
+            assertThat(actualDiffsToUpdate, Matchers.containsInAnyOrder(expectedDiffsToUpdate.toArray()));
+        });
     }
 
     @NotNull
-    private String getPathForDiffs(String diffOperation) {
+    private String getPathForDiffs(String diffOperation, String table) {
         return Paths.get(tempReloadPath)
                 .resolve("diffs")
                 .resolve(diffOperation)
                 .resolve(inputSchemaName)
-                .resolve(agencyInternalLocationsTable)
+                .resolve(table)
                 .toAbsolutePath()
                 .toString();
     }

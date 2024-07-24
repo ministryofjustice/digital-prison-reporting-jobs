@@ -32,6 +32,7 @@ import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 public class ReloadDiffProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(ReloadDiffProcessor.class);
+    private static final String LEFT_ANTI_JOIN_TYPE = "leftanti";
     private static final String RANK_COL = "rank";
     private static final String DATE_TIME_PATTERN = "yyyyMMddHHmmss";
     private final DataStorageService storageService;
@@ -72,13 +73,13 @@ public class ReloadDiffProcessor {
 
     private static Dataset<Row> getRecordsToInsert(SourceReference sourceReference, Dataset<Row> raw, Dataset<Row> archive) {
         return raw
-                .join(archive, getKeyColumnNamesSeq(sourceReference), "leftanti")
+                .join(archive, getKeyColumnNamesSeq(sourceReference), LEFT_ANTI_JOIN_TYPE)
                 .withColumn(OPERATION, lit(Insert.getName()));
     }
 
     private static Dataset<Row> getRecordsToDelete(SourceReference sourceReference, Dataset<Row> raw, Dataset<Row> archive) {
         return archive
-                .join(raw, getKeyColumnNamesSeq(sourceReference), "leftanti")
+                .join(raw, getKeyColumnNamesSeq(sourceReference), LEFT_ANTI_JOIN_TYPE)
                 .withColumn(OPERATION, lit(Delete.getName()));
     }
 
@@ -90,7 +91,7 @@ public class ReloadDiffProcessor {
                 .orElseThrow(() -> new IllegalStateException("Failed to create filter expression"));
 
         return raw.as("raw")
-                .join(recordsToInsert.as("toInsert"), keyColumnNamesSeq, "leftanti")
+                .join(recordsToInsert.as("toInsert"), keyColumnNamesSeq, LEFT_ANTI_JOIN_TYPE)
                 .join(archive.as("archive"), keyColumnNamesSeq)
                 .where(filterExpression)
                 .select("raw.*")
