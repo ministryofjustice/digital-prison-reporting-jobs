@@ -45,6 +45,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenEmptyTableExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
@@ -99,6 +100,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk4, "2023-11-13 10:50:00.123456", Delete, "data4")
         ), TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
 
+        givenEmptyTableExists(inputFullTableName, input, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, input);
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
@@ -115,6 +118,9 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA);
+
+        givenEmptyTableExists(inputFullTableName, input, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, input);
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
@@ -131,6 +137,9 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("extra-column", lit(1));
+
+        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
@@ -148,6 +157,9 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).drop("data");
+
+        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
@@ -165,6 +177,9 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1));
+
+        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
@@ -182,6 +197,9 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1));
+
+        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
@@ -199,6 +217,9 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1L));
+
+        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
@@ -217,6 +238,9 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA);
+
+        givenEmptyTableExists(inputFullTableName, dfNullNonNullableCols, testQueryConnection, operationalDataStore);
+
         underTest.processBatch(spark, sourceReference, dfNullNonNullableCols);
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
