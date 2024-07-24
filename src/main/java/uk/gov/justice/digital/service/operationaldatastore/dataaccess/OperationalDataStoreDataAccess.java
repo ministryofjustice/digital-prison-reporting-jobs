@@ -16,6 +16,7 @@ import uk.gov.justice.digital.exception.OperationalDataStoreException;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
@@ -70,6 +71,8 @@ public class OperationalDataStoreDataAccess {
         logger.debug("Writing data to Operational DataStore");
         dataframe.write()
                 .mode(SaveMode.Overwrite)
+                // We truncate instead of dropping and recreating the table since DDL is managed in the Transfer Component
+                .option("truncate", "true")
                 .jdbc(jdbcUrl, destinationTableName, jdbcProps);
         logger.debug("Finished writing data to Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
     }
@@ -102,6 +105,20 @@ public class OperationalDataStoreDataAccess {
         DataHubOperationalDataStoreManagedTable thisTable =
                 new DataHubOperationalDataStoreManagedTable(sourceReference.getSource(), sourceReference.getTable());
         return managedTables.contains(thisTable);
+    }
+
+    public boolean tableExists(SourceReference sourceReference) {
+        String sql = format(
+                "SELECT EXISTS (SELECT  FROM information_schema.tables WHERE table_schema = '%s' AND table_name = '%s')",
+                sourceReference.getSource(), sourceReference.getTable());
+        try (Connection connection = dataSource.getConnection()) {
+            try (Statement statement = connection.createStatement()) {
+                ResultSet rs = statement.executeQuery(sql);
+                return (rs.next() && rs.getBoolean(1));
+            }
+        } catch (SQLException e) {
+            throw new OperationalDataStoreException("Exception while checking if tables exists", e);
+        }
     }
 
     @VisibleForTesting

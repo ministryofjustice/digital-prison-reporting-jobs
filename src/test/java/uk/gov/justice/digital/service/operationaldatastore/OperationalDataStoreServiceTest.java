@@ -13,8 +13,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.OperationalDataStoreException;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -64,6 +66,7 @@ class OperationalDataStoreServiceTest {
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
+        when(mockDataAccess.tableExists(any())).thenReturn(true);
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
@@ -76,6 +79,7 @@ class OperationalDataStoreServiceTest {
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
+        when(mockDataAccess.tableExists(any())).thenReturn(true);
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
@@ -88,6 +92,19 @@ class OperationalDataStoreServiceTest {
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
 
         underTest.overwriteData(inputDataframe, sourceReference);
+
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, destinationTableName);
+    }
+
+    @Test
+    void overwriteDataShouldThrowIfTheTableDoesNotExist() {
+        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
+        when(mockDataAccess.tableExists(any())).thenReturn(false);
+
+        assertThrows(OperationalDataStoreException.class, () -> {
+            underTest.overwriteData(inputDataframe, sourceReference);
+        });
 
         verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, destinationTableName);
     }

@@ -74,10 +74,15 @@ public class InMemoryOperationalDataStore {
         return DRIVER_CLASS_NAME;
     }
 
-    public Connection getJdbcConnection() throws SQLException {
+    public Properties getJdbcProperties() {
         Properties jdbcProps = new Properties();
         jdbcProps.put("user", getUsername());
         jdbcProps.put("password", getPassword());
+        return jdbcProps;
+    }
+
+    public Connection getJdbcConnection() throws SQLException {
+        Properties jdbcProps = getJdbcProperties();
         Connection connection = DriverManager.getConnection(getJdbcUrl(), jdbcProps);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {

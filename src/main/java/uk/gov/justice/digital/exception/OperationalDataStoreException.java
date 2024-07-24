@@ -7,4 +7,8 @@ public class OperationalDataStoreException extends RuntimeException {
     public OperationalDataStoreException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public OperationalDataStoreException(String message) {
+        super(message);
+    }
 }

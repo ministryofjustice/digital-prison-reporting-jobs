@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.job;
 
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,10 +38,12 @@ import java.util.List;
 
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
+import static uk.gov.justice.digital.test.SharedTestFunctions.givenEmptyTableExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
@@ -57,6 +60,11 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWrite
 class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
     private static Connection testQueryConnection;
+
+    private static final List<Row> initialDataEveryTable = Arrays.asList(
+            createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
+            createRow(2, "2023-11-13 10:00:00.000000", Insert, "2")
+    );
 
     @Mock
     private JobArguments arguments;
@@ -95,6 +103,13 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, movementReasonsTable, testQueryConnection);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, offenderBookingsTable, testQueryConnection);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
+
+        Dataset<Row> df = spark.createDataFrame(initialDataEveryTable, TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
+        givenEmptyTableExists(inputSchemaName, agencyInternalLocationsTable, df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(inputSchemaName, agencyLocationsTable, df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(inputSchemaName, movementReasonsTable, df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(inputSchemaName, offenderBookingsTable, df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(inputSchemaName, offenderExternalMovementsTable, df, testQueryConnection, operationalDataStore);
         givenDependenciesAreInjected();
     }
 
@@ -108,10 +123,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         // offenders is the only table that has no schema - we expect its data to arrive in violations
         givenNoSourceReferenceFor(offendersTable, sourceReferenceService);
 
-        List<Row> initialDataEveryTable = Arrays.asList(
-                createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
-                createRow(2, "2023-11-13 10:00:00.000000", Insert, "2")
-        );
+
 
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);
 

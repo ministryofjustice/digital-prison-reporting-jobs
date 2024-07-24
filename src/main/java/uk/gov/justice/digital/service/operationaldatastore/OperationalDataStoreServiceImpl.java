@@ -10,8 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.OperationalDataStoreException;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
 
+import static java.lang.String.format;
 import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
@@ -45,16 +47,27 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
         val startTime = System.currentTimeMillis();
         String destinationTableName = sourceReference.getFullyQualifiedTableName();
         if (operationalDataStoreDataAccess.isOperationalDataStoreManagedTable(sourceReference)) {
-            logger.info("Processing records to write to Operational Data Store table {}", destinationTableName);
+            if (operationalDataStoreDataAccess.tableExists(sourceReference)) {
+                logger.info("Processing records to write to Operational Data Store table {}", destinationTableName);
 
-            Dataset<Row> transformedDf = transformer
-                    .transform(dataFrame)
-                    // We don't store these metadata columns in the destination table so we remove them
-                    .drop(OPERATION.toLowerCase(), TIMESTAMP.toLowerCase(), CHECKPOINT_COL.toLowerCase());
-            operationalDataStoreDataAccess.overwriteTable(transformedDf, destinationTableName);
+                Dataset<Row> transformedDf = transformer
+                        .transform(dataFrame)
+                        // We don't store these metadata columns in the destination table so we remove them
+                        .drop(OPERATION.toLowerCase(), TIMESTAMP.toLowerCase(), CHECKPOINT_COL.toLowerCase());
+                operationalDataStoreDataAccess.overwriteTable(transformedDf, destinationTableName);
 
-            logger.info("Finished processing records to write to Operational Data Store table {} in {}ms",
-                    destinationTableName, System.currentTimeMillis() - startTime);
+                logger.info("Finished processing records to write to Operational Data Store table {} in {}ms",
+                        destinationTableName, System.currentTimeMillis() - startTime);
+            } else {
+                // We explicitly don't want Spark to create the table for us to ensure DDL is managed in one place in
+                // the migrations in the Transfer Component. If the load is run when someone has forgotten to create
+                // the table first then the job will fail and ask them to create the table.
+                String msg = format(
+                        "Table %s does not exist. Please create it in the Transfer Component before running the load",
+                        destinationTableName
+                );
+                throw new OperationalDataStoreException(msg);
+            }
         } else {
             logger.info("Skipping write to Operational Data Store for non-managed table {}", destinationTableName);
         }
