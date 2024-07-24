@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
@@ -32,9 +33,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 
 @ExtendWith(MockitoExtension.class)
 class OperationalDataStoreDataAccessTest {
@@ -44,6 +47,8 @@ class OperationalDataStoreDataAccessTest {
             new DataHubOperationalDataStoreManagedTable("nomis", "prisoners"),
             new DataHubOperationalDataStoreManagedTable("nomis", "external_movements")
     ));
+    @Mock
+    private JobArguments jobArguments;
     @Mock
     private OperationalDataStoreConnectionDetailsService connectionDetailsService;
     @Mock
@@ -80,7 +85,7 @@ class OperationalDataStoreDataAccessTest {
         when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables()).thenReturn(managedTables);
-        underTest = new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+        underTest = new OperationalDataStoreDataAccess(jobArguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
     }
 
     @Test
@@ -110,6 +115,8 @@ class OperationalDataStoreDataAccessTest {
         when(dataframe.write()).thenReturn(dataframeWriter);
         when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
         when(dataframeWriter.option(any(), any())).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), anyLong())).thenReturn(dataframeWriter);
+        when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
 
         underTest.overwriteTable(dataframe, destinationTableName);
 
@@ -130,15 +137,27 @@ class OperationalDataStoreDataAccessTest {
         when(dataframe.write()).thenReturn(dataframeWriter);
         when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
         when(dataframeWriter.option(any(), any())).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), anyLong())).thenReturn(dataframeWriter);
+        when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
 
         underTest.overwriteTable(dataframe, destinationTableName);
 
-        Properties expectedProperties = new Properties();
-        expectedProperties.put("user", "username");
-        expectedProperties.put("password", "password");
-        expectedProperties.put("driver", "org.postgresql.Driver");
-
         verify(dataframeWriter, times(1)).option("truncate", "true");
+    }
+
+    @Test
+    void overwriteTableShouldUseJdbcBatchSize() {
+        String destinationTableName = "some.table";
+
+        when(dataframe.write()).thenReturn(dataframeWriter);
+        when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), any())).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), anyLong())).thenReturn(dataframeWriter);
+        when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(5000L);
+
+        underTest.overwriteTable(dataframe, destinationTableName);
+
+        verify(dataframeWriter, times(1)).option("batchSize", 5000L);
     }
 
     @Test

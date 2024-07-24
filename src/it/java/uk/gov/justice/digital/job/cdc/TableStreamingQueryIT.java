@@ -56,6 +56,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
@@ -115,8 +116,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
         givenEmptyDestinationTableExists();
-        givenPathsAreConfigured();
-        givenRetrySettingsAreConfigured(arguments);
+        givenSettingsAreConfigured();
     }
 
     @AfterEach
@@ -361,6 +361,12 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
+    private void givenSettingsAreConfigured() {
+        givenPathsAreConfigured();
+        givenRetrySettingsAreConfigured(arguments);
+        lenient().when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
+    }
+
     private void givenAMatchingSchema() {
         when(dataProvider.inferSchema(any(), eq(inputSchemaName), eq(inputTableName)))
                 .thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
@@ -452,7 +458,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         OperationalDataStoreRepository operationalDataStoreRepository =
                 new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+                new OperationalDataStoreDataAccess(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(

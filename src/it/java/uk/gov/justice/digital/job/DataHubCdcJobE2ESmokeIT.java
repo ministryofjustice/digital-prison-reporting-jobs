@@ -46,6 +46,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
@@ -100,12 +101,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         givenSchemaExists(loadingSchemaName, testQueryConnection);
         givenSchemaExists(inputSchemaName, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
-        givenPathsAreConfigured(arguments);
-        givenTableConfigIsConfigured(arguments, configService);
-        givenGlobPatternIsConfigured();
-        givenCheckpointsAreConfigured();
-        givenRetrySettingsAreConfigured(arguments);
-        givenLoadingSchemaIsConfigured();
+        givenSettingsAreConfigured();
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, agencyInternalLocationsTable, testQueryConnection);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, agencyLocationsTable, testQueryConnection);
@@ -185,6 +181,16 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk3);
     }
 
+    private void givenSettingsAreConfigured() throws IOException {
+        givenPathsAreConfigured(arguments);
+        givenTableConfigIsConfigured(arguments, configService);
+        givenGlobPatternIsConfigured();
+        givenCheckpointsAreConfigured();
+        givenRetrySettingsAreConfigured(arguments);
+        givenLoadingSchemaIsConfigured();
+        when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
+    }
+
     private void whenTheJobRuns() {
         streamingQueries = underTest.runJob(spark);
         assertFalse(streamingQueries.isEmpty());
@@ -207,7 +213,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         OperationalDataStoreRepository operationalDataStoreRepository =
                 new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+                new OperationalDataStoreDataAccess(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(

@@ -74,7 +74,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, "some-connection-name" },
             { JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, "true" },
             { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, "some_schema" },
-            { JobArguments.OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME, "configuration.datahub_managed_tables" }
+            { JobArguments.OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME, "configuration.datahub_managed_tables" },
+            { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, "10000" }
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -132,6 +133,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, validArguments.isOperationalDataStoreWriteEnabled() },
                 { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, validArguments.getOperationalDataStoreLoadingSchemaName() },
                 { JobArguments.OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME, validArguments.getOperationalDataStoreTablesToWriteTableName() },
+                { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, Long.toString(validArguments.getOperationalDataStoreJdbcBatchSize()) },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -193,6 +195,14 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.ADD_IDLE_TIME_BETWEEN_READS, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals("false", jobArguments.addIdleTimeBetweenReads());
+    }
+
+    @Test
+    public void shouldDefaultOperationalDataStoreJdbcBatchSizeTo1000() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(1000L, jobArguments.getOperationalDataStoreJdbcBatchSize());
     }
 
     @ParameterizedTest
