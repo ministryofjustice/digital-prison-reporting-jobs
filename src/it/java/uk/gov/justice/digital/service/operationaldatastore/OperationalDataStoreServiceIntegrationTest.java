@@ -97,9 +97,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     @BeforeEach
     void setUp() throws Exception {
         givenDatastoreCredentials(mockConnectionDetailsService, operationalDataStore);
-        jdbcProperties = new Properties();
-        jdbcProperties.put("user", operationalDataStore.getUsername());
-        jdbcProperties.put("password", operationalDataStore.getPassword());
+        jdbcProperties = operationalDataStore.getJdbcProperties();
 
         // Use unique tables for each test.
         // Postgres table names cannot start with a number, hence the underscore prefix, and cannot contain hyphens/dashes.
@@ -127,7 +125,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    void overwriteDataShouldInsertData() {
+    void overwriteDataShouldInsertData() throws Exception {
+        createDestinationTable();
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
@@ -145,12 +144,13 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    void overwriteDataShouldOverwriteExistingData() {
+    void overwriteDataShouldOverwriteExistingData() throws Exception {
         Dataset<Row> df2 = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "some new data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "I", "some other new data")
         ), schema);
 
+        createDestinationTable();
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
@@ -171,7 +171,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    void overwriteDataShouldCreateTableWithLowercaseColumnsWithoutOpAndTimestamp() {
+    void overwriteDataShouldCreateTableWithLowercaseColumnsWithoutOpAndTimestamp() throws Exception {
+        createDestinationTable();
         when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
@@ -185,7 +186,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     }
 
     @Test
-    void overwriteDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
+    void overwriteDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() throws Exception {
+        createDestinationTable();
         SourceReference unmanagedSourceReference = mock(SourceReference.class);
         when(unmanagedSourceReference.getFullyQualifiedTableName()).thenReturn("nomis.not_a_managed_table");
         when(unmanagedSourceReference.getSource()).thenReturn("nomis");
@@ -193,8 +195,9 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         underTest.overwriteData(twoInsertsDf, unmanagedSourceReference);
 
-        // The table should not exist
-        assertThrows(SQLException.class, this::retrieveAlDataInTable);
+        // The table should be empty
+        Dataset<Row> df = retrieveAlDataInTable();
+        assertEquals(0, df.count());
     }
 
     @Test

@@ -18,6 +18,7 @@ import uk.gov.justice.digital.exception.OperationalDataStoreException;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,6 +60,8 @@ class OperationalDataStoreDataAccessTest {
     private Connection connection;
     @Mock
     private Statement statement;
+    @Mock
+    private ResultSet resultSet;
     @Mock
     private SourceReference sourceReference;
     @Mock
@@ -236,4 +240,116 @@ class OperationalDataStoreDataAccessTest {
         when(sourceReference.getTable()).thenReturn("table_not_in_managed_tables");
         assertFalse(underTest.isOperationalDataStoreManagedTable(sourceReference));
     }
+
+    @Test
+    void shouldReturnTrueIfTableExists() throws Exception {
+        String schemaName = "schema_name";
+        String tableName = "table_name";
+
+        when(sourceReference.getSource()).thenReturn(schemaName);
+        when(sourceReference.getTable()).thenReturn(tableName);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getBoolean(anyInt())).thenReturn(true);
+
+        assertTrue(underTest.tableExists(sourceReference));
+    }
+
+    @Test
+    void shouldReturnFalseIfTableDoesNotExist() throws Exception {
+        String schemaName = "schema_name";
+        String tableName = "table_name";
+
+        when(sourceReference.getSource()).thenReturn(schemaName);
+        when(sourceReference.getTable()).thenReturn(tableName);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getBoolean(anyInt())).thenReturn(false);
+
+        assertFalse(underTest.tableExists(sourceReference));
+    }
+
+    @Test
+    void shouldReturnFalseIfNoResultsForQuery() throws Exception {
+        String schemaName = "schema_name";
+        String tableName = "table_name";
+
+        when(sourceReference.getSource()).thenReturn(schemaName);
+        when(sourceReference.getTable()).thenReturn(tableName);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(false);
+
+        assertFalse(underTest.tableExists(sourceReference));
+    }
+
+    @Test
+    void shouldRunSqlToCheckIfTableExists() throws Exception {
+        String schemaName = "schema_name";
+        String tableName = "table_name";
+
+        when(sourceReference.getSource()).thenReturn(schemaName);
+        when(sourceReference.getTable()).thenReturn(tableName);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getBoolean(anyInt())).thenReturn(true);
+
+        underTest.tableExists(sourceReference);
+
+        String expectedSql = "SELECT EXISTS (SELECT  FROM information_schema.tables WHERE table_schema = 'schema_name' AND table_name = 'table_name')";
+        verify(statement, times(1)).executeQuery(expectedSql);
+        verify(resultSet, times(1)).getBoolean(1);
+    }
+
+    @Test
+    void tableExistsShouldCloseResources() throws Exception {
+        String schemaName = "schema_name";
+        String tableName = "table_name";
+
+        when(sourceReference.getSource()).thenReturn(schemaName);
+        when(sourceReference.getTable()).thenReturn(tableName);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getBoolean(anyInt())).thenReturn(true);
+
+        underTest.tableExists(sourceReference);
+
+        verify(connection, times(1)).close();
+        verify(statement, times(1)).close();
+    }
+
+    @Test
+    void tableExistsShouldCloseResourcesWhenSqlExecutionThrows() throws Exception {
+        String schemaName = "schema_name";
+        String tableName = "table_name";
+
+        when(sourceReference.getSource()).thenReturn(schemaName);
+        when(sourceReference.getTable()).thenReturn(tableName);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenThrow(new SQLException());
+
+        assertThrows(OperationalDataStoreException.class, () -> {
+            underTest.tableExists(sourceReference);
+        });
+
+        verify(connection, times(1)).close();
+        verify(statement, times(1)).close();
+    }
+
 }
