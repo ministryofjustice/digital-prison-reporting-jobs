@@ -22,8 +22,9 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
@@ -48,21 +49,27 @@ public class E2ETestBase extends BaseSparkTest {
     @TempDir
     protected Path testRoot;
     protected String rawPath;
+    protected String rawArchivePath;
     protected String structuredPath;
     protected String curatedPath;
     protected String violationsPath;
+    protected String tempReloadPath;
 
     protected String checkpointPath;
 
     protected void givenPathsAreConfigured(JobArguments arguments) {
         rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
+        rawArchivePath = testRoot.resolve("rawArchive").toAbsolutePath().toString();
         structuredPath = testRoot.resolve("structured").toAbsolutePath().toString();
         curatedPath = testRoot.resolve("curated").toAbsolutePath().toString();
         violationsPath = testRoot.resolve("violations").toAbsolutePath().toString();
+        tempReloadPath = testRoot.resolve("tempReload").toAbsolutePath().toString();
         when(arguments.getRawS3Path()).thenReturn(rawPath);
-        when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
-        when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
-        when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
+        lenient().when(arguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
+        lenient().when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
+        lenient().when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
+        lenient().when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
+        lenient().when(arguments.getTempReloadS3Path()).thenReturn(tempReloadPath);
     }
 
     protected void givenTableConfigIsConfigured(JobArguments jobArguments, ConfigService configService) {
@@ -84,8 +91,8 @@ public class E2ETestBase extends BaseSparkTest {
         when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.of(sourceReference));
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
-        when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        lenient().when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
+        lenient().when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
 
@@ -93,13 +100,22 @@ public class E2ETestBase extends BaseSparkTest {
         when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.empty());
     }
 
-    protected void givenRawDataIsAddedToEveryTable(List<Row> initialDataEveryTable) {
-        whenDataIsAddedToRawForTable(agencyInternalLocationsTable, initialDataEveryTable);
-        whenDataIsAddedToRawForTable(agencyLocationsTable, initialDataEveryTable);
-        whenDataIsAddedToRawForTable(movementReasonsTable, initialDataEveryTable);
-        whenDataIsAddedToRawForTable(offenderBookingsTable, initialDataEveryTable);
-        whenDataIsAddedToRawForTable(offenderExternalMovementsTable, initialDataEveryTable);
-        whenDataIsAddedToRawForTable(offendersTable, initialDataEveryTable);
+    protected void givenRawDataIsAddedToEveryTable(List<Row> data) {
+        whenDataIsAddedToPathForTable(agencyInternalLocationsTable, data, rawPath);
+        whenDataIsAddedToPathForTable(agencyLocationsTable, data, rawPath);
+        whenDataIsAddedToPathForTable(movementReasonsTable, data, rawPath);
+        whenDataIsAddedToPathForTable(offenderBookingsTable, data, rawPath);
+        whenDataIsAddedToPathForTable(offenderExternalMovementsTable, data, rawPath);
+        whenDataIsAddedToPathForTable(offendersTable, data, rawPath);
+    }
+
+    protected void givenArchiveDataIsAddedToEveryTable(List<Row> data) {
+        whenDataIsAddedToPathForTable(agencyInternalLocationsTable, data, rawArchivePath);
+        whenDataIsAddedToPathForTable(agencyLocationsTable, data, rawArchivePath);
+        whenDataIsAddedToPathForTable(movementReasonsTable, data, rawArchivePath);
+        whenDataIsAddedToPathForTable(offenderBookingsTable, data, rawArchivePath);
+        whenDataIsAddedToPathForTable(offenderExternalMovementsTable, data, rawArchivePath);
+        whenDataIsAddedToPathForTable(offendersTable, data, rawArchivePath);
     }
 
     protected void givenDestinationTableExists(String tableName, Connection testQueryConnection) throws SQLException {
@@ -108,8 +124,8 @@ public class E2ETestBase extends BaseSparkTest {
         }
     }
 
-    protected void whenDataIsAddedToRawForTable(String table, List<Row> inputData) {
-        String tablePath = Paths.get(rawPath).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
+    protected void whenDataIsAddedToPathForTable(String table, List<Row> inputData, String path) {
+        String tablePath = Paths.get(path).resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
         spark
                 .createDataFrame(inputData, TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS)
                 .write()
@@ -121,21 +137,21 @@ public class E2ETestBase extends BaseSparkTest {
         List<Row> input = Collections.singletonList(
                 createRow(primaryKey, timestamp, Insert, data)
         );
-        whenDataIsAddedToRawForTable(table, input);
+        whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
     protected void whenUpdateOccursForTableAndPK(String table, int primaryKey, String data, String timestamp) {
         List<Row> input = Collections.singletonList(
                 createRow(primaryKey, timestamp, Update, data)
         );
-        whenDataIsAddedToRawForTable(table, input);
+        whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
     protected void whenDeleteOccursForTableAndPK(String table, int primaryKey, String timestamp) {
         List<Row> input = Collections.singletonList(
                 createRow(primaryKey, timestamp, Delete, null)
         );
-        whenDataIsAddedToRawForTable(table, input);
+        whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
     protected void thenStructuredViolationsContainsForPK(String table, String data, int primaryKey) {

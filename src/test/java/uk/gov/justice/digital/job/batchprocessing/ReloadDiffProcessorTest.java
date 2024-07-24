@@ -59,7 +59,8 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
     private static final String OUTPUT_BASE_PATH = "s3://bucket/output-folder";
     private static final String LOAD_CHECKPOINT_VALUE = "";
     private static final Date reloadTime = Date.from(Instant.now());
-    private static final String FORMATTED_RELOAD_TIME = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(reloadTime);
+    private static final String FORMATTED_RELOAD_TIME = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault())
+            .format(reloadTime);
 
     private ReloadDiffProcessor underTest;
 
@@ -84,7 +85,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
         assertThat(datasetCaptor.getValue().collectAsList(), is(empty()));
 
-        List<String> expectedOutputPaths = Arrays.asList(createPath("toInsert"), createPath("toDelete"), createPath("toUpdate"));
+        List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
         assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
     }
 
@@ -105,15 +106,15 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
-        Dataset<Row> recordsToInsert = capturedRecords.get(0);
-        Dataset<Row> recordsToDelete = capturedRecords.get(1);
+        Dataset<Row> recordsToDelete = capturedRecords.get(0);
+        Dataset<Row> recordsToInsert = capturedRecords.get(1);
         Dataset<Row> recordsToUpdate = capturedRecords.get(2);
 
-        assertThat(recordsToInsert.collectAsList(), containsInAnyOrder(expectedDatasetToInsert.collectAsList().toArray()));
         assertThat(recordsToDelete.collectAsList(), is(empty()));
+        assertThat(recordsToInsert.collectAsList(), containsInAnyOrder(expectedDatasetToInsert.collectAsList().toArray()));
         assertThat(recordsToUpdate.collectAsList(), is(empty()));
 
-        List<String> expectedOutputPaths = Arrays.asList(createPath("toInsert"), createPath("toDelete"), createPath("toUpdate"));
+        List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
         assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
     }
 
@@ -142,15 +143,15 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
-        Dataset<Row> recordsToInsert = capturedRecords.get(0);
-        Dataset<Row> recordsToDelete = capturedRecords.get(1);
+        Dataset<Row> recordsToDelete = capturedRecords.get(0);
+        Dataset<Row> recordsToInsert = capturedRecords.get(1);
         Dataset<Row> recordsToUpdate = capturedRecords.get(2);
 
-        assertThat(recordsToInsert.collectAsList(), is(empty()));
         assertThat(recordsToDelete.collectAsList(), containsInAnyOrder(expectedDatasetToDelete.toArray()));
+        assertThat(recordsToInsert.collectAsList(), is(empty()));
         assertThat(recordsToUpdate.collectAsList(), is(empty()));
 
-        List<String> expectedOutputPaths = Arrays.asList(createPath("toInsert"), createPath("toDelete"), createPath("toUpdate"));
+        List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
         assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
     }
 
@@ -178,15 +179,15 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
-        Dataset<Row> recordsToInsert = capturedRecords.get(0);
-        Dataset<Row> recordsToDelete = capturedRecords.get(1);
+        Dataset<Row> recordsToDelete = capturedRecords.get(0);
+        Dataset<Row> recordsToInsert = capturedRecords.get(1);
         Dataset<Row> recordsToUpdate = capturedRecords.get(2);
 
-        assertThat(recordsToInsert.collectAsList(), containsInAnyOrder(expectedDatasetToInsert.toArray()));
         assertThat(recordsToDelete.collectAsList(), is(empty()));
+        assertThat(recordsToInsert.collectAsList(), containsInAnyOrder(expectedDatasetToInsert.toArray()));
         assertThat(recordsToUpdate.collectAsList(), is(empty()));
 
-        List<String> expectedOutputPaths = Arrays.asList(createPath("toInsert"), createPath("toDelete"), createPath("toUpdate"));
+        List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
         assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
     }
 
@@ -220,15 +221,15 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
         verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
-        Dataset<Row> recordsToInsert = capturedRecords.get(0);
-        Dataset<Row> recordsToDelete = capturedRecords.get(1);
+        Dataset<Row> recordsToDelete = capturedRecords.get(0);
+        Dataset<Row> recordsToInsert = capturedRecords.get(1);
         Dataset<Row> recordsToUpdate = capturedRecords.get(2);
 
-        assertThat(recordsToInsert.collectAsList(), is(empty()));
         assertThat(recordsToDelete.collectAsList(), is(empty()));
+        assertThat(recordsToInsert.collectAsList(), is(empty()));
         assertThat(recordsToUpdate.collectAsList(), containsInAnyOrder(expectedDatasetToInsert.toArray()));
 
-        List<String> expectedOutputPaths = Arrays.asList(createPath("toInsert"), createPath("toDelete"), createPath("toUpdate"));
+        List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
         assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
     }
 

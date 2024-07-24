@@ -26,6 +26,7 @@ import uk.gov.justice.digital.service.DmsOrchestrationService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -50,7 +51,10 @@ import static org.mockito.Mockito.verify;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
-import static uk.gov.justice.digital.test.MinimalTestData.*;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.CHECKPOINT_COL_VALUE;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
@@ -135,7 +139,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
 
     @Test
     void shouldCreateReloadDiffForDiscoveredTables() {
-        Date dmsTaskStartTime = new Date();
+        Date dmsTaskStartTime = Date.from(Instant.now());
 
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
@@ -267,7 +271,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
                 .thenReturn(Collections.singletonMap(s1T1, Collections.emptyList()));
         when(tableDiscoveryService.discoverBatchFilesToLoad(ARCHIVE_PATH, spark)).thenReturn(discoveredArchivePathsByTable);
 
-        assertDoesNotThrow(() ->underTest.runJob(spark));
+        assertDoesNotThrow(() -> underTest.runJob(spark));
     }
 
     @Test

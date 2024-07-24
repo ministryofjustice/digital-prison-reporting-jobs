@@ -46,28 +46,28 @@ public class ReloadDiffProcessor {
         String formattedStartTime = new SimpleDateFormat(DATE_TIME_PATTERN).format(reloadTime);
         val windowFunction = Window.partitionBy(getKeyColumnsAsSeq(sourceReference)).orderBy(col(CHECKPOINT_COL).desc());
 
-        Dataset<Row> latestArchiveRecords = archive
+        Dataset<Row> activeArchiveRecords = archive
                 .withColumn(RANK_COL, row_number().over(windowFunction))
                 .where(col(RANK_COL).eqNullSafe(lit(1)).and(col(OPERATION).notEqual(lit(Delete.getName()))))
                 .drop(RANK_COL)
                 .persist();
 
-        logger.info("Processing reload diffs to insert");
-        Dataset<Row> recordsToInsert = getRecordsToInsert(sourceReference, raw, latestArchiveRecords)
-                .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
-        storageService.writeParquet(createOutputPath(sourceReference, outputBasePath, "toInsert"), recordsToInsert);
-
         logger.info("Processing reload diffs to delete");
-        Dataset<Row> recordsToDelete = getRecordsToDelete(sourceReference, raw, latestArchiveRecords)
+        Dataset<Row> recordsToDelete = getRecordsToDelete(sourceReference, raw, activeArchiveRecords)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
         storageService.writeParquet(createOutputPath(sourceReference, outputBasePath, "toDelete"), recordsToDelete);
 
+        logger.info("Processing reload diffs to insert");
+        Dataset<Row> recordsToInsert = getRecordsToInsert(sourceReference, raw, activeArchiveRecords)
+                .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
+        storageService.writeParquet(createOutputPath(sourceReference, outputBasePath, "toInsert"), recordsToInsert);
+
         logger.info("Processing reload diffs to update");
-        Dataset<Row> recordsToUpdate = getRecordsToUpdate(sourceReference, raw, latestArchiveRecords)
+        Dataset<Row> recordsToUpdate = getRecordsToUpdate(sourceReference, raw, activeArchiveRecords, recordsToInsert)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
         storageService.writeParquet(createOutputPath(sourceReference, outputBasePath, "toUpdate"), recordsToUpdate);
 
-        latestArchiveRecords.unpersist();
+        activeArchiveRecords.unpersist();
     }
 
     private static Dataset<Row> getRecordsToInsert(SourceReference sourceReference, Dataset<Row> raw, Dataset<Row> archive) {
@@ -82,14 +82,16 @@ public class ReloadDiffProcessor {
                 .withColumn(OPERATION, lit(Delete.getName()));
     }
 
-    private Dataset<Row> getRecordsToUpdate(SourceReference sourceReference, Dataset<Row> raw, Dataset<Row> archive) {
+    private Dataset<Row> getRecordsToUpdate(SourceReference sourceReference, Dataset<Row> raw, Dataset<Row> archive, Dataset<Row> recordsToInsert) {
+        Seq<String> keyColumnNamesSeq = getKeyColumnNamesSeq(sourceReference);
         Column filterExpression = Arrays.stream(sourceReference.getSchema().fieldNames())
                 .map(fieldName -> not(col("raw." + fieldName).eqNullSafe(col("archive." + fieldName))))
                 .reduce(Column::or)
                 .orElseThrow(() -> new IllegalStateException("Failed to create filter expression"));
 
         return raw.as("raw")
-                .join(archive.as("archive"), getKeyColumnNamesSeq(sourceReference))
+                .join(recordsToInsert.as("toInsert"), keyColumnNamesSeq, "leftanti")
+                .join(archive.as("archive"), keyColumnNamesSeq)
                 .where(filterExpression)
                 .select("raw.*")
                 .withColumn(OPERATION, lit(Update.getName()));
