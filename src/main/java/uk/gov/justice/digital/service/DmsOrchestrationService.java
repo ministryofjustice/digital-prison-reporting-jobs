@@ -7,6 +7,7 @@ import uk.gov.justice.digital.config.JobArguments;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.Date;
 
 @Singleton
 public class DmsOrchestrationService {
@@ -30,5 +31,9 @@ public class DmsOrchestrationService {
         logger.info("Stopping DMS task {}", taskId);
         dmsClient.stopTask(taskId, waitIntervalSeconds, maxAttempts);
         logger.info("Stopped DMS task {}", taskId);
+    }
+
+    public Date getTaskStartTime(String taskId) {
+        return dmsClient.getTaskStartTime(taskId);
     }
 }

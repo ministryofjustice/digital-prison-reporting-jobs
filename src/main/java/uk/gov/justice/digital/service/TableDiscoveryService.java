@@ -42,12 +42,12 @@ public class TableDiscoveryService {
         return configService.getConfiguredTables(arguments.getConfigKey()).asList();
     }
 
-    public Map<ImmutablePair<String, String>, List<String>> discoverBatchFilesToLoad(String rawS3Path, SparkSession sparkSession) throws TableDiscoveryException {
+    public Map<ImmutablePair<String, String>, List<String>> discoverBatchFilesToLoad(String s3Path, SparkSession sparkSession) throws TableDiscoveryException {
         val listPathsStartTime = System.currentTimeMillis();
         String fileGlobPattern = arguments.getBatchLoadFileGlobPattern();
         logger.info("Enumerating load files using glob pattern {}", fileGlobPattern);
         try {
-            FileSystem fileSystem = FileSystem.get(URI.create(rawS3Path), sparkSession.sparkContext().hadoopConfiguration());
+            FileSystem fileSystem = FileSystem.get(URI.create(s3Path), sparkSession.sparkContext().hadoopConfiguration());
             List<ImmutablePair<String, String>> tablesToProcess = discoverTablesToProcess();
 
             Map<ImmutablePair<String, String>, List<String>> pathsByTable = new HashMap<>();
@@ -55,11 +55,13 @@ public class TableDiscoveryService {
             for (val tableToProcess : tablesToProcess) {
                 String schema = tableToProcess.getLeft();
                 String table = tableToProcess.getRight();
-                String tablePath = tablePath(rawS3Path, schema, table);
+                String tablePath = tablePath(s3Path, schema, table);
                 List<String> filePathsToProcess = listFiles(fileSystem, tablePath, fileGlobPattern);
                 if(!filePathsToProcess.isEmpty()) {
                     val key = new ImmutablePair<>(schema, table);
                     pathsByTable.put(key, filePathsToProcess);
+                } else {
+                    logger.info("Found no files to process for {}.{} in {}", schema, table, s3Path);
                 }
             }
             logger.info("Finished enumerating load files in {}ms", System.currentTimeMillis() - listPathsStartTime);

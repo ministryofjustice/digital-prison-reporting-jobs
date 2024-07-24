@@ -68,6 +68,8 @@ public class JobArguments {
     public static final String RAW_ARCHIVE_S3_PATH = "dpr.raw.archive.s3.path";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
+    public static final String TEMP_RELOAD_S3_PATH = "dpr.temp.reload.s3.path";
+    public static final String TEMP_RELOAD_OUTPUT_FOLDER = "dpr.temp.reload.output.folder";
     public static final String RAW_ARCHIVE_DATABASE = "dpr.raw_archive.database";
     public static final String STRUCTURED_DATABASE = "dpr.structured.database";
     public static final String CURATED_DATABASE = "dpr.curated.database";
@@ -226,6 +228,14 @@ public class JobArguments {
 
     public String getViolationsS3Path() {
         return getArgument(VIOLATIONS_S3_PATH);
+    }
+
+    public String getTempReloadS3Path() {
+        return getArgument(TEMP_RELOAD_S3_PATH);
+    }
+
+    public String getTempReloadOutputFolder() {
+        return getArgument(TEMP_RELOAD_OUTPUT_FOLDER);
     }
 
     public String getRawArchiveDatabase() {

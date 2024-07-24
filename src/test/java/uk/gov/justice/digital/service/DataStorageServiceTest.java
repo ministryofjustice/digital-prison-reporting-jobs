@@ -12,6 +12,7 @@ import lombok.val;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -449,6 +450,22 @@ class DataStorageServiceTest extends BaseSparkTest {
         verify(mockDeltaTable, times(retryAttempts)).vacuum();
     }
 
+    @Test
+    void shouldWriteParquet() {
+        JobArguments mockJobArguments = mock(JobArguments.class);
+        int retryAttempts = 1;
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+
+        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
+        when(mockDataFrameWriter.mode(SaveMode.Overwrite)).thenReturn(mockDataFrameWriter);
+        String path = "some-path";
+
+        dataStorageService.writeParquet(path, mockDataSet);
+
+        verify(mockDataFrameWriter, times(1)).parquet(path);
+    }
+
     private void givenSaveThrowsEveryTime(Class<? extends Throwable> toBeThrown) {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
@@ -513,17 +530,6 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
         when(mockDeltaMergeBuilder.whenNotMatched()).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
         when(mockDeltaMergeNotMatchedActionBuilder.insertAll()).thenReturn(mockDeltaMergeBuilder);
-    }
-
-    private void stubMergeRecords() {
-        when(mockDeltaTable.as(anyString())).thenReturn(mockDeltaTable);
-        when(mockDeltaTable.merge(any(), anyString())).thenReturn(mockDeltaMergeBuilder);
-        when(mockDeltaMergeBuilder.whenMatched(anyString())).thenReturn(mockDeltaMergeMatchedActionBuilder);
-        when(mockDeltaMergeMatchedActionBuilder.updateExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
-        when(mockDeltaMergeBuilder.whenMatched(anyString())).thenReturn(mockDeltaMergeMatchedActionBuilder);
-        when(mockDeltaMergeMatchedActionBuilder.delete()).thenReturn(mockDeltaMergeBuilder);
-        when(mockDeltaMergeBuilder.whenNotMatched()).thenReturn(mockDeltaMergeNotMatchedActionBuilder);
-        when(mockDeltaMergeNotMatchedActionBuilder.insertExpr(anyMap())).thenReturn(mockDeltaMergeBuilder);
     }
 
     private void stubMergeRecordsCdc() {

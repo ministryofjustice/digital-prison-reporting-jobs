@@ -14,15 +14,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.exception.DmsClientException;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -80,7 +83,6 @@ class DmsClientTest {
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     void stopTaskShouldNotFailWhenTaskIsAlreadyStopped() {
         List<ReplicationTask> stoppedTasks = new ArrayList<>();
@@ -105,6 +107,50 @@ class DmsClientTest {
 
         underTest.stopTask(TEST_TASK_ID, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
 
+        verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+    }
+
+    @Test
+    void getTaskStartTimeShouldReturnTheStartTimeOfReplicationTask() {
+        Date taskStartTime = new Date();
+        List<ReplicationTask> tasks = new ArrayList<>();
+        tasks.add(createReplicationTask("stopped").withReplicationTaskStartDate(taskStartTime));
+
+        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+        when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
+                .thenReturn(mockDescribeReplicationTasksResult);
+
+        Date actualTaskStartTime = underTest.getTaskStartTime(TEST_TASK_ID);
+
+        assertThat(actualTaskStartTime, equalTo(taskStartTime));
+        verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+    }
+
+    @Test
+    void getTaskStartTimeShouldThrowAnExceptionWhenReplicationTaskStartTimeIsNull() {
+        List<ReplicationTask> tasks = new ArrayList<>();
+        tasks.add(createReplicationTask("stopped").withReplicationTaskStartDate(null));
+
+        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+        when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
+                .thenReturn(mockDescribeReplicationTasksResult);
+
+        assertThrows(DmsClientException.class, () -> underTest.getTaskStartTime(TEST_TASK_ID));
+        verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+    }
+
+    @Test
+    void getTaskStartTimeShouldThrowAnExceptionWhenNoReplicationTaskIsFound() {
+        List<ReplicationTask> tasks = Collections.emptyList();
+
+        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+        when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
+                .thenReturn(mockDescribeReplicationTasksResult);
+
+        assertThrows(DmsClientException.class, () -> underTest.getTaskStartTime(TEST_TASK_ID));
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
         verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
     }

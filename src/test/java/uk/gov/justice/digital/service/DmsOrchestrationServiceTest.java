@@ -57,4 +57,18 @@ class DmsOrchestrationServiceTest {
 
         assertThrows(DmsClientException.class, () -> underTest.stopTask(TEST_TASK_ID));
     }
+
+    @Test
+    void getTaskStartTimeShouldReturnTheDmsTskStartTime() {
+        underTest.getTaskStartTime(TEST_TASK_ID);
+
+        verify(mockDmsClient, times(1)).getTaskStartTime(TEST_TASK_ID);
+    }
+
+    @Test
+    void getTaskStartTimeShouldFailWhenDmsClientThrowsAnException() {
+        doThrow(new DmsClientException("Client error")).when(mockDmsClient).getTaskStartTime(TEST_TASK_ID);
+
+        assertThrows(DmsClientException.class, () -> underTest.getTaskStartTime(TEST_TASK_ID));
+    }
 }
