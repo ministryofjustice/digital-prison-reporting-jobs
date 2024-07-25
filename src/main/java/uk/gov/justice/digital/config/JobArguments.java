@@ -138,6 +138,8 @@ public class JobArguments {
     static final String OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME = "dpr.operational.data.store.loading.schema.name";
     static final String OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME_DEFAULT = "loading";
     static final String OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME = "dpr.operational.data.store.tables.to.write.table.name";
+    static final String OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE = "dpr.operational.data.store.jdbc.batch.size";
+    public static final long OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT = 1000;
 
     private final Map<String, String> config;
 
@@ -441,6 +443,10 @@ public class JobArguments {
 
     public String getOperationalDataStoreTablesToWriteTableName() {
         return getArgument(OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME);
+    }
+
+    public long getOperationalDataStoreJdbcBatchSize() {
+        return getArgument(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
     }
 
     public int orchestrationWaitIntervalSeconds() {

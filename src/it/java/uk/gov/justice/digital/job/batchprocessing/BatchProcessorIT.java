@@ -39,6 +39,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
@@ -81,8 +82,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     @BeforeEach
     public void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
-        givenPathsAreConfigured();
-        givenRetrySettingsAreConfigured(arguments);
+        givenSettingsAreConfigured();
         givenSchemaExists(inputSchemaName, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
@@ -267,6 +267,12 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk6, testQueryConnection);
     }
 
+    private void givenSettingsAreConfigured() {
+        givenPathsAreConfigured();
+        givenRetrySettingsAreConfigured(arguments);
+        when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
+    }
+
     private void givenS3BatchProcessorDependenciesAreInjected() {
         DataStorageService storageService = new DataStorageService(arguments);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
@@ -280,7 +286,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         OperationalDataStoreRepository operationalDataStoreRepository =
                 new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+                new OperationalDataStoreDataAccess(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);

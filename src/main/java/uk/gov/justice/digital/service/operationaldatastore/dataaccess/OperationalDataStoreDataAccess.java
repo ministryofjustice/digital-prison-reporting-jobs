@@ -9,6 +9,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -34,6 +35,7 @@ public class OperationalDataStoreDataAccess {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreDataAccess.class);
 
+    private final JobArguments jobArguments;
     private final String jdbcUrl;
     // Used by Spark to access the DataStore
     private final Properties jdbcProps;
@@ -46,10 +48,12 @@ public class OperationalDataStoreDataAccess {
 
     @Inject
     public OperationalDataStoreDataAccess(
+            JobArguments jobArguments,
             OperationalDataStoreConnectionDetailsService connectionDetailsService,
             ConnectionPoolProvider connectionPoolProvider,
             OperationalDataStoreRepository operationalDataStoreRepository
     ) {
+        this.jobArguments = jobArguments;
         logger.debug("Retrieving connection details for Operational DataStore");
         OperationalDataStoreConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails();
         jdbcUrl = connectionDetails.getUrl();
@@ -73,6 +77,8 @@ public class OperationalDataStoreDataAccess {
                 .mode(SaveMode.Overwrite)
                 // We truncate instead of dropping and recreating the table since DDL is managed in the Transfer Component
                 .option("truncate", "true")
+                // Batch size is tunable for performance
+                .option("batchSize", jobArguments.getOperationalDataStoreJdbcBatchSize())
                 .jdbc(jdbcUrl, destinationTableName, jdbcProps);
         logger.debug("Finished writing data to Operational DataStore in {}ms", System.currentTimeMillis() - startTime);
     }

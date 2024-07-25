@@ -38,10 +38,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
@@ -113,6 +115,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         givenSchemaExists(inputSchemaName, testQueryConnection);
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(jobArguments, configurationSchema + "." + configurationTable);
         givenTablesToWriteToOperationalDataStore(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
+        lenient().when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
@@ -120,7 +123,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         underTest = new OperationalDataStoreServiceImpl(
                 jobArguments,
                 new OperationalDataStoreTransformation(),
-                new OperationalDataStoreDataAccess(mockConnectionDetailsService, connectionPoolProvider, operationalDataStoreRepository)
+                new OperationalDataStoreDataAccess(jobArguments, mockConnectionDetailsService, connectionPoolProvider, operationalDataStoreRepository)
         );
     }
 

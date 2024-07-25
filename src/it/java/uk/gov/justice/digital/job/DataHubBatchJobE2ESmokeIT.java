@@ -38,6 +38,7 @@ import java.util.List;
 
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
@@ -91,10 +92,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     @BeforeEach
     public void setUp() throws SQLException {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
-        givenPathsAreConfigured(arguments);
-        givenTableConfigIsConfigured(arguments, configService);
-        givenGlobPatternIsConfigured();
-        givenRetrySettingsAreConfigured(arguments);
+        givenSettingsAreConfigured();
         givenSchemaExists(inputSchemaName, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
@@ -123,8 +121,6 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         // offenders is the only table that has no schema - we expect its data to arrive in violations
         givenNoSourceReferenceFor(offendersTable, sourceReferenceService);
 
-
-
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);
 
         whenTheJobRuns();
@@ -147,6 +143,14 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
     }
 
+    private void givenSettingsAreConfigured() {
+        givenPathsAreConfigured(arguments);
+        givenTableConfigIsConfigured(arguments, configService);
+        givenGlobPatternIsConfigured();
+        givenRetrySettingsAreConfigured(arguments);
+        when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
+    }
+
     private void whenTheJobRuns() {
         underTest.runJob(spark);
     }
@@ -167,7 +171,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         OperationalDataStoreRepository operationalDataStoreRepository =
                 new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+                new OperationalDataStoreDataAccess(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
