@@ -45,8 +45,7 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
     @Override
     public void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
-        String tableName = format("%s_%s", sourceReference.getSource(), sourceReference.getTable());
-        String fullDestinationTableName = format("%s.%s", sourceReference.getNamespace(), tableName);
+        String fullDestinationTableName = operationalDataStoreFullTableName(sourceReference);
         if (operationalDataStoreDataAccess.isOperationalDataStoreManagedTable(sourceReference)) {
             if (operationalDataStoreDataAccess.tableExists(sourceReference)) {
                 logger.info("Processing records to write to Operational Data Store table {}", fullDestinationTableName);
@@ -77,8 +76,8 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
     @Override
     public void mergeData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
-        String tableName = format("%s_%s", sourceReference.getSource(), sourceReference.getTable());
-        String fullDestinationTableName = format("%s.%s", sourceReference.getNamespace(), tableName);
+        String tableName = operationalDataStoreTableName(sourceReference);
+        String fullDestinationTableName = operationalDataStoreFullTableName(sourceReference);
         if (operationalDataStoreDataAccess.isOperationalDataStoreManagedTable(sourceReference)) {
             logger.info("Processing records to merge into Operational Data Store table {}", fullDestinationTableName);
 
@@ -102,5 +101,14 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
         } else {
             logger.info("Skipping merge to Operational Data Store for non-managed table {}", fullDestinationTableName);
         }
+    }
+
+    private static String operationalDataStoreTableName(SourceReference sourceReference) {
+        return format("%s_%s", sourceReference.getSource(), sourceReference.getTable());
+    }
+
+    private static String operationalDataStoreFullTableName(SourceReference sourceReference) {
+        String tableName = operationalDataStoreTableName(sourceReference);
+        return format("%s.%s", sourceReference.getNamespace(), tableName);
     }
 }
