@@ -88,6 +88,7 @@ public class SourceReferenceServiceTest {
         val pk = new SourceReference.PrimaryKey("OFFENDER_ID");
 
         assertEquals(schemaId, sourceReference.getKey());
+        assertEquals("prisons", sourceReference.getNamespace());
         assertEquals("nomis", sourceReference.getSource());
         assertEquals("offenders", sourceReference.getTable());
         assertEquals(pk, sourceReference.getPrimaryKey());

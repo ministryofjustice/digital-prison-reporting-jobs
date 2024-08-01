@@ -32,6 +32,8 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 
 public class E2ETestBase extends BaseSparkTest {
     protected static final String configurationSchemaName = "configuration";
@@ -157,6 +159,16 @@ public class E2ETestBase extends BaseSparkTest {
                 createRow(primaryKey, timestamp, Delete, null)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
+    }
+
+    protected void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
+        assertOperationalDataStoreContainsForPK(namespace, inputSchemaName + "_" + table, data, primaryKey, testQueryConnection);
+    }
+
+    protected void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
+        assertOperationalDataStoreDoesNotContainPK(namespace, inputSchemaName + "_" + table, primaryKey, testQueryConnection);
     }
 
     protected void thenStructuredViolationsContainsForPK(String table, String data, int primaryKey) {

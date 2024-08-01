@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,12 +38,8 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
-import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
-import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
-import static uk.gov.justice.digital.test.SharedTestFunctions.givenEmptyTableExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
@@ -102,12 +97,11 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, offenderBookingsTable, testQueryConnection);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
 
-        Dataset<Row> df = spark.createDataFrame(initialDataEveryTable, TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
-        givenEmptyTableExists(operationalDataStoreTableName(agencyInternalLocationsTable), df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(operationalDataStoreTableName(agencyLocationsTable), df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(operationalDataStoreTableName(movementReasonsTable), df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(operationalDataStoreTableName(offenderBookingsTable), df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(operationalDataStoreTableName(offenderExternalMovementsTable), df, testQueryConnection, operationalDataStore);
+        givenDestinationTableExists(agencyInternalLocationsTable, testQueryConnection);
+        givenDestinationTableExists(agencyLocationsTable, testQueryConnection);
+        givenDestinationTableExists(movementReasonsTable, testQueryConnection);
+        givenDestinationTableExists(offenderBookingsTable, testQueryConnection);
+        givenDestinationTableExists(offenderExternalMovementsTable, testQueryConnection);
         givenDependenciesAreInjected();
     }
 
@@ -125,20 +119,20 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1", 1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1", 1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1", 1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1", 1);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1", 1);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1", 1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1", 1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1", 1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1", 1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1", 1, testQueryConnection);
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2", 2);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2", 2);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2", 2);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2", 2);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2", 2);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2", 2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2", 2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2", 2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2", 2, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2", 2, testQueryConnection);
 
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 1);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 2);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 1, testQueryConnection);
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 2, testQueryConnection);
         thenStructuredViolationsContainsForPK(offendersTable, "1", 1);
         thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
     }
@@ -190,15 +184,5 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     private void givenGlobPatternIsConfigured() {
         // Pattern for data written by Spark as input in tests instead of by DMS
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("part-*parquet");
-    }
-
-    private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey) throws SQLException {
-        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
-        assertOperationalDataStoreContainsForPK(namespace, inputSchemaName + "_" + table, data, primaryKey, testQueryConnection);
-    }
-
-    private void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey) throws SQLException {
-        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
-        assertOperationalDataStoreDoesNotContainPK(namespace, inputSchemaName + "_" + table, primaryKey, testQueryConnection);
     }
 }
