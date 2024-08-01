@@ -27,11 +27,11 @@ import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 @ExtendWith(MockitoExtension.class)
 class OperationalDataStoreServiceTest {
-    private static final String namespace = "prisons";
-    private static final String sourceName = "somesource";
-    private static final String tableName = "sometable";
-    private static final String expectedFullTableName = "prisons.somesource_sometable";
-    private static final String expectedLoadingFullTableName = "loading.somesource_sometable";
+    private static final String NAMESPACE = "prisons";
+    private static final String SOURCE_NAME = "somesource";
+    private static final String TABLE_NAME = "sometable";
+    private static final String EXPECTED_FULL_TABLE_NAME = "prisons.somesource_sometable";
+    private static final String EXPECTED_LOADING_FULL_TABLE_NAME = "loading.somesource_sometable";
 
     private static final StructType schema = new StructType(new StructField[]{
             new StructField("PK", DataTypes.StringType, true, Metadata.empty()),
@@ -63,9 +63,9 @@ class OperationalDataStoreServiceTest {
     public void setup() {
         when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
         underTest = new OperationalDataStoreServiceImpl(jobArguments, mockDataTransformation, mockDataAccess);
-        when(sourceReference.getSource()).thenReturn(sourceName);
-        when(sourceReference.getTable()).thenReturn(tableName);
-        when(sourceReference.getNamespace()).thenReturn(namespace);
+        when(sourceReference.getSource()).thenReturn(SOURCE_NAME);
+        when(sourceReference.getTable()).thenReturn(TABLE_NAME);
+        when(sourceReference.getNamespace()).thenReturn(NAMESPACE);
     }
 
     @Test
@@ -89,7 +89,7 @@ class OperationalDataStoreServiceTest {
         underTest.overwriteData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("op", "_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, expectedFullTableName);
+        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, EXPECTED_FULL_TABLE_NAME);
     }
 
     @Test
@@ -98,7 +98,7 @@ class OperationalDataStoreServiceTest {
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, expectedFullTableName);
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, EXPECTED_FULL_TABLE_NAME);
     }
 
     @Test
@@ -110,7 +110,7 @@ class OperationalDataStoreServiceTest {
             underTest.overwriteData(inputDataframe, sourceReference);
         });
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, expectedFullTableName);
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, EXPECTED_FULL_TABLE_NAME);
     }
 
     @Test
@@ -132,7 +132,7 @@ class OperationalDataStoreServiceTest {
         underTest.mergeData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, expectedLoadingFullTableName);
+        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, EXPECTED_LOADING_FULL_TABLE_NAME);
     }
 
     @Test
@@ -143,7 +143,7 @@ class OperationalDataStoreServiceTest {
 
         underTest.mergeData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(1)).merge(expectedLoadingFullTableName, expectedFullTableName, sourceReference);
+        verify(mockDataAccess, times(1)).merge(EXPECTED_LOADING_FULL_TABLE_NAME, EXPECTED_FULL_TABLE_NAME, sourceReference);
     }
 
     @Test
@@ -152,6 +152,6 @@ class OperationalDataStoreServiceTest {
 
         underTest.mergeData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, expectedFullTableName);
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, EXPECTED_FULL_TABLE_NAME);
     }
 }
