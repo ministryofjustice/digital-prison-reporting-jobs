@@ -13,6 +13,7 @@ class SourceReferenceTest {
     void testGetFullyQualifiedTableName() {
         SourceReference underTest = new SourceReference(
                 "key",
+                "prisons",
                 "source",
                 "table",
                 new SourceReference.PrimaryKey("pk_column"),

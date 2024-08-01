@@ -13,6 +13,7 @@ import static java.lang.String.format;
 @Data
 public class SourceReference {
     private final String key;
+    private final String namespace;
     private final String source;
     private final String table;
     private final PrimaryKey primaryKey;
