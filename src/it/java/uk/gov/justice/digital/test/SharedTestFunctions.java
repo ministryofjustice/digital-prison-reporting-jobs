@@ -36,10 +36,6 @@ public class SharedTestFunctions {
         }
     }
 
-    public static void givenEmptyTableExists(String schemaName, String tableName, Dataset<Row> df, Connection testQueryConnection, InMemoryOperationalDataStore operationalDataStore) throws SQLException {
-        givenEmptyTableExists(schemaName + "." + tableName, df, testQueryConnection, operationalDataStore);
-    }
-
     public static void givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(JobArguments arguments, String fullTableName) {
         when(arguments.getOperationalDataStoreTablesToWriteTableName()).thenReturn(fullTableName);
     }

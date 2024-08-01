@@ -99,7 +99,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     public void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemaExists(loadingSchemaName, testQueryConnection);
-        givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(namespace, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
         givenSettingsAreConfigured();
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
@@ -246,12 +246,12 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
     private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey) throws SQLException {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
-        assertOperationalDataStoreContainsForPK(inputSchemaName, table, data, primaryKey, testQueryConnection);
+        assertOperationalDataStoreContainsForPK(namespace, inputSchemaName + "_" + table, data, primaryKey, testQueryConnection);
     }
 
     private void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey) throws SQLException {
         assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
-        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, table, primaryKey, testQueryConnection);
+        assertOperationalDataStoreDoesNotContainPK(namespace, inputSchemaName + "_" + table, primaryKey, testQueryConnection);
     }
 
     @FunctionalInterface

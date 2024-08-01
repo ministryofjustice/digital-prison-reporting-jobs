@@ -93,7 +93,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     public void setUp() throws SQLException {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSettingsAreConfigured();
-        givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(namespace, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, agencyInternalLocationsTable, testQueryConnection);
@@ -103,11 +103,11 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, offenderExternalMovementsTable, testQueryConnection);
 
         Dataset<Row> df = spark.createDataFrame(initialDataEveryTable, TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
-        givenEmptyTableExists(inputSchemaName, agencyInternalLocationsTable, df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(inputSchemaName, agencyLocationsTable, df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(inputSchemaName, movementReasonsTable, df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(inputSchemaName, offenderBookingsTable, df, testQueryConnection, operationalDataStore);
-        givenEmptyTableExists(inputSchemaName, offenderExternalMovementsTable, df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreTableName(agencyInternalLocationsTable), df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreTableName(agencyLocationsTable), df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreTableName(movementReasonsTable), df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreTableName(offenderBookingsTable), df, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreTableName(offenderExternalMovementsTable), df, testQueryConnection, operationalDataStore);
         givenDependenciesAreInjected();
     }
 
@@ -194,11 +194,11 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
     private void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey) throws SQLException {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
-        assertOperationalDataStoreContainsForPK(inputSchemaName, table, data, primaryKey, testQueryConnection);
+        assertOperationalDataStoreContainsForPK(namespace, inputSchemaName + "_" + table, data, primaryKey, testQueryConnection);
     }
 
     private void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey) throws SQLException {
         assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
-        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, table, primaryKey, testQueryConnection);
+        assertOperationalDataStoreDoesNotContainPK(namespace, inputSchemaName + "_" + table, primaryKey, testQueryConnection);
     }
 }

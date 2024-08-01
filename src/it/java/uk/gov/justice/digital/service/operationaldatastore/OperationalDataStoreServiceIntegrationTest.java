@@ -63,6 +63,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     });
     private static Dataset<Row> twoInsertsDf;
     private static final String inputSchemaName = "nomis";
+    private static final String namespace = "prisons";
 
     @Mock
     private OperationalDataStoreConnectionDetailsService mockConnectionDetailsService;
@@ -107,12 +108,12 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         String loadingSchemaName = "loading";
         String configurationTable = "datahub_managed_tables";
         inputTableName = "_" + UUID.randomUUID().toString().replaceAll("-", "_");
-        destinationTableNameWithSchema = inputSchemaName + "." + inputTableName;
+        destinationTableNameWithSchema = format("%s.%s_%s", namespace, inputSchemaName, inputTableName);
         when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn(loadingSchemaName);
 
         givenSchemaExists(configurationSchema, testQueryConnection);
         givenSchemaExists(loadingSchemaName, testQueryConnection);
-        givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(namespace, testQueryConnection);
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(jobArguments, configurationSchema + "." + configurationTable);
         givenTablesToWriteToOperationalDataStore(configurationSchema, configurationTable, inputSchemaName, inputTableName, testQueryConnection);
         lenient().when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
@@ -130,7 +131,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     @Test
     void overwriteDataShouldInsertData() throws Exception {
         createDestinationTable();
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -154,7 +155,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         ), schema);
 
         createDestinationTable();
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -176,7 +177,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     @Test
     void overwriteDataShouldCreateTableWithLowercaseColumnsWithoutOpAndTimestamp() throws Exception {
         createDestinationTable();
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -192,7 +193,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     void overwriteDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() throws Exception {
         createDestinationTable();
         SourceReference unmanagedSourceReference = mock(SourceReference.class);
-        when(unmanagedSourceReference.getFullyQualifiedTableName()).thenReturn("nomis.not_a_managed_table");
+        when(unmanagedSourceReference.getNamespace()).thenReturn(namespace);
         when(unmanagedSourceReference.getSource()).thenReturn("nomis");
         when(unmanagedSourceReference.getTable()).thenReturn("not_a_managed_table");
 
@@ -214,7 +215,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -246,7 +247,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -282,7 +283,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -314,7 +315,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -347,7 +348,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         when(sourceReference.getSchema()).thenReturn(schemaWithoutMetadataCols);
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey("PK"));
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableNameWithSchema);
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
 
@@ -364,7 +365,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     @Test
     void mergeDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
         SourceReference unmanagedSourceReference = mock(SourceReference.class);
-        when(unmanagedSourceReference.getFullyQualifiedTableName()).thenReturn("nomis.not_a_managed_table");
+        when(unmanagedSourceReference.getNamespace()).thenReturn(namespace);
         when(unmanagedSourceReference.getSource()).thenReturn("nomis");
         when(unmanagedSourceReference.getTable()).thenReturn("not_a_managed_table");
 

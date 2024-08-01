@@ -36,6 +36,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 public class E2ETestBase extends BaseSparkTest {
     protected static final String configurationSchemaName = "configuration";
     protected static final String loadingSchemaName = "loading";
+    protected static final String namespace = "prisons";
     protected static final String inputSchemaName = "nomis";
     protected static final String configurationTableName = "datahub_managed_tables";
     protected static final String agencyInternalLocationsTable = "agency_internal_locations";
@@ -56,6 +57,10 @@ public class E2ETestBase extends BaseSparkTest {
     protected String tempReloadPath;
 
     protected String checkpointPath;
+
+    protected static String operationalDataStoreTableName(String tableName) {
+        return format("%s.%s_%s", namespace, inputSchemaName, tableName);
+    }
 
     protected void givenPathsAreConfigured(JobArguments arguments) {
         rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
@@ -89,9 +94,9 @@ public class E2ETestBase extends BaseSparkTest {
     protected void givenASourceReferenceFor(String inputTableName, SourceReferenceService sourceReferenceService) {
         SourceReference sourceReference = mock(SourceReference.class);
         when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.of(sourceReference));
+        lenient().when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
-        lenient().when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
         lenient().when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
@@ -120,7 +125,7 @@ public class E2ETestBase extends BaseSparkTest {
 
     protected void givenDestinationTableExists(String tableName, Connection testQueryConnection) throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
-            statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (pk INTEGER, data VARCHAR)", inputSchemaName, tableName));
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s (pk INTEGER, data VARCHAR)", operationalDataStoreTableName(tableName)));
         }
     }
 

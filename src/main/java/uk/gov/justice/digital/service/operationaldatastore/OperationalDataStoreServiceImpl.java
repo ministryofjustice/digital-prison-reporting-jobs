@@ -45,42 +45,44 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
     @Override
     public void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
-        String destinationTableName = sourceReference.getFullyQualifiedTableName();
+        String tableName = format("%s_%s", sourceReference.getSource(), sourceReference.getTable());
+        String fullDestinationTableName = format("%s.%s", sourceReference.getNamespace(), tableName);
         if (operationalDataStoreDataAccess.isOperationalDataStoreManagedTable(sourceReference)) {
             if (operationalDataStoreDataAccess.tableExists(sourceReference)) {
-                logger.info("Processing records to write to Operational Data Store table {}", destinationTableName);
+                logger.info("Processing records to write to Operational Data Store table {}", fullDestinationTableName);
 
                 Dataset<Row> transformedDf = transformer
                         .transform(dataFrame)
                         // We don't store these metadata columns in the destination table so we remove them
                         .drop(OPERATION.toLowerCase(), TIMESTAMP.toLowerCase(), CHECKPOINT_COL.toLowerCase());
-                operationalDataStoreDataAccess.overwriteTable(transformedDf, destinationTableName);
+                operationalDataStoreDataAccess.overwriteTable(transformedDf, fullDestinationTableName);
 
                 logger.info("Finished processing records to write to Operational Data Store table {} in {}ms",
-                        destinationTableName, System.currentTimeMillis() - startTime);
+                        fullDestinationTableName, System.currentTimeMillis() - startTime);
             } else {
                 // We explicitly don't want Spark to create the table for us to ensure DDL is managed in one place in
                 // the migrations in the Transfer Component. If the load is run when someone has forgotten to create
                 // the table first then the job will fail and ask them to create the table.
                 String msg = format(
                         "Table %s does not exist. Please create it in the Transfer Component before running the load",
-                        destinationTableName
+                        fullDestinationTableName
                 );
                 throw new OperationalDataStoreException(msg);
             }
         } else {
-            logger.info("Skipping write to Operational Data Store for non-managed table {}", destinationTableName);
+            logger.info("Skipping write to Operational Data Store for non-managed table {}", fullDestinationTableName);
         }
     }
 
     @Override
     public void mergeData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
-        String destinationTableName = sourceReference.getFullyQualifiedTableName();
+        String tableName = format("%s_%s", sourceReference.getSource(), sourceReference.getTable());
+        String fullDestinationTableName = format("%s.%s", sourceReference.getNamespace(), tableName);
         if (operationalDataStoreDataAccess.isOperationalDataStoreManagedTable(sourceReference)) {
-            logger.info("Processing records to merge into Operational Data Store table {}", destinationTableName);
+            logger.info("Processing records to merge into Operational Data Store table {}", fullDestinationTableName);
 
-            String temporaryLoadingTableName = loadingSchema + "." + sourceReference.getTable();
+            String temporaryLoadingTableName = loadingSchema + "." + tableName;
             logger.debug("Loading to temporary table {}", temporaryLoadingTableName);
 
             Dataset<Row> transformedDf = transformer
@@ -92,13 +94,13 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
             // Load the data to the temporary loading table
             operationalDataStoreDataAccess.overwriteTable(transformedDf, temporaryLoadingTableName);
             logger.debug("Finished loading to temporary table {}", temporaryLoadingTableName);
-            logger.debug("Merging to destination table {}", destinationTableName);
-            operationalDataStoreDataAccess.merge(temporaryLoadingTableName, destinationTableName, sourceReference);
-            logger.debug("Finished merging to destination table {}", destinationTableName);
+            logger.debug("Merging to destination table {}", fullDestinationTableName);
+            operationalDataStoreDataAccess.merge(temporaryLoadingTableName, fullDestinationTableName, sourceReference);
+            logger.debug("Finished merging to destination table {}", fullDestinationTableName);
             logger.info("Finished processing records to merge into Operational Data Store table {} in {}ms",
-                    destinationTableName, System.currentTimeMillis() - startTime);
+                    fullDestinationTableName, System.currentTimeMillis() - startTime);
         } else {
-            logger.info("Skipping merge to Operational Data Store for non-managed table {}", destinationTableName);
+            logger.info("Skipping merge to Operational Data Store for non-managed table {}", fullDestinationTableName);
         }
     }
 }

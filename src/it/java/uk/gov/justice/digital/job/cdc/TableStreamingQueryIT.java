@@ -412,9 +412,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void givenSourceReference() {
         when(sourceReferenceService.getSourceReference(inputSchemaName, inputTableName))
                 .thenReturn(Optional.of(sourceReference));
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
     }
 
     private void givenASourceReferenceSchema() {
@@ -433,15 +433,15 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void givenSchemas() throws SQLException {
         when(arguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
         givenSchemaExists("loading", testQueryConnection);
-        givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(namespace, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
     }
 
     private void givenEmptyDestinationTableExists() throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
-            statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (pk INTEGER, data VARCHAR)", inputSchemaName, inputTableName));
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s (pk INTEGER, data VARCHAR)", operationalDataStoreFullTableName));
             // Truncate the table in case another test in this class might have already used this table
-            statement.execute(format("TRUNCATE TABLE %s.%s", inputSchemaName, inputTableName));
+            statement.execute(format("TRUNCATE TABLE %s", operationalDataStoreFullTableName));
         }
     }
 

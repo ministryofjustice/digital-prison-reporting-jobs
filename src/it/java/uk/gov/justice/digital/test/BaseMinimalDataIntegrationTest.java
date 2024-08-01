@@ -21,9 +21,11 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
 
     protected static final String configurationSchemaName = "configuration";
     protected static final String configurationTableName = "datahub_managed_tables";
+    protected static final String namespace = "prisons";
     protected static final String inputSchemaName = "my_schema";
     protected static final String inputTableName = "my_table";
-    protected static final String inputFullTableName = inputSchemaName + "." + inputTableName;
+    protected static final String operationalDataStoreTableName = inputSchemaName + "_" + inputTableName;
+    protected static final String operationalDataStoreFullTableName = namespace + "." + operationalDataStoreTableName;
 
     @TempDir
     protected Path testRoot;
@@ -55,11 +57,11 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
 
     protected void thenStructuredCuratedAndOperationalDataStoreContainForPK(String data, int primaryKey, Connection testQueryConnection) throws SQLException {
         assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, inputTableName, data, primaryKey);
-        assertOperationalDataStoreContainsForPK(inputSchemaName, inputTableName, data, primaryKey, testQueryConnection);
+        assertOperationalDataStoreContainsForPK(namespace, operationalDataStoreTableName, data, primaryKey, testQueryConnection);
     }
 
     protected void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(int primaryKey, Connection testQueryConnection) throws SQLException {
         assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, inputTableName, primaryKey);
-        assertOperationalDataStoreDoesNotContainPK(inputSchemaName, inputTableName, primaryKey, testQueryConnection);
+        assertOperationalDataStoreDoesNotContainPK(namespace, operationalDataStoreTableName, primaryKey, testQueryConnection);
     }
 }
