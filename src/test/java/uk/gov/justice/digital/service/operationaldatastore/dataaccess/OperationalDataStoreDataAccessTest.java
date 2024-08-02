@@ -41,6 +41,8 @@ import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_
 
 @ExtendWith(MockitoExtension.class)
 class OperationalDataStoreDataAccessTest {
+    private static final String NAMESPACE = "namespace";
+    private static final String FULL_TABLE_NAME = "schema_name_table_name";
 
     private static final Set<DataHubOperationalDataStoreManagedTable> managedTables = new HashSet<>(Arrays.asList(
             new DataHubOperationalDataStoreManagedTable("nomis", "activities"),
@@ -262,11 +264,8 @@ class OperationalDataStoreDataAccessTest {
 
     @Test
     void shouldReturnTrueIfTableExists() throws Exception {
-        String schemaName = "schema_name";
-        String tableName = "table_name";
-
-        when(sourceReference.getSource()).thenReturn(schemaName);
-        when(sourceReference.getTable()).thenReturn(tableName);
+        when(sourceReference.getNamespace()).thenReturn(NAMESPACE);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(FULL_TABLE_NAME);
 
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
@@ -279,11 +278,8 @@ class OperationalDataStoreDataAccessTest {
 
     @Test
     void shouldReturnFalseIfTableDoesNotExist() throws Exception {
-        String schemaName = "schema_name";
-        String tableName = "table_name";
-
-        when(sourceReference.getSource()).thenReturn(schemaName);
-        when(sourceReference.getTable()).thenReturn(tableName);
+        when(sourceReference.getNamespace()).thenReturn(NAMESPACE);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(FULL_TABLE_NAME);
 
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
@@ -296,11 +292,8 @@ class OperationalDataStoreDataAccessTest {
 
     @Test
     void shouldReturnFalseIfNoResultsForQuery() throws Exception {
-        String schemaName = "schema_name";
-        String tableName = "table_name";
-
-        when(sourceReference.getSource()).thenReturn(schemaName);
-        when(sourceReference.getTable()).thenReturn(tableName);
+        when(sourceReference.getNamespace()).thenReturn(NAMESPACE);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(FULL_TABLE_NAME);
 
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
@@ -312,11 +305,8 @@ class OperationalDataStoreDataAccessTest {
 
     @Test
     void shouldRunSqlToCheckIfTableExists() throws Exception {
-        String schemaName = "schema_name";
-        String tableName = "table_name";
-
-        when(sourceReference.getSource()).thenReturn(schemaName);
-        when(sourceReference.getTable()).thenReturn(tableName);
+        when(sourceReference.getNamespace()).thenReturn(NAMESPACE);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(FULL_TABLE_NAME);
 
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
@@ -326,18 +316,15 @@ class OperationalDataStoreDataAccessTest {
 
         underTest.tableExists(sourceReference);
 
-        String expectedSql = "SELECT EXISTS (SELECT  FROM information_schema.tables WHERE table_schema = 'schema_name' AND table_name = 'table_name')";
+        String expectedSql = "SELECT EXISTS (SELECT  FROM information_schema.tables WHERE table_schema = 'namespace' AND table_name = 'schema_name_table_name')";
         verify(statement, times(1)).executeQuery(expectedSql);
         verify(resultSet, times(1)).getBoolean(1);
     }
 
     @Test
     void tableExistsShouldCloseResources() throws Exception {
-        String schemaName = "schema_name";
-        String tableName = "table_name";
-
-        when(sourceReference.getSource()).thenReturn(schemaName);
-        when(sourceReference.getTable()).thenReturn(tableName);
+        when(sourceReference.getNamespace()).thenReturn(NAMESPACE);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(FULL_TABLE_NAME);
 
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
@@ -353,11 +340,8 @@ class OperationalDataStoreDataAccessTest {
 
     @Test
     void tableExistsShouldCloseResourcesWhenSqlExecutionThrows() throws Exception {
-        String schemaName = "schema_name";
-        String tableName = "table_name";
-
-        when(sourceReference.getSource()).thenReturn(schemaName);
-        when(sourceReference.getTable()).thenReturn(tableName);
+        when(sourceReference.getNamespace()).thenReturn(NAMESPACE);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(FULL_TABLE_NAME);
 
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);

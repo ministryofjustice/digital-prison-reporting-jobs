@@ -325,6 +325,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     private static SourceReference createSourceReference(ImmutablePair<String, String> sourceTable) {
         return new SourceReference(
                 sourceTable.left + "_" + sourceTable.right,
+                "prisons",
                 sourceTable.left,
                 sourceTable.right,
                 new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN),

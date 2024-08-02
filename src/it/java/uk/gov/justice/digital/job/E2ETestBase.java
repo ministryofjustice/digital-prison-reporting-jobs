@@ -22,9 +22,9 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
@@ -32,10 +32,15 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableName;
+import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableNameWithSchema;
 
 public class E2ETestBase extends BaseSparkTest {
     protected static final String configurationSchemaName = "configuration";
     protected static final String loadingSchemaName = "loading";
+    protected static final String namespace = "prisons";
     protected static final String inputSchemaName = "nomis";
     protected static final String configurationTableName = "datahub_managed_tables";
     protected static final String agencyInternalLocationsTable = "agency_internal_locations";
@@ -89,9 +94,11 @@ public class E2ETestBase extends BaseSparkTest {
     protected void givenASourceReferenceFor(String inputTableName, SourceReferenceService sourceReferenceService) {
         SourceReference sourceReference = mock(SourceReference.class);
         when(sourceReferenceService.getSourceReference(eq(inputSchemaName), eq(inputTableName))).thenReturn(Optional.of(sourceReference));
+        lenient().when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
-        lenient().when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
+        lenient().when(sourceReference.getOperationalDataStoreTableName()).thenReturn(operationalDataStoreTableName(inputSchemaName, inputTableName));
+        lenient().when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(operationalDataStoreTableNameWithSchema(namespace, inputSchemaName, inputTableName));
         lenient().when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }
@@ -120,7 +127,7 @@ public class E2ETestBase extends BaseSparkTest {
 
     protected void givenDestinationTableExists(String tableName, Connection testQueryConnection) throws SQLException {
         try(Statement statement = testQueryConnection.createStatement()) {
-            statement.execute(format("CREATE TABLE IF NOT EXISTS %s.%s (pk INTEGER, data VARCHAR)", inputSchemaName, tableName));
+            statement.execute(format("CREATE TABLE IF NOT EXISTS %s (pk INTEGER, data VARCHAR)", operationalDataStoreTableNameWithSchema(namespace, inputSchemaName, tableName)));
         }
     }
 
@@ -152,6 +159,16 @@ public class E2ETestBase extends BaseSparkTest {
                 createRow(primaryKey, timestamp, Delete, null)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
+    }
+
+    protected void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
+        assertOperationalDataStoreContainsForPK(namespace, operationalDataStoreTableName(inputSchemaName, table), data, primaryKey, testQueryConnection);
+    }
+
+    protected void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
+        assertOperationalDataStoreDoesNotContainPK(namespace, operationalDataStoreTableName(inputSchemaName, table), primaryKey, testQueryConnection);
     }
 
     protected void thenStructuredViolationsContainsForPK(String table, String data, int primaryKey) {

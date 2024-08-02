@@ -27,7 +27,9 @@ import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 @ExtendWith(MockitoExtension.class)
 class OperationalDataStoreServiceTest {
-    private static final String destinationTableName = "somesource.sometable";
+    private static final String TABLE_NAME = "somesource_sometable";
+    private static final String FULL_TABLE_NAME = "prisons.somesource_sometable";
+    private static final String LOADING_FULL_TABLE_NAME = "loading.somesource_sometable";
 
     private static final StructType schema = new StructType(new StructField[]{
             new StructField("PK", DataTypes.StringType, true, Metadata.empty()),
@@ -59,11 +61,11 @@ class OperationalDataStoreServiceTest {
     public void setup() {
         when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
         underTest = new OperationalDataStoreServiceImpl(jobArguments, mockDataTransformation, mockDataAccess);
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
     }
 
     @Test
     void overwriteDataShouldTransformInputDataframe() {
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
         when(mockDataAccess.tableExists(any())).thenReturn(true);
@@ -75,7 +77,6 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void overwriteDataShouldWriteTransformedDataframeToDestinationTableAfterDroppingMetadataCols() {
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
@@ -84,7 +85,7 @@ class OperationalDataStoreServiceTest {
         underTest.overwriteData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("op", "_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, destinationTableName);
+        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
     }
 
     @Test
@@ -93,12 +94,11 @@ class OperationalDataStoreServiceTest {
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, destinationTableName);
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
     }
 
     @Test
     void overwriteDataShouldThrowIfTheTableDoesNotExist() {
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
         when(mockDataAccess.tableExists(any())).thenReturn(false);
 
@@ -106,13 +106,13 @@ class OperationalDataStoreServiceTest {
             underTest.overwriteData(inputDataframe, sourceReference);
         });
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, destinationTableName);
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
     }
 
     @Test
     void mergeDataShouldTransformInputDataframe() {
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(TABLE_NAME);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
 
         underTest.mergeData(inputDataframe, sourceReference);
@@ -122,37 +122,36 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void mergeDataShouldWriteTransformedDataframeToLoadingTableAfterDroppingMetadataCols() {
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
-        when(sourceReference.getTable()).thenReturn("some_table");
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(TABLE_NAME);
 
         underTest.mergeData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, "loading.some_table");
+        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, LOADING_FULL_TABLE_NAME);
     }
 
     @Test
     void mergeDataShouldRunMerge() {
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(destinationTableName);
-        when(sourceReference.getTable()).thenReturn("some_table");
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(TABLE_NAME);
 
         underTest.mergeData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(1)).merge("loading.some_table", destinationTableName, sourceReference);
+        verify(mockDataAccess, times(1)).merge(LOADING_FULL_TABLE_NAME, FULL_TABLE_NAME, sourceReference);
     }
 
     @Test
     void mergeDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(TABLE_NAME);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
 
         underTest.mergeData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, destinationTableName);
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
     }
 }

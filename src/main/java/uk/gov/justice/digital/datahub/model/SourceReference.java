@@ -13,6 +13,7 @@ import static java.lang.String.format;
 @Data
 public class SourceReference {
     private final String key;
+    private final String namespace;
     private final String source;
     private final String table;
     private final PrimaryKey primaryKey;
@@ -20,8 +21,13 @@ public class SourceReference {
     private final StructType schema;
     private final SensitiveColumns sensitiveColumns;
 
-    public String getFullyQualifiedTableName() {
-        return format("%s.%s", source, table);
+    public String getOperationalDataStoreTableName() {
+        return format("%s_%s", source, table);
+    }
+
+    public String getFullOperationalDataStoreTableNameWithSchema() {
+        String tableName = getOperationalDataStoreTableName();
+        return format("%s.%s", namespace, tableName);
     }
 
     public static class PrimaryKey {

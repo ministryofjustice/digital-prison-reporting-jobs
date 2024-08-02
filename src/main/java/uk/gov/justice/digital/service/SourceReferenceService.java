@@ -69,6 +69,7 @@ public class SourceReferenceService {
 
         return new SourceReference(
                 response.getId(),
+                parsedAvro.getNamespace(),
                 parsedAvro.getService(),
                 parsedAvro.getNameWithoutVersionSuffix(),
                 parsedAvro.findPrimaryKey()
@@ -95,6 +96,8 @@ public class SourceReferenceService {
     private static class AvroSchema {
         @Getter
         private final String service;
+        @Getter
+        private final String namespace;
         private final String name;
         private final List<Map<String, Object>> fields;
 

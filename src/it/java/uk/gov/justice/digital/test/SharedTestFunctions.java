@@ -19,6 +19,14 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
 public class SharedTestFunctions {
 
+    public static String operationalDataStoreTableName(String inputSchemaName, String tableName) {
+        return format("%s_%s", inputSchemaName, tableName);
+    }
+
+    public static String operationalDataStoreTableNameWithSchema(String namespace, String inputSchemaName, String tableName) {
+        return format("%s.%s", namespace, operationalDataStoreTableName(inputSchemaName, tableName));
+    }
+
     public static void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
         when(connectionDetailsService.getConnectionDetails()).thenReturn(operationalDataStore.getConnectionDetails());
     }
@@ -34,10 +42,6 @@ public class SharedTestFunctions {
         try (Statement statement = testQueryConnection.createStatement()) {
             statement.execute("TRUNCATE TABLE " + fullTableName);
         }
-    }
-
-    public static void givenEmptyTableExists(String schemaName, String tableName, Dataset<Row> df, Connection testQueryConnection, InMemoryOperationalDataStore operationalDataStore) throws SQLException {
-        givenEmptyTableExists(schemaName + "." + tableName, df, testQueryConnection, operationalDataStore);
     }
 
     public static void givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(JobArguments arguments, String fullTableName) {

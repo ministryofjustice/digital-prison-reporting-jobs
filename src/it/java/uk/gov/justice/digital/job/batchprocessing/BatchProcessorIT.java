@@ -32,7 +32,6 @@ import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 import java.sql.Connection;
 import java.util.Arrays;
 
-import static java.lang.String.format;
 import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -83,7 +82,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     public void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSettingsAreConfigured();
-        givenSchemaExists(inputSchemaName, testQueryConnection);
+        givenSchemaExists(namespace, testQueryConnection);
         givenSchemaExists(configurationSchemaName, testQueryConnection);
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
         givenTablesToWriteToOperationalDataStore(configurationSchemaName, configurationTableName, inputSchemaName, inputTableName, testQueryConnection);
@@ -100,7 +99,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk4, "2023-11-13 10:50:00.123456", Delete, "data4")
         ), TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
 
-        givenEmptyTableExists(inputFullTableName, input, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, input, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, input);
 
@@ -119,7 +118,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA);
 
-        givenEmptyTableExists(inputFullTableName, input, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, input, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, input);
 
@@ -138,7 +137,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("extra-column", lit(1));
 
-        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -158,7 +157,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).drop("data");
 
-        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -178,7 +177,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1));
 
-        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -198,7 +197,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1));
 
-        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -218,7 +217,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1L));
 
-        givenEmptyTableExists(inputFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -239,7 +238,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA);
 
-        givenEmptyTableExists(inputFullTableName, dfNullNonNullableCols, testQueryConnection, operationalDataStore);
+        givenEmptyTableExists(operationalDataStoreFullTableName, dfNullNonNullableCols, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, dfNullNonNullableCols);
 
@@ -303,9 +302,11 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     private void givenASourceReference() {
+        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
-        when(sourceReference.getFullyQualifiedTableName()).thenReturn(format("%s.%s", inputSchemaName, inputTableName));
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(operationalDataStoreTableName);
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(operationalDataStoreFullTableName);
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }

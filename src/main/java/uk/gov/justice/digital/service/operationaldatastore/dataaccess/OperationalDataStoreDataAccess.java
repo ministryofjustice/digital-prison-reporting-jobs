@@ -116,7 +116,7 @@ public class OperationalDataStoreDataAccess {
     public boolean tableExists(SourceReference sourceReference) {
         String sql = format(
                 "SELECT EXISTS (SELECT  FROM information_schema.tables WHERE table_schema = '%s' AND table_name = '%s')",
-                sourceReference.getSource(), sourceReference.getTable());
+                sourceReference.getNamespace(), sourceReference.getOperationalDataStoreTableName());
         try (Connection connection = dataSource.getConnection()) {
             try (Statement statement = connection.createStatement()) {
                 ResultSet rs = statement.executeQuery(sql);

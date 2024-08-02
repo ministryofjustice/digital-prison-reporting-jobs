@@ -388,10 +388,11 @@ public class HiveTableServiceTest extends BaseSparkTest {
         String key = String.valueOf(index);
         val primaryKey = new SourceReference.PrimaryKey(key);
         val sensitiveColumn = createSensitiveColumn(index);
+        String namespace = "prisons";
         String source = SCHEMA_NAME + key;
         String table = TABLE + key;
         String versionId = UUID.randomUUID().toString();
-        return new SourceReference(key, source, table, primaryKey, versionId, JSON_DATA_SCHEMA, sensitiveColumn);
+        return new SourceReference(key, namespace, source, table, primaryKey, versionId, JSON_DATA_SCHEMA, sensitiveColumn);
     }
 
     @NotNull
