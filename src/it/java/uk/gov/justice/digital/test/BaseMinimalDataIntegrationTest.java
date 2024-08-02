@@ -10,6 +10,8 @@ import java.sql.SQLException;
 
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreContainsForPK;
 import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalDataStoreDoesNotContainPK;
+import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableName;
+import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableNameWithSchema;
 
 public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected static final int pk1 = 1;
@@ -24,8 +26,8 @@ public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
     protected static final String namespace = "prisons";
     protected static final String inputSchemaName = "my_schema";
     protected static final String inputTableName = "my_table";
-    protected static final String operationalDataStoreTableName = inputSchemaName + "_" + inputTableName;
-    protected static final String operationalDataStoreFullTableName = namespace + "." + operationalDataStoreTableName;
+    protected static final String operationalDataStoreTableName = operationalDataStoreTableName(inputSchemaName, inputTableName);
+    protected static final String operationalDataStoreFullTableName = operationalDataStoreTableNameWithSchema(namespace, inputSchemaName, inputTableName);
 
     @TempDir
     protected Path testRoot;

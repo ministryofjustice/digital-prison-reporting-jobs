@@ -412,9 +412,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void givenSourceReference() {
         when(sourceReferenceService.getSourceReference(inputSchemaName, inputTableName))
                 .thenReturn(Optional.of(sourceReference));
-        when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(operationalDataStoreTableName);
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(operationalDataStoreFullTableName);
     }
 
     private void givenASourceReferenceSchema() {

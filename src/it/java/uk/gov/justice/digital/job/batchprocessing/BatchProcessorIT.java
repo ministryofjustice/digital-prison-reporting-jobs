@@ -305,6 +305,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         when(sourceReference.getNamespace()).thenReturn(namespace);
         when(sourceReference.getSource()).thenReturn(inputSchemaName);
         when(sourceReference.getTable()).thenReturn(inputTableName);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(operationalDataStoreTableName);
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(operationalDataStoreFullTableName);
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
     }

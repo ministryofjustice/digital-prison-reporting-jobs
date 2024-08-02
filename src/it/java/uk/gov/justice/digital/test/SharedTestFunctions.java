@@ -19,6 +19,14 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
 public class SharedTestFunctions {
 
+    public static String operationalDataStoreTableName(String inputSchemaName, String tableName) {
+        return format("%s_%s", inputSchemaName, tableName);
+    }
+
+    public static String operationalDataStoreTableNameWithSchema(String namespace, String inputSchemaName, String tableName) {
+        return format("%s.%s", namespace, operationalDataStoreTableName(inputSchemaName, tableName));
+    }
+
     public static void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
         when(connectionDetailsService.getConnectionDetails()).thenReturn(operationalDataStore.getConnectionDetails());
     }

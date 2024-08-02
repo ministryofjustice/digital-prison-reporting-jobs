@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
+
 @Data
 public class SourceReference {
     private final String key;
@@ -18,6 +20,15 @@ public class SourceReference {
     private final String versionId;
     private final StructType schema;
     private final SensitiveColumns sensitiveColumns;
+
+    public String getOperationalDataStoreTableName() {
+        return format("%s_%s", source, table);
+    }
+
+    public String getFullOperationalDataStoreTableNameWithSchema() {
+        String tableName = getOperationalDataStoreTableName();
+        return format("%s.%s", namespace, tableName);
+    }
 
     public static class PrimaryKey {
 
