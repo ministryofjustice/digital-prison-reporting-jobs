@@ -33,7 +33,7 @@ public class ReloadDiffProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(ReloadDiffProcessor.class);
     private static final String LEFT_ANTI_JOIN_TYPE = "leftanti";
-    private static final String RANK_COL = "rank";
+    private static final String RANK_COL = "archive_recency_rank";
     private static final String DATE_TIME_PATTERN = "yyyyMMddHHmmss";
     private final DataStorageService storageService;
 
