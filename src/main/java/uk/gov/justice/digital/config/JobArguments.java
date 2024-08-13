@@ -131,6 +131,9 @@ public class JobArguments {
     static final String SPARK_BROADCAST_TIMEOUT_SECONDS = "dpr.spark.broadcast.timeout.seconds";
     static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
     static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
+
+    static final Integer DEFAULT_SPARK_NETWORK_TIMEOUT_SECONDS = 120;
+    static final String SPARK_NETWORK_TIMEOUT_SECONDS = "dpr.spark.network.timeout.seconds";
     static final String GLUE_TRIGGER_NAME = "dpr.glue.trigger.name";
     static final String ACTIVATE_GLUE_TRIGGER = "dpr.glue.trigger.activate";
     static final String OPERATIONAL_DATA_STORE_WRITE_ENABLED = "dpr.operational.data.store.write.enabled";
@@ -472,6 +475,10 @@ public class JobArguments {
 
     public boolean disableAutoBroadcastJoinThreshold() {
         return getArgument(DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, false);
+    }
+
+    public Integer getSparkNetworkTimeoutSeconds() {
+        return getArgument(SPARK_NETWORK_TIMEOUT_SECONDS, DEFAULT_SPARK_NETWORK_TIMEOUT_SECONDS);
     }
 
     public boolean cleanCdcCheckpoint() {

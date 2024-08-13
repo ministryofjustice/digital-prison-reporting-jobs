@@ -3,7 +3,6 @@ package uk.gov.justice.digital.provider;
 import com.amazonaws.services.glue.GlueContext;
 import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkContext;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.config.JobArguments;
 
@@ -53,7 +52,8 @@ public class SparkSessionProvider {
                 .set("spark.sql.parquet.int96RebaseModeInWrite", "CORRECTED")
                 .set("spark.sql.parquet.int96RebaseModeInRead", "CORRECTED")
                 // Standardise on UTC.
-                .set("spark.sql.session.timeZone", "UTC");
+                .set("spark.sql.session.timeZone", "UTC")
+                .set("spark.network.timeout", arguments.getSparkNetworkTimeoutSeconds().toString());
 
         if (arguments.disableAutoBroadcastJoinThreshold()) {
             sparkConf

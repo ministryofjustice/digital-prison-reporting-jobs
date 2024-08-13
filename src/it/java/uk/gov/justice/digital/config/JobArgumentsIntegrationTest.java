@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_NETWORK_TIMEOUT_SECONDS;
 
 class JobArgumentsIntegrationTest {
 
@@ -71,6 +72,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.CLEAN_CDC_CHECKPOINT, "false" },
             { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, "60" },
             { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" },
+            { JobArguments.SPARK_NETWORK_TIMEOUT_SECONDS, "120" },
             { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, "some-connection-name" },
             { JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, "true" },
             { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, "some_schema" },
@@ -129,6 +131,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() },
                 { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, validArguments.getBroadcastTimeoutSeconds() },
                 { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() },
+                { JobArguments.SPARK_NETWORK_TIMEOUT_SECONDS, validArguments.getSparkNetworkTimeoutSeconds() },
                 { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, validArguments.getOperationalDataStoreGlueConnectionName() },
                 { JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, validArguments.isOperationalDataStoreWriteEnabled() },
                 { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, validArguments.getOperationalDataStoreLoadingSchemaName() },
@@ -474,6 +477,14 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(expected, jobArguments.enableStreamingSourceArchiving());
+    }
+
+    @Test
+    public void defaultSparkNetworkTimeoutSecondsWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.SPARK_NETWORK_TIMEOUT_SECONDS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(jobArguments.getSparkNetworkTimeoutSeconds(), DEFAULT_SPARK_NETWORK_TIMEOUT_SECONDS);
     }
 
     @Test
