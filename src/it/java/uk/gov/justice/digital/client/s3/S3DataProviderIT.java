@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
@@ -93,6 +94,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         when(arguments.enableStreamingSourceArchiving()).thenReturn(false);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
+        when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
 
         Dataset<Row> df = underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
         StreamingQuery query = df.writeStream()
@@ -109,6 +111,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         when(arguments.enableStreamingSourceArchiving()).thenReturn(false);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
+        when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
@@ -130,6 +133,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(arguments.enableStreamingSourceArchiving()).thenReturn(true);
         when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
+        when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
 
         Dataset<Row> df = underTest.getStreamingSourceDataWithSchemaInference(spark, sourceName, tableName);
 
@@ -148,6 +152,7 @@ public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(arguments.enableStreamingSourceArchiving()).thenReturn(true);
         when(arguments.getProcessedRawFilesPath()).thenReturn(processedRawFilesPath);
         when(arguments.getCdcFileGlobPattern()).thenReturn(CDC_FILE_GLOB_PATTERN_DEFAULT);
+        when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);

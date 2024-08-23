@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
@@ -186,6 +187,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         givenRetrySettingsAreConfigured(arguments);
         givenLoadingSchemaIsConfigured();
         when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
+        when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
     }
 
     private void whenTheJobRuns() {

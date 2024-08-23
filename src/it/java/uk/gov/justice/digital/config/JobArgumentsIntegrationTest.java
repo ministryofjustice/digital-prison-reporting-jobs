@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
+import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
 
 class JobArgumentsIntegrationTest {
 
@@ -69,6 +70,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, "10" },
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
             { JobArguments.CLEAN_CDC_CHECKPOINT, "false" },
+            { JobArguments.GLUE_TRIGGER_NAME, "dpr-glue-trigger-name" },
             { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, "60" },
             { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" },
             { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, "some-connection-name" },
@@ -127,6 +129,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, validArguments.orchestrationMaxAttempts() },
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
                 { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() },
+                { JobArguments.GLUE_TRIGGER_NAME, validArguments.getGlueTriggerName() },
                 { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, validArguments.getBroadcastTimeoutSeconds() },
                 { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() },
                 { JobArguments.OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME, validArguments.getOperationalDataStoreGlueConnectionName() },
@@ -402,11 +405,36 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void cleanCdcCheckpointShouldDefaultToFalseWhenMissing() {
+    public void cleanCdcCheckpointShouldDefaultToFalseWhenNotProvided() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.CLEAN_CDC_CHECKPOINT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.cleanCdcCheckpoint());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldConvertValidValueForActivateGlueTriggerToBoolean(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.ACTIVATE_GLUE_TRIGGER, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.activateGlueTrigger());
+    }
+
+    @Test
+    public void activateGlueTriggerShouldDefaultToFalseWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.ACTIVATE_GLUE_TRIGGER);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.activateGlueTrigger());
+    }
+
+    @Test
+    public void streamingJobMaxFilePerTriggerShouldUseDefaultWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.STREAMING_JOB_MAX_FILES_PER_TRIGGER);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER, jobArguments.streamingJobMaxFilePerTrigger());
     }
 
     @Test

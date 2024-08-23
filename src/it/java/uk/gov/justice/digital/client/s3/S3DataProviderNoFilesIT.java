@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +50,7 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
 
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         when(arguments.getCdcFileGlobPattern()).thenReturn(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT);
+        when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
@@ -76,6 +78,7 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
 
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
         when(arguments.getCdcFileGlobPattern()).thenReturn(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT);
+        when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
         when(sourceReference.getSource()).thenReturn(sourceName);
         when(sourceReference.getTable()).thenReturn(tableName);
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);

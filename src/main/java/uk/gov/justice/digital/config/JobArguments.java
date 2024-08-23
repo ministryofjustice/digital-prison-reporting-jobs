@@ -129,10 +129,12 @@ public class JobArguments {
     static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
     static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
     static final String SPARK_BROADCAST_TIMEOUT_SECONDS = "dpr.spark.broadcast.timeout.seconds";
-    static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
+    public static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
     static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
     static final String GLUE_TRIGGER_NAME = "dpr.glue.trigger.name";
     static final String ACTIVATE_GLUE_TRIGGER = "dpr.glue.trigger.activate";
+    static final String STREAMING_JOB_MAX_FILES_PER_TRIGGER = "dpr.streaming.job.max.files.per.trigger";
+    public static final long STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER = 1000;
     static final String OPERATIONAL_DATA_STORE_WRITE_ENABLED = "dpr.operational.data.store.write.enabled";
     static final String OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME = "dpr.operational.data.store.glue.connection.name";
     static final String OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME = "dpr.operational.data.store.loading.schema.name";
@@ -484,6 +486,10 @@ public class JobArguments {
 
     public boolean activateGlueTrigger() {
         return getArgument(ACTIVATE_GLUE_TRIGGER, false);
+    }
+
+    public long streamingJobMaxFilePerTrigger() {
+        return getArgument(STREAMING_JOB_MAX_FILES_PER_TRIGGER, STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
     }
 
     private String getArgument(String argumentName) {
