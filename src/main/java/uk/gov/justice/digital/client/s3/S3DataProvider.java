@@ -136,7 +136,9 @@ public class S3DataProvider {
     }
 
     private Dataset<Row> getStreamingDataset(SparkSession sparkSession, String fileGlobPath, StructType schema) {
-        DataStreamReader streamReader = sparkSession.readStream().schema(schema);
+        DataStreamReader streamReader = sparkSession.readStream()
+                .option("maxFilesPerTrigger", arguments.streamingJobMaxFilePerTrigger())
+                .schema(schema);
 
         if (arguments.enableStreamingSourceArchiving()) {
             String processedRawFilesLocation = ensureEndsWithSlash(arguments.getRawS3Path()) + arguments.getProcessedRawFilesPath();

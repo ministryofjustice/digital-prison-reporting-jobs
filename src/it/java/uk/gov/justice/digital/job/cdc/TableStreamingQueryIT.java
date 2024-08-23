@@ -56,6 +56,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
@@ -364,6 +365,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void givenSettingsAreConfigured() {
         givenPathsAreConfigured();
         givenRetrySettingsAreConfigured(arguments);
+        when(arguments.getBroadcastTimeoutSeconds()).thenReturn(DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
         lenient().when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
     }
 
