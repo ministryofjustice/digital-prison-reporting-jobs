@@ -269,7 +269,7 @@ public class DataStorageService {
         updateDeltaManifestForTable(spark, tableId.toPath());
     }
 
-    public void writeParquet(String path, Dataset<Row> dataset) {
+    public void overwriteParquet(String path, Dataset<Row> dataset) {
         dataset.write().mode(SaveMode.Overwrite).parquet(path);
     }
 

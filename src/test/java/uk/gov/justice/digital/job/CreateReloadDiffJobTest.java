@@ -49,8 +49,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
-import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
-import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.CHECKPOINT_COL_VALUE;
@@ -256,7 +254,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
 
         Dataset<Row> actualArchiveDataset = archiveDatasetCaptor.getValue();
         assertThat(actualArchiveDataset.collectAsList(), is(empty()));
-        assertThat(actualArchiveDataset.schema(), is(equalTo(withCheckpointField(withMetadataFields(TEST_DATA_SCHEMA)))));
+        assertThat(actualArchiveDataset.schema(), is(equalTo(TEST_DATA_SCHEMA)));
     }
 
     @Test
