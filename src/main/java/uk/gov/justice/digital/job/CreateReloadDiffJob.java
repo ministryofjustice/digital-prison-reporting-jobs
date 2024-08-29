@@ -27,8 +27,6 @@ import javax.inject.Inject;
 import java.util.Collections;
 import java.util.Optional;
 
-import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
-import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 
@@ -124,7 +122,7 @@ public class CreateReloadDiffJob implements Runnable {
                     val diffOutputPath = createValidatedPath(jobArguments.getTempReloadS3Path(), jobArguments.getTempReloadOutputFolder());
                     val rawDataFrame = dataProvider.getBatchSourceData(sparkSession, rawFilePaths);
                     val rawArchiveDataFrame = archiveFilePaths.isEmpty() ?
-                            sparkSession.emptyDataset(RowEncoder.apply(withCheckpointField(withMetadataFields(sourceReference.getSchema())))) :
+                            sparkSession.emptyDataset(RowEncoder.apply(rawDataFrame.schema())) :
                             dataProvider.getBatchSourceData(sparkSession, archiveFilePaths);
 
                     reloadDiffProcessor.createDiff(sourceReference, diffOutputPath, rawDataFrame, rawArchiveDataFrame, dmsStartTime);

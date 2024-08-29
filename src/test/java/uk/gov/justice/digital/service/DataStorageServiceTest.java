@@ -451,7 +451,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldWriteParquet() {
+    void shouldOverwriteParquet() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 1;
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
@@ -461,7 +461,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         when(mockDataFrameWriter.mode(SaveMode.Overwrite)).thenReturn(mockDataFrameWriter);
         String path = "some-path";
 
-        dataStorageService.writeParquet(path, mockDataSet);
+        dataStorageService.overwriteParquet(path, mockDataSet);
 
         verify(mockDataFrameWriter, times(1)).parquet(path);
     }

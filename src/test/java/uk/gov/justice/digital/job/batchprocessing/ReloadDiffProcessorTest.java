@@ -82,7 +82,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
 
         underTest.createDiff(sourceReference, OUTPUT_BASE_PATH, rawDataset, rawDataset, reloadTime);
 
-        verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
+        verify(dataStorageService, times(3)).overwriteParquet(outputPathCaptor.capture(), datasetCaptor.capture());
         assertThat(datasetCaptor.getValue().collectAsList(), is(empty()));
 
         List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
@@ -103,7 +103,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
 
         underTest.createDiff(sourceReference, OUTPUT_BASE_PATH, rawDataset, spark.emptyDataset(encoder), reloadTime);
 
-        verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
+        verify(dataStorageService, times(3)).overwriteParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
         Dataset<Row> recordsToDelete = capturedRecords.get(0);
@@ -140,7 +140,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
 
         underTest.createDiff(sourceReference, OUTPUT_BASE_PATH, rawDataset, archiveDataset, reloadTime);
 
-        verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
+        verify(dataStorageService, times(3)).overwriteParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
         Dataset<Row> recordsToDelete = capturedRecords.get(0);
@@ -176,7 +176,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
 
         underTest.createDiff(sourceReference, OUTPUT_BASE_PATH, rawDataset, archiveDataset, reloadTime);
 
-        verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
+        verify(dataStorageService, times(3)).overwriteParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
         Dataset<Row> recordsToDelete = capturedRecords.get(0);
@@ -218,7 +218,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
 
         underTest.createDiff(sourceReference, OUTPUT_BASE_PATH, rawDataset, archiveDataset, reloadTime);
 
-        verify(dataStorageService, times(3)).writeParquet(outputPathCaptor.capture(), datasetCaptor.capture());
+        verify(dataStorageService, times(3)).overwriteParquet(outputPathCaptor.capture(), datasetCaptor.capture());
 
         List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
         Dataset<Row> recordsToDelete = capturedRecords.get(0);
