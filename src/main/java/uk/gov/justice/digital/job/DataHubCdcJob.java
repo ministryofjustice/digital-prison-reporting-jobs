@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.job;
 
+import com.amazonaws.AbortedException;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
@@ -7,12 +8,14 @@ import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.streaming.StreamingQueryException;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -128,8 +131,13 @@ public class DataHubCdcJob implements Runnable {
         try {
             spark.streams().awaitAnyTermination();
         } catch (StreamingQueryException e) {
-            logger.error("A streaming query terminated with an Exception", e);
-            throw new RuntimeException(e);
+            if (isAbortedException(e)) {
+                logger.info("Job terminated because of Aborted Exception");
+                System.exit(0);
+            } else {
+                logger.error("A streaming query terminated with an Exception", e);
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -143,5 +151,10 @@ public class DataHubCdcJob implements Runnable {
             }
         }
         logger.info("Checkpoint directory deleted");
+    }
+
+    @NotNull
+    private static Boolean isAbortedException(StreamingQueryException e) {
+        return ExceptionUtils.getRootCause(e) instanceof AbortedException;
     }
 }

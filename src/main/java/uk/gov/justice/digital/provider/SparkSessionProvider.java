@@ -3,7 +3,6 @@ package uk.gov.justice.digital.provider;
 import com.amazonaws.services.glue.GlueContext;
 import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkContext;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.config.JobArguments;
 
