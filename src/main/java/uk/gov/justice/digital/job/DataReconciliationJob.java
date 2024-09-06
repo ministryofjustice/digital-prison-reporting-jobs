@@ -12,7 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.datareconciliation.CurrentStateCountResults;
+import uk.gov.justice.digital.service.datareconciliation.CurrentStateTotalCountResults;
 import uk.gov.justice.digital.service.datareconciliation.DataReconciliationService;
 
 import javax.inject.Inject;
@@ -78,7 +78,7 @@ public class DataReconciliationJob implements Runnable {
     }
 
     private void runJob(SparkSession sparkSession) {
-        CurrentStateCountResults results = dataReconciliationService.reconcileDataOrThrow(sparkSession);
+        CurrentStateTotalCountResults results = dataReconciliationService.reconcileDataOrThrow(sparkSession);
         String resultSummary = results.summary();
         if (results.isFailure()) {
             logger.error("Data reconciliation FAILED WITH DIFFERENCES: {}", resultSummary);

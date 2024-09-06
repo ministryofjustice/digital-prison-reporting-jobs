@@ -6,6 +6,9 @@ import lombok.Data;
 
 import static java.lang.String.format;
 
+/**
+ * Data Transfer Object for the Nomis connection details stored in AWS Secrets Manager.
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Data
 public class NomisConnectionDetails {

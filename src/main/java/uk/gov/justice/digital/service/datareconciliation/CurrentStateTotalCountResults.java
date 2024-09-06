@@ -6,10 +6,12 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CurrentStateCountResults {
+/**
+ * Represents the results of running the total counts data reconciliation for the "current state" data in DataHub
+ */
+public class CurrentStateTotalCountResults {
 
     private final Map<SourceReference, CurrentStateCountTableResult> results = new HashMap<>();
-
 
     public void put(SourceReference sourceReference, CurrentStateCountTableResult currentStateCountTableResult) {
         results.put(sourceReference, currentStateCountTableResult);
@@ -34,10 +36,4 @@ public class CurrentStateCountResults {
 
         return sb.toString();
     }
-
-
 }
-
-
-
-

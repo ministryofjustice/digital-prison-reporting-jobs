@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.client.oracle;
+package uk.gov.justice.digital.service;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.NomisConnectionDetails;
-import uk.gov.justice.digital.exception.OracleDataProviderException;
+import uk.gov.justice.digital.exception.NomisDataAccessException;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 
 import javax.sql.DataSource;
@@ -16,10 +16,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * Responsible for access to data in NOMIS.
+ */
 @Singleton
-public class NomisDataProvider {
+public class NomisDataAccessService {
 
-    private static final Logger logger = LoggerFactory.getLogger(NomisDataProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(NomisDataAccessService.class);
 
     private static final String ORACLE_JDBC_DRIVER_NAME = "oracle.jdbc.driver.OracleDriver";
 
@@ -27,7 +30,7 @@ public class NomisDataProvider {
     private final DataSource dataSource;
 
     @Inject
-    public NomisDataProvider(
+    public NomisDataAccessService(
             JobArguments jobArguments,
             ConnectionPoolProvider connectionPoolProvider,
             SecretsManagerClient secretsManagerClient
@@ -56,11 +59,11 @@ public class NomisDataProvider {
                 if (rs.next()) {
                     return rs.getLong(1);
                 } else {
-                    throw new OracleDataProviderException("No results returned while getting count of rows in table " + tableName);
+                    throw new NomisDataAccessException("No results returned while getting count of rows in table " + tableName);
                 }
             }
         } catch (SQLException e) {
-            throw new OracleDataProviderException("Exception while getting count of rows in table " + tableName, e);
+            throw new NomisDataAccessException("Exception while getting count of rows in table " + tableName, e);
         }
     }
 }
