@@ -43,7 +43,7 @@ public class NomisDataAccessService {
         );
         logger.info("Creating DataSource for JDBC access to Nomis");
         dataSource = connectionPoolProvider.getConnectionPool(
-                nomisConnectionDetails.getJdbcUrl(),
+                jobArguments.getNomisJdbcConnectionString(),
                 ORACLE_JDBC_DRIVER_NAME,
                 nomisConnectionDetails.getUser(),
                 nomisConnectionDetails.getPassword()
