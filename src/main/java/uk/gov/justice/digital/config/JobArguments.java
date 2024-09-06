@@ -144,7 +144,6 @@ public class JobArguments {
     public static final long OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT = 1000;
     static final String NOMIS_CONNECTION_DETAILS_SECRET_NAME = "dpr.nomis.connection.details.secret.name";
     static final String NOMIS_SOURCE_SCHEMA_NAME = "dpr.nomis.source.schema.name";
-    static final String NOMIS_JDBC_CONNECTION_STRING = "dpr.nomis.jdbc.connection.string";
 
     private final Map<String, String> config;
 
@@ -501,10 +500,6 @@ public class JobArguments {
 
     public String getNomisSourceSchemaName() {
         return getArgument(NOMIS_SOURCE_SCHEMA_NAME);
-    }
-
-    public String getNomisJdbcConnectionString() {
-        return getArgument(NOMIS_JDBC_CONNECTION_STRING);
     }
 
     private String getArgument(String argumentName) {
