@@ -10,9 +10,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.exception.DataReconciliationFailureException;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
+import uk.gov.justice.digital.service.datareconciliation.CurrentStateCountResults;
 import uk.gov.justice.digital.service.datareconciliation.DataReconciliationService;
 
 import javax.inject.Inject;
@@ -20,7 +20,7 @@ import javax.inject.Inject;
 import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 
 /**
- * Job that reconciles.
+ * Job that runs data reconciliation in the DataHub.
  */
 @CommandLine.Command(name = "DataReconciliationJob")
 public class DataReconciliationJob implements Runnable {
@@ -69,9 +69,6 @@ public class DataReconciliationJob implements Runnable {
                 runJob(spark);
                 Job.commit();
             }
-        } catch (DataReconciliationFailureException e) {
-            logger.error("Data reconciliation failed: {}", e.getResults().summary());
-            System.exit(1);
         } catch (Exception e) {
             logger.error("Caught exception during job run", e);
             System.exit(1);
@@ -81,7 +78,12 @@ public class DataReconciliationJob implements Runnable {
     }
 
     private void runJob(SparkSession sparkSession) throws RuntimeException {
-        dataReconciliationService.reconcileDataOrThrow(sparkSession);
+        CurrentStateCountResults results = dataReconciliationService.reconcileDataOrThrow(sparkSession);
+        logger.info(results.summary());
+        if (results.isFailure()) {
+            logger.error("Data reconciliation failed: {}", results.summary());
+            System.exit(1);
+        }
     }
 
 }

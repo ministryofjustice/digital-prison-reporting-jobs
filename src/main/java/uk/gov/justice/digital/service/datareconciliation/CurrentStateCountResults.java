@@ -15,8 +15,8 @@ public class CurrentStateCountResults {
         results.put(sourceReference, currentStateCountTableResult);
     }
 
-    public boolean countsMatch() {
-        return results.entrySet().stream().allMatch(entry -> entry.getValue().countsMatch());
+    public boolean isFailure() {
+        return !results.entrySet().stream().allMatch(entry -> entry.getValue().countsMatch());
     }
 
     public String summary() {

@@ -13,7 +13,6 @@ import uk.gov.justice.digital.client.oracle.NomisDataProvider;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataReconciliationFailureException;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 
@@ -76,7 +75,7 @@ public class DataReconciliationService {
     }
 
 
-    public void reconcileDataOrThrow(SparkSession sparkSession) throws DataReconciliationFailureException {
+    public CurrentStateCountResults reconcileDataOrThrow(SparkSession sparkSession) {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(jobArguments.getConfigKey());
         List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
 
@@ -84,10 +83,7 @@ public class DataReconciliationService {
         allSourceReferences.forEach(sourceReference -> {
             results.put(sourceReference, currentStateCounts(sparkSession, sourceReference));
         });
-        logger.info(results.summary());
-        if (!results.countsMatch()) {
-            throw new DataReconciliationFailureException(results);
-        }
+        return results;
     }
 }
 
