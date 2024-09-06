@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.datareconciliation;
+package uk.gov.justice.digital.service.datareconciliation.model;
 
 import lombok.val;
 import uk.gov.justice.digital.datahub.model.SourceReference;

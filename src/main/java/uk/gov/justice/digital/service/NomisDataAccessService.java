@@ -51,7 +51,7 @@ public class NomisDataAccessService {
     }
 
     @SuppressWarnings("java:S2077")
-    public long getTableCount(String tableName) {
+    public long getTableRowCount(String tableName) {
         String query = "SELECT COUNT(1) FROM " + tableName;
         try (Connection connection = dataSource.getConnection()) {
             try (Statement statement = connection.createStatement()) {

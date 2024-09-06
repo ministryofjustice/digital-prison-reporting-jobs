@@ -43,6 +43,11 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
     }
 
     @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    @Override
     public void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
         String fullDestinationTableName = sourceReference.getFullOperationalDataStoreTableNameWithSchema();
@@ -101,5 +106,15 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
         } else {
             logger.info("Skipping merge to Operational Data Store for non-managed table {}", fullDestinationTableName);
         }
+    }
+
+    @Override
+    public boolean isOperationalDataStoreManagedTable(SourceReference sourceReference) {
+        return operationalDataStoreDataAccess.isOperationalDataStoreManagedTable(sourceReference);
+    }
+
+    @Override
+    public long getTableRowCount(String tableName) {
+        return operationalDataStoreDataAccess.getTableRowCount(tableName);
     }
 }

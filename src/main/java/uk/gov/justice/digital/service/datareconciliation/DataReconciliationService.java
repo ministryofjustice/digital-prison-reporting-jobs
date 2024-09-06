@@ -15,6 +15,9 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateCountTableResult;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCountResults;
+import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 
 import java.util.List;
 
@@ -34,6 +37,7 @@ public class DataReconciliationService {
     private final NomisDataAccessService nomisDataAccessService;
     private final ConfigService configService;
     private final SourceReferenceService sourceReferenceService;
+    private final OperationalDataStoreService operationalDataStoreService;
 
     @Inject
     public DataReconciliationService(
@@ -41,13 +45,15 @@ public class DataReconciliationService {
             S3DataProvider s3DataProvider,
             NomisDataAccessService nomisDataAccessService,
             ConfigService configService,
-            SourceReferenceService sourceReferenceService
+            SourceReferenceService sourceReferenceService,
+            OperationalDataStoreService operationalDataStoreService
     ) {
         this.jobArguments = jobArguments;
         this.s3DataProvider = s3DataProvider;
         this.nomisDataAccessService = nomisDataAccessService;
         this.configService = configService;
         this.sourceReferenceService = sourceReferenceService;
+        this.operationalDataStoreService = operationalDataStoreService;
     }
 
     public CurrentStateTotalCountResults reconcileDataOrThrow(SparkSession sparkSession) {
@@ -68,9 +74,11 @@ public class DataReconciliationService {
     private CurrentStateCountTableResult currentStateCounts(SparkSession sparkSession, SourceReference sourceReference) {
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
+        logger.info("Getting current state counts across data stores for table {}.{}", sourceName, tableName);
 
         String nomisOracleSourceSchema = jobArguments.getNomisSourceSchemaName();
         String oracleFullTableName = nomisOracleSourceSchema + "." + tableName.toUpperCase();
+        String operationalDataStoreFullTableName = sourceReference.getFullOperationalDataStoreTableNameWithSchema();
 
         String structuredPath = tablePath(jobArguments.getStructuredS3Path(), sourceName, tableName);
         String curatedPath = tablePath(jobArguments.getCuratedS3Path(), sourceName, tableName);
@@ -78,14 +86,26 @@ public class DataReconciliationService {
         Dataset<Row> curated = s3DataProvider.getBatchSourceData(sparkSession, curatedPath);
 
 
-        logger.info("Reading Nomis count");
-        long nomisCount = nomisDataAccessService.getTableCount(oracleFullTableName);
-        logger.info("Reading Structured count");
+        logger.info("Reading Nomis count for table {}", oracleFullTableName);
+        long nomisCount = nomisDataAccessService.getTableRowCount(oracleFullTableName);
+        logger.info("Reading Structured count for table {}/{}", sourceName, tableName);
         long structuredCount = structured.count();
-        logger.info("Reading Curated count");
+        logger.info("Reading Curated count for table {}/{}", sourceName, tableName);
         long curatedCount = curated.count();
 
-        return new CurrentStateCountTableResult(nomisCount, structuredCount, curatedCount);
+        CurrentStateCountTableResult result;
+        if (operationalDataStoreService.isEnabled() && operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference)) {
+            logger.info("Reading Operational DataStore count for managed table {}", operationalDataStoreFullTableName);
+            long operationalDataStoreCount = operationalDataStoreService.getTableRowCount(operationalDataStoreFullTableName);
+            result = new CurrentStateCountTableResult(nomisCount, structuredCount, curatedCount, operationalDataStoreCount);
+        } else {
+            logger.info("Skipping reading Operational DataStore count for table {}", operationalDataStoreFullTableName);
+            result = new CurrentStateCountTableResult(nomisCount, structuredCount, curatedCount);
+        }
+
+        logger.info("Finished current state counts across data stores for table {}.{}", sourceName, tableName);
+
+        return result;
     }
 }
 

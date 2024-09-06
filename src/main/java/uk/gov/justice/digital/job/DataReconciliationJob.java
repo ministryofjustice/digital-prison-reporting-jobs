@@ -12,7 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.datareconciliation.CurrentStateTotalCountResults;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCountResults;
 import uk.gov.justice.digital.service.datareconciliation.DataReconciliationService;
 
 import javax.inject.Inject;

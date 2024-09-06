@@ -31,6 +31,7 @@ import static java.lang.String.format;
 /**
  * Hub for accessing the Operational DataStore.
  */
+@SuppressWarnings("java:S2077")
 @Singleton
 public class OperationalDataStoreDataAccess {
 
@@ -125,6 +126,22 @@ public class OperationalDataStoreDataAccess {
             }
         } catch (SQLException e) {
             throw new OperationalDataStoreException("Exception while checking if tables exists", e);
+        }
+    }
+
+    public long getTableRowCount(String tableName) {
+        String query = "SELECT COUNT(1) FROM " + tableName;
+        try (Connection connection = dataSource.getConnection()) {
+            try (Statement statement = connection.createStatement()) {
+                ResultSet rs = statement.executeQuery(query);
+                if (rs.next()) {
+                    return rs.getLong(1);
+                } else {
+                    throw new OperationalDataStoreException("No results returned while getting count of rows in table " + tableName);
+                }
+            }
+        } catch (SQLException e) {
+            throw new OperationalDataStoreException("Exception while getting count of rows in table " + tableName, e);
         }
     }
 

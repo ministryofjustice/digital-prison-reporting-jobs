@@ -142,9 +142,8 @@ public class JobArguments {
     static final String OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME = "dpr.operational.data.store.tables.to.write.table.name";
     static final String OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE = "dpr.operational.data.store.jdbc.batch.size";
     public static final long OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT = 1000;
-
-    static final String NOMIS_CONNECTION_DETAILS_SECRET_NAME = "nomis.connection.details.secret.name";
-    static final String NOMIS_SOURCE_SCHEMA_NAME = "nomis.source.schema.name";
+    static final String NOMIS_CONNECTION_DETAILS_SECRET_NAME = "dpr.nomis.connection.details.secret.name";
+    static final String NOMIS_SOURCE_SCHEMA_NAME = "dpr.nomis.source.schema.name";
 
     private final Map<String, String> config;
 
