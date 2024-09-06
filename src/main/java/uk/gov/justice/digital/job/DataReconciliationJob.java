@@ -78,7 +78,7 @@ public class DataReconciliationJob implements Runnable {
     }
 
     private void runJob(SparkSession sparkSession) {
-        CurrentStateTotalCountResults results = dataReconciliationService.reconcileDataOrThrow(sparkSession);
+        CurrentStateTotalCountResults results = dataReconciliationService.reconcileData(sparkSession);
         String resultSummary = results.summary();
         if (results.isFailure()) {
             logger.error("Data reconciliation FAILED WITH DIFFERENCES: {}", resultSummary);

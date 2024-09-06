@@ -56,7 +56,7 @@ public class DataReconciliationService {
         this.operationalDataStoreService = operationalDataStoreService;
     }
 
-    public CurrentStateTotalCountResults reconcileDataOrThrow(SparkSession sparkSession) {
+    public CurrentStateTotalCountResults reconcileData(SparkSession sparkSession) {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(jobArguments.getConfigKey());
         List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
 
