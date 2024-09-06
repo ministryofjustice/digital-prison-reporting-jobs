@@ -31,7 +31,7 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;

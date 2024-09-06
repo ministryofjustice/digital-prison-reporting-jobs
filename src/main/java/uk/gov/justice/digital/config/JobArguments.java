@@ -143,6 +143,9 @@ public class JobArguments {
     static final String OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE = "dpr.operational.data.store.jdbc.batch.size";
     public static final long OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT = 1000;
 
+    static final String NOMIS_CONNECTION_DETAILS_SECRET_NAME = "nomis.connection.details.secret.name";
+    static final String NOMIS_SOURCE_SCHEMA_NAME = "nomis.source.schema.name";
+
     private final Map<String, String> config;
 
     @Inject
@@ -490,6 +493,14 @@ public class JobArguments {
 
     public long streamingJobMaxFilePerTrigger() {
         return getArgument(STREAMING_JOB_MAX_FILES_PER_TRIGGER, STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
+    }
+
+    public String getNomisConnectionDetailsSecretName() {
+        return getArgument(NOMIS_CONNECTION_DETAILS_SECRET_NAME);
+    }
+
+    public String getNomisSourceSchemaName() {
+        return getArgument(NOMIS_SOURCE_SCHEMA_NAME);
     }
 
     private String getArgument(String argumentName) {

@@ -3,7 +3,7 @@ package uk.gov.justice.digital.test;
 import org.h2.tools.Server;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 
 import javax.sql.DataSource;
 import java.sql.Connection;

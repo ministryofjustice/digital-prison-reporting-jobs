@@ -47,6 +47,7 @@ ext {
     systemLambdaVersion = '1.2.1'
     postgresVersion = '42.7.3'
     h2Version = '2.2.224'
+    oracleJdbcVersion = '23.5.0.24.07'
     hikariCPVersion = '4.0.3'
 }
 
@@ -78,6 +79,7 @@ dependencies {
     implementation "io.delta:delta-contribs_2.12:$deltaVersion"
     implementation "dev.failsafe:failsafe:$failSafeVersion"
     implementation "org.postgresql:postgresql:$postgresVersion"
+    implementation "com.oracle.database.jdbc:ojdbc8:$oracleJdbcVersion"
     implementation "com.zaxxer:HikariCP:$hikariCPVersion"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we

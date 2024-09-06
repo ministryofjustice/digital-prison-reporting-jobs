@@ -14,6 +14,7 @@ import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTa
 import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
