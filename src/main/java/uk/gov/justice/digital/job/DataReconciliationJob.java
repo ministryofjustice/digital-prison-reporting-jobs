@@ -77,12 +77,14 @@ public class DataReconciliationJob implements Runnable {
         logger.info("DataReconciliationJob completed successfully");
     }
 
-    private void runJob(SparkSession sparkSession) throws RuntimeException {
+    private void runJob(SparkSession sparkSession) {
         CurrentStateCountResults results = dataReconciliationService.reconcileDataOrThrow(sparkSession);
-        logger.info(results.summary());
+        String resultSummary = results.summary();
         if (results.isFailure()) {
-            logger.error("Data reconciliation failed: {}", results.summary());
+            logger.error("Data reconciliation FAILED WITH DIFFERENCES: {}", resultSummary);
             System.exit(1);
+        } else {
+            logger.info("Data reconciliation SUCCEEDED: {}", resultSummary);
         }
     }
 
