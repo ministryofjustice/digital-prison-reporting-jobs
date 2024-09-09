@@ -85,7 +85,6 @@ class CurrentStateCountServiceTest {
         long oracleCount = 4L;
         long structuredCount = 3L;
         long curatedCount = 2L;
-        long odsCount = 1L;
 
         when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(oracleCount);
         when(structured.count()).thenReturn(structuredCount);
@@ -106,7 +105,6 @@ class CurrentStateCountServiceTest {
         long oracleCount = 4L;
         long structuredCount = 3L;
         long curatedCount = 2L;
-        long odsCount = 1L;
 
         when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(oracleCount);
         when(structured.count()).thenReturn(structuredCount);
