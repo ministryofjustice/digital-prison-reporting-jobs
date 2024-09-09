@@ -89,7 +89,7 @@ class OperationalDataStoreDataAccessTest {
                 "jdbc-url", "org.postgresql.Driver", credentials
         );
         when(jobArguments.getOperationalDataStoreGlueConnectionName()).thenReturn(GLUE_CONNECTION_NAME);
-        when(connectionDetailsService.getConnectionDetails(anyString())).thenReturn(connectionDetails);
+        when(connectionDetailsService.getConnectionDetails(GLUE_CONNECTION_NAME)).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables()).thenReturn(managedTables);
         underTest = new OperationalDataStoreDataAccess(jobArguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
@@ -306,6 +306,48 @@ class OperationalDataStoreDataAccessTest {
         when(resultSet.next()).thenReturn(false);
 
         assertFalse(underTest.tableExists(sourceReference));
+    }
+
+    @Test
+    void shouldGetTableRowCount() throws Exception {
+        long count = 9999L;
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getLong(1)).thenReturn(count);
+
+        long result = underTest.getTableRowCount("some_schema.some_table");
+        assertEquals(count, result);
+    }
+
+    @Test
+    void getTableRowCountShouldCloseResources() throws Exception {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getLong(anyInt())).thenReturn(1L);
+
+        underTest.getTableRowCount("some_schema.some_table");
+
+        verify(connection, times(1)).close();
+        verify(statement, times(1)).close();
+    }
+
+    @Test
+    void getTableRowCountShouldCloseResourcesWhenSqlExecutionThrows() throws Exception {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenThrow(new SQLException());
+
+        assertThrows(OperationalDataStoreException.class, () -> {
+            underTest.getTableRowCount("some_schema.some_table");
+        });
+
+        verify(connection, times(1)).close();
+        verify(statement, times(1)).close();
     }
 
     @Test

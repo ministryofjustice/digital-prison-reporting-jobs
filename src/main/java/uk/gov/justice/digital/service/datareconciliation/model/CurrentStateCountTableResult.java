@@ -1,5 +1,12 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+import lombok.Getter;
+
+/**
+ * Represents the results of running the total counts data reconciliation for a single "current state" table in DataHub
+ * replicated across multiple datastores
+ */
+@Getter
 public class CurrentStateCountTableResult {
     private final long nomisCount;
     private final long structuredCount;
@@ -31,7 +38,7 @@ public class CurrentStateCountTableResult {
 
     public String summary() {
         return (countsMatch() ? "   MATCH: " : "MISMATCH: ") +
-                "Nomis count: " + nomisCount + ", Structured Zone: " + structuredCount + ", Curated Zone: " + curatedCount
+                "Nomis: " + nomisCount + ", Structured Zone: " + structuredCount + ", Curated Zone: " + curatedCount
                 +", Operational DataStore: " + (operationalDataStoreCount == null ? "skipped": operationalDataStoreCount);
     }
 

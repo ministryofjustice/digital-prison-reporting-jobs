@@ -21,6 +21,10 @@ public class SourceReference {
     private final StructType schema;
     private final SensitiveColumns sensitiveColumns;
 
+    public String getFullDatahubTableName() {
+        return format("%s.%s", source, table);
+    }
+
     public String getOperationalDataStoreTableName() {
         return format("%s_%s", source, table);
     }
