@@ -29,7 +29,7 @@ public class CurrentStateTotalCountResults {
             val currentStateCountTableResult = entrySet.getValue();
             sb.append("For table ");
             sb.append(sourceReference.getSource()).append(".").append(sourceReference.getTable());
-            sb.append(": ");
+            sb.append(":\n");
             sb.append(currentStateCountTableResult.summary());
             sb.append("\n");
         }

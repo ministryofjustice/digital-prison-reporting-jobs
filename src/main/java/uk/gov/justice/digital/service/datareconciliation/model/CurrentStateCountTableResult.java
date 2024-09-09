@@ -30,7 +30,7 @@ public class CurrentStateCountTableResult {
     }
 
     public String summary() {
-        return (countsMatch() ? "MATCH: " : "MISMATCH: ") +
+        return (countsMatch() ? "   MATCH: " : "MISMATCH: ") +
                 "Nomis count: " + nomisCount + ", Structured Zone: " + structuredCount + ", Curated Zone: " + curatedCount
                 +", Operational DataStore: " + (operationalDataStoreCount == null ? "skipped": operationalDataStoreCount);
     }
