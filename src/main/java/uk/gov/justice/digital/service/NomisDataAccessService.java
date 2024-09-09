@@ -4,9 +4,8 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.datahub.model.NomisConnectionDetails;
+import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
 import uk.gov.justice.digital.exception.NomisDataAccessException;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 
@@ -24,8 +23,6 @@ public class NomisDataAccessService {
 
     private static final Logger logger = LoggerFactory.getLogger(NomisDataAccessService.class);
 
-    private static final String ORACLE_JDBC_DRIVER_NAME = "oracle.jdbc.driver.OracleDriver";
-
     // Used for accessing Nomis via JDBC
     private final DataSource dataSource;
 
@@ -33,21 +30,18 @@ public class NomisDataAccessService {
     public NomisDataAccessService(
             JobArguments jobArguments,
             ConnectionPoolProvider connectionPoolProvider,
-            SecretsManagerClient secretsManagerClient
+            JDBCGlueConnectionDetailsService connectionDetailsService
     ) {
-        String secretName = jobArguments.getNomisConnectionDetailsSecretName();
-        logger.info("Retrieving Nomis connection details from secretsmanager secret {}", secretName);
-        NomisConnectionDetails nomisConnectionDetails = secretsManagerClient.getSecret(
-                secretName,
-                NomisConnectionDetails.class
-        );
-        logger.info("Creating DataSource for JDBC access to Nomis");
+        logger.debug("Retrieving connection details for NOMIS");
+        String connectionName = jobArguments.getNomisGlueConnectionName();
+        JDBCGlueConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails(connectionName);
         dataSource = connectionPoolProvider.getConnectionPool(
-                nomisConnectionDetails.getJdbcUrl(),
-                ORACLE_JDBC_DRIVER_NAME,
-                nomisConnectionDetails.getUser(),
-                nomisConnectionDetails.getPassword()
+                connectionDetails.getUrl(),
+                connectionDetails.getJdbcDriverClassName(),
+                connectionDetails.getCredentials().getUsername(),
+                connectionDetails.getCredentials().getPassword()
         );
+        logger.debug("Finished retrieving connection details for NOMIS");
     }
 
     @SuppressWarnings("java:S2077")

@@ -32,7 +32,7 @@ import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreS
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -93,7 +93,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private TableDiscoveryService tableDiscoveryService;
     @Mock
-    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
+    private JDBCGlueConnectionDetailsService connectionDetailsService;
     private TableStreamingQuery underTest;
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;

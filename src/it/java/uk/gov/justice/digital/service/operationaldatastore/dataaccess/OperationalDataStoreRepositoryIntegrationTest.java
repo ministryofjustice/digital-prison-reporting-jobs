@@ -10,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
 import java.sql.Connection;
@@ -31,7 +32,7 @@ public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest
     @Mock
     private JobArguments jobArguments;
     @Mock
-    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
+    private JDBCGlueConnectionDetailsService connectionDetailsService;
 
     private OperationalDataStoreRepository underTest;
 

@@ -9,14 +9,14 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OperationalDataStoreConnectionDetailsTest {
+class JDBCGlueConnectionDetailsTest {
 
     @Test
     void toSparkJdbcPropertiesCorrectlyMapsProperties() {
-        OperationalDataStoreConnectionDetails underTest = new OperationalDataStoreConnectionDetails(
+        JDBCGlueConnectionDetails underTest = new JDBCGlueConnectionDetails(
                 "url",
                 "org.postgresql.Driver",
-                new OperationalDataStoreCredentials("user", "password")
+                new JDBCCredentials("user", "password")
         );
 
         Properties properties = underTest.toSparkJdbcProperties();

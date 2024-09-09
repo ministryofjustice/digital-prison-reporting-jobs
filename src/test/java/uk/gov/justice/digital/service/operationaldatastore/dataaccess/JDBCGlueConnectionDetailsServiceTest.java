@@ -9,8 +9,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.glue.GlueClient;
 import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
+import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
+import uk.gov.justice.digital.datahub.model.JDBCCredentials;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,22 +23,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class OperationalDataStoreConnectionDetailsServiceTest {
+class JDBCGlueConnectionDetailsServiceTest {
 
     @Mock
     private GlueClient mockGlueClient;
-    @Mock
-    private JobArguments mockJobArguments;
     @Mock
     private SecretsManagerClient mockSecretsManagerClient;
     @Mock
     private Connection mockConnection;
 
-    private OperationalDataStoreConnectionDetailsService underTest;
+    private JDBCGlueConnectionDetailsService underTest;
 
     @BeforeEach
     public void setup() {
-        underTest = new OperationalDataStoreConnectionDetailsService(mockGlueClient, mockSecretsManagerClient, mockJobArguments);
+        underTest = new JDBCGlueConnectionDetailsService(mockGlueClient, mockSecretsManagerClient);
     }
 
     @Test
@@ -54,20 +53,19 @@ class OperationalDataStoreConnectionDetailsServiceTest {
         connectionProperties.put("JDBC_DRIVER_CLASS_NAME", expectedDriver);
         connectionProperties.put("SECRET_ID", secretId);
 
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials(expectedUsername, expectedPassword);
+        JDBCCredentials credentials = new JDBCCredentials(expectedUsername, expectedPassword);
 
-        when(mockJobArguments.getOperationalDataStoreGlueConnectionName()).thenReturn(connectionName);
         when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);
         when(mockConnection.getConnectionProperties()).thenReturn(connectionProperties);
-        when(mockSecretsManagerClient.getSecret(secretId, OperationalDataStoreCredentials.class)).thenReturn(credentials);
+        when(mockSecretsManagerClient.getSecret(secretId, JDBCCredentials.class)).thenReturn(credentials);
 
-        OperationalDataStoreConnectionDetails result = underTest.getConnectionDetails();
+        JDBCGlueConnectionDetails result = underTest.getConnectionDetails(connectionName);
         assertEquals(expectedUrl, result.getUrl());
         assertEquals(expectedDriver, result.getJdbcDriverClassName());
         assertEquals(expectedUsername, result.getCredentials().getUsername());
         assertEquals(expectedPassword, result.getCredentials().getPassword());
 
         verify(mockGlueClient, times(1)).getConnection(connectionName);
-        verify(mockSecretsManagerClient, times(1)).getSecret(secretId, OperationalDataStoreCredentials.class);
+        verify(mockSecretsManagerClient, times(1)).getSecret(secretId, JDBCCredentials.class);
     }
 }

@@ -12,11 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
+import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
+import uk.gov.justice.digital.datahub.model.JDBCCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +46,7 @@ import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_
 class OperationalDataStoreDataAccessTest {
     private static final String NAMESPACE = "namespace";
     private static final String FULL_TABLE_NAME = "schema_name_table_name";
+    private static final String GLUE_CONNECTION_NAME = "connection";
 
     private static final Set<DataHubOperationalDataStoreManagedTable> managedTables = new HashSet<>(Arrays.asList(
             new DataHubOperationalDataStoreManagedTable("nomis", "activities"),
@@ -53,7 +56,7 @@ class OperationalDataStoreDataAccessTest {
     @Mock
     private JobArguments jobArguments;
     @Mock
-    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
+    private JDBCGlueConnectionDetailsService connectionDetailsService;
     @Mock
     private Dataset<Row> dataframe;
     @Mock
@@ -81,11 +84,12 @@ class OperationalDataStoreDataAccessTest {
 
     @BeforeEach
     public void setup() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials("username", "password");
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
+        JDBCCredentials credentials = new JDBCCredentials("username", "password");
+        JDBCGlueConnectionDetails connectionDetails = new JDBCGlueConnectionDetails(
                 "jdbc-url", "org.postgresql.Driver", credentials
         );
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
+        when(jobArguments.getOperationalDataStoreGlueConnectionName()).thenReturn(GLUE_CONNECTION_NAME);
+        when(connectionDetailsService.getConnectionDetails(anyString())).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables()).thenReturn(managedTables);
         underTest = new OperationalDataStoreDataAccess(jobArguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
@@ -93,7 +97,7 @@ class OperationalDataStoreDataAccessTest {
 
     @Test
     void shouldRetrieveConnectionDetailsInConstructor() {
-        verify(connectionDetailsService, times(1)).getConnectionDetails();
+        verify(connectionDetailsService, times(1)).getConnectionDetails(GLUE_CONNECTION_NAME);
     }
 
     @Test

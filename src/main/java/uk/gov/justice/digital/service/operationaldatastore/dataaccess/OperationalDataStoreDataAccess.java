@@ -11,10 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
+import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -51,13 +52,14 @@ public class OperationalDataStoreDataAccess {
     @Inject
     public OperationalDataStoreDataAccess(
             JobArguments jobArguments,
-            OperationalDataStoreConnectionDetailsService connectionDetailsService,
+            JDBCGlueConnectionDetailsService connectionDetailsService,
             ConnectionPoolProvider connectionPoolProvider,
             OperationalDataStoreRepository operationalDataStoreRepository
     ) {
         this.jobArguments = jobArguments;
         logger.debug("Retrieving connection details for Operational DataStore");
-        OperationalDataStoreConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails();
+        String connectionName = jobArguments.getOperationalDataStoreGlueConnectionName();
+        JDBCGlueConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails(connectionName);
         jdbcUrl = connectionDetails.getUrl();
         jdbcProps = connectionDetails.toSparkJdbcProperties();
         dataSource = connectionPoolProvider.getConnectionPool(

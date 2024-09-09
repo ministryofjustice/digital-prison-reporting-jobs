@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class OperationalDataStoreCredentials {
+public class JDBCCredentials {
     private String username;
     private String password;
 }
