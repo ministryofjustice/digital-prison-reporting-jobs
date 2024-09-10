@@ -64,7 +64,7 @@ public class S3SchemaClient {
                 .collect(Collectors.toSet());
 
         for (String schemaKey : schemaKeys) {
-            logger.info("Processing schema key {}", schemaKey);
+            logger.debug("Processing schema key {}", schemaKey);
             if (schemaGroupWithExtension.contains(schemaKey)) {
                 val schema = getAvroSchema(schemaKey).orElseThrow(() -> new RuntimeException("Failed to get schema " + schemaKey));
                 schemas.add(schema);
