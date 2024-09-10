@@ -8,17 +8,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.JDBCCredentials;
 import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
-import uk.gov.justice.digital.exception.OperationalDataStoreException;
+import uk.gov.justice.digital.exception.NomisDataAccessException;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 
 import javax.sql.DataSource;
-
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.times;
@@ -69,7 +69,7 @@ class NomisDataAccessServiceTest {
     void shouldInitialiseConnectionPoolInConstructor() {
         verify(connectionPoolProvider, times(1)).getConnectionPool(
                 "jdbc-url",
-                "org.postgresql.Driver",
+                "some-driver-class",
                 "username",
                 "password"
         );
@@ -109,7 +109,7 @@ class NomisDataAccessServiceTest {
         when(connection.createStatement()).thenReturn(statement);
         when(statement.executeQuery(any())).thenThrow(new SQLException());
 
-        assertThrows(OperationalDataStoreException.class, () -> {
+        assertThrows(NomisDataAccessException.class, () -> {
             underTest.getTableRowCount("some_schema.some_table");
         });
 
