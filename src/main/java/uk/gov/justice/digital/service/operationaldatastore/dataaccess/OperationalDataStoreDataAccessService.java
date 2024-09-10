@@ -34,9 +34,9 @@ import static java.lang.String.format;
  */
 @SuppressWarnings("java:S2077")
 @Singleton
-public class OperationalDataStoreDataAccess {
+public class OperationalDataStoreDataAccessService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreDataAccess.class);
+    private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreDataAccessService.class);
 
     private final JobArguments jobArguments;
     private final String jdbcUrl;
@@ -50,7 +50,7 @@ public class OperationalDataStoreDataAccess {
     private final Set<DataHubOperationalDataStoreManagedTable> managedTables;
 
     @Inject
-    public OperationalDataStoreDataAccess(
+    public OperationalDataStoreDataAccessService(
             JobArguments jobArguments,
             JDBCGlueConnectionDetailsService connectionDetailsService,
             ConnectionPoolProvider connectionPoolProvider,

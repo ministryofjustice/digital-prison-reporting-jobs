@@ -19,7 +19,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
@@ -129,7 +129,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         underTest = new OperationalDataStoreServiceImpl(
                 jobArguments,
                 new OperationalDataStoreTransformation(),
-                new OperationalDataStoreDataAccess(jobArguments, mockConnectionDetailsService, connectionPoolProvider, operationalDataStoreRepository)
+                new OperationalDataStoreDataAccessService(jobArguments, mockConnectionDetailsService, connectionPoolProvider, operationalDataStoreRepository)
         );
     }
 

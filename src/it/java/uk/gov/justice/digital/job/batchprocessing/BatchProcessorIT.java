@@ -22,7 +22,7 @@ import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreS
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
@@ -285,10 +285,10 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
                 new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
-        OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+        OperationalDataStoreDataAccessService operationalDataStoreDataAccessService =
+                new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
+                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
         underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
     }
 

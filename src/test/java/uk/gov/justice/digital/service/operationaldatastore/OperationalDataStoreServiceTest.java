@@ -16,7 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,7 +46,7 @@ class OperationalDataStoreServiceTest {
     @Mock
     private OperationalDataStoreTransformation mockDataTransformation;
     @Mock
-    private OperationalDataStoreDataAccess mockDataAccess;
+    private OperationalDataStoreDataAccessService mockDataAccess;
     @Mock
     private JobArguments jobArguments;
 

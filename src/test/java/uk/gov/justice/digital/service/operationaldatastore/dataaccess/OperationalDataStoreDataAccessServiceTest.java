@@ -36,14 +36,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 
 @ExtendWith(MockitoExtension.class)
-class OperationalDataStoreDataAccessTest {
+class OperationalDataStoreDataAccessServiceTest {
     private static final String NAMESPACE = "namespace";
     private static final String FULL_TABLE_NAME = "schema_name_table_name";
     private static final String GLUE_CONNECTION_NAME = "connection";
@@ -80,7 +79,7 @@ class OperationalDataStoreDataAccessTest {
     @Mock
     private SourceReference.PrimaryKey primaryKey;
 
-    private OperationalDataStoreDataAccess underTest;
+    private OperationalDataStoreDataAccessService underTest;
 
     @BeforeEach
     public void setup() {
@@ -92,7 +91,7 @@ class OperationalDataStoreDataAccessTest {
         when(connectionDetailsService.getConnectionDetails(GLUE_CONNECTION_NAME)).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables()).thenReturn(managedTables);
-        underTest = new OperationalDataStoreDataAccess(jobArguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+        underTest = new OperationalDataStoreDataAccessService(jobArguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
     }
 
     @Test
