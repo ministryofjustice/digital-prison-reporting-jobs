@@ -31,9 +31,9 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
@@ -93,7 +93,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     @Mock
     private TableDiscoveryService tableDiscoveryService;
     @Mock
-    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
+    private JDBCGlueConnectionDetailsService connectionDetailsService;
     private TableStreamingQuery underTest;
     private MemoryStream<Row> inputStream;
     private StreamingQuery streamingQuery;
@@ -367,6 +367,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenRetrySettingsAreConfigured(arguments);
         when(arguments.getBroadcastTimeoutSeconds()).thenReturn(DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
         lenient().when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
+        when(arguments.getOperationalDataStoreGlueConnectionName()).thenReturn("operational-datastore-connection-name");
     }
 
     private void givenAMatchingSchema() {
@@ -460,10 +461,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
                 new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
-        OperationalDataStoreDataAccess operationalDataStoreDataAccess =
-                new OperationalDataStoreDataAccess(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+        OperationalDataStoreDataAccessService operationalDataStoreDataAccessService =
+                new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
-                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccess);
+                new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 new ValidationService(violationService),
                 new StructuredZoneCDC(arguments, violationService, storageService),

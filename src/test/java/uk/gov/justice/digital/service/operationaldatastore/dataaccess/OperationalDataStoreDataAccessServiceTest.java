@@ -12,10 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
+import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
+import uk.gov.justice.digital.datahub.model.JDBCCredentials;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -40,9 +42,10 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 
 @ExtendWith(MockitoExtension.class)
-class OperationalDataStoreDataAccessTest {
+class OperationalDataStoreDataAccessServiceTest {
     private static final String NAMESPACE = "namespace";
     private static final String FULL_TABLE_NAME = "schema_name_table_name";
+    private static final String GLUE_CONNECTION_NAME = "connection";
 
     private static final Set<DataHubOperationalDataStoreManagedTable> managedTables = new HashSet<>(Arrays.asList(
             new DataHubOperationalDataStoreManagedTable("nomis", "activities"),
@@ -52,7 +55,7 @@ class OperationalDataStoreDataAccessTest {
     @Mock
     private JobArguments jobArguments;
     @Mock
-    private OperationalDataStoreConnectionDetailsService connectionDetailsService;
+    private JDBCGlueConnectionDetailsService connectionDetailsService;
     @Mock
     private Dataset<Row> dataframe;
     @Mock
@@ -76,23 +79,24 @@ class OperationalDataStoreDataAccessTest {
     @Mock
     private SourceReference.PrimaryKey primaryKey;
 
-    private OperationalDataStoreDataAccess underTest;
+    private OperationalDataStoreDataAccessService underTest;
 
     @BeforeEach
     public void setup() {
-        OperationalDataStoreCredentials credentials = new OperationalDataStoreCredentials("username", "password");
-        OperationalDataStoreConnectionDetails connectionDetails = new OperationalDataStoreConnectionDetails(
+        JDBCCredentials credentials = new JDBCCredentials("username", "password");
+        JDBCGlueConnectionDetails connectionDetails = new JDBCGlueConnectionDetails(
                 "jdbc-url", "org.postgresql.Driver", credentials
         );
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(connectionDetails);
+        when(jobArguments.getOperationalDataStoreGlueConnectionName()).thenReturn(GLUE_CONNECTION_NAME);
+        when(connectionDetailsService.getConnectionDetails(GLUE_CONNECTION_NAME)).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
         when(operationalDataStoreRepository.getDataHubOperationalDataStoreManagedTables()).thenReturn(managedTables);
-        underTest = new OperationalDataStoreDataAccess(jobArguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
+        underTest = new OperationalDataStoreDataAccessService(jobArguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
     }
 
     @Test
     void shouldRetrieveConnectionDetailsInConstructor() {
-        verify(connectionDetailsService, times(1)).getConnectionDetails();
+        verify(connectionDetailsService, times(1)).getConnectionDetails(GLUE_CONNECTION_NAME);
     }
 
     @Test
@@ -301,6 +305,48 @@ class OperationalDataStoreDataAccessTest {
         when(resultSet.next()).thenReturn(false);
 
         assertFalse(underTest.tableExists(sourceReference));
+    }
+
+    @Test
+    void shouldGetTableRowCount() throws Exception {
+        long count = 9999L;
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getLong(1)).thenReturn(count);
+
+        long result = underTest.getTableRowCount("some_schema.some_table");
+        assertEquals(count, result);
+    }
+
+    @Test
+    void getTableRowCountShouldCloseResources() throws Exception {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getLong(anyInt())).thenReturn(1L);
+
+        underTest.getTableRowCount("some_schema.some_table");
+
+        verify(connection, times(1)).close();
+        verify(statement, times(1)).close();
+    }
+
+    @Test
+    void getTableRowCountShouldCloseResourcesWhenSqlExecutionThrows() throws Exception {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenThrow(new SQLException());
+
+        assertThrows(OperationalDataStoreException.class, () -> {
+            underTest.getTableRowCount("some_schema.some_table");
+        });
+
+        verify(connection, times(1)).close();
+        verify(statement, times(1)).close();
     }
 
     @Test

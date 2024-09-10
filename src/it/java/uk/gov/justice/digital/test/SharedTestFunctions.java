@@ -4,7 +4,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreConnectionDetailsService;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -13,6 +13,7 @@ import java.sql.Statement;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
@@ -27,8 +28,8 @@ public class SharedTestFunctions {
         return format("%s.%s", namespace, operationalDataStoreTableName(inputSchemaName, tableName));
     }
 
-    public static void givenDatastoreCredentials(OperationalDataStoreConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
-        when(connectionDetailsService.getConnectionDetails()).thenReturn(operationalDataStore.getConnectionDetails());
+    public static void givenDatastoreCredentials(JDBCGlueConnectionDetailsService connectionDetailsService, InMemoryOperationalDataStore operationalDataStore) {
+        when(connectionDetailsService.getConnectionDetails(anyString())).thenReturn(operationalDataStore.getConnectionDetails());
     }
 
     public static void givenSchemaExists(String schemaName, Connection testQueryConnection) throws SQLException {

@@ -30,6 +30,12 @@ class SourceReferenceTest {
     }
 
     @Test
+    void shouldGetDataHubTableName() {
+        String expectedFullTableName = "source.table";
+        assertEquals(expectedFullTableName, underTest.getFullDatahubTableName());
+    }
+
+    @Test
     void shouldGetOperationalDataStoreTableName() {
         String expectedFullTableName = "source_table";
         assertEquals(expectedFullTableName, underTest.getOperationalDataStoreTableName());

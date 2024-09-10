@@ -1,9 +1,9 @@
 package uk.gov.justice.digital.test;
 
 import org.h2.tools.Server;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreCredentials;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.ConnectionPoolProvider;
+import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
+import uk.gov.justice.digital.datahub.model.JDBCCredentials;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -58,14 +58,14 @@ public class InMemoryOperationalDataStore {
         return "";
     }
 
-    public OperationalDataStoreCredentials getCredentials() {
-        return new OperationalDataStoreCredentials(
+    public JDBCCredentials getCredentials() {
+        return new JDBCCredentials(
                 getUsername(), getPassword()
         );
     }
 
-    public OperationalDataStoreConnectionDetails getConnectionDetails() {
-        return new OperationalDataStoreConnectionDetails(
+    public JDBCGlueConnectionDetails getConnectionDetails() {
+        return new JDBCGlueConnectionDetails(
                 getJdbcUrl(), getDriverClassName(), getCredentials()
         );
     }

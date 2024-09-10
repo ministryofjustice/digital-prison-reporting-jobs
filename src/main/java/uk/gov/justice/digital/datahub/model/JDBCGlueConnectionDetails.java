@@ -5,10 +5,10 @@ import lombok.Data;
 import java.util.Properties;
 
 @Data
-public class OperationalDataStoreConnectionDetails {
+public class JDBCGlueConnectionDetails {
     private final String url;
     private final String jdbcDriverClassName;
-    private final OperationalDataStoreCredentials credentials;
+    private final JDBCCredentials credentials;
 
 
     /**

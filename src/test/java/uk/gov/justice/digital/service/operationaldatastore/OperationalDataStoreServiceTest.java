@@ -9,14 +9,18 @@ import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
-import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccess;
+import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -42,7 +46,7 @@ class OperationalDataStoreServiceTest {
     @Mock
     private OperationalDataStoreTransformation mockDataTransformation;
     @Mock
-    private OperationalDataStoreDataAccess mockDataAccess;
+    private OperationalDataStoreDataAccessService mockDataAccess;
     @Mock
     private JobArguments jobArguments;
 
@@ -61,11 +65,16 @@ class OperationalDataStoreServiceTest {
     public void setup() {
         when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
         underTest = new OperationalDataStoreServiceImpl(jobArguments, mockDataTransformation, mockDataAccess);
-        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
+    }
+
+    @Test
+    void isEnabledShouldBeTrue() {
+        assertTrue(underTest.isEnabled());
     }
 
     @Test
     void overwriteDataShouldTransformInputDataframe() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
         when(mockDataAccess.tableExists(any())).thenReturn(true);
@@ -77,6 +86,7 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void overwriteDataShouldWriteTransformedDataframeToDestinationTableAfterDroppingMetadataCols() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
@@ -90,6 +100,7 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void overwriteDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
 
         underTest.overwriteData(inputDataframe, sourceReference);
@@ -99,6 +110,7 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void overwriteDataShouldThrowIfTheTableDoesNotExist() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
         when(mockDataAccess.tableExists(any())).thenReturn(false);
 
@@ -111,6 +123,7 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void mergeDataShouldTransformInputDataframe() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(sourceReference.getOperationalDataStoreTableName()).thenReturn(TABLE_NAME);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
@@ -122,6 +135,7 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void mergeDataShouldWriteTransformedDataframeToLoadingTableAfterDroppingMetadataCols() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
@@ -135,6 +149,7 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void mergeDataShouldRunMerge() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
         when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
@@ -147,11 +162,33 @@ class OperationalDataStoreServiceTest {
 
     @Test
     void mergeDataShouldSkipOverwriteForTablesUnmanagedByOperationalDataStore() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
         when(sourceReference.getOperationalDataStoreTableName()).thenReturn(TABLE_NAME);
         when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(false);
 
         underTest.mergeData(inputDataframe, sourceReference);
 
         verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void isOperationalDataStoreManagedTableShouldDelegate(boolean isManaged) {
+        when(mockDataAccess.isOperationalDataStoreManagedTable(sourceReference)).thenReturn(isManaged);
+        boolean result = underTest.isOperationalDataStoreManagedTable(sourceReference);
+        assertEquals(isManaged, result);
+
+        verify(mockDataAccess, times(1)).isOperationalDataStoreManagedTable(sourceReference);
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {1L, 2L})
+    void getTableRowCountShouldDelegate(long count) {
+        String tableName = "table_name";
+        when(mockDataAccess.getTableRowCount(tableName)).thenReturn(count);
+        long result = underTest.getTableRowCount(tableName);
+        assertEquals(count, result);
+
+        verify(mockDataAccess, times(1)).getTableRowCount(tableName);
     }
 }

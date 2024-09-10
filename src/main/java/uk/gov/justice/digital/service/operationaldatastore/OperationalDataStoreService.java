@@ -8,6 +8,9 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
  * Entrypoint for access to the Operational DataStore.
  */
 public interface OperationalDataStoreService {
+    boolean isEnabled();
     void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference);
     void mergeData(Dataset<Row> dataFrame, SourceReference sourceReference);
+    boolean isOperationalDataStoreManagedTable(SourceReference sourceReference);
+    long getTableRowCount(String tableName);
 }

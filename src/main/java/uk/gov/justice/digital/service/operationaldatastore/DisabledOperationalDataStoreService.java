@@ -18,6 +18,11 @@ public class DisabledOperationalDataStoreService implements OperationalDataStore
     }
 
     @Override
+    public boolean isEnabled() {
+        return false;
+    }
+
+    @Override
     public void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         logger.info("Operational DataStore functionality is disabled, Skipping overwrite data to table {}.{}", sourceReference.getSource(), sourceReference.getTable());
     }
@@ -25,5 +30,16 @@ public class DisabledOperationalDataStoreService implements OperationalDataStore
     @Override
     public void mergeData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         logger.info("Operational DataStore functionality is disabled, Skipping merge into table {}.{}", sourceReference.getSource(), sourceReference.getTable());
+    }
+
+    @Override
+    public boolean isOperationalDataStoreManagedTable(SourceReference sourceReference) {
+        logger.info("Operational DataStore functionality is disabled, marking table {}.{} as unmanaged", sourceReference.getSource(), sourceReference.getTable());
+        return false;
+    }
+
+    @Override
+    public long getTableRowCount(String tableName) {
+        throw new IllegalStateException("Operational DataStore functionality is disabled");
     }
 }

@@ -77,7 +77,9 @@ class JobArgumentsIntegrationTest {
             { JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, "true" },
             { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, "some_schema" },
             { JobArguments.OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME, "configuration.datahub_managed_tables" },
-            { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, "10000" }
+            { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, "10000" },
+            { JobArguments.NOMIS_GLUE_CONNECTION_NAME, "my-connection" },
+            { JobArguments.NOMIS_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -137,6 +139,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, validArguments.getOperationalDataStoreLoadingSchemaName() },
                 { JobArguments.OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME, validArguments.getOperationalDataStoreTablesToWriteTableName() },
                 { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, Long.toString(validArguments.getOperationalDataStoreJdbcBatchSize()) },
+                { JobArguments.NOMIS_GLUE_CONNECTION_NAME, validArguments.getNomisGlueConnectionName() },
+                { JobArguments.NOMIS_SOURCE_SCHEMA_NAME, validArguments.getNomisSourceSchemaName() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);

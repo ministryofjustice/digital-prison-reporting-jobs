@@ -11,9 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
-import uk.gov.justice.digital.datahub.model.OperationalDataStoreConnectionDetails;
+import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -30,10 +32,11 @@ import static java.lang.String.format;
 /**
  * Hub for accessing the Operational DataStore.
  */
+@SuppressWarnings("java:S2077")
 @Singleton
-public class OperationalDataStoreDataAccess {
+public class OperationalDataStoreDataAccessService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreDataAccess.class);
+    private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreDataAccessService.class);
 
     private final JobArguments jobArguments;
     private final String jdbcUrl;
@@ -47,15 +50,16 @@ public class OperationalDataStoreDataAccess {
     private final Set<DataHubOperationalDataStoreManagedTable> managedTables;
 
     @Inject
-    public OperationalDataStoreDataAccess(
+    public OperationalDataStoreDataAccessService(
             JobArguments jobArguments,
-            OperationalDataStoreConnectionDetailsService connectionDetailsService,
+            JDBCGlueConnectionDetailsService connectionDetailsService,
             ConnectionPoolProvider connectionPoolProvider,
             OperationalDataStoreRepository operationalDataStoreRepository
     ) {
         this.jobArguments = jobArguments;
         logger.debug("Retrieving connection details for Operational DataStore");
-        OperationalDataStoreConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails();
+        String connectionName = jobArguments.getOperationalDataStoreGlueConnectionName();
+        JDBCGlueConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails(connectionName);
         jdbcUrl = connectionDetails.getUrl();
         jdbcProps = connectionDetails.toSparkJdbcProperties();
         dataSource = connectionPoolProvider.getConnectionPool(
@@ -124,6 +128,22 @@ public class OperationalDataStoreDataAccess {
             }
         } catch (SQLException e) {
             throw new OperationalDataStoreException("Exception while checking if tables exists", e);
+        }
+    }
+
+    public long getTableRowCount(String tableName) {
+        String query = "SELECT COUNT(1) FROM " + tableName;
+        try (Connection connection = dataSource.getConnection()) {
+            try (Statement statement = connection.createStatement()) {
+                ResultSet rs = statement.executeQuery(query);
+                if (rs.next()) {
+                    return rs.getLong(1);
+                } else {
+                    throw new OperationalDataStoreException("No results returned while getting count of rows in table " + tableName);
+                }
+            }
+        } catch (SQLException e) {
+            throw new OperationalDataStoreException("Exception while getting count of rows in table " + tableName, e);
         }
     }
 
