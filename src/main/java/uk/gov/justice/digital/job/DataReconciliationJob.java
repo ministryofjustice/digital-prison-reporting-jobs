@@ -47,7 +47,12 @@ public class DataReconciliationJob implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job starting");
-        PicocliRunner.run(DataReconciliationJob.class, MicronautContext.withArgs(args));
+        try {
+            PicocliRunner.run(DataReconciliationJob.class, MicronautContext.withArgs(args));
+        } catch (Exception e) {
+            logger.error("Caught exception during Picocli and Micronaut bootstrap", e);
+            System.exit(1);
+        }
     }
 
     @Override
