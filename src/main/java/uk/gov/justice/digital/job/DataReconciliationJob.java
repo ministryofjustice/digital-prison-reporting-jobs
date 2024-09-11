@@ -65,7 +65,9 @@ public class DataReconciliationJob implements Runnable {
                 logger.error("Caught ParameterException during Picocli and Micronaut bootstrap", ex);
                 return 1;
             });
-            commandLine.execute(args);
+            int exitCode = commandLine.execute(args);
+            logger.info("Exit code: {}", exitCode);
+            System.exit(exitCode);
         } catch (Exception e) {
             logger.error("Caught exception during Picocli and Micronaut bootstrap", e);
             System.exit(1);
