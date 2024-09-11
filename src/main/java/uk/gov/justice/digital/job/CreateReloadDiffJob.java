@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
-import io.micronaut.configuration.picocli.PicocliRunner;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.SparkConf;
@@ -17,7 +16,6 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.SchemaNotFoundException;
 import uk.gov.justice.digital.job.batchprocessing.ReloadDiffProcessor;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DmsOrchestrationService;
 import uk.gov.justice.digital.service.SourceReferenceService;
@@ -68,8 +66,7 @@ public class CreateReloadDiffJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job starting");
-        PicocliRunner.run(CreateReloadDiffJob.class, MicronautContext.withArgs(args));
+        PicocliMicronautExecutor.execute(CreateReloadDiffJob.class, args);
     }
 
     @Override

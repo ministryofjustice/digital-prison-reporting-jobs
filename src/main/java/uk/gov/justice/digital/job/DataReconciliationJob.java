@@ -1,9 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.util.Job;
-import io.micronaut.configuration.picocli.MicronautFactory;
-import io.micronaut.configuration.picocli.PicocliRunner;
-import io.micronaut.context.ApplicationContext;
 import lombok.val;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
@@ -12,10 +9,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCountResults;
 import uk.gov.justice.digital.service.datareconciliation.DataReconciliationService;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCountResults;
 
 import javax.inject.Inject;
 
@@ -47,12 +43,8 @@ public class DataReconciliationJob implements Runnable {
         this.dataReconciliationService = dataReconciliationService;
     }
 
-    public static void main(String[] args) {
-        logger.info("Job starting");
-        CommandLine commandLine = new CommandLine(DataReconciliationJob.class, new MicronautFactory(MicronautContext.withArgs(args)));
-        int exitCode = commandLine.execute(args);
-        logger.info("Job finished with exit code {}", exitCode);
-        System.exit(exitCode);
+    public static void main(String... args) {
+        PicocliMicronautExecutor.execute(DataReconciliationJob.class, args);
     }
 
     @Override

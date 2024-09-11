@@ -1,19 +1,16 @@
 package uk.gov.justice.digital.job;
 
 import com.google.common.collect.ImmutableSet;
-import io.micronaut.configuration.picocli.PicocliRunner;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.service.CheckpointReaderService;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import javax.inject.Inject;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -46,8 +43,7 @@ public class UnprocessedRawFilesCheckJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job starting");
-        PicocliRunner.run(UnprocessedRawFilesCheckJob.class, MicronautContext.withArgs(args).registerSingleton(Clock.class, Clock.systemUTC()));
+        PicocliMicronautExecutor.execute(UnprocessedRawFilesCheckJob.class, args);
     }
 
     @Override

@@ -1,20 +1,19 @@
 package uk.gov.justice.digital.job;
 
 import com.google.common.collect.ImmutableSet;
-import io.micronaut.configuration.picocli.PicocliRunner;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import javax.inject.Inject;
-import java.time.Clock;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Job that deletes s3 files from a list of bucket(s).
@@ -39,8 +38,7 @@ public class S3DataDeletionJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job starting");
-        PicocliRunner.run(S3DataDeletionJob.class, MicronautContext.withArgs(args).registerSingleton(Clock.class, Clock.systemUTC()));
+        PicocliMicronautExecutor.execute(S3DataDeletionJob.class, args);
     }
 
     @Override

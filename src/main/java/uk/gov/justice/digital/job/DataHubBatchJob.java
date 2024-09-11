@@ -2,7 +2,6 @@ package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
-import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -16,10 +15,9 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
+import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.job.batchprocessing.BatchProcessor;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
@@ -68,8 +66,7 @@ public class DataHubBatchJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job started");
-        PicocliRunner.run(DataHubBatchJob.class, MicronautContext.withArgs(args));
+        PicocliMicronautExecutor.execute(DataHubBatchJob.class, args);
     }
 
     @Override

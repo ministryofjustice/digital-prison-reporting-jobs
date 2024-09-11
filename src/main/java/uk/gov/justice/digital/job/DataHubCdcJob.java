@@ -4,7 +4,6 @@ import com.amazonaws.AbortedException;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
-import io.micronaut.configuration.picocli.PicocliRunner;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -24,7 +23,6 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
@@ -64,8 +62,7 @@ public class DataHubCdcJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job started");
-        PicocliRunner.run(DataHubCdcJob.class, MicronautContext.withArgs(args));
+        PicocliMicronautExecutor.execute(DataHubCdcJob.class, args);
     }
 
     @Override

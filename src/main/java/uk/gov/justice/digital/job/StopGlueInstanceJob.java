@@ -1,11 +1,9 @@
 package uk.gov.justice.digital.job;
 
-import io.micronaut.configuration.picocli.PicocliRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.service.GlueOrchestrationService;
 
 import javax.inject.Inject;
@@ -30,8 +28,7 @@ public class StopGlueInstanceJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job starting");
-        PicocliRunner.run(StopGlueInstanceJob.class, MicronautContext.withArgs(args));
+        PicocliMicronautExecutor.execute(StopGlueInstanceJob.class, args);
     }
 
     @Override
