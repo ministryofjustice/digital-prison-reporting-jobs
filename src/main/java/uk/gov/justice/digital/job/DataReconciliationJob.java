@@ -1,7 +1,9 @@
 package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.util.Job;
+import io.micronaut.configuration.picocli.MicronautFactory;
 import io.micronaut.configuration.picocli.PicocliRunner;
+import io.micronaut.context.ApplicationContext;
 import lombok.val;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
@@ -22,7 +24,7 @@ import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERT
 /**
  * Job that runs data reconciliation in the DataHub.
  */
-@CommandLine.Command(name = "DataReconciliationJob")
+@CommandLine.Command(name = "DataReconciliationJob", exitCodeOnInvalidInput = 1, exitCodeOnExecutionException = 1)
 public class DataReconciliationJob implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DataReconciliationJob.class);
@@ -49,6 +51,21 @@ public class DataReconciliationJob implements Runnable {
         logger.info("Job starting");
         try {
             PicocliRunner.run(DataReconciliationJob.class, MicronautContext.withArgs(args));
+
+//            CommandLine commandLine = new CommandLine(DataReconciliationJob.class, new MicronautFactory(MicronautContext.withArgs(args)));
+//            commandLine.setExitCodeExceptionMapper(exception -> {
+//                logger.error("Getting exit code", exception);
+//                return 1;
+//            });
+//            commandLine.setExecutionExceptionHandler((ex, commandLine1, parseResult) -> {
+//                logger.error("Caught execution exception during Picocli and Micronaut bootstrap", ex);
+//                return 1;
+//            });
+//            commandLine.setParameterExceptionHandler((ex, args1) -> {
+//                logger.error("Caught ParameterException during Picocli and Micronaut bootstrap", ex);
+//                return 1;
+//            });
+//            commandLine.execute(args);
         } catch (Exception e) {
             logger.error("Caught exception during Picocli and Micronaut bootstrap", e);
             System.exit(1);
