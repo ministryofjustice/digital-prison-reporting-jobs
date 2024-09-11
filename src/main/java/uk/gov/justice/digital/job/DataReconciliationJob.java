@@ -49,29 +49,10 @@ public class DataReconciliationJob implements Runnable {
 
     public static void main(String[] args) {
         logger.info("Job starting");
-        try {
-//            PicocliRunner.run(DataReconciliationJob.class, MicronautContext.withArgs(args));
-
-            CommandLine commandLine = new CommandLine(DataReconciliationJob.class, new MicronautFactory(MicronautContext.withArgs(args)));
-            commandLine.setExitCodeExceptionMapper(exception -> {
-                logger.error("Getting exit code", exception);
-                return 1;
-            });
-            commandLine.setExecutionExceptionHandler((ex, commandLine1, parseResult) -> {
-                logger.error("Caught execution exception during Picocli and Micronaut bootstrap", ex);
-                return 1;
-            });
-            commandLine.setParameterExceptionHandler((ex, args1) -> {
-                logger.error("Caught ParameterException during Picocli and Micronaut bootstrap", ex);
-                return 1;
-            });
-            int exitCode = commandLine.execute(args);
-            logger.info("Exit code: {}", exitCode);
-            System.exit(exitCode);
-        } catch (Exception e) {
-            logger.error("Caught exception during Picocli and Micronaut bootstrap", e);
-            System.exit(1);
-        }
+        CommandLine commandLine = new CommandLine(DataReconciliationJob.class, new MicronautFactory(MicronautContext.withArgs(args)));
+        int exitCode = commandLine.execute(args);
+        logger.info("Job finished with exit code {}", exitCode);
+        System.exit(exitCode);
     }
 
     @Override
