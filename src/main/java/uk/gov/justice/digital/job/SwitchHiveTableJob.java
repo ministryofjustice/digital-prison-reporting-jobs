@@ -1,14 +1,12 @@
 package uk.gov.justice.digital.job;
 
 import com.google.common.collect.ImmutableSet;
-import io.micronaut.configuration.picocli.PicocliRunner;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.HiveTableService;
@@ -41,8 +39,7 @@ public class SwitchHiveTableJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job starting");
-        PicocliRunner.run(SwitchHiveTableJob.class, MicronautContext.withArgs(args));
+        PicocliMicronautExecutor.execute(SwitchHiveTableJob.class, args);
     }
 
     @Override

@@ -1,11 +1,9 @@
 package uk.gov.justice.digital.job;
 
-import io.micronaut.configuration.picocli.PicocliRunner;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.job.context.MicronautContext;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.MaintenanceService;
 
@@ -39,8 +37,7 @@ public class VacuumJob implements Runnable {
     }
 
     public static void main(String[] args) {
-        logger.info("Job starting");
-        PicocliRunner.run(VacuumJob.class, MicronautContext.withArgs(args));
+        PicocliMicronautExecutor.execute(VacuumJob.class, args);
     }
 
     @Override
