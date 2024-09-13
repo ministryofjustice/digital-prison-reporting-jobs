@@ -12,8 +12,8 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateCountTableResult;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCountResults;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTableCount;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
 
 import java.util.Arrays;
 
@@ -41,9 +41,9 @@ class DataReconciliationServiceTest {
     @Mock
     private SourceReference sourceReference2;
     @Mock
-    private CurrentStateCountTableResult result1;
+    private CurrentStateTableCount result1;
     @Mock
-    private CurrentStateCountTableResult result2;
+    private CurrentStateTableCount result2;
 
     @InjectMocks
     private DataReconciliationService underTest;
@@ -60,16 +60,16 @@ class DataReconciliationServiceTest {
         ));
         when(sourceReference1.getFullDatahubTableName()).thenReturn("table1");
         when(sourceReference2.getFullDatahubTableName()).thenReturn("table2");
-        when(currentStateCountService.currentStateCounts(sparkSession, sourceReference1)).thenReturn(result1);
-        when(currentStateCountService.currentStateCounts(sparkSession, sourceReference2)).thenReturn(result2);
+        when(currentStateCountService.currentStateCountForTable(sparkSession, sourceReference1)).thenReturn(result1);
+        when(currentStateCountService.currentStateCountForTable(sparkSession, sourceReference2)).thenReturn(result2);
 
-        CurrentStateTotalCountResults results = underTest.reconcileData(sparkSession);
+        CurrentStateTotalCounts results = underTest.reconcileData(sparkSession).getCurrentStateTotalCounts();
 
         assertEquals(result1, results.get("table1"));
         assertEquals(result2, results.get("table2"));
 
-        verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, sourceReference1);
-        verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, sourceReference2);
+        verify(currentStateCountService, times(1)).currentStateCountForTable(sparkSession, sourceReference1);
+        verify(currentStateCountService, times(1)).currentStateCountForTable(sparkSession, sourceReference2);
     }
 
 }

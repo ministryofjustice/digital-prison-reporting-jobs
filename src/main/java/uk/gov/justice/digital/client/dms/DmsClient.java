@@ -2,9 +2,12 @@ package uk.gov.justice.digital.client.dms;
 
 import com.amazonaws.services.databasemigrationservice.AWSDatabaseMigrationService;
 import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksRequest;
+import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsRequest;
+import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsResult;
 import com.amazonaws.services.databasemigrationservice.model.Filter;
 import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
+import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -14,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DmsClientException;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -60,6 +64,17 @@ public class DmsClient {
         } else {
             throw new DmsClientException("Failed to get DMS task with Id: " + taskId);
         }
+    }
+
+    public List<TableStatistics> getReplicationTaskTableStatistics(String taskId) {
+        Optional<ReplicationTask> optionalTask = getTask(taskId);
+        ReplicationTask replicationTask = optionalTask.orElseThrow(() ->
+                new DmsClientException("Replication task with Id: " + taskId + " not found")
+        );
+        DescribeTableStatisticsRequest request = new DescribeTableStatisticsRequest();
+        request.setReplicationTaskArn(replicationTask.getReplicationTaskArn());
+        DescribeTableStatisticsResult response = awsDms.describeTableStatistics(request);
+        return response.getTableStatistics();
     }
 
     private void ensureState(String taskId, String state, int waitIntervalSeconds, int maxAttempts) throws InterruptedException {

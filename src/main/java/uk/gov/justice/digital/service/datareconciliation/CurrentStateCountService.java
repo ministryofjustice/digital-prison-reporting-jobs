@@ -11,8 +11,11 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.NomisDataAccessService;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateCountTableResult;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTableCount;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
+
+import java.util.List;
 
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
@@ -39,11 +42,20 @@ public class CurrentStateCountService {
         this.operationalDataStoreService = operationalDataStoreService;
     }
 
+    CurrentStateTotalCounts currentStateCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
+        CurrentStateTotalCounts currentStateCountResults = new CurrentStateTotalCounts();
+        sourceReferences.forEach(sourceReference -> {
+            CurrentStateTableCount countResults = currentStateCountForTable(sparkSession, sourceReference);
+            currentStateCountResults.put(sourceReference.getFullDatahubTableName(), countResults);
+        });
+        return currentStateCountResults;
+    }
+
     /**
      * Retrieve record counts from data stores that contain current state
      * (the source datastore, structured and curated, and possibly the OperationalDataStore).
      */
-    CurrentStateCountTableResult currentStateCounts(SparkSession sparkSession, SourceReference sourceReference) {
+    CurrentStateTableCount currentStateCountForTable(SparkSession sparkSession, SourceReference sourceReference) {
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
         logger.info("Getting current state counts across data stores for table {}.{}", sourceName, tableName);
@@ -52,10 +64,10 @@ public class CurrentStateCountService {
         String oracleFullTableName = nomisOracleSourceSchema + "." + tableName.toUpperCase();
         String operationalDataStoreFullTableName = sourceReference.getFullOperationalDataStoreTableNameWithSchema();
 
-        String structuredPath = tablePath(jobArguments.getStructuredS3Path(), sourceName, tableName);
-        String curatedPath = tablePath(jobArguments.getCuratedS3Path(), sourceName, tableName);
-        Dataset<Row> structured = s3DataProvider.getBatchSourceData(sparkSession, structuredPath);
-        Dataset<Row> curated = s3DataProvider.getBatchSourceData(sparkSession, curatedPath);
+        String structuredTablePath = tablePath(jobArguments.getStructuredS3Path(), sourceName, tableName);
+        String curatedTablePath = tablePath(jobArguments.getCuratedS3Path(), sourceName, tableName);
+        Dataset<Row> structured = s3DataProvider.getBatchSourceData(sparkSession, structuredTablePath);
+        Dataset<Row> curated = s3DataProvider.getBatchSourceData(sparkSession, curatedTablePath);
 
 
         logger.info("Reading Nomis count for table {}", oracleFullTableName);
@@ -65,14 +77,14 @@ public class CurrentStateCountService {
         logger.info("Reading Curated count for table {}/{}", sourceName, tableName);
         long curatedCount = curated.count();
 
-        CurrentStateCountTableResult result;
+        CurrentStateTableCount result;
         if (operationalDataStoreService.isEnabled() && operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference)) {
             logger.info("Reading Operational DataStore count for managed table {}", operationalDataStoreFullTableName);
             long operationalDataStoreCount = operationalDataStoreService.getTableRowCount(operationalDataStoreFullTableName);
-            result = new CurrentStateCountTableResult(nomisCount, structuredCount, curatedCount, operationalDataStoreCount);
+            result = new CurrentStateTableCount(nomisCount, structuredCount, curatedCount, operationalDataStoreCount);
         } else {
             logger.info("Skipping reading Operational DataStore count for table {}", operationalDataStoreFullTableName);
-            result = new CurrentStateCountTableResult(nomisCount, structuredCount, curatedCount);
+            result = new CurrentStateTableCount(nomisCount, structuredCount, curatedCount);
         }
 
         logger.info("Finished current state counts across data stores for table {}.{}", sourceName, tableName);

@@ -2,25 +2,22 @@ package uk.gov.justice.digital.service.datareconciliation.model;
 
 import lombok.val;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Represents the results of running the total counts data reconciliation for the "current state" data in DataHub
  */
-public class CurrentStateTotalCountResults {
+public class CurrentStateTotalCounts {
 
-    private final Map<String, CurrentStateCountTableResult> tableToResult = new HashMap<>();
+    private final CountsByTable<CurrentStateTableCount> tableToResult = new CountsByTable<>();
 
-    public void put(String fullTableName, CurrentStateCountTableResult currentStateCountTableResult) {
-        tableToResult.put(fullTableName, currentStateCountTableResult);
+    public void put(String fullTableName, CurrentStateTableCount currentStateTableCount) {
+        tableToResult.put(fullTableName, currentStateTableCount);
     }
 
     /**
      * Returns the value to which the specified key is mapped, or
      *  {@code null} if this map contains no mapping for the key
      */
-    public CurrentStateCountTableResult get(String fullTableName) {
+    public CurrentStateTableCount get(String fullTableName) {
         return tableToResult.get(fullTableName);
     }
 
@@ -29,7 +26,7 @@ public class CurrentStateTotalCountResults {
     }
 
     public String summary() {
-        StringBuilder sb = new StringBuilder("Current State Count Results:\n");
+        StringBuilder sb = new StringBuilder("Current State Total Counts:\n");
 
         for (val entrySet: tableToResult.entrySet()) {
             val tableName = entrySet.getKey();

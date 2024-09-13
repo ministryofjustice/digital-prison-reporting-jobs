@@ -9,10 +9,13 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateCountTableResult;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCountResults;
+import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCounts;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
+import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
 import java.util.List;
+
+import static java.lang.String.format;
 
 
 /**
@@ -25,30 +28,33 @@ public class DataReconciliationService {
     private final ConfigService configService;
     private final SourceReferenceService sourceReferenceService;
     private final CurrentStateCountService currentStateCountService;
+    private final ChangeDataCountService changeDataCountService;
 
     @Inject
     public DataReconciliationService(
             JobArguments jobArguments,
             ConfigService configService,
             SourceReferenceService sourceReferenceService,
-            CurrentStateCountService currentStateCountService
+            CurrentStateCountService currentStateCountService,
+            ChangeDataCountService changeDataCountService
     ) {
         this.jobArguments = jobArguments;
         this.configService = configService;
         this.sourceReferenceService = sourceReferenceService;
         this.currentStateCountService = currentStateCountService;
+        this.changeDataCountService = changeDataCountService;
     }
 
-    public CurrentStateTotalCountResults reconcileData(SparkSession sparkSession) {
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(jobArguments.getConfigKey());
+    public DataReconciliationResults reconcileData(SparkSession sparkSession) {
+        String inputDomain = jobArguments.getConfigKey();
+        // TODO This needs to work for DPS as well as Nomis so sort out how taskId is configured
+        String dmsTaskId = format("dpr-dms-nomis-oracle-s3-%s-task-development", inputDomain);
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(inputDomain);
         List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
 
-        CurrentStateTotalCountResults results = new CurrentStateTotalCountResults();
-        allSourceReferences.forEach(sourceReference -> {
-            CurrentStateCountTableResult countResults = currentStateCountService.currentStateCounts(sparkSession, sourceReference);
-            results.put(sourceReference.getFullDatahubTableName(), countResults);
-        });
-        return results;
+        CurrentStateTotalCounts currentStateTotalCounts = currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
+        ChangeDataTotalCounts changeDataTotalCounts = changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+        return new DataReconciliationResults(currentStateTotalCounts, changeDataTotalCounts);
     }
 }
 

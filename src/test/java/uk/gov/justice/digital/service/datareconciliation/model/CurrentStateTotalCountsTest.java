@@ -4,31 +4,31 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CurrentStateTotalCountResultsTest {
+class CurrentStateTotalCountsTest {
 
     @Test
     void shouldGiveFailureIfAnyResultHasMismatchedCounts() {
-        CurrentStateTotalCountResults underTest = new CurrentStateTotalCountResults();
-        underTest.put("table1", new CurrentStateCountTableResult(1L, 1L, 1L, 1L));
-        underTest.put("table2", new CurrentStateCountTableResult(999L, 1L, 1L, 1L));
+        CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
+        underTest.put("table1", new CurrentStateTableCount(1L, 1L, 1L, 1L));
+        underTest.put("table2", new CurrentStateTableCount(999L, 1L, 1L, 1L));
 
         assertTrue(underTest.isFailure());
     }
 
     @Test
     void shouldGiveSuccessIfAllResultsHaveMatchedCounts() {
-        CurrentStateTotalCountResults underTest = new CurrentStateTotalCountResults();
-        underTest.put("table1", new CurrentStateCountTableResult(1L, 1L, 1L, 1L));
-        underTest.put("table2", new CurrentStateCountTableResult(2L, 2L, 2L));
+        CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
+        underTest.put("table1", new CurrentStateTableCount(1L, 1L, 1L, 1L));
+        underTest.put("table2", new CurrentStateTableCount(2L, 2L, 2L));
 
         assertFalse(underTest.isFailure());
     }
 
     @Test
     void shouldSummariseResults() {
-        CurrentStateTotalCountResults underTest = new CurrentStateTotalCountResults();
-        underTest.put("table1", new CurrentStateCountTableResult(1L, 1L, 1L, 1L));
-        underTest.put("table2", new CurrentStateCountTableResult(2L, 2L, 1L));
+        CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
+        underTest.put("table1", new CurrentStateTableCount(1L, 1L, 1L, 1L));
+        underTest.put("table2", new CurrentStateTableCount(2L, 2L, 1L));
 
         String expected = "Current State Count Results:\n" +
                 "For table table2:\n" +

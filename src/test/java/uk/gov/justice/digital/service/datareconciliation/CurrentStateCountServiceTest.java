@@ -13,7 +13,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.NomisDataAccessService;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateCountTableResult;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTableCount;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -57,7 +57,7 @@ class CurrentStateCountServiceTest {
     }
 
     @Test
-    void shouldGetCurrentStateCounts() {
+    void shouldGetCurrentStateCountForTable() {
         long oracleCount = 4L;
         long structuredCount = 3L;
         long curatedCount = 2L;
@@ -71,7 +71,7 @@ class CurrentStateCountServiceTest {
         when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference)).thenReturn(true);
         when(operationalDataStoreService.getTableRowCount("namespace.source_table")).thenReturn(odsCount);
 
-        CurrentStateCountTableResult result = underTest.currentStateCounts(sparkSession, sourceReference);
+        CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference);
 
         assertEquals(oracleCount, result.getNomisCount());
         assertEquals(structuredCount, result.getStructuredCount());
@@ -81,7 +81,7 @@ class CurrentStateCountServiceTest {
     }
 
     @Test
-    void shouldGetCurrentStateCountsWhenOperationalDataStoreIsDisabled() {
+    void shouldGetCurrentStateCountForTableWhenOperationalDataStoreIsDisabled() {
         long oracleCount = 4L;
         long structuredCount = 3L;
         long curatedCount = 2L;
@@ -92,7 +92,7 @@ class CurrentStateCountServiceTest {
 
         when(operationalDataStoreService.isEnabled()).thenReturn(false);
 
-        CurrentStateCountTableResult result = underTest.currentStateCounts(sparkSession, sourceReference);
+        CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference);
 
         assertEquals(oracleCount, result.getNomisCount());
         assertEquals(structuredCount, result.getStructuredCount());
@@ -101,7 +101,7 @@ class CurrentStateCountServiceTest {
     }
 
     @Test
-    void shouldGetCurrentStateCountsWhenOperationalDataStoreDoesNotManageTheTable() {
+    void shouldGetCurrentStateCountForTableWhenOperationalDataStoreDoesNotManageTheTable() {
         long oracleCount = 4L;
         long structuredCount = 3L;
         long curatedCount = 2L;
@@ -113,7 +113,7 @@ class CurrentStateCountServiceTest {
         when(operationalDataStoreService.isEnabled()).thenReturn(true);
         when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference)).thenReturn(false);
 
-        CurrentStateCountTableResult result = underTest.currentStateCounts(sparkSession, sourceReference);
+        CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference);
 
         assertEquals(oracleCount, result.getNomisCount());
         assertEquals(structuredCount, result.getStructuredCount());
