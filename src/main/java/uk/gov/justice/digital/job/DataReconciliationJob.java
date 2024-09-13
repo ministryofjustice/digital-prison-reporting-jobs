@@ -78,10 +78,10 @@ public class DataReconciliationJob implements Runnable {
         DataReconciliationResults results = dataReconciliationService.reconcileData(sparkSession);
         String resultSummary = results.summary();
         if (results.isFailure()) {
-            logger.error("Data reconciliation FAILED WITH DIFFERENCES:\n{}", resultSummary);
+            logger.error("Data reconciliation FAILED WITH DIFFERENCES:\n\n{}", resultSummary);
             System.exit(1);
         } else {
-            logger.info("Data reconciliation SUCCEEDED:\n{}", resultSummary);
+            logger.info("Data reconciliation SUCCEEDED:\n\n{}", resultSummary);
         }
     }
 

@@ -23,7 +23,12 @@ public class ChangeDataTotalCounts {
 
 
     public String summary() {
-        StringBuilder sb = new StringBuilder("Change Data Total Counts:\n");
+        StringBuilder sb = new StringBuilder("Change Data Total Counts ");
+        if (isFailure()) {
+            sb.append("DO NOT MATCH:\n");
+        } else {
+            sb.append("MATCH:\n");
+        }
 
         rawZoneCounts.entrySet().forEach(entry -> {
             // todo handle nulls
@@ -31,13 +36,18 @@ public class ChangeDataTotalCounts {
             ChangeDataTableRawZoneCount rawCount = entry.getValue();
             ChangeDataTableDmsCount dmsCount = dmsCounts.get(tableName);
 
-            sb.append("For table ").append(tableName).append(":\n");
+            sb.append("For table ").append(tableName);
+            if (rawCount.dmsCountsMatch(dmsCount)) {
+                sb.append(" MATCH:\n");
+            } else {
+                sb.append(" DOES NOT MATCH:\n");
+            }
 
-            sb.append("Inserts - ");
+            sb.append("\t").append("Inserts - ");
             addSummaryRow(sb, rawCount.getInsertCount(), dmsCount.getInsertCount(), dmsCount.getAppliedInsertCount());
-            sb.append("Updates - ");
+            sb.append("\t").append("Updates - ");
             addSummaryRow(sb, rawCount.getUpdateCount(), dmsCount.getUpdateCount(), dmsCount.getAppliedUpdateCount());
-            sb.append("Deletes - ");
+            sb.append("\t").append("Deletes - ");
             addSummaryRow(sb, rawCount.getDeleteCount(), dmsCount.getDeleteCount(), dmsCount.getAppliedDeleteCount());
         });
         return sb.toString();

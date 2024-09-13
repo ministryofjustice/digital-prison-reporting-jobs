@@ -26,13 +26,18 @@ public class CurrentStateTotalCounts {
     }
 
     public String summary() {
-        StringBuilder sb = new StringBuilder("Current State Total Counts:\n");
+        StringBuilder sb = new StringBuilder("Current State Total Counts ");
+        if (isFailure()) {
+            sb.append("DO NOT MATCH:\n");
+        } else {
+            sb.append("MATCH:\n");
+        }
 
         for (val entrySet: tableToResult.entrySet()) {
             val tableName = entrySet.getKey();
             val currentStateCountTableResult = entrySet.getValue();
             sb.append("For table ").append(tableName).append(":\n");
-            sb.append(currentStateCountTableResult.summary()).append("\n");
+            sb.append("\t").append(currentStateCountTableResult.summary()).append("\n");
         }
 
         return sb.toString();
