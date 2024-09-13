@@ -62,7 +62,12 @@ public class ChangeDataCountService {
     private static CountsByTable<ChangeDataTableDmsCount> toDmsChangeDataCounts(List<TableStatistics> dmsTableStatistics) {
         CountsByTable<ChangeDataTableDmsCount> totalCounts = new CountsByTable<>();
         dmsTableStatistics.forEach(tableStatistics -> {
-            String fullTableName = format("%s/%s", tableStatistics.getSchemaName(), tableStatistics.getTableName());
+            String schemaName = tableStatistics.getSchemaName();
+            if (!"OMS_OWNER".equals(schemaName)) {
+                // Only OMS_OWNER is supported for now
+                throw new UnsupportedOperationException("Unsupported table statistics schema: " + schemaName);
+            }
+            String fullTableName = format("%s.%s", "nomis", tableStatistics.getTableName().toLowerCase());
 
             Long insertCount = tableStatistics.getInserts();
             Long updateCount = tableStatistics.getUpdates();
