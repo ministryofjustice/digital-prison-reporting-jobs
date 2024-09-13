@@ -3,6 +3,7 @@ package uk.gov.justice.digital.service.datareconciliation;
 import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -95,21 +96,35 @@ public class ChangeDataCountService {
         String rawPath = jobArguments.getRawS3Path();
 
         String rawTablePath = tablePath(rawPath, sourceReference.getSource(), sourceReference.getTable());
-        Dataset<Row> raw = s3DataProvider.getBatchSourceData(sparkSession, rawTablePath);
-        List<Row> countsByOperation = raw.groupBy(OPERATION).count().collectAsList();
-        countsByOperation.forEach(row -> {
-            String operation = row.getString(0);
-            long count = row.getLong(1);
-            if (Insert.getName().equals(operation)) {
-                result.setInsertCount(count);
-            } else if (Update.getName().equals(operation)) {
-                result.setUpdateCount(count);
-            } else if (Delete.getName().equals(operation)) {
-                result.setDeleteCount(count);
+        try {
+            Dataset<Row> raw = s3DataProvider.getBatchSourceData(sparkSession, rawTablePath);
+            List<Row> countsByOperation = raw.groupBy(OPERATION).count().collectAsList();
+            countsByOperation.forEach(row -> {
+                String operation = row.getString(0);
+                long count = row.getLong(1);
+                if (Insert.getName().equals(operation)) {
+                    result.setInsertCount(count);
+                } else if (Update.getName().equals(operation)) {
+                    result.setUpdateCount(count);
+                } else if (Delete.getName().equals(operation)) {
+                    result.setDeleteCount(count);
+                } else {
+                    logger.error("{} is not a known Operation", operation);
+                }
+            });
+        } catch (Exception e) {
+            //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch
+            //  because the Java compiler will complain that AnalysisException isn't declared as thrown due to Scala trickery.
+            if (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) {
+                logger.warn("Raw table does not exist at {}", rawTablePath, e);
+                result.setInsertCount(0L);
+                result.setUpdateCount(0L);
+                result.setDeleteCount(0L);
             } else {
-                logger.error("{} is not a known Operation", operation);
+                throw e;
             }
-        });
+
+        }
         return result;
     }
 }
