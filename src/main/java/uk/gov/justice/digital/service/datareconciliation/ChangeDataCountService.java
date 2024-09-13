@@ -53,6 +53,7 @@ public class ChangeDataCountService {
     }
 
     private CountsByTable<ChangeDataTableDmsCount> dmsChangeDataCounts(String dmsTaskId) {
+        logger.info("Getting DMS counts by operation for DMS Task ID {}", dmsTaskId);
         List<TableStatistics> dmsTableStatistics = dmsClient.getReplicationTaskTableStatistics(dmsTaskId);
         return toDmsChangeDataCounts(dmsTableStatistics);
     }
@@ -82,6 +83,7 @@ public class ChangeDataCountService {
         CountsByTable<ChangeDataTableRawZoneCount> totalCounts = new CountsByTable<>();
         sourceReferences.forEach(sourceReference -> {
             String tableName = sourceReference.getFullDatahubTableName();
+            logger.info("Getting raw zone counts by operation for table {}", tableName);
             ChangeDataTableRawZoneCount singleTableCount = rawZoneCountForTable(sparkSession, sourceReference);
             totalCounts.put(tableName, singleTableCount);
         });

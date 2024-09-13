@@ -5,6 +5,8 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.SparkSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
@@ -23,6 +25,8 @@ import static java.lang.String.format;
  */
 @Singleton
 public class DataReconciliationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataReconciliationService.class);
 
     private final JobArguments jobArguments;
     private final ConfigService configService;
@@ -49,6 +53,9 @@ public class DataReconciliationService {
         String inputDomain = jobArguments.getConfigKey();
         // TODO This needs to work for DPS as well as Nomis so sort out how taskId is configured
         String dmsTaskId = format("dpr-dms-nomis-oracle-s3-%s-task-development", inputDomain);
+
+        logger.info("Reconciling with input domain: {}, DMS Task ID: {}", inputDomain, dmsTaskId);
+
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(inputDomain);
         List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
 
