@@ -6,10 +6,10 @@ import java.util.Set;
 
 public class CountsByTable<V> {
 
-    private final Map<String, V> countsByTable = new HashMap<>();
+    private final Map<String, V> underlyingMap = new HashMap<>();
 
     public void put(String fullTableName, V tableCount) {
-        countsByTable.put(fullTableName, tableCount);
+        underlyingMap.put(fullTableName, tableCount);
     }
 
     /**
@@ -17,14 +17,14 @@ public class CountsByTable<V> {
      *  {@code null} if this map contains no mapping for the key
      */
     public V get(String fullTableName) {
-        return countsByTable.get(fullTableName);
+        return underlyingMap.get(fullTableName);
     }
 
     public Set<Map.Entry<String, V>> entrySet() {
-        return countsByTable.entrySet();
+        return underlyingMap.entrySet();
     }
 
     public Set<String> keySet() {
-        return countsByTable.keySet();
+        return underlyingMap.keySet();
     }
 }

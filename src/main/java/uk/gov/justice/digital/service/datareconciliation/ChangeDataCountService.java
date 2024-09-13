@@ -110,8 +110,6 @@ public class ChangeDataCountService {
                 logger.error("{} is not a known Operation", operation);
             }
         });
-
-        logger.info(result.summary());
         return result;
     }
 }

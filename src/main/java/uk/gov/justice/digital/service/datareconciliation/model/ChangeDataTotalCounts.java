@@ -34,32 +34,22 @@ public class ChangeDataTotalCounts {
             sb.append("For table ").append(tableName).append(":\n");
 
             sb.append("Inserts - ");
-            sb.append("Raw: ");
-            sb.append(rawCount.getInsertCount());
-            sb.append(", DMS read: ");
-            sb.append(dmsCount.getInsertCount());
-            sb.append(", DMS applied: ");
-            sb.append(dmsCount.getAppliedInsertCount());
-            sb.append("\n");
-
+            addSummaryRow(sb, rawCount.getInsertCount(), dmsCount.getInsertCount(), dmsCount.getAppliedInsertCount());
             sb.append("Updates - ");
-            sb.append("Raw: ");
-            sb.append(rawCount.getUpdateCount());
-            sb.append(", DMS read: ");
-            sb.append(dmsCount.getUpdateCount());
-            sb.append(", DMS applied: ");
-            sb.append(dmsCount.getAppliedUpdateCount());
-            sb.append("\n");
-
+            addSummaryRow(sb, rawCount.getUpdateCount(), dmsCount.getUpdateCount(), dmsCount.getAppliedUpdateCount());
             sb.append("Deletes - ");
-            sb.append("Raw: ");
-            sb.append(rawCount.getDeleteCount());
-            sb.append(", DMS read: ");
-            sb.append(dmsCount.getDeleteCount());
-            sb.append(", DMS applied: ");
-            sb.append(dmsCount.getAppliedDeleteCount());
-            sb.append("\n");
+            addSummaryRow(sb, rawCount.getDeleteCount(), dmsCount.getDeleteCount(), dmsCount.getAppliedDeleteCount());
         });
         return sb.toString();
+    }
+
+    private void addSummaryRow(StringBuilder sb, long rawCount, long dmsCount, long appliedDmsCount) {
+        sb.append("Raw: ");
+        sb.append(rawCount);
+        sb.append(", DMS: ");
+        sb.append(dmsCount);
+        sb.append(", DMS applied: ");
+        sb.append(appliedDmsCount);
+        sb.append("\n");
     }
 }
