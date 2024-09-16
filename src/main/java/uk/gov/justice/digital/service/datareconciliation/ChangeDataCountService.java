@@ -49,7 +49,7 @@ public class ChangeDataCountService {
 
     ChangeDataTotalCounts changeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences, String dmsTaskId) {
         CountsByTable<ChangeDataTableDmsCount> dmsCounts = dmsChangeDataCounts(dmsTaskId);
-        CountsByTable<ChangeDataTableRawZoneCount> rawCounts = rawZoneChangeDataCounts(sparkSession, sourceReferences);
+        CountsByTable<ChangeDataTableRawZoneCount> rawCounts = rawZoneAndRawArchiveChangeDataCounts(sparkSession, sourceReferences);
         return new ChangeDataTotalCounts(rawCounts, dmsCounts);
     }
 
@@ -85,22 +85,24 @@ public class ChangeDataCountService {
         return totalCounts;
     }
 
-    private CountsByTable<ChangeDataTableRawZoneCount> rawZoneChangeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
+    private CountsByTable<ChangeDataTableRawZoneCount> rawZoneAndRawArchiveChangeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
         CountsByTable<ChangeDataTableRawZoneCount> totalCounts = new CountsByTable<>();
         sourceReferences.forEach(sourceReference -> {
             String tableName = sourceReference.getFullDatahubTableName();
             logger.info("Getting raw zone counts by operation for table {}", tableName);
-            ChangeDataTableRawZoneCount singleTableCount = rawZoneCountForTable(sparkSession, sourceReference);
+            ChangeDataTableRawZoneCount rawZoneCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawS3Path());
+            logger.info("Getting raw zone archive counts by operation for table {}", tableName);
+            ChangeDataTableRawZoneCount rawArchiveCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawArchiveS3Path());
+            ChangeDataTableRawZoneCount singleTableCount = rawZoneCount.combineCounts(rawArchiveCount);
             totalCounts.put(tableName, singleTableCount);
         });
         return totalCounts;
     }
 
-    private ChangeDataTableRawZoneCount rawZoneCountForTable(SparkSession sparkSession, SourceReference sourceReference) {
+    private ChangeDataTableRawZoneCount changeDataCountsForTable(SparkSession sparkSession, SourceReference sourceReference, String s3Path) {
         ChangeDataTableRawZoneCount result = new ChangeDataTableRawZoneCount();
-        String rawPath = jobArguments.getRawS3Path();
 
-        String rawTablePath = tablePath(rawPath, sourceReference.getSource(), sourceReference.getTable());
+        String rawTablePath = tablePath(s3Path, sourceReference.getSource(), sourceReference.getTable());
         try {
             Dataset<Row> raw = s3DataProvider.getBatchSourceData(sparkSession, rawTablePath);
             List<Row> countsByOperation = raw.groupBy(OPERATION).count().collectAsList();
