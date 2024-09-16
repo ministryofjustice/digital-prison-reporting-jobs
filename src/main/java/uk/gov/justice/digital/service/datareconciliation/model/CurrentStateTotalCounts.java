@@ -1,10 +1,14 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.val;
 
 /**
  * Represents the results of running the total counts data reconciliation for the "current state" data in DataHub
  */
+@EqualsAndHashCode
+@ToString
 public class CurrentStateTotalCounts {
 
     private final CountsByTable<CurrentStateTableCount> tableToResult = new CountsByTable<>();

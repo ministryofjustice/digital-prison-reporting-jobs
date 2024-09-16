@@ -1,12 +1,12 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
-import lombok.Getter;
+import lombok.Data;
 
 /**
  * Represents the results of running the total counts data reconciliation for a single "current state" table in DataHub
  * replicated across multiple datastores
  */
-@Getter
+@Data
 public class CurrentStateTableCount {
     private final long nomisCount;
     private final long structuredCount;

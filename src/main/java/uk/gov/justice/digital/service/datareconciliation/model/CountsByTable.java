@@ -1,9 +1,14 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+@EqualsAndHashCode
+@ToString
 public class CountsByTable<V> {
 
     private final Map<String, V> underlyingMap = new HashMap<>();

@@ -84,4 +84,27 @@ class CurrentStateTableCountTest {
         assertEquals(expected, underTest.summary());
     }
 
+    @Test
+    void shouldBeEqualToAnotherWithSameValues() {
+        CurrentStateTableCount underTest1 = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+        CurrentStateTableCount underTest2 = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+
+        assertEquals(underTest1, underTest2);
+    }
+
+    @Test
+    void shouldBeEqualToAnotherWithSameValuesNoODSCount() {
+        CurrentStateTableCount underTest1 = new CurrentStateTableCount(1L, 1L, 1L);
+        CurrentStateTableCount underTest2 = new CurrentStateTableCount(1L, 1L, 1L);
+
+        assertEquals(underTest1, underTest2);
+    }
+
+    @Test
+    void shouldNotBeEqualToAnotherWithDifferentValues() {
+        CurrentStateTableCount underTest1 = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+        CurrentStateTableCount underTest2 = new CurrentStateTableCount(1L, 1L, 1L);
+
+        assertNotEquals(underTest1, underTest2);
+    }
 }

@@ -49,53 +49,63 @@ public class ChangeDataCountService {
 
     ChangeDataTotalCounts changeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences, String dmsTaskId) {
         CountsByTable<ChangeDataTableDmsCount> dmsCounts = dmsChangeDataCounts(dmsTaskId);
-        CountsByTable<ChangeDataTableRawZoneCount> rawCounts = rawZoneAndRawArchiveChangeDataCounts(sparkSession, sourceReferences);
+        CountsByTable<ChangeDataTableRawZoneCount> rawCounts = rawArchiveChangeDataCounts(sparkSession, sourceReferences);
         return new ChangeDataTotalCounts(rawCounts, dmsCounts);
     }
 
     private CountsByTable<ChangeDataTableDmsCount> dmsChangeDataCounts(String dmsTaskId) {
         logger.info("Getting DMS counts by operation for DMS Task ID {}", dmsTaskId);
         List<TableStatistics> dmsTableStatistics = dmsClient.getReplicationTaskTableStatistics(dmsTaskId);
-        return toDmsChangeDataCounts(dmsTableStatistics);
+        CountsByTable<ChangeDataTableDmsCount> dmsChangeDataCounts = toDmsChangeDataCounts(dmsTableStatistics);
+        logger.info("Finished getting DMS counts by operation for DMS Task ID {}", dmsTaskId);
+        return dmsChangeDataCounts;
     }
 
     private static CountsByTable<ChangeDataTableDmsCount> toDmsChangeDataCounts(List<TableStatistics> dmsTableStatistics) {
         CountsByTable<ChangeDataTableDmsCount> totalCounts = new CountsByTable<>();
         dmsTableStatistics.forEach(tableStatistics -> {
             String schemaName = tableStatistics.getSchemaName();
+            // TODO: Must support DPS sources
+            //    - need to get the 1st part of the table name from SourceReference / contract's service field
             if (!"OMS_OWNER".equals(schemaName)) {
                 // Only OMS_OWNER is supported for now
                 throw new UnsupportedOperationException("Unsupported table statistics schema: " + schemaName);
             }
             String fullTableName = format("%s.%s", "nomis", tableStatistics.getTableName().toLowerCase());
 
-            Long insertCount = tableStatistics.getInserts();
-            Long updateCount = tableStatistics.getUpdates();
-            Long deleteCount = tableStatistics.getDeletes();
-
-            Long appliedInsertCount = tableStatistics.getAppliedInserts();
-            Long appliedUpdateCount = tableStatistics.getAppliedUpdates();
-            Long appliedDeleteCount = tableStatistics.getAppliedDeletes();
-
-            ChangeDataTableDmsCount tableResult = new ChangeDataTableDmsCount(
-                    insertCount, updateCount, deleteCount, appliedInsertCount, appliedUpdateCount, appliedDeleteCount
-            );
+            ChangeDataTableDmsCount tableResult = convertToChangeDataTableDmsCount(tableStatistics);
             totalCounts.put(fullTableName, tableResult);
         });
         return totalCounts;
     }
 
-    private CountsByTable<ChangeDataTableRawZoneCount> rawZoneAndRawArchiveChangeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
+    private static ChangeDataTableDmsCount convertToChangeDataTableDmsCount(TableStatistics tableStatistics) {
+        Long insertCount = tableStatistics.getInserts();
+        Long updateCount = tableStatistics.getUpdates();
+        Long deleteCount = tableStatistics.getDeletes();
+
+        Long appliedInsertCount = tableStatistics.getAppliedInserts();
+        Long appliedUpdateCount = tableStatistics.getAppliedUpdates();
+        Long appliedDeleteCount = tableStatistics.getAppliedDeletes();
+
+        return new ChangeDataTableDmsCount(
+                insertCount, updateCount, deleteCount, appliedInsertCount, appliedUpdateCount, appliedDeleteCount
+        );
+    }
+
+    private CountsByTable<ChangeDataTableRawZoneCount> rawArchiveChangeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
+        logger.info("Getting raw zone and raw archive counts by operation");
         CountsByTable<ChangeDataTableRawZoneCount> totalCounts = new CountsByTable<>();
         sourceReferences.forEach(sourceReference -> {
             String tableName = sourceReference.getFullDatahubTableName();
-            logger.info("Getting raw zone counts by operation for table {}", tableName);
+            logger.debug("Getting raw zone counts by operation for table {}", tableName);
             ChangeDataTableRawZoneCount rawZoneCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawS3Path());
-            logger.info("Getting raw zone archive counts by operation for table {}", tableName);
+            logger.debug("Getting raw zone archive counts by operation for table {}", tableName);
             ChangeDataTableRawZoneCount rawArchiveCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawArchiveS3Path());
             ChangeDataTableRawZoneCount singleTableCount = rawZoneCount.combineCounts(rawArchiveCount);
             totalCounts.put(tableName, singleTableCount);
         });
+        logger.info("Finished getting raw zone and raw archive counts by operation");
         return totalCounts;
     }
 
@@ -106,6 +116,7 @@ public class ChangeDataCountService {
         try {
             Dataset<Row> raw = s3DataProvider.getBatchSourceData(sparkSession, rawTablePath);
             List<Row> countsByOperation = raw.groupBy(OPERATION).count().collectAsList();
+            // Counts default to zero unless we find a count for that operation below
             countsByOperation.forEach(row -> {
                 String operation = row.getString(0);
                 long count = row.getLong(1);
@@ -123,7 +134,7 @@ public class ChangeDataCountService {
             //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch
             //  because the Java compiler will complain that AnalysisException isn't declared as thrown due to Scala trickery.
             if (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) {
-                logger.warn("Raw table does not exist at {}", rawTablePath, e);
+                logger.warn("Table does not exist at {} so will set counts to zero", rawTablePath, e);
                 result.setInsertCount(0L);
                 result.setUpdateCount(0L);
                 result.setDeleteCount(0L);
