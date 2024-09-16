@@ -2,9 +2,12 @@ package uk.gov.justice.digital.job;
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus;
 import org.apache.spark.sql.SparkSession;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -15,13 +18,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class DataReconciliationJobTest {
     @Mock
     private JobProperties properties;
     @Mock
     private JobArguments jobArguments;
-    @Mock
-    private SparkSessionProvider sparkSessionProvider;
     @Mock
     private DataReconciliationService dataReconciliationService;
     @Mock
@@ -29,8 +31,12 @@ class DataReconciliationJobTest {
     @Mock
     private DataReconciliationResults results;
 
-    @InjectMocks
     private DataReconciliationJob underTest;
+
+    @BeforeEach
+    void setUp() {
+        underTest = new DataReconciliationJob(properties, jobArguments, new SparkSessionProvider(), dataReconciliationService);
+    }
 
     @Test
     void runJobShouldReconcileData() {
