@@ -14,8 +14,7 @@ public class ChangeDataTotalCounts {
     private final Map<String, ChangeDataTableCount> dmsAppliedCounts;
 
     public boolean countsMatch() {
-        boolean rawCountsMatchDmsCounts = rawCountsMatchDmsCounts();
-        return sameTables() && rawCountsMatchDmsCounts;
+        return sameTables() && rawCountsMatchDmsCounts();
     }
 
     public String summary() {

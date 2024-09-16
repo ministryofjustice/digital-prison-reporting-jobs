@@ -11,28 +11,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CurrentStateTotalCountsTest {
 
     @Test
-    void shouldGiveFailureIfAnyResultHasMismatchedCounts() {
+    void countsShouldNotMatchIfAnyResultHasMismatchedCounts() {
         // Exhaustive testing of different cases is included in the tests for CurrentStateTableCount
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
         underTest.put("table1", new CurrentStateTableCount(1L, 1L, 1L, 1L));
         underTest.put("table2", new CurrentStateTableCount(999L, 1L, 1L, 1L));
 
-        assertTrue(underTest.isFailure());
+        assertFalse(underTest.countsMatch());
     }
 
     @Test
-    void shouldGiveSuccessIfAllResultsHaveMatchedCounts() {
+    void countsShouldMatchIfAllResultsHaveMatchedCounts() {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
         underTest.put("table1", new CurrentStateTableCount(1L, 1L, 1L, 1L));
         underTest.put("table2", new CurrentStateTableCount(2L, 2L, 2L));
 
-        assertFalse(underTest.isFailure());
+        assertTrue(underTest.countsMatch());
     }
 
     @Test
-    void shouldGiveSuccessIfThereAreNoCounts() {
+    void countsShouldMatchIfThereAreNoCounts() {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
-        assertFalse(underTest.isFailure());
+        assertTrue(underTest.countsMatch());
     }
 
     @Test
@@ -43,9 +43,9 @@ class CurrentStateTotalCountsTest {
 
         String expected = "Current State Total Counts DO NOT MATCH:\n" +
                 "For table table2:\n" +
-                "\tMISMATCH: Nomis: 2, Structured Zone: 2, Curated Zone: 1, Operational DataStore: skipped\n" +
+                "\tNomis: 2, Structured Zone: 2, Curated Zone: 1, Operational DataStore: skipped\t - MISMATCH\n" +
                 "For table table1:\n" +
-                "\t   MATCH: Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\n";
+                "\tNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
         assertEquals(expected, underTest.summary());
     }
 
@@ -57,9 +57,9 @@ class CurrentStateTotalCountsTest {
 
         String expected = "Current State Total Counts MATCH:\n" +
                 "For table table2:\n" +
-                "\t   MATCH: Nomis: 2, Structured Zone: 2, Curated Zone: 2, Operational DataStore: skipped\n" +
+                "\tNomis: 2, Structured Zone: 2, Curated Zone: 2, Operational DataStore: skipped\t - MATCH\n" +
                 "For table table1:\n" +
-                "\t   MATCH: Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\n";
+                "\tNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
         assertEquals(expected, underTest.summary());
     }
 

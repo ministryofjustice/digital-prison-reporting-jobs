@@ -4,6 +4,9 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.val;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Represents the results of running the total counts data reconciliation for the "current state" data in DataHub
  */
@@ -11,7 +14,7 @@ import lombok.val;
 @ToString
 public class CurrentStateTotalCounts {
 
-    private final CountsByTable<CurrentStateTableCount> tableToResult = new CountsByTable<>();
+    private final Map<String, CurrentStateTableCount> tableToResult = new HashMap<>();
 
     public void put(String fullTableName, CurrentStateTableCount currentStateTableCount) {
         tableToResult.put(fullTableName, currentStateTableCount);
@@ -25,17 +28,16 @@ public class CurrentStateTotalCounts {
         return tableToResult.get(fullTableName);
     }
 
-    // todo replace with countsMatch
-    public boolean isFailure() {
-        return tableToResult.entrySet().stream().anyMatch(entry -> !entry.getValue().countsMatch());
+    public boolean countsMatch() {
+        return tableToResult.values().stream().allMatch(CurrentStateTableCount::countsMatch);
     }
 
     public String summary() {
         StringBuilder sb = new StringBuilder("Current State Total Counts ");
-        if (isFailure()) {
-            sb.append("DO NOT MATCH:\n");
-        } else {
+        if (countsMatch()) {
             sb.append("MATCH:\n");
+        } else {
+            sb.append("DO NOT MATCH:\n");
         }
 
         for (val entrySet: tableToResult.entrySet()) {
