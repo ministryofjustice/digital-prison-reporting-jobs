@@ -18,7 +18,7 @@ public class DataReconciliationResults {
 
     public boolean isFailure() {
         // TODO: test
-        return currentStateTotalCounts.isFailure() || changeDataTotalCounts.isFailure();
+        return currentStateTotalCounts.isFailure() || !changeDataTotalCounts.countsMatch();
     }
 
     public String summary() {

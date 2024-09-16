@@ -59,28 +59,28 @@ class CurrentStateTableCountTest {
     @Test
     void shouldProvideSummaryWhenCountsMatch() {
         CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 1L, 1L, 1L);
-        String expected = "   MATCH: Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1";
+        String expected = "MATCH:\nNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1";
         assertEquals(expected, underTest.summary());
     }
 
     @Test
     void shouldProvideSummaryWhenCountsMatchWithDisabledODS() {
         CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 1L, 1L);
-        String expected = "   MATCH: Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped";
+        String expected = "MATCH:\nNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped";
         assertEquals(expected, underTest.summary());
     }
 
     @Test
     void shouldProvideSummaryWhenCountsDoNotMatch() {
         CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 2L, 1L, 1L);
-        String expected = "MISMATCH: Nomis: 1, Structured Zone: 2, Curated Zone: 1, Operational DataStore: 1";
+        String expected = "MISMATCH:\nNomis: 1, Structured Zone: 2, Curated Zone: 1, Operational DataStore: 1";
         assertEquals(expected, underTest.summary());
     }
 
     @Test
     void shouldProvideSummaryWhenCountsDoNotMatchWithDisabledODS() {
         CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 2L, 3L);
-        String expected = "MISMATCH: Nomis: 1, Structured Zone: 2, Curated Zone: 3, Operational DataStore: skipped";
+        String expected = "MISMATCH:\nNomis: 1, Structured Zone: 2, Curated Zone: 3, Operational DataStore: skipped";
         assertEquals(expected, underTest.summary());
     }
 

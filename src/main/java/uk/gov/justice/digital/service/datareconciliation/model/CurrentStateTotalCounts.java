@@ -25,6 +25,7 @@ public class CurrentStateTotalCounts {
         return tableToResult.get(fullTableName);
     }
 
+    // todo replace with countsMatch
     public boolean isFailure() {
         return tableToResult.entrySet().stream().anyMatch(entry -> !entry.getValue().countsMatch());
     }

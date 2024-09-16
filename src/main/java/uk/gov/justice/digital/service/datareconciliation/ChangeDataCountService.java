@@ -13,12 +13,12 @@ import uk.gov.justice.digital.client.dms.DmsClient;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableDmsCount;
-import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableRawZoneCount;
+import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCounts;
-import uk.gov.justice.digital.service.datareconciliation.model.CountsByTable;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.lang.String.format;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
@@ -48,21 +48,17 @@ public class ChangeDataCountService {
     }
 
     ChangeDataTotalCounts changeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences, String dmsTaskId) {
-        CountsByTable<ChangeDataTableDmsCount> dmsCounts = dmsChangeDataCounts(dmsTaskId);
-        CountsByTable<ChangeDataTableRawZoneCount> rawCounts = rawArchiveChangeDataCounts(sparkSession, sourceReferences);
-        return new ChangeDataTotalCounts(rawCounts, dmsCounts);
-    }
-
-    private CountsByTable<ChangeDataTableDmsCount> dmsChangeDataCounts(String dmsTaskId) {
         logger.info("Getting DMS counts by operation for DMS Task ID {}", dmsTaskId);
         List<TableStatistics> dmsTableStatistics = dmsClient.getReplicationTaskTableStatistics(dmsTaskId);
-        CountsByTable<ChangeDataTableDmsCount> dmsChangeDataCounts = toDmsChangeDataCounts(dmsTableStatistics);
         logger.info("Finished getting DMS counts by operation for DMS Task ID {}", dmsTaskId);
-        return dmsChangeDataCounts;
+        Map<String, ChangeDataTableCount> dmsReadChangeDataCounts = toDmsReadChangeDataCounts(dmsTableStatistics);
+        Map<String, ChangeDataTableCount> dmsAppliedChangeDataCounts = toDmsAppliedChangeDataCounts(dmsTableStatistics);
+        Map<String, ChangeDataTableCount> rawCounts = rawArchiveChangeDataCounts(sparkSession, sourceReferences);
+        return new ChangeDataTotalCounts(rawCounts, dmsReadChangeDataCounts, dmsAppliedChangeDataCounts);
     }
 
-    private static CountsByTable<ChangeDataTableDmsCount> toDmsChangeDataCounts(List<TableStatistics> dmsTableStatistics) {
-        CountsByTable<ChangeDataTableDmsCount> totalCounts = new CountsByTable<>();
+    private static Map<String, ChangeDataTableCount> toDmsReadChangeDataCounts(List<TableStatistics> dmsTableStatistics) {
+        Map<String, ChangeDataTableCount> tableToReadCounts = new HashMap<>();
         dmsTableStatistics.forEach(tableStatistics -> {
             String schemaName = tableStatistics.getSchemaName();
             // TODO: Must support DPS sources
@@ -73,44 +69,64 @@ public class ChangeDataCountService {
             }
             String fullTableName = format("%s.%s", "nomis", tableStatistics.getTableName().toLowerCase());
 
-            ChangeDataTableDmsCount tableResult = convertToChangeDataTableDmsCount(tableStatistics);
-            totalCounts.put(fullTableName, tableResult);
+            ChangeDataTableCount readCounts = convertToReadChangeDataTableCount(tableStatistics);
+            tableToReadCounts.put(fullTableName, readCounts);
         });
-        return totalCounts;
+        return tableToReadCounts;
     }
 
-    private static ChangeDataTableDmsCount convertToChangeDataTableDmsCount(TableStatistics tableStatistics) {
+    private static Map<String, ChangeDataTableCount> toDmsAppliedChangeDataCounts(List<TableStatistics> dmsTableStatistics) {
+        Map<String, ChangeDataTableCount> tableToAppliedCounts = new HashMap<>();
+        dmsTableStatistics.forEach(tableStatistics -> {
+            String schemaName = tableStatistics.getSchemaName();
+            // TODO: Must support DPS sources
+            //    - need to get the 1st part of the table name from SourceReference / contract's service field
+            if (!"OMS_OWNER".equals(schemaName)) {
+                // Only OMS_OWNER is supported for now
+                throw new UnsupportedOperationException("Unsupported table statistics schema: " + schemaName);
+            }
+            String fullTableName = format("%s.%s", "nomis", tableStatistics.getTableName().toLowerCase());
+
+            ChangeDataTableCount appliedCounts = convertToAppliedChangeDataTableCount(tableStatistics);
+            tableToAppliedCounts.put(fullTableName, appliedCounts);
+        });
+        return tableToAppliedCounts;
+    }
+
+    private static ChangeDataTableCount convertToReadChangeDataTableCount(TableStatistics tableStatistics) {
         Long insertCount = tableStatistics.getInserts();
         Long updateCount = tableStatistics.getUpdates();
         Long deleteCount = tableStatistics.getDeletes();
 
+        return new ChangeDataTableCount(insertCount, updateCount, deleteCount);
+    }
+
+    private static ChangeDataTableCount convertToAppliedChangeDataTableCount(TableStatistics tableStatistics) {
         Long appliedInsertCount = tableStatistics.getAppliedInserts();
         Long appliedUpdateCount = tableStatistics.getAppliedUpdates();
         Long appliedDeleteCount = tableStatistics.getAppliedDeletes();
 
-        return new ChangeDataTableDmsCount(
-                insertCount, updateCount, deleteCount, appliedInsertCount, appliedUpdateCount, appliedDeleteCount
-        );
+        return new ChangeDataTableCount(appliedInsertCount, appliedUpdateCount, appliedDeleteCount);
     }
 
-    private CountsByTable<ChangeDataTableRawZoneCount> rawArchiveChangeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
+    private Map<String, ChangeDataTableCount> rawArchiveChangeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
         logger.info("Getting raw zone and raw archive counts by operation");
-        CountsByTable<ChangeDataTableRawZoneCount> totalCounts = new CountsByTable<>();
+        Map<String, ChangeDataTableCount> totalCounts = new HashMap<>();
         sourceReferences.forEach(sourceReference -> {
             String tableName = sourceReference.getFullDatahubTableName();
             logger.debug("Getting raw zone counts by operation for table {}", tableName);
-            ChangeDataTableRawZoneCount rawZoneCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawS3Path());
+            ChangeDataTableCount rawZoneCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawS3Path());
             logger.debug("Getting raw zone archive counts by operation for table {}", tableName);
-            ChangeDataTableRawZoneCount rawArchiveCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawArchiveS3Path());
-            ChangeDataTableRawZoneCount singleTableCount = rawZoneCount.combineCounts(rawArchiveCount);
+            ChangeDataTableCount rawArchiveCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawArchiveS3Path());
+            ChangeDataTableCount singleTableCount = rawZoneCount.combineCounts(rawArchiveCount);
             totalCounts.put(tableName, singleTableCount);
         });
         logger.info("Finished getting raw zone and raw archive counts by operation");
         return totalCounts;
     }
 
-    private ChangeDataTableRawZoneCount changeDataCountsForTable(SparkSession sparkSession, SourceReference sourceReference, String s3Path) {
-        ChangeDataTableRawZoneCount result = new ChangeDataTableRawZoneCount();
+    private ChangeDataTableCount changeDataCountsForTable(SparkSession sparkSession, SourceReference sourceReference, String s3Path) {
+        ChangeDataTableCount result = new ChangeDataTableCount();
 
         String rawTablePath = tablePath(s3Path, sourceReference.getSource(), sourceReference.getTable());
         try {
