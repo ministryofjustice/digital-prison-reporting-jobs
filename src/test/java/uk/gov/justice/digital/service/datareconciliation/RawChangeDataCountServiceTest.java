@@ -36,8 +36,8 @@ import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestam
 @ExtendWith(MockitoExtension.class)
 class RawChangeDataCountServiceTest extends BaseSparkTest {
 
-    private static final String rawPath = "s3://raw-bucket/";
-    private static final String rawArchivePath = "s3://raw-archive-bucket/";
+    private static final String RAW_PATH = "s3://raw-bucket/";
+    private static final String RAW_ARCHIVE_PATH = "s3://raw-archive-bucket/";
     private static final SourceReference sourceReference1 = new SourceReference(
             "key",
             "namespace",
@@ -71,14 +71,14 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
 
     @Test
     void shouldCombineRawAndRawArchiveCountsByOperation() {
-        when(jobArguments.getRawS3Path()).thenReturn(rawPath);
-        when(jobArguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
+        when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
+        when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
 
-        when(s3DataProvider.getBatchSourceData(spark, rawPath + "source/table1")).thenReturn(inserts(spark));
-        when(s3DataProvider.getBatchSourceData(spark, rawArchivePath + "source/table1")).thenReturn(rowPerPkDfSameTimestamp(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenReturn(inserts(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1")).thenReturn(rowPerPkDfSameTimestamp(spark));
 
-        when(s3DataProvider.getBatchSourceData(spark, rawPath + "source/table2")).thenReturn(manyRowsPerPkDfSameTimestamp(spark));
-        when(s3DataProvider.getBatchSourceData(spark, rawArchivePath + "source/table2")).thenReturn(manyRowsPerPkDfSameTimestamp(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table2")).thenReturn(manyRowsPerPkDfSameTimestamp(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table2")).thenReturn(manyRowsPerPkDfSameTimestamp(spark));
 
         List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);
@@ -89,22 +89,22 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
 
         assertEquals(expectedResult, result);
 
-        verify(s3DataProvider, times(1)).getBatchSourceData(spark, rawPath + "source/table1");
-        verify(s3DataProvider, times(1)).getBatchSourceData(spark, rawArchivePath + "source/table1");
-        verify(s3DataProvider, times(1)).getBatchSourceData(spark, rawPath + "source/table2");
-        verify(s3DataProvider, times(1)).getBatchSourceData(spark, rawArchivePath + "source/table2");
+        verify(s3DataProvider, times(1)).getBatchSourceData(spark, RAW_PATH + "source/table1");
+        verify(s3DataProvider, times(1)).getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1");
+        verify(s3DataProvider, times(1)).getBatchSourceData(spark, RAW_PATH + "source/table2");
+        verify(s3DataProvider, times(1)).getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table2");
     }
 
     @Test
     void shouldSetCountsToZeroWhenTablePathDoesNotExist() {
-        when(jobArguments.getRawS3Path()).thenReturn(rawPath);
-        when(jobArguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
+        when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
+        when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
 
         when(analysisException.getMessage()).thenReturn("Path does not exist");
-        when(s3DataProvider.getBatchSourceData(spark, rawPath + "source/table1")).thenAnswer(invocation -> {
+        when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenAnswer(invocation -> {
             throw analysisException;
         });
-        when(s3DataProvider.getBatchSourceData(spark, rawArchivePath + "source/table1")).thenAnswer(invocation -> {
+        when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1")).thenAnswer(invocation -> {
             throw analysisException;
         });
 
@@ -119,11 +119,11 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
 
     @Test
     void shouldIgnoreUnknownOperations() {
-        when(jobArguments.getRawS3Path()).thenReturn(rawPath);
-        when(jobArguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
+        when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
+        when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
 
-        when(s3DataProvider.getBatchSourceData(spark, rawPath + "source/table1")).thenReturn(withUnknownOperations(spark));
-        when(s3DataProvider.getBatchSourceData(spark, rawArchivePath + "source/table1")).thenReturn(withUnknownOperations(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenReturn(withUnknownOperations(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1")).thenReturn(withUnknownOperations(spark));
 
         List<SourceReference> sourceReferences = Collections.singletonList(sourceReference1);
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);

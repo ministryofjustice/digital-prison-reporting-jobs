@@ -26,13 +26,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ChangeDataCountServiceTest {
 
-    private static final String dmsTaskId = "dms-task-id";
+    private static final String DMS_TASK_ID = "dms-task-id";
     @Mock
     private DmsChangeDataCountService dmsChangeDataCountService;
     @Mock
     private RawChangeDataCountService rawChangeDataCountService;
     @Mock
-    private SourceReference sourceReference;;
+    private SourceReference sourceReference;
     @Mock
     private SparkSession sparkSession;
 
@@ -62,7 +62,7 @@ class ChangeDataCountServiceTest {
         when(dmsChangeDataCountService.dmsChangeDataCounts(any(), any())).thenReturn(dmsChangeDataCountsPair);
         when(rawChangeDataCountService.changeDataCounts(any(), any())).thenReturn(rawChangeDataCounts);
 
-        ChangeDataTotalCounts result = underTest.changeDataCounts(sparkSession, sourceReferences, dmsTaskId);
+        ChangeDataTotalCounts result = underTest.changeDataCounts(sparkSession, sourceReferences, DMS_TASK_ID);
 
         assertEquals(dmsChangeDataCountsPair.getDmsChangeDataCounts(), result.getDmsCounts());
         assertEquals(dmsChangeDataCountsPair.getDmsAppliedChangeDataCounts(), result.getDmsAppliedCounts());
@@ -73,16 +73,16 @@ class ChangeDataCountServiceTest {
     void shouldRetrieveDmsChangeDataCounts() {
         when(dmsChangeDataCountService.dmsChangeDataCounts(any(), any())).thenReturn(dmsChangeDataCountsPair);
 
-        underTest.changeDataCounts(sparkSession, sourceReferences, dmsTaskId);
+        underTest.changeDataCounts(sparkSession, sourceReferences, DMS_TASK_ID);
 
-        verify(dmsChangeDataCountService, times(1)).dmsChangeDataCounts(sourceReferences, dmsTaskId);
+        verify(dmsChangeDataCountService, times(1)).dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
     }
 
     @Test
     void shouldRetrieveRawChangeDataCounts() {
         when(dmsChangeDataCountService.dmsChangeDataCounts(any(), any())).thenReturn(dmsChangeDataCountsPair);
 
-        underTest.changeDataCounts(sparkSession, sourceReferences, dmsTaskId);
+        underTest.changeDataCounts(sparkSession, sourceReferences, DMS_TASK_ID);
 
         verify(rawChangeDataCountService, times(1)).changeDataCounts(sparkSession, sourceReferences);
     }

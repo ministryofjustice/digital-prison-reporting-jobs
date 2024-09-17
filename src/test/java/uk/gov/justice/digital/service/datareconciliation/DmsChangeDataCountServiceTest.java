@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DmsChangeDataCountServiceTest {
-    private static final String dmsTaskId = "dms-task-id";
+    private static final String DMS_TASK_ID = "dms-task-id";
     private static final SourceReference sourceReference1 = new SourceReference(
             "key",
             "namespace",
@@ -115,14 +115,14 @@ class DmsChangeDataCountServiceTest {
         List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
         List<TableStatistics> dmsTableStatistics = Arrays.asList(tableStats1, tableStats2);
 
-        when(dmsClient.getReplicationTaskTableStatistics(dmsTaskId)).thenReturn(dmsTableStatistics);
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenReturn(dmsTableStatistics);
 
-        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, dmsTaskId);
+        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
 
         assertEquals(expectedDmsChangeDataCounts, results.getDmsChangeDataCounts());
         assertEquals(expectedDmsAppliedChangeDataCounts, results.getDmsAppliedChangeDataCounts());
 
-        verify(dmsClient, times(1)).getReplicationTaskTableStatistics(dmsTaskId);
+        verify(dmsClient, times(1)).getReplicationTaskTableStatistics(DMS_TASK_ID);
     }
 
     @Test
@@ -131,9 +131,9 @@ class DmsChangeDataCountServiceTest {
         List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
         List<TableStatistics> dmsTableStatistics = Arrays.asList(tableStats1, tableStats2, tableStats3);
 
-        when(dmsClient.getReplicationTaskTableStatistics(dmsTaskId)).thenReturn(dmsTableStatistics);
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenReturn(dmsTableStatistics);
 
-        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, dmsTaskId);
+        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
 
         assertEquals(expectedDmsChangeDataCounts, results.getDmsChangeDataCounts());
         assertEquals(expectedDmsAppliedChangeDataCounts, results.getDmsAppliedChangeDataCounts());
@@ -145,9 +145,9 @@ class DmsChangeDataCountServiceTest {
         List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2, sourceReference3);
         List<TableStatistics> dmsTableStatistics = Arrays.asList(tableStats1, tableStats2);
 
-        when(dmsClient.getReplicationTaskTableStatistics(dmsTaskId)).thenReturn(dmsTableStatistics);
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenReturn(dmsTableStatistics);
 
-        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, dmsTaskId);
+        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
 
         assertEquals(expectedDmsChangeDataCounts, results.getDmsChangeDataCounts());
         assertEquals(expectedDmsAppliedChangeDataCounts, results.getDmsAppliedChangeDataCounts());
