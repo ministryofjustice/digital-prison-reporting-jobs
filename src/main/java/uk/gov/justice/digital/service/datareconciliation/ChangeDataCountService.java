@@ -19,6 +19,8 @@ import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCo
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
@@ -51,46 +53,46 @@ public class ChangeDataCountService {
         logger.info("Getting DMS counts by operation for DMS Task ID {}", dmsTaskId);
         List<TableStatistics> dmsTableStatistics = dmsClient.getReplicationTaskTableStatistics(dmsTaskId);
         logger.info("Finished getting DMS counts by operation for DMS Task ID {}", dmsTaskId);
-        Map<String, ChangeDataTableCount> dmsReadChangeDataCounts = toDmsReadChangeDataCounts(dmsTableStatistics);
-        Map<String, ChangeDataTableCount> dmsAppliedChangeDataCounts = toDmsAppliedChangeDataCounts(dmsTableStatistics);
+        Map<String, String> tableToSource = tableToSourceLookup(sourceReferences);
+
+        Map<String, ChangeDataTableCount> dmsReadChangeDataCounts =
+                toReadChangeDataCounts(dmsTableStatistics, tableToSource, ChangeDataCountService::convertToReadChangeDataTableCount);
+
+        Map<String, ChangeDataTableCount> dmsAppliedChangeDataCounts =
+                toReadChangeDataCounts(dmsTableStatistics, tableToSource, ChangeDataCountService::convertToAppliedChangeDataTableCount);
+
+        logger.info("Getting raw zone and raw archive counts by operation");
         Map<String, ChangeDataTableCount> rawCounts = rawArchiveChangeDataCounts(sparkSession, sourceReferences);
+        logger.info("Finished getting raw zone and raw archive counts by operation");
         return new ChangeDataTotalCounts(rawCounts, dmsReadChangeDataCounts, dmsAppliedChangeDataCounts);
     }
 
-    private static Map<String, ChangeDataTableCount> toDmsReadChangeDataCounts(List<TableStatistics> dmsTableStatistics) {
-        Map<String, ChangeDataTableCount> tableToReadCounts = new HashMap<>();
-        dmsTableStatistics.forEach(tableStatistics -> {
-            String schemaName = tableStatistics.getSchemaName();
-            // TODO: Must support DPS sources
-            //    - need to get the 1st part of the table name from SourceReference / contract's service field
-            if (!"OMS_OWNER".equals(schemaName)) {
-                // Only OMS_OWNER is supported for now
-                throw new UnsupportedOperationException("Unsupported table statistics schema: " + schemaName);
-            }
-            String fullTableName = format("%s.%s", "nomis", tableStatistics.getTableName().toLowerCase());
-
-            ChangeDataTableCount readCounts = convertToReadChangeDataTableCount(tableStatistics);
-            tableToReadCounts.put(fullTableName, readCounts);
-        });
-        return tableToReadCounts;
+    private static Map<String, String> tableToSourceLookup(List<SourceReference> sourceReferences) {
+        return sourceReferences.stream().collect(Collectors.toMap(SourceReference::getTable, SourceReference::getSource));
     }
 
-    private static Map<String, ChangeDataTableCount> toDmsAppliedChangeDataCounts(List<TableStatistics> dmsTableStatistics) {
-        Map<String, ChangeDataTableCount> tableToAppliedCounts = new HashMap<>();
+    private static Map<String, ChangeDataTableCount> toReadChangeDataCounts(
+            List<TableStatistics> dmsTableStatistics,
+            Map<String, String> tableToSource,
+            Function<TableStatistics, ChangeDataTableCount> conversion
+    ) {
+        Map<String, ChangeDataTableCount> tableToCounts = new HashMap<>();
         dmsTableStatistics.forEach(tableStatistics -> {
-            String schemaName = tableStatistics.getSchemaName();
-            // TODO: Must support DPS sources
-            //    - need to get the 1st part of the table name from SourceReference / contract's service field
-            if (!"OMS_OWNER".equals(schemaName)) {
-                // Only OMS_OWNER is supported for now
-                throw new UnsupportedOperationException("Unsupported table statistics schema: " + schemaName);
-            }
-            String fullTableName = format("%s.%s", "nomis", tableStatistics.getTableName().toLowerCase());
+            String tableName = tableStatistics.getTableName().toLowerCase();
+            // We can't use the schema on the table statistics because it is the input schema rather than the 'source'.
+            // It might be 'OMS_OWNER', for example, when we need 'nomis'.
+            String source = tableToSource.get(tableName);
+            if (source != null) {
+                String fullTableName = format("%s.%s", source, tableName);
 
-            ChangeDataTableCount appliedCounts = convertToAppliedChangeDataTableCount(tableStatistics);
-            tableToAppliedCounts.put(fullTableName, appliedCounts);
+                ChangeDataTableCount readCounts = conversion.apply(tableStatistics);
+                tableToCounts.put(fullTableName, readCounts);
+            } else {
+                logger.warn("Cannot find table {} (with source schema {}) in the SourceReferences", tableName, tableStatistics.getSchemaName());
+            }
+            
         });
-        return tableToAppliedCounts;
+        return tableToCounts;
     }
 
     private static ChangeDataTableCount convertToReadChangeDataTableCount(TableStatistics tableStatistics) {
@@ -110,7 +112,6 @@ public class ChangeDataCountService {
     }
 
     private Map<String, ChangeDataTableCount> rawArchiveChangeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
-        logger.info("Getting raw zone and raw archive counts by operation");
         Map<String, ChangeDataTableCount> totalCounts = new HashMap<>();
         sourceReferences.forEach(sourceReference -> {
             String tableName = sourceReference.getFullDatahubTableName();
@@ -121,7 +122,6 @@ public class ChangeDataCountService {
             ChangeDataTableCount singleTableCount = rawZoneCount.combineCounts(rawArchiveCount);
             totalCounts.put(tableName, singleTableCount);
         });
-        logger.info("Finished getting raw zone and raw archive counts by operation");
         return totalCounts;
     }
 

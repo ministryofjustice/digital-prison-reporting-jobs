@@ -51,8 +51,7 @@ public class DataReconciliationService {
 
     public DataReconciliationResults reconcileData(SparkSession sparkSession) {
         String inputDomain = jobArguments.getConfigKey();
-        // TODO This needs to work for DPS as well as Nomis so sort out how taskId is configured
-        String dmsTaskId = format("dpr-dms-nomis-oracle-s3-%s-task-development", inputDomain);
+        String dmsTaskId = jobArguments.getDmsTaskId();
 
         logger.info("Reconciling with input domain: {}, DMS Task ID: {}", inputDomain, dmsTaskId);
 
