@@ -1,14 +1,14 @@
 package uk.gov.justice.digital.client.dms;
 
 import com.amazonaws.services.databasemigrationservice.AWSDatabaseMigrationService;
-import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksResult;
 import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksRequest;
+import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksResult;
 import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsRequest;
 import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsResult;
 import com.amazonaws.services.databasemigrationservice.model.Filter;
 import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
-import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskResult;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
+import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskResult;
 import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.exception.DmsClientException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -170,8 +169,7 @@ class DmsClientTest {
         List<ReplicationTask> tasks = new ArrayList<>();
         tasks.add(createReplicationTask("running")
                 .withReplicationTaskIdentifier(TEST_TASK_ID)
-                .withReplicationTaskArn("replication-task-arn")
-        );
+                .withReplicationTaskArn("replication-task-arn"));
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
                 .thenReturn(mockDescribeReplicationTasksResult);
         when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
@@ -180,7 +178,7 @@ class DmsClientTest {
         when(mockDmsClient.describeTableStatistics(describeTableStatisticsRequestCaptor.capture()))
                 .thenReturn(mockDescribeTableStatisticsResult);
 
-        List<TableStatistics> expectedTableStatistics = Arrays.asList(
+        List<TableStatistics> expectedTableStatistics = Collections.singletonList(
                 new TableStatistics()
                         .withAppliedDeletes(10L)
                         .withDeletes(10L)

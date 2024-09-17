@@ -17,12 +17,10 @@ public class DataReconciliationResults {
     }
 
     public boolean isSuccess() {
-        // TODO: test
         return currentStateTotalCounts.countsMatch() && changeDataTotalCounts.countsMatch();
     }
 
     public String summary() {
-        // TODO: test
         return currentStateTotalCounts.summary() + "\n\n" + changeDataTotalCounts.summary();
     }
 }

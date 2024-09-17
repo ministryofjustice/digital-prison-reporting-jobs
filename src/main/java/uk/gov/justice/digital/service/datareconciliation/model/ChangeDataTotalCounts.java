@@ -1,17 +1,21 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChangeDataTotalCounts {
 
     private static final String MISSING_COUNTS_MESSAGE = "MISSING COUNTS";
 
-    private final Map<String, ChangeDataTableCount> rawZoneCounts;
-    private final Map<String, ChangeDataTableCount> dmsCounts;
-    private final Map<String, ChangeDataTableCount> dmsAppliedCounts;
+    private Map<String, ChangeDataTableCount> rawZoneCounts;
+    private Map<String, ChangeDataTableCount> dmsCounts;
+    private Map<String, ChangeDataTableCount> dmsAppliedCounts;
 
     public boolean countsMatch() {
         return sameTables() && rawCountsMatchDmsCounts();
