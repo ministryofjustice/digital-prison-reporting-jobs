@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.dms.DmsClient;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.DmsClientException;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
 import uk.gov.justice.digital.service.datareconciliation.model.DmsChangeDataCountsPair;
 
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -151,5 +153,12 @@ class DmsChangeDataCountServiceTest {
 
         assertEquals(expectedDmsChangeDataCounts, results.getDmsChangeDataCounts());
         assertEquals(expectedDmsAppliedChangeDataCounts, results.getDmsAppliedChangeDataCounts());
+    }
+
+    @Test
+    void shouldFailIfDmsClientFails() {
+        List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenThrow(new DmsClientException(""));
+        assertThrows(DmsClientException.class, () -> underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID));
     }
 }

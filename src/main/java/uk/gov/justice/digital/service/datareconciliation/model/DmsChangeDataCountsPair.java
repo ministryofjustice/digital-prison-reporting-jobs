@@ -11,6 +11,8 @@ import java.util.Map;
  */
 @Data
 public class DmsChangeDataCountsPair {
+    // The counts the DMS thinks it has read from the source data store
     private final Map<String, ChangeDataTableCount> dmsChangeDataCounts;
+    // The counts the DMS thinks it has applied to the target data store
     private final Map<String, ChangeDataTableCount> dmsAppliedChangeDataCounts;
 }

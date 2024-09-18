@@ -11,6 +11,9 @@ import uk.gov.justice.digital.service.datareconciliation.model.DmsChangeDataCoun
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Retrieves change data counts for all DataHub data stores which contain change data.
+ */
 @Singleton
 public class ChangeDataCountService {
 

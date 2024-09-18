@@ -12,6 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCounts;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
 
 import java.util.Arrays;
@@ -25,6 +26,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DataReconciliationServiceTest {
+
+    private static final String DMS_TASK_ID = "dms-task-id";;
 
     @Mock
     private JobArguments jobArguments;
@@ -43,7 +46,9 @@ class DataReconciliationServiceTest {
     @Mock
     private SourceReference sourceReference2;
     @Mock
-    private CurrentStateTotalCounts result;
+    private CurrentStateTotalCounts currentStateResult;
+    @Mock
+    private ChangeDataTotalCounts changeDataResult;
 
     @InjectMocks
     private DataReconciliationService underTest;
@@ -59,12 +64,69 @@ class DataReconciliationServiceTest {
                 sourceReference1, sourceReference2
         );
         when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
-        when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(result);
+        when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(currentStateResult);
 
         CurrentStateTotalCounts results = underTest.reconcileData(sparkSession).getCurrentStateTotalCounts();
 
-        assertEquals(result, results);
+        assertEquals(currentStateResult, results);
         verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
     }
 
+    @Test
+    void shouldGetChangeDataCounts() {
+        when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+        when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(currentStateResult);
+        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID)).thenReturn(changeDataResult);
+
+        ChangeDataTotalCounts results = underTest.reconcileData(sparkSession).getChangeDataTotalCounts();
+
+        assertEquals(changeDataResult, results);
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+    }
+
+    @Test
+    void shouldGetConfiguredTables() {
+        when(jobArguments.getConfigKey()).thenReturn("config-key");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+        when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(currentStateResult);
+
+        underTest.reconcileData(sparkSession);
+
+        verify(configService, times(1)).getConfiguredTables("config-key");
+    }
+
+    @Test
+    void shouldGetAllSourceReferences() {
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+        when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(currentStateResult);
+
+        underTest.reconcileData(sparkSession);
+
+        verify(sourceReferenceService, times(1)).getAllSourceReferences(configuredTables);
+    }
 }

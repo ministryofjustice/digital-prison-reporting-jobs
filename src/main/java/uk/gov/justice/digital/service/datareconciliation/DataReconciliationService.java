@@ -17,8 +17,6 @@ import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliatio
 
 import java.util.List;
 
-import static java.lang.String.format;
-
 
 /**
  * Entry point for all data reconciliation in the DataHub.

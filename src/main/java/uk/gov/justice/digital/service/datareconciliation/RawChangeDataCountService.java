@@ -2,7 +2,6 @@ package uk.gov.justice.digital.service.datareconciliation;
 
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -17,12 +16,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.justice.digital.client.s3.S3DataProvider.isPathDoesNotExistException;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
+/**
+ * Retrieves change data counts from the Raw Zone and Raw Archive.
+ */
 @Singleton
 public class RawChangeDataCountService {
 
@@ -37,6 +40,10 @@ public class RawChangeDataCountService {
         this.s3DataProvider = s3DataProvider;
     }
 
+    /**
+     * For each provided SourceReference, calculates the combined change data counts for that table for the
+     * Raw Zone and Raw Archive.
+     */
     Map<String, ChangeDataTableCount> changeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
         logger.info("Getting raw zone and raw archive counts by operation");
         Map<String, ChangeDataTableCount> totalCounts = new HashMap<>();
@@ -75,9 +82,7 @@ public class RawChangeDataCountService {
                 }
             });
         } catch (Exception e) {
-            //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch
-            //  because the Java compiler will complain that AnalysisException isn't declared as thrown due to Scala trickery.
-            if (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) {
+            if (isPathDoesNotExistException(e)) {
                 logger.warn("Table does not exist at {} so will set counts to zero", rawTablePath, e);
                 result.setInsertCount(0L);
                 result.setUpdateCount(0L);

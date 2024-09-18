@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
+/**
+ * Retrieves change data counts from the AWS DMS API.
+ */
 @Singleton
 public class DmsChangeDataCountService {
 
@@ -29,6 +32,9 @@ public class DmsChangeDataCountService {
         this.dmsClient = dmsClient;
     }
 
+    /**
+     * Retrieves the change data counts that the DMS thinks it has read as well as that it thinks it has applied.
+     */
     DmsChangeDataCountsPair dmsChangeDataCounts(List<SourceReference> sourceReferences, String dmsTaskId) {
         logger.info("Getting DMS table statistics for DMS Task ID {}", dmsTaskId);
         List<TableStatistics> dmsTableStatistics = dmsClient.getReplicationTaskTableStatistics(dmsTaskId);

@@ -14,7 +14,7 @@ public class CurrentStateTableCount {
     // A null value indicates that there is no Operational DataStore count
     private final Long operationalDataStoreCount;
 
-    public CurrentStateTableCount(long nomisCount, long structuredCount, long curatedCount, long operationalDataStoreCount) {
+    public CurrentStateTableCount(long nomisCount, long structuredCount, long curatedCount, Long operationalDataStoreCount) {
         this.nomisCount = nomisCount;
         this.structuredCount = structuredCount;
         this.curatedCount = curatedCount;

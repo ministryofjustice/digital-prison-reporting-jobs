@@ -101,6 +101,8 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
         when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
 
         when(analysisException.getMessage()).thenReturn("Path does not exist");
+        // We use thenAnswer instead of thenThrow because Scala treats checked
+        // exceptions like AnalysisException as if they are unchecked Exceptions
         when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenAnswer(invocation -> {
             throw analysisException;
         });
