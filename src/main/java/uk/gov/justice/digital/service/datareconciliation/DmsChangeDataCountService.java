@@ -64,18 +64,20 @@ public class DmsChangeDataCountService {
     }
 
     private static ChangeDataTableCount convertToChangeDataTableCount(TableStatistics tableStatistics) {
-        Long insertCount = tableStatistics.getInserts();
-        Long updateCount = tableStatistics.getUpdates();
-        Long deleteCount = tableStatistics.getDeletes();
+        Long cdcInsertCount = tableStatistics.getInserts();
+        Long fullLoadInserts = tableStatistics.getFullLoadRows();
+        Long cdcUpdateCount = tableStatistics.getUpdates();
+        Long cdcDeleteCount = tableStatistics.getDeletes();
 
-        return new ChangeDataTableCount(insertCount, updateCount, deleteCount);
+        return new ChangeDataTableCount(cdcInsertCount + fullLoadInserts, cdcUpdateCount, cdcDeleteCount);
     }
 
     private static ChangeDataTableCount convertToAppliedChangeDataTableCount(TableStatistics tableStatistics) {
         Long appliedInsertCount = tableStatistics.getAppliedInserts();
-        Long appliedUpdateCount = tableStatistics.getAppliedUpdates();
-        Long appliedDeleteCount = tableStatistics.getAppliedDeletes();
+        Long fullLoadInserts = tableStatistics.getFullLoadRows();
+        Long appliedCdcUpdateCount = tableStatistics.getAppliedUpdates();
+        Long appliedCdcDeleteCount = tableStatistics.getAppliedDeletes();
 
-        return new ChangeDataTableCount(appliedInsertCount, appliedUpdateCount, appliedDeleteCount);
+        return new ChangeDataTableCount(appliedInsertCount + fullLoadInserts, appliedCdcUpdateCount, appliedCdcDeleteCount);
     }
 }

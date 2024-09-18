@@ -61,6 +61,7 @@ class DmsChangeDataCountServiceTest {
     private static final TableStatistics tableStats1 = new TableStatistics()
             .withTableName("table1")
             .withSchemaName("schema")
+            .withFullLoadRows(100L)
             .withInserts(1L)
             .withAppliedInserts(2L)
             .withUpdates(3L)
@@ -70,6 +71,7 @@ class DmsChangeDataCountServiceTest {
     private static final TableStatistics tableStats2 = new TableStatistics()
             .withTableName("table2")
             .withSchemaName("schema")
+            .withFullLoadRows(100L)
             .withInserts(7L)
             .withAppliedInserts(8L)
             .withUpdates(9L)
@@ -79,6 +81,7 @@ class DmsChangeDataCountServiceTest {
     private static final TableStatistics tableStats3 = new TableStatistics()
             .withTableName("table3")
             .withSchemaName("schema")
+            .withFullLoadRows(100L)
             .withInserts(13L)
             .withAppliedInserts(14L)
             .withUpdates(15L)
@@ -98,16 +101,16 @@ class DmsChangeDataCountServiceTest {
     @BeforeAll
     static void beforeAll() {
         expectedDmsChangeDataCounts.put("source.table1", new ChangeDataTableCount(
-                1L, 3L, 5L
+                101L, 3L, 5L
         ));
         expectedDmsChangeDataCounts.put("source.table2", new ChangeDataTableCount(
-                7L, 9L, 11L
+                107L, 9L, 11L
         ));
         expectedDmsAppliedChangeDataCounts.put("source.table1", new ChangeDataTableCount(
-                2L, 4L, 6L
+                102L, 4L, 6L
         ));
         expectedDmsAppliedChangeDataCounts.put("source.table2", new ChangeDataTableCount(
-                8L, 10L, 12L
+                108L, 10L, 12L
         ));
     }
 
