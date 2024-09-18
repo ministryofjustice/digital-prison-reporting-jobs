@@ -1,12 +1,15 @@
 package uk.gov.justice.digital.client.dms;
 
 import com.amazonaws.services.databasemigrationservice.AWSDatabaseMigrationService;
-import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksResult;
 import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksRequest;
+import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksResult;
+import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsRequest;
+import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsResult;
 import com.amazonaws.services.databasemigrationservice.model.Filter;
 import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
-import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskResult;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
+import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskResult;
+import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,8 +28,10 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -42,10 +47,14 @@ class DmsClientTest {
     private DescribeReplicationTasksResult mockDescribeReplicationTasksResult;
     @Mock
     private StopReplicationTaskResult mockStopReplicationTaskResult;
+    @Mock
+    private DescribeTableStatisticsResult mockDescribeTableStatisticsResult;
     @Captor
     private ArgumentCaptor<DescribeReplicationTasksRequest> describeReplicationTasksRequestCaptor;
     @Captor
     private ArgumentCaptor<StopReplicationTaskRequest> stopReplicationTaskRequestCaptor;
+    @Captor
+    private ArgumentCaptor<DescribeTableStatisticsRequest> describeTableStatisticsRequestCaptor;
 
     private static final String TEST_TASK_ID = "test_task_id";
     private static final int WAIT_INTERVAL_SECONDS = 1;
@@ -153,6 +162,45 @@ class DmsClientTest {
         assertThrows(DmsClientException.class, () -> underTest.getTaskStartTime(TEST_TASK_ID));
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
         verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+    }
+
+    @Test
+    void getReplicationTaskTableStatisticsShouldReturnListOfTableStatistics() {
+        List<ReplicationTask> tasks = new ArrayList<>();
+        tasks.add(createReplicationTask("running")
+                .withReplicationTaskIdentifier(TEST_TASK_ID)
+                .withReplicationTaskArn("replication-task-arn"));
+        when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
+                .thenReturn(mockDescribeReplicationTasksResult);
+        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+
+
+        when(mockDmsClient.describeTableStatistics(describeTableStatisticsRequestCaptor.capture()))
+                .thenReturn(mockDescribeTableStatisticsResult);
+
+        List<TableStatistics> expectedTableStatistics = Collections.singletonList(
+                new TableStatistics()
+                        .withAppliedDeletes(10L)
+                        .withDeletes(10L)
+        );
+        when(mockDescribeTableStatisticsResult.getTableStatistics()).thenReturn(expectedTableStatistics);
+
+        List<TableStatistics> actualTableStatistics = underTest.getReplicationTaskTableStatistics(TEST_TASK_ID);
+        assertEquals(expectedTableStatistics, actualTableStatistics);
+
+        verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
+        assertEquals("replication-task-arn", describeTableStatisticsRequestCaptor.getValue().getReplicationTaskArn());
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+    }
+
+    @Test
+    void getReplicationTaskTableStatisticsShouldThrowWhenNoReplicationTaskIsFound() {
+        List<ReplicationTask> tasks = Collections.emptyList();
+
+        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(mockDescribeReplicationTasksResult);
+        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+
+        assertThrows(DmsClientException.class, () -> underTest.getReplicationTaskTableStatistics(TEST_TASK_ID));
     }
 
     private static void verifyDescribeReplicationTasksRequestParams(DescribeReplicationTasksRequest describeReplicationTasksRequest) {

@@ -1,27 +1,27 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
-import lombok.Getter;
+import lombok.Data;
 
 /**
  * Represents the results of running the total counts data reconciliation for a single "current state" table in DataHub
  * replicated across multiple datastores
  */
-@Getter
-public class CurrentStateCountTableResult {
+@Data
+public class CurrentStateTableCount {
     private final long nomisCount;
     private final long structuredCount;
     private final long curatedCount;
     // A null value indicates that there is no Operational DataStore count
     private final Long operationalDataStoreCount;
 
-    public CurrentStateCountTableResult(long nomisCount, long structuredCount, long curatedCount, long operationalDataStoreCount) {
+    public CurrentStateTableCount(long nomisCount, long structuredCount, long curatedCount, Long operationalDataStoreCount) {
         this.nomisCount = nomisCount;
         this.structuredCount = structuredCount;
         this.curatedCount = curatedCount;
         this.operationalDataStoreCount = operationalDataStoreCount;
     }
 
-    public CurrentStateCountTableResult(long nomisCount, long structuredCount, long curatedCount) {
+    public CurrentStateTableCount(long nomisCount, long structuredCount, long curatedCount) {
         this.nomisCount = nomisCount;
         this.structuredCount = structuredCount;
         this.curatedCount = curatedCount;
@@ -37,9 +37,9 @@ public class CurrentStateCountTableResult {
     }
 
     public String summary() {
-        return (countsMatch() ? "   MATCH: " : "MISMATCH: ") +
-                "Nomis: " + nomisCount + ", Structured Zone: " + structuredCount + ", Curated Zone: " + curatedCount
-                +", Operational DataStore: " + (operationalDataStoreCount == null ? "skipped": operationalDataStoreCount);
+        return "Nomis: " + nomisCount + ", Structured Zone: " + structuredCount + ", Curated Zone: " + curatedCount
+                +", Operational DataStore: " + (operationalDataStoreCount == null ? "skipped": operationalDataStoreCount) +
+                (countsMatch() ? "\t - MATCH" : "\t - MISMATCH");
     }
 
 

@@ -68,9 +68,7 @@ public class S3DataProvider {
 
             return getStreamingDataset(sparkSession, fileGlobPath, schema);
         } catch (Exception e) {
-            //  We only want to catch AnalysisException, but we can't be more specific than Exception in what we catch
-            //  because the Java compiler will complain that AnalysisException isn't declared as thrown due to Scala trickery.
-            if (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) {
+            if (isPathDoesNotExistException(e)) {
                 String msg = format("No data available to read and no schema provided to read it with, so we can't run a streaming job for %s.%s", sourceName, tableName);
                 logger.error(msg, e);
                 throw new NoSchemaNoDataException(msg, e);
@@ -80,6 +78,14 @@ public class S3DataProvider {
             }
         }
     }
+
+    public static boolean isPathDoesNotExistException(Exception e) {
+        //  We sometimes only want to catch AnalysisException and check if it is because the path does not exist,
+        //  but we can't be more specific than Exception in what we catch because the Java compiler will complain
+        //  that AnalysisException isn't declared as thrown due to Scala trickery.
+        return e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist");
+    }
+
 
     public Dataset<Row> getBatchSourceData(SparkSession sparkSession, List<String> filePaths) throws DataProviderFailedMergingSchemasException {
         try {

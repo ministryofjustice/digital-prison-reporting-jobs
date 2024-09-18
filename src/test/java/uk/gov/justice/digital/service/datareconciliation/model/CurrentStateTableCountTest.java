@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class CurrentStateCountTableResultTest {
+class CurrentStateTableCountTest {
 
     static Stream<Object> countsThatDoNotMatch() {
         return Stream.of(
@@ -32,56 +32,79 @@ class CurrentStateCountTableResultTest {
 
     @Test
     void shouldGiveMatchForCountsThatMatch() {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(1L, 1L, 1L, 1L);
+        CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 1L, 1L, 1L);
         assertTrue(underTest.countsMatch());
     }
 
     @ParameterizedTest
     @MethodSource("countsThatDoNotMatch")
     void shouldGiveNoMatchForCountsThatDoNotMatch(long nomisCount, long structuredCount, long curatedCount, long odsCount) {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(nomisCount, structuredCount, curatedCount, odsCount);
+        CurrentStateTableCount underTest = new CurrentStateTableCount(nomisCount, structuredCount, curatedCount, odsCount);
         assertFalse(underTest.countsMatch());
     }
 
     @Test
     void shouldGiveMatchForCountsThatMatchWithDisabledODS() {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(1L, 1L, 1L);
+        CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 1L, 1L);
         assertTrue(underTest.countsMatch());
     }
 
     @ParameterizedTest
     @MethodSource("countsThatDoNotMatchDisabledOds")
     void shouldGiveNoMatchForCountsThatDoNotMatchWithDisabledODS(long nomisCount, long structuredCount, long curatedCount) {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(nomisCount, structuredCount, curatedCount);
+        CurrentStateTableCount underTest = new CurrentStateTableCount(nomisCount, structuredCount, curatedCount);
         assertFalse(underTest.countsMatch());
     }
 
     @Test
     void shouldProvideSummaryWhenCountsMatch() {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(1L, 1L, 1L, 1L);
-        String expected = "   MATCH: Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1";
+        CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+        String expected = "Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1	 - MATCH";
         assertEquals(expected, underTest.summary());
     }
 
     @Test
     void shouldProvideSummaryWhenCountsMatchWithDisabledODS() {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(1L, 1L, 1L);
-        String expected = "   MATCH: Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped";
+        CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 1L, 1L);
+        String expected = "Nomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped	 - MATCH";
         assertEquals(expected, underTest.summary());
     }
 
     @Test
     void shouldProvideSummaryWhenCountsDoNotMatch() {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(1L, 2L, 1L, 1L);
-        String expected = "MISMATCH: Nomis: 1, Structured Zone: 2, Curated Zone: 1, Operational DataStore: 1";
+        CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 2L, 1L, 1L);
+        String expected = "Nomis: 1, Structured Zone: 2, Curated Zone: 1, Operational DataStore: 1	 - MISMATCH";
         assertEquals(expected, underTest.summary());
     }
 
     @Test
     void shouldProvideSummaryWhenCountsDoNotMatchWithDisabledODS() {
-        CurrentStateCountTableResult underTest = new CurrentStateCountTableResult(1L, 2L, 3L);
-        String expected = "MISMATCH: Nomis: 1, Structured Zone: 2, Curated Zone: 3, Operational DataStore: skipped";
+        CurrentStateTableCount underTest = new CurrentStateTableCount(1L, 2L, 3L);
+        String expected = "Nomis: 1, Structured Zone: 2, Curated Zone: 3, Operational DataStore: skipped	 - MISMATCH";
         assertEquals(expected, underTest.summary());
     }
 
+    @Test
+    void shouldBeEqualToAnotherWithSameValues() {
+        CurrentStateTableCount underTest1 = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+        CurrentStateTableCount underTest2 = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+
+        assertEquals(underTest1, underTest2);
+    }
+
+    @Test
+    void shouldBeEqualToAnotherWithSameValuesNoODSCount() {
+        CurrentStateTableCount underTest1 = new CurrentStateTableCount(1L, 1L, 1L);
+        CurrentStateTableCount underTest2 = new CurrentStateTableCount(1L, 1L, 1L);
+
+        assertEquals(underTest1, underTest2);
+    }
+
+    @Test
+    void shouldNotBeEqualToAnotherWithDifferentValues() {
+        CurrentStateTableCount underTest1 = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+        CurrentStateTableCount underTest2 = new CurrentStateTableCount(1L, 1L, 1L);
+
+        assertNotEquals(underTest1, underTest2);
+    }
 }

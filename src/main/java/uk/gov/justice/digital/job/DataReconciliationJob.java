@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.job;
 
 import com.amazonaws.services.glue.util.Job;
+import com.google.common.annotations.VisibleForTesting;
 import lombok.val;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
@@ -11,7 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.datareconciliation.DataReconciliationService;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCountResults;
+import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
 import javax.inject.Inject;
 
@@ -74,14 +75,15 @@ public class DataReconciliationJob implements Runnable {
         logger.info("DataReconciliationJob completed successfully");
     }
 
-    private void runJob(SparkSession sparkSession) {
-        CurrentStateTotalCountResults results = dataReconciliationService.reconcileData(sparkSession);
+    @VisibleForTesting
+    void runJob(SparkSession sparkSession) {
+        DataReconciliationResults results = dataReconciliationService.reconcileData(sparkSession);
         String resultSummary = results.summary();
-        if (results.isFailure()) {
-            logger.error("Data reconciliation FAILED WITH DIFFERENCES:\n{}", resultSummary);
-            System.exit(1);
+        if (results.isSuccess()) {
+            logger.info("Data reconciliation SUCCEEDED:\n\n{}", resultSummary);
         } else {
-            logger.info("Data reconciliation SUCCEEDED:\n{}", resultSummary);
+            logger.error("Data reconciliation FAILED WITH DIFFERENCES:\n\n{}", resultSummary);
+            System.exit(1);
         }
     }
 
