@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.client.s3;
 
 import org.apache.spark.SparkException;
+import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import scala.None;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import uk.gov.justice.digital.config.JobArguments;
@@ -16,7 +18,9 @@ import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasExceptio
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +33,8 @@ class S3DataProviderTest {
     private SparkSession spark;
     @Mock
     private DataFrameReader dfReader;
+    @Mock
+    private AnalysisException analysisException;
 
     private S3DataProvider underTest;
 
@@ -72,5 +78,22 @@ class S3DataProviderTest {
                 DataProviderFailedMergingSchemasException.class,
                 () -> underTest.getBatchSourceData(spark, input)
         );
+    }
+
+    @Test
+    void isPathDoesNotExistExceptionShouldReturnTrueWhenPathDoesNotExist() {
+        when(analysisException.getMessage()).thenReturn("Path does not exist");
+        assertTrue(S3DataProvider.isPathDoesNotExistException(analysisException));
+    }
+
+    @Test
+    void isPathDoesNotExistExceptionShouldReturnFalseWhenOtherReason() {
+        when(analysisException.getMessage()).thenReturn("Some other message");
+        assertFalse(S3DataProvider.isPathDoesNotExistException(analysisException));
+    }
+
+    @Test
+    void isPathDoesNotExistExceptionShouldReturnFalseWhenOtherExceptionType() {
+        assertFalse(S3DataProvider.isPathDoesNotExistException(new Exception()));
     }
 }

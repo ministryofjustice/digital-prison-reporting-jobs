@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DataReconciliationServiceTest {
 
-    private static final String DMS_TASK_ID = "dms-task-id";;
+    private static final String DMS_TASK_ID = "dms-task-id";
 
     @Mock
     private JobArguments jobArguments;
