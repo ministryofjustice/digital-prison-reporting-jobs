@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import scala.None;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import uk.gov.justice.digital.config.JobArguments;
