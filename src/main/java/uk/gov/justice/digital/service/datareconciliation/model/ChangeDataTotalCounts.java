@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -33,6 +35,13 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
 
         if (!sameTables()) {
             sb.append("\nThe set of tables for DMS vs Raw zone DO NOT MATCH\n\n");
+            String dmsTables = sortedListOfTables(dmsCounts.keySet());
+            String dmsAppliedTables = sortedListOfTables(dmsAppliedCounts.keySet());
+            String rawTables = sortedListOfTables(rawZoneCounts.keySet());
+            sb.append("DMS Tables: ").append(dmsTables).append("\n");
+            sb.append("DMS Applied Tables: ").append(dmsAppliedTables).append("\n");
+            sb.append("Raw Zone/Raw Archive Tables: ").append(rawTables).append("\n");
+            sb.append("\n");
         }
 
         dmsCounts.forEach((tableName, dmsCount) -> {
@@ -63,6 +72,10 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
         });
 
         return sb.toString();
+    }
+
+    private static String sortedListOfTables(Set<String> tables) {
+        return tables.stream().sorted().collect(Collectors.joining(", "));
     }
 
     private boolean rawCountsMatchDmsCounts() {
