@@ -1,5 +1,8 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+/**
+ * The data reconciliation checks that can be run by the Data Reconciliation service
+ */
 public enum ReconciliationCheck {
     CURRENT_STATE_COUNTS,
     CHANGE_DATA_COUNTS;
