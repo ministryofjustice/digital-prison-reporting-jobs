@@ -15,13 +15,8 @@ import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationChe
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
@@ -513,7 +508,8 @@ public class JobArguments {
     public Set<ReconciliationCheck> getReconciliationChecksToRun() {
         return Optional
                 .ofNullable(config.get(RECONCILIATION_CHECKS_TO_RUN))
-                .map(s -> s.toLowerCase().split(","))
+                .map(String::toLowerCase)
+                .map(s -> s.split(","))
                 .map(tokens ->
                     Arrays.stream(tokens)
                             .map(String::trim)

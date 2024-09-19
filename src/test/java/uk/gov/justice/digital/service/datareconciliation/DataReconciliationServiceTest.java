@@ -23,6 +23,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -75,8 +76,7 @@ class DataReconciliationServiceTest {
         List<DataReconciliationResult> results = ((DataReconciliationResults) underTest.reconcileData(sparkSession)).getResults();
 
         assertEquals(1, results.size());
-        DataReconciliationResult result = results.get(0);
-        assertEquals(currentStateResult, result);
+        assertTrue(results.contains(currentStateResult));
         verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
     }
 
@@ -98,8 +98,7 @@ class DataReconciliationServiceTest {
         List<DataReconciliationResult> results = ((DataReconciliationResults) underTest.reconcileData(sparkSession)).getResults();
 
         assertEquals(1, results.size());
-        DataReconciliationResult result = results.get(0);
-        assertEquals(changeDataResult, result);
+        assertTrue(results.contains(changeDataResult));
         verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
     }
 
@@ -124,6 +123,41 @@ class DataReconciliationServiceTest {
         assertEquals(2, results.size());
         assertTrue(results.contains(currentStateResult));
         assertTrue(results.contains(changeDataResult));
+        verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+    }
+
+    @Test
+    void shouldRunJustConfiguredReconciliationChecks() {
+        when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+
+        // Verify running with different configured reconciliation checks, resetting mocks between each run
+
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS));
+        underTest.reconcileData(sparkSession);
+        verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
+        verify(changeDataCountService, times(0)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+
+        reset(currentStateCountService);
+        reset(changeDataCountService);
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CHANGE_DATA_COUNTS));
+        underTest.reconcileData(sparkSession);
+        verify(currentStateCountService, times(0)).currentStateCounts(sparkSession, allSourceReferences);
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+
+        reset(currentStateCountService);
+        reset(changeDataCountService);
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
+        underTest.reconcileData(sparkSession);
         verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
         verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
     }
