@@ -170,6 +170,10 @@ class ChangeDataTotalCountsTest {
                 "\n" +
                 "The set of tables for DMS vs Raw zone DO NOT MATCH\n" +
                 "\n" +
+                "DMS Tables: table1\n" +
+                "DMS Applied Tables: table1\n" +
+                "Raw Zone/Raw Archive Tables: different table\n" +
+                "\n" +
                 "For table table1 DOES NOT MATCH:\n" +
                 "\tMISSING COUNTS\t - Raw\n" +
                 "\tInserts: 1, Updates: 1, Deletes: 1\t - DMS\n" +
@@ -185,6 +189,7 @@ class ChangeDataTotalCountsTest {
         Map<String, ChangeDataTableCount> dmsAppliedCounts = new HashMap<>();
 
         rawCounts.put(TABLE_NAME, new ChangeDataTableCount(1L, 1L, 1L));
+        rawCounts.put("table2", new ChangeDataTableCount(1L, 1L, 1L));
         dmsCounts.put(TABLE_NAME, new ChangeDataTableCount(1L, 1L, 1L));
         dmsAppliedCounts.put("different table", new ChangeDataTableCount(1L, 1L, 1L));
 
@@ -194,6 +199,10 @@ class ChangeDataTotalCountsTest {
                 "\n" +
                 "\n" +
                 "The set of tables for DMS vs Raw zone DO NOT MATCH\n" +
+                "\n" +
+                "DMS Tables: table1\n" +
+                "DMS Applied Tables: different table\n" +
+                "Raw Zone/Raw Archive Tables: table1, table2\n" +
                 "\n" +
                 "For table table1 DOES NOT MATCH:\n" +
                 "\tInserts: 1, Updates: 1, Deletes: 1\t - Raw\n" +
