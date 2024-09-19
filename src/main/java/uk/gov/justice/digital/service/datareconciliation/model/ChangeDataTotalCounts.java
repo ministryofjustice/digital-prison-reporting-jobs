@@ -9,7 +9,7 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChangeDataTotalCounts {
+public class ChangeDataTotalCounts implements DataReconciliationResult {
 
     private static final String MISSING_COUNTS_MESSAGE = "MISSING COUNTS";
 
@@ -17,13 +17,15 @@ public class ChangeDataTotalCounts {
     private Map<String, ChangeDataTableCount> dmsCounts;
     private Map<String, ChangeDataTableCount> dmsAppliedCounts;
 
-    public boolean countsMatch() {
+    @Override
+    public boolean isSuccess() {
         return sameTables() && rawCountsMatchDmsCounts();
     }
 
+    @Override
     public String summary() {
         StringBuilder sb = new StringBuilder("Change Data Total Counts ");
-        if (countsMatch()) {
+        if (isSuccess()) {
             sb.append("MATCH:\n\n");
         } else {
             sb.append("DO NOT MATCH:\n\n");

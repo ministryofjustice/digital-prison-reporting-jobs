@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @EqualsAndHashCode
 @ToString
-public class CurrentStateTotalCounts {
+public class CurrentStateTotalCounts implements DataReconciliationResult {
 
     private final Map<String, CurrentStateTableCount> tableToResult = new HashMap<>();
 
@@ -28,13 +28,15 @@ public class CurrentStateTotalCounts {
         return tableToResult.get(fullTableName);
     }
 
-    public boolean countsMatch() {
+    @Override
+    public boolean isSuccess() {
         return tableToResult.values().stream().allMatch(CurrentStateTableCount::countsMatch);
     }
 
+    @Override
     public String summary() {
         StringBuilder sb = new StringBuilder("Current State Total Counts ");
-        if (countsMatch()) {
+        if (isSuccess()) {
             sb.append("MATCH:\n");
         } else {
             sb.append("DO NOT MATCH:\n");

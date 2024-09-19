@@ -3,6 +3,7 @@ package uk.gov.justice.digital.service.datareconciliation.model;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +32,8 @@ class DataReconciliationResultsTest {
         ChangeDataTotalCounts allMatchingChangeDataTotalCounts =
                 new ChangeDataTotalCounts(changeDataTableCountMap1, changeDataTableCountMap1, changeDataTableCountMap1);
 
-        DataReconciliationResults underTest = new DataReconciliationResults(matchingCurrentStateTotalCounts, allMatchingChangeDataTotalCounts);
+        DataReconciliationResults underTest =
+                new DataReconciliationResults(Arrays.asList(matchingCurrentStateTotalCounts, allMatchingChangeDataTotalCounts));
         assertTrue(underTest.isSuccess());
     }
 
@@ -40,7 +42,8 @@ class DataReconciliationResultsTest {
         ChangeDataTotalCounts notMatchingChangeDataTotalCounts =
                 new ChangeDataTotalCounts(changeDataTableCountMap1, changeDataTableCountMap2, changeDataTableCountMap1);
 
-        DataReconciliationResults underTest = new DataReconciliationResults(notMatchingCurrentStateTotalCounts, notMatchingChangeDataTotalCounts);
+        DataReconciliationResults underTest =
+                new DataReconciliationResults(Arrays.asList(notMatchingCurrentStateTotalCounts, notMatchingChangeDataTotalCounts));
 
         assertFalse(underTest.isSuccess());
     }
@@ -50,7 +53,8 @@ class DataReconciliationResultsTest {
         ChangeDataTotalCounts matchingChangeDataTotalCounts =
                 new ChangeDataTotalCounts(changeDataTableCountMap1, changeDataTableCountMap1, changeDataTableCountMap1);
 
-        DataReconciliationResults underTest = new DataReconciliationResults(notMatchingCurrentStateTotalCounts, matchingChangeDataTotalCounts);
+        DataReconciliationResults underTest =
+                new DataReconciliationResults(Arrays.asList(notMatchingCurrentStateTotalCounts, matchingChangeDataTotalCounts));
 
         assertFalse(underTest.isSuccess());
     }
@@ -60,7 +64,8 @@ class DataReconciliationResultsTest {
         ChangeDataTotalCounts notMatchingChangeDataTotalCounts =
                 new ChangeDataTotalCounts(changeDataTableCountMap1, changeDataTableCountMap2, changeDataTableCountMap1);
 
-        DataReconciliationResults underTest = new DataReconciliationResults(matchingCurrentStateTotalCounts, notMatchingChangeDataTotalCounts);
+        DataReconciliationResults underTest =
+                new DataReconciliationResults(Arrays.asList(matchingCurrentStateTotalCounts, notMatchingChangeDataTotalCounts));
 
         assertFalse(underTest.isSuccess());
     }
@@ -70,8 +75,9 @@ class DataReconciliationResultsTest {
         ChangeDataTotalCounts allMatchingChangeDataTotalCounts =
                 new ChangeDataTotalCounts(changeDataTableCountMap1, changeDataTableCountMap1, changeDataTableCountMap1);
 
-        DataReconciliationResults underTest = new DataReconciliationResults(matchingCurrentStateTotalCounts, allMatchingChangeDataTotalCounts);
-        String expected = "Current State Total Counts MATCH:\n" +
+        DataReconciliationResults underTest =
+                new DataReconciliationResults(Arrays.asList(matchingCurrentStateTotalCounts, allMatchingChangeDataTotalCounts));
+        String expected = "\n\nCurrent State Total Counts MATCH:\n" +
                 "For table table1:\n" +
                 "\tNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped\t - MATCH\n" +
                 "\n" +

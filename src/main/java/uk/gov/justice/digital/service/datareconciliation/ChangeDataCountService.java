@@ -6,6 +6,7 @@ import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCounts;
+import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DmsChangeDataCountsPair;
 
 import java.util.List;
@@ -29,7 +30,7 @@ public class ChangeDataCountService {
         this.rawChangeDataCountService = rawChangeDataCountService;
     }
 
-    ChangeDataTotalCounts changeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences, String dmsTaskId) {
+    DataReconciliationResult changeDataCounts(SparkSession sparkSession, List<SourceReference> sourceReferences, String dmsTaskId) {
         DmsChangeDataCountsPair dmsChangeDataCountsPair = dmsChangeDataCountService.dmsChangeDataCounts(sourceReferences, dmsTaskId);
 
         Map<String, ChangeDataTableCount> rawCounts = rawChangeDataCountService.changeDataCounts(sparkSession, sourceReferences);

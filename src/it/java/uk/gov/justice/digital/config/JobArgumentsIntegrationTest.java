@@ -22,7 +22,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
+import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_CHECKS_TO_RUN_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 
 class JobArgumentsIntegrationTest {
 
@@ -538,6 +541,51 @@ class JobArgumentsIntegrationTest {
     @Test
     public void shouldThrowAnExceptionWhenAMissingArgumentIsRequested() {
         assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
+    }
+
+    @Test
+    public void shouldGetCurrentStateCountsReconciliationCheckToRun() {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, "current_state_counts");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(ImmutableSet.of(CURRENT_STATE_COUNTS), jobArguments.getReconciliationChecksToRun());
+    }
+
+    @Test
+    public void shouldGetChangeDataCountsReconciliationCheckToRun() {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, "change_data_counts");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(ImmutableSet.of(CHANGE_DATA_COUNTS), jobArguments.getReconciliationChecksToRun());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "current_state_counts,change_data_counts",
+            "current_state_counts, change_data_counts",
+            "CURRENT_STATE_COUNTS,change_data_counts",
+            "current_state_counts,change_data_counts,",
+            "current_state_counts,,change_data_counts,",
+            "current_state_counts, ,change_data_counts,",
+            ",current_state_counts, ,change_data_counts,",
+            "current_state_counts,current_state_counts,change_data_counts,change_data_counts"
+    })
+    public void shouldGetMultipleReconciliationChecksToRun(String input) {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThat(
+                jobArguments.getReconciliationChecksToRun(),
+                containsInAnyOrder(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS)
+        );
+    }
+
+    @Test
+    public void getReconciliationChecksToRunShouldDefaultWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_CHECKS_TO_RUN);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(RECONCILIATION_CHECKS_TO_RUN_DEFAULT, jobArguments.getReconciliationChecksToRun());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

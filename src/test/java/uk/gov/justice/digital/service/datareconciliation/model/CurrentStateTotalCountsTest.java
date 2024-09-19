@@ -11,28 +11,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CurrentStateTotalCountsTest {
 
     @Test
-    void countsShouldNotMatchIfAnyResultHasMismatchedCounts() {
+    void shouldBeFailureIfAnyResultHasMismatchedCounts() {
         // Exhaustive testing of different cases is included in the tests for CurrentStateTableCount
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
         underTest.put("table1", new CurrentStateTableCount(1L, 1L, 1L, 1L));
         underTest.put("table2", new CurrentStateTableCount(999L, 1L, 1L, 1L));
 
-        assertFalse(underTest.countsMatch());
+        assertFalse(underTest.isSuccess());
     }
 
     @Test
-    void countsShouldMatchIfAllResultsHaveMatchedCounts() {
+    void shouldBeSuccessIfAllResultsHaveMatchedCounts() {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
         underTest.put("table1", new CurrentStateTableCount(1L, 1L, 1L, 1L));
         underTest.put("table2", new CurrentStateTableCount(2L, 2L, 2L));
 
-        assertTrue(underTest.countsMatch());
+        assertTrue(underTest.isSuccess());
     }
 
     @Test
-    void countsShouldMatchIfThereAreNoCounts() {
+    void shouldBeSuccessIfThereAreNoCounts() {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
-        assertTrue(underTest.countsMatch());
+        assertTrue(underTest.isSuccess());
     }
 
     @Test
