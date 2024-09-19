@@ -62,7 +62,7 @@ class ChangeDataCountServiceTest {
         when(dmsChangeDataCountService.dmsChangeDataCounts(any(), any())).thenReturn(dmsChangeDataCountsPair);
         when(rawChangeDataCountService.changeDataCounts(any(), any())).thenReturn(rawChangeDataCounts);
 
-        ChangeDataTotalCounts result = underTest.changeDataCounts(sparkSession, sourceReferences, DMS_TASK_ID);
+        ChangeDataTotalCounts result = (ChangeDataTotalCounts) underTest.changeDataCounts(sparkSession, sourceReferences, DMS_TASK_ID);
 
         assertEquals(dmsChangeDataCountsPair.getDmsChangeDataCounts(), result.getDmsCounts());
         assertEquals(dmsChangeDataCountsPair.getDmsAppliedChangeDataCounts(), result.getDmsAppliedCounts());

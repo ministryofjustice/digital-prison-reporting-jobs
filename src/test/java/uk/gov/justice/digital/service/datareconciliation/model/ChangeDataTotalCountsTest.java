@@ -23,7 +23,7 @@ class ChangeDataTotalCountsTest {
     }
 
     @Test
-    void countsShouldMatchForMatchingCounts() {
+    void shouldBeSuccessForMatchingCounts() {
         Map<String, ChangeDataTableCount> rawCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedCounts = new HashMap<>();
@@ -33,12 +33,12 @@ class ChangeDataTotalCountsTest {
         dmsAppliedCounts.put(TABLE_NAME, new ChangeDataTableCount(1L, 1L, 1L));
 
         ChangeDataTotalCounts underTest = new ChangeDataTotalCounts(rawCounts, dmsCounts, dmsAppliedCounts);
-        assertTrue(underTest.countsMatch());
+        assertTrue(underTest.isSuccess());
     }
 
     @ParameterizedTest
     @MethodSource("countsThatDoNotMatch")
-    void countsShouldNotMatchForDifferentInsertCounts(long rawInsertCount, long dmsInsertCount, long dmsAppliedInsertCount) {
+    void shouldBeFailureForDifferentInsertCounts(long rawInsertCount, long dmsInsertCount, long dmsAppliedInsertCount) {
         Map<String, ChangeDataTableCount> rawCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedCounts = new HashMap<>();
@@ -48,12 +48,12 @@ class ChangeDataTotalCountsTest {
         dmsAppliedCounts.put(TABLE_NAME, new ChangeDataTableCount(dmsAppliedInsertCount, 1L, 1L));
 
         ChangeDataTotalCounts underTest = new ChangeDataTotalCounts(rawCounts, dmsCounts, dmsAppliedCounts);
-        assertFalse(underTest.countsMatch());
+        assertFalse(underTest.isSuccess());
     }
 
     @ParameterizedTest
     @MethodSource("countsThatDoNotMatch")
-    void countsShouldNotMatchForDifferentUpdateCounts(long rawUpdateCount, long dmsUpdateCount, long dmsAppliedUpdateCount) {
+    void shouldBeFailureForDifferentUpdateCounts(long rawUpdateCount, long dmsUpdateCount, long dmsAppliedUpdateCount) {
         Map<String, ChangeDataTableCount> rawCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedCounts = new HashMap<>();
@@ -63,12 +63,12 @@ class ChangeDataTotalCountsTest {
         dmsAppliedCounts.put(TABLE_NAME, new ChangeDataTableCount(1L, dmsAppliedUpdateCount, 1L));
 
         ChangeDataTotalCounts underTest = new ChangeDataTotalCounts(rawCounts, dmsCounts, dmsAppliedCounts);
-        assertFalse(underTest.countsMatch());
+        assertFalse(underTest.isSuccess());
     }
 
     @ParameterizedTest
     @MethodSource("countsThatDoNotMatch")
-    void countsShouldNotMatchForDifferentDeleteCounts(long rawDeleteCount, long dmsDeleteCount, long dmsAppliedDeleteCount) {
+    void shouldBeFailureForDifferentDeleteCounts(long rawDeleteCount, long dmsDeleteCount, long dmsAppliedDeleteCount) {
         Map<String, ChangeDataTableCount> rawCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedCounts = new HashMap<>();
@@ -78,11 +78,11 @@ class ChangeDataTotalCountsTest {
         dmsAppliedCounts.put(TABLE_NAME, new ChangeDataTableCount(1L, 1L, dmsAppliedDeleteCount));
 
         ChangeDataTotalCounts underTest = new ChangeDataTotalCounts(rawCounts, dmsCounts, dmsAppliedCounts);
-        assertFalse(underTest.countsMatch());
+        assertFalse(underTest.isSuccess());
     }
 
     @Test
-    void countsShouldNotMatchForDifferentDmsTable() {
+    void shouldBeFailureForDifferentDmsTable() {
         Map<String, ChangeDataTableCount> rawCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedCounts = new HashMap<>();
@@ -92,11 +92,11 @@ class ChangeDataTotalCountsTest {
         dmsAppliedCounts.put(TABLE_NAME, new ChangeDataTableCount(1L, 1L, 1L));
 
         ChangeDataTotalCounts underTest = new ChangeDataTotalCounts(rawCounts, dmsCounts, dmsAppliedCounts);
-        assertFalse(underTest.countsMatch());
+        assertFalse(underTest.isSuccess());
     }
 
     @Test
-    void countsShouldNotMatchForDifferentDmsAppliedTable() {
+    void shouldBeFailureForDifferentDmsAppliedTable() {
         Map<String, ChangeDataTableCount> rawCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedCounts = new HashMap<>();
@@ -106,7 +106,7 @@ class ChangeDataTotalCountsTest {
         dmsAppliedCounts.put("different table", new ChangeDataTableCount(1L, 1L, 1L));
 
         ChangeDataTotalCounts underTest = new ChangeDataTotalCounts(rawCounts, dmsCounts, dmsAppliedCounts);
-        assertFalse(underTest.countsMatch());
+        assertFalse(underTest.isSuccess());
     }
 
     @Test

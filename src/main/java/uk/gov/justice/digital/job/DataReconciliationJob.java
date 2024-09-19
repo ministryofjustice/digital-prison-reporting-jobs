@@ -12,6 +12,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.datareconciliation.DataReconciliationService;
+import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
 import javax.inject.Inject;
@@ -77,7 +78,7 @@ public class DataReconciliationJob implements Runnable {
 
     @VisibleForTesting
     void runJob(SparkSession sparkSession) {
-        DataReconciliationResults results = dataReconciliationService.reconcileData(sparkSession);
+        DataReconciliationResult results = dataReconciliationService.reconcileData(sparkSession);
         String resultSummary = results.summary();
         if (results.isSuccess()) {
             logger.info("Data reconciliation SUCCEEDED:\n\n{}", resultSummary);

@@ -11,11 +11,15 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCounts;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
+import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType;
+import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType.CHANGE_DATA_COUNTS;
 
 
 /**
@@ -47,7 +51,7 @@ public class DataReconciliationService {
         this.changeDataCountService = changeDataCountService;
     }
 
-    public DataReconciliationResults reconcileData(SparkSession sparkSession) {
+    public DataReconciliationResult reconcileData(SparkSession sparkSession) {
         String inputDomain = jobArguments.getConfigKey();
         String dmsTaskId = jobArguments.getDmsTaskId();
 
@@ -56,9 +60,20 @@ public class DataReconciliationService {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(inputDomain);
         List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
 
-        CurrentStateTotalCounts currentStateTotalCounts = currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
-        ChangeDataTotalCounts changeDataTotalCounts = changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
-        return new DataReconciliationResults(currentStateTotalCounts, changeDataTotalCounts);
+        Set<ReconciliationType> reconciliationsToRun = jobArguments.getReconciliationsToRun();
+        List<DataReconciliationResult> results = reconciliationsToRun.stream().map(toRun -> {
+            logger.info("Configured to run {}", toRun);
+            switch (toRun) {
+                case CHANGE_DATA_COUNTS:
+                    return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+                case CURRENT_STATE_COUNTS:
+                    return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
+                default:
+                    throw new IllegalStateException("Unexpected reconciliation result: " + toRun);
+            }
+        }).collect(Collectors.toList());
+
+        return new DataReconciliationResults(results);
     }
 }
 

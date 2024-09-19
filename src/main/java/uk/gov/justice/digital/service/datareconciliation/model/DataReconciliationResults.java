@@ -2,25 +2,26 @@ package uk.gov.justice.digital.service.datareconciliation.model;
 
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
-public class DataReconciliationResults {
+public class DataReconciliationResults implements DataReconciliationResult {
 
-    private final CurrentStateTotalCounts currentStateTotalCounts;
-    private final ChangeDataTotalCounts changeDataTotalCounts;
+    private final List<DataReconciliationResult> results;
 
-    public DataReconciliationResults(
-            CurrentStateTotalCounts currentStateTotalCounts,
-            ChangeDataTotalCounts changeDataTotalCounts
-    ) {
-        this.currentStateTotalCounts = currentStateTotalCounts;
-        this.changeDataTotalCounts = changeDataTotalCounts;
+    public DataReconciliationResults(List<DataReconciliationResult> results) {
+        this.results = results;
     }
 
+    @Override
     public boolean isSuccess() {
-        return currentStateTotalCounts.countsMatch() && changeDataTotalCounts.countsMatch();
+        return results.stream().allMatch(DataReconciliationResult::isSuccess);
     }
 
+    @Override
     public String summary() {
-        return currentStateTotalCounts.summary() + "\n\n" + changeDataTotalCounts.summary();
+        return results.stream()
+                .map(DataReconciliationResult::summary)
+                .reduce("", (s1, s2) -> s1 + "\n\n" + s2);
     }
 }

@@ -11,11 +11,17 @@ import jakarta.inject.Singleton;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
@@ -144,6 +150,8 @@ public class JobArguments {
     public static final long OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT = 1000;
     static final String NOMIS_SOURCE_SCHEMA_NAME = "dpr.nomis.source.schema.name";
     static final String NOMIS_GLUE_CONNECTION_NAME = "dpr.nomis.glue.connection.name";
+    static final String RECONCILIATIONS_TO_RUN = "dpr.reconciliations.to.run";
+    static final Set<ReconciliationType> RECONCILIATIONS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationType.values()));
 
     private final Map<String, String> config;
 
@@ -500,6 +508,20 @@ public class JobArguments {
 
     public String getNomisGlueConnectionName() {
         return getArgument(NOMIS_GLUE_CONNECTION_NAME);
+    }
+
+    public Set<ReconciliationType> getReconciliationsToRun() {
+        return Optional
+                .ofNullable(config.get(RECONCILIATIONS_TO_RUN))
+                .map(s -> s.toLowerCase().split(","))
+                .map(tokens ->
+                    Arrays.stream(tokens)
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .map(ReconciliationType::fromString)
+                            .collect(Collectors.toSet())
+                )
+                .orElse(RECONCILIATIONS_TO_RUN_DEFAULT);
     }
 
     private String getArgument(String argumentName) {
