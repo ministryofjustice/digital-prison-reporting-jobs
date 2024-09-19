@@ -11,15 +11,13 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType;
+import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType.CHANGE_DATA_COUNTS;
 
 
 /**
@@ -60,16 +58,16 @@ public class DataReconciliationService {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(inputDomain);
         List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
 
-        Set<ReconciliationType> reconciliationsToRun = jobArguments.getReconciliationsToRun();
-        List<DataReconciliationResult> results = reconciliationsToRun.stream().map(toRun -> {
-            logger.info("Configured to run {}", toRun);
-            switch (toRun) {
+        Set<ReconciliationCheck> reconciliationChecksToRun = jobArguments.getReconciliationChecksToRun();
+        List<DataReconciliationResult> results = reconciliationChecksToRun.stream().map(checkToRun -> {
+            logger.info("Configured to run {}", checkToRun);
+            switch (checkToRun) {
                 case CHANGE_DATA_COUNTS:
                     return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
                 case CURRENT_STATE_COUNTS:
                     return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
                 default:
-                    throw new IllegalStateException("Unexpected reconciliation result: " + toRun);
+                    throw new IllegalStateException("Unexpected reconciliation result: " + checkToRun);
             }
         }).collect(Collectors.toList());
 

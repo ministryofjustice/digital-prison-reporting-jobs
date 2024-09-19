@@ -11,7 +11,7 @@ import jakarta.inject.Singleton;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType;
+import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -150,8 +150,8 @@ public class JobArguments {
     public static final long OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT = 1000;
     static final String NOMIS_SOURCE_SCHEMA_NAME = "dpr.nomis.source.schema.name";
     static final String NOMIS_GLUE_CONNECTION_NAME = "dpr.nomis.glue.connection.name";
-    static final String RECONCILIATIONS_TO_RUN = "dpr.reconciliations.to.run";
-    static final Set<ReconciliationType> RECONCILIATIONS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationType.values()));
+    static final String RECONCILIATION_CHECKS_TO_RUN = "dpr.reconciliation.checks.to.run";
+    static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationCheck.values()));
 
     private final Map<String, String> config;
 
@@ -510,18 +510,18 @@ public class JobArguments {
         return getArgument(NOMIS_GLUE_CONNECTION_NAME);
     }
 
-    public Set<ReconciliationType> getReconciliationsToRun() {
+    public Set<ReconciliationCheck> getReconciliationChecksToRun() {
         return Optional
-                .ofNullable(config.get(RECONCILIATIONS_TO_RUN))
+                .ofNullable(config.get(RECONCILIATION_CHECKS_TO_RUN))
                 .map(s -> s.toLowerCase().split(","))
                 .map(tokens ->
                     Arrays.stream(tokens)
                             .map(String::trim)
                             .filter(s -> !s.isEmpty())
-                            .map(ReconciliationType::fromString)
+                            .map(ReconciliationCheck::fromString)
                             .collect(Collectors.toSet())
                 )
-                .orElse(RECONCILIATIONS_TO_RUN_DEFAULT);
+                .orElse(RECONCILIATION_CHECKS_TO_RUN_DEFAULT);
     }
 
     private String getArgument(String argumentName) {

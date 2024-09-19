@@ -26,8 +26,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType.CHANGE_DATA_COUNTS;
-import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationType.CURRENT_STATE_COUNTS;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 
 @ExtendWith(MockitoExtension.class)
 class DataReconciliationServiceTest {
@@ -60,7 +60,7 @@ class DataReconciliationServiceTest {
 
     @Test
     void shouldGetCurrentStateCounts() {
-        when(jobArguments.getReconciliationsToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS));
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS));
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
                 ImmutablePair.of("schema", "table2")
@@ -82,7 +82,7 @@ class DataReconciliationServiceTest {
 
     @Test
     void shouldGetChangeDataCounts() {
-        when(jobArguments.getReconciliationsToRun()).thenReturn(ImmutableSet.of(CHANGE_DATA_COUNTS));
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CHANGE_DATA_COUNTS));
         when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
@@ -105,7 +105,7 @@ class DataReconciliationServiceTest {
 
     @Test
     void shouldGetCurrentStateCountsAndChangeDataCounts() {
-        when(jobArguments.getReconciliationsToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
         when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
@@ -130,7 +130,7 @@ class DataReconciliationServiceTest {
 
     @Test
     void shouldGetConfiguredTables() {
-        when(jobArguments.getReconciliationsToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
         when(jobArguments.getConfigKey()).thenReturn("config-key");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
@@ -150,7 +150,7 @@ class DataReconciliationServiceTest {
 
     @Test
     void shouldGetAllSourceReferences() {
-        when(jobArguments.getReconciliationsToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
                 ImmutablePair.of("schema", "table2")
