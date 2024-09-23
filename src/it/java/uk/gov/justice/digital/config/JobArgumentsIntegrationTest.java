@@ -593,7 +593,7 @@ class JobArgumentsIntegrationTest {
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
     public void shouldGetShouldReconciliationDataSourceTableNamesBeUpperCase(String input, boolean expected) {
         HashMap<String, String> args = new HashMap<>();
-        args.put(JobArguments.RECONCILIATION_DATASOURCE_UPPERCASE_TABLENAMES, input);
+        args.put(JobArguments.RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(expected, jobArguments.shouldReconciliationDataSourceTableNamesBeUpperCase());
     }

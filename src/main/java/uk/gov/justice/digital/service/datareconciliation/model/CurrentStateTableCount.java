@@ -30,10 +30,10 @@ public class CurrentStateTableCount {
 
     public boolean countsMatch() {
         boolean structuredMatchesCurated = structuredCount == curatedCount;
-        boolean nomisMatchesCurated = dataSourceCount == curatedCount;
+        boolean dataSourceMatchesCurated = dataSourceCount == curatedCount;
         boolean operationalDataStoreSkippedOrMatchesCurated = operationalDataStoreCount == null || operationalDataStoreCount == curatedCount;
 
-        return structuredMatchesCurated && nomisMatchesCurated && operationalDataStoreSkippedOrMatchesCurated;
+        return structuredMatchesCurated && dataSourceMatchesCurated && operationalDataStoreSkippedOrMatchesCurated;
     }
 
     public String summary() {

@@ -145,7 +145,7 @@ public class JobArguments {
     public static final long OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT = 1000;
     static final String RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME = "dpr.reconciliation.datasource.source.schema.name";
     static final String RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME = "dpr.reconciliation.datasource.glue.connection.name";
-    static final String RECONCILIATION_DATASOURCE_UPPERCASE_TABLENAMES = "dpr.reconciliation.datasource.uppercase.tablenames";
+    static final String RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES = "dpr.reconciliation.datasource.should.uppercase.tablenames";
     static final String RECONCILIATION_CHECKS_TO_RUN = "dpr.reconciliation.checks.to.run";
     static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationCheck.values()));
 
@@ -507,7 +507,7 @@ public class JobArguments {
     }
 
     public boolean shouldReconciliationDataSourceTableNamesBeUpperCase() {
-        return Boolean.parseBoolean(getArgument(RECONCILIATION_DATASOURCE_UPPERCASE_TABLENAMES));
+        return Boolean.parseBoolean(getArgument(RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES));
     }
 
     public Set<ReconciliationCheck> getReconciliationChecksToRun() {
