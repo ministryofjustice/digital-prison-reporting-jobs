@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service;
+package uk.gov.justice.digital.service.datareconciliation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,8 +8,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.JDBCCredentials;
 import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
-import uk.gov.justice.digital.exception.NomisDataAccessException;
+import uk.gov.justice.digital.exception.ReconciliationDataSourceException;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class NomisDataAccessServiceTest {
+class ReconciliationDataSourceServiceTest {
 
     private static final String GLUE_CONNECTION_NAME = "connection";
 
@@ -45,7 +46,7 @@ class NomisDataAccessServiceTest {
     @Mock
     private ResultSet resultSet;
 
-    private NomisDataAccessService underTest;
+    private ReconciliationDataSourceService underTest;
 
     @BeforeEach
     public void setup() {
@@ -53,11 +54,11 @@ class NomisDataAccessServiceTest {
         JDBCGlueConnectionDetails connectionDetails = new JDBCGlueConnectionDetails(
                 "jdbc-url", "some-driver-class", credentials
         );
-        when(jobArguments.getNomisGlueConnectionName()).thenReturn(GLUE_CONNECTION_NAME);
+        when(jobArguments.getReconciliationDataSourceGlueConnectionName()).thenReturn(GLUE_CONNECTION_NAME);
         when(connectionDetailsService.getConnectionDetails(GLUE_CONNECTION_NAME)).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
 
-        underTest = new NomisDataAccessService(jobArguments, connectionPoolProvider, connectionDetailsService);
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
     }
 
     @Test
@@ -109,7 +110,7 @@ class NomisDataAccessServiceTest {
         when(connection.createStatement()).thenReturn(statement);
         when(statement.executeQuery(any())).thenThrow(new SQLException());
 
-        assertThrows(NomisDataAccessException.class, () -> {
+        assertThrows(ReconciliationDataSourceException.class, () -> {
             underTest.getTableRowCount("some_schema.some_table");
         });
 

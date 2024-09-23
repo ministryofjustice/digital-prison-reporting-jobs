@@ -43,9 +43,9 @@ class CurrentStateTotalCountsTest {
 
         String expected = "Current State Total Counts DO NOT MATCH:\n" +
                 "For table table2:\n" +
-                "\tNomis: 2, Structured Zone: 2, Curated Zone: 1, Operational DataStore: skipped\t - MISMATCH\n" +
+                "\tData Source: 2, Structured Zone: 2, Curated Zone: 1, Operational DataStore: skipped\t - MISMATCH\n" +
                 "For table table1:\n" +
-                "\tNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
+                "\tData Source: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
         assertEquals(expected, underTest.summary());
     }
 
@@ -57,9 +57,9 @@ class CurrentStateTotalCountsTest {
 
         String expected = "Current State Total Counts MATCH:\n" +
                 "For table table2:\n" +
-                "\tNomis: 2, Structured Zone: 2, Curated Zone: 2, Operational DataStore: skipped\t - MATCH\n" +
+                "\tData Source: 2, Structured Zone: 2, Curated Zone: 2, Operational DataStore: skipped\t - MATCH\n" +
                 "For table table1:\n" +
-                "\tNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
+                "\tData Source: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
         assertEquals(expected, underTest.summary());
     }
 

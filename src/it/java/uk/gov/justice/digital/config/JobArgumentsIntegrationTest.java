@@ -81,8 +81,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, "some_schema" },
             { JobArguments.OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME, "configuration.datahub_managed_tables" },
             { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, "10000" },
-            { JobArguments.NOMIS_GLUE_CONNECTION_NAME, "my-connection" },
-            { JobArguments.NOMIS_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
+            { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, "my-connection" },
+            { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -142,8 +142,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME, validArguments.getOperationalDataStoreLoadingSchemaName() },
                 { JobArguments.OPERATIONAL_DATA_STORE_TABLES_TO_WRITE_TABLE_NAME, validArguments.getOperationalDataStoreTablesToWriteTableName() },
                 { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, Long.toString(validArguments.getOperationalDataStoreJdbcBatchSize()) },
-                { JobArguments.NOMIS_GLUE_CONNECTION_NAME, validArguments.getNomisGlueConnectionName() },
-                { JobArguments.NOMIS_SOURCE_SCHEMA_NAME, validArguments.getNomisSourceSchemaName() },
+                { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, validArguments.getReconciliationDataSourceGlueConnectionName() },
+                { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, validArguments.getReconciliationDataSourceSourceSchemaName() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -586,6 +586,16 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.RECONCILIATION_CHECKS_TO_RUN);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(RECONCILIATION_CHECKS_TO_RUN_DEFAULT, jobArguments.getReconciliationChecksToRun());
+    }
+
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldGetShouldReconciliationDataSourceTableNamesBeUpperCase(String input, boolean expected) {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_DATASOURCE_UPPERCASE_TABLENAMES, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.shouldReconciliationDataSourceTableNamesBeUpperCase());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

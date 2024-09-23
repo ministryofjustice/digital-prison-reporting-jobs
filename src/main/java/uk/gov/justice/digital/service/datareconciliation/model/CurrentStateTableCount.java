@@ -8,21 +8,21 @@ import lombok.Data;
  */
 @Data
 public class CurrentStateTableCount {
-    private final long nomisCount;
+    private final long dataSourceCount;
     private final long structuredCount;
     private final long curatedCount;
     // A null value indicates that there is no Operational DataStore count
     private final Long operationalDataStoreCount;
 
-    public CurrentStateTableCount(long nomisCount, long structuredCount, long curatedCount, Long operationalDataStoreCount) {
-        this.nomisCount = nomisCount;
+    public CurrentStateTableCount(long dataSourceCount, long structuredCount, long curatedCount, Long operationalDataStoreCount) {
+        this.dataSourceCount = dataSourceCount;
         this.structuredCount = structuredCount;
         this.curatedCount = curatedCount;
         this.operationalDataStoreCount = operationalDataStoreCount;
     }
 
-    public CurrentStateTableCount(long nomisCount, long structuredCount, long curatedCount) {
-        this.nomisCount = nomisCount;
+    public CurrentStateTableCount(long dataSourceCount, long structuredCount, long curatedCount) {
+        this.dataSourceCount = dataSourceCount;
         this.structuredCount = structuredCount;
         this.curatedCount = curatedCount;
         this.operationalDataStoreCount = null;
@@ -30,14 +30,14 @@ public class CurrentStateTableCount {
 
     public boolean countsMatch() {
         boolean structuredMatchesCurated = structuredCount == curatedCount;
-        boolean nomisMatchesCurated = nomisCount == curatedCount;
+        boolean nomisMatchesCurated = dataSourceCount == curatedCount;
         boolean operationalDataStoreSkippedOrMatchesCurated = operationalDataStoreCount == null || operationalDataStoreCount == curatedCount;
 
         return structuredMatchesCurated && nomisMatchesCurated && operationalDataStoreSkippedOrMatchesCurated;
     }
 
     public String summary() {
-        return "Nomis: " + nomisCount + ", Structured Zone: " + structuredCount + ", Curated Zone: " + curatedCount
+        return "Data Source: " + dataSourceCount + ", Structured Zone: " + structuredCount + ", Curated Zone: " + curatedCount
                 +", Operational DataStore: " + (operationalDataStoreCount == null ? "skipped": operationalDataStoreCount) +
                 (countsMatch() ? "\t - MATCH" : "\t - MISMATCH");
     }
