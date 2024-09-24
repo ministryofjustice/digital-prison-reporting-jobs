@@ -79,7 +79,7 @@ class DataReconciliationResultsTest {
                 new DataReconciliationResults(Arrays.asList(matchingCurrentStateTotalCounts, allMatchingChangeDataTotalCounts));
         String expected = "\n\nCurrent State Total Counts MATCH:\n" +
                 "For table table1:\n" +
-                "\tNomis: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped\t - MATCH\n" +
+                "\tData Source: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped\t - MATCH\n" +
                 "\n" +
                 "\n" +
                 "Change Data Total Counts MATCH:\n" +

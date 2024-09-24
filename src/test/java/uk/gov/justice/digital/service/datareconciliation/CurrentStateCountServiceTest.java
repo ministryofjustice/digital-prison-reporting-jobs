@@ -13,9 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.NomisDataAccessException;
+import uk.gov.justice.digital.exception.ReconciliationDataSourceException;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
-import uk.gov.justice.digital.service.NomisDataAccessService;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTableCount;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
@@ -34,7 +33,7 @@ class CurrentStateCountServiceTest {
     @Mock
     private S3DataProvider s3DataProvider;
     @Mock
-    private NomisDataAccessService nomisDataAccessService;
+    private ReconciliationDataSourceService reconciliationDataSourceService;
     @Mock
     private OperationalDataStoreService operationalDataStoreService;
     @Mock
@@ -63,7 +62,6 @@ class CurrentStateCountServiceTest {
         when(sourceReference1.getTable()).thenReturn("table");
         when(sourceReference1.getFullOperationalDataStoreTableNameWithSchema()).thenReturn("namespace.source_table");
 
-        when(jobArguments.getNomisSourceSchemaName()).thenReturn("OMS_OWNER");
         when(jobArguments.getStructuredS3Path()).thenReturn("s3://structured");
         when(jobArguments.getCuratedS3Path()).thenReturn("s3://curated");
 
@@ -81,7 +79,7 @@ class CurrentStateCountServiceTest {
         long curatedCount1 = 1L;
         long odsCount1 = 1L;
 
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(oracleCount1);
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount1);
         when(structured1.count()).thenReturn(structuredCount1);
         when(curated1.count()).thenReturn(curatedCount1);
         when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference1)).thenReturn(true);
@@ -101,7 +99,7 @@ class CurrentStateCountServiceTest {
         long curatedCount2 = 2L;
         long odsCount2 = 1L;
 
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE2")).thenReturn(oracleCount2);
+        when(reconciliationDataSourceService.getTableRowCount("table2")).thenReturn(oracleCount2);
         when(structured2.count()).thenReturn(structuredCount2);
         when(curated2.count()).thenReturn(curatedCount2);
         when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference2)).thenReturn(true);
@@ -126,7 +124,7 @@ class CurrentStateCountServiceTest {
         long curatedCount = 2L;
         long odsCount = 1L;
 
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(oracleCount);
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount);
         when(structured1.count()).thenReturn(structuredCount);
         when(curated1.count()).thenReturn(curatedCount);
 
@@ -136,7 +134,7 @@ class CurrentStateCountServiceTest {
 
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
-        assertEquals(oracleCount, result.getNomisCount());
+        assertEquals(oracleCount, result.getDataSourceCount());
         assertEquals(structuredCount, result.getStructuredCount());
         assertEquals(curatedCount, result.getCuratedCount());
         assertEquals(odsCount, result.getOperationalDataStoreCount());
@@ -148,7 +146,7 @@ class CurrentStateCountServiceTest {
         long structuredCount = 3L;
         long curatedCount = 2L;
 
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(oracleCount);
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount);
         when(structured1.count()).thenReturn(structuredCount);
         when(curated1.count()).thenReturn(curatedCount);
 
@@ -156,7 +154,7 @@ class CurrentStateCountServiceTest {
 
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
-        assertEquals(oracleCount, result.getNomisCount());
+        assertEquals(oracleCount, result.getDataSourceCount());
         assertEquals(structuredCount, result.getStructuredCount());
         assertEquals(curatedCount, result.getCuratedCount());
         assertNull(result.getOperationalDataStoreCount());
@@ -168,7 +166,7 @@ class CurrentStateCountServiceTest {
         long structuredCount = 3L;
         long curatedCount = 2L;
 
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(oracleCount);
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount);
         when(structured1.count()).thenReturn(structuredCount);
         when(curated1.count()).thenReturn(curatedCount);
 
@@ -177,7 +175,7 @@ class CurrentStateCountServiceTest {
 
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
-        assertEquals(oracleCount, result.getNomisCount());
+        assertEquals(oracleCount, result.getDataSourceCount());
         assertEquals(structuredCount, result.getStructuredCount());
         assertEquals(curatedCount, result.getCuratedCount());
         assertNull(result.getOperationalDataStoreCount());
@@ -186,8 +184,8 @@ class CurrentStateCountServiceTest {
     @Test
     void shouldReturnZeroCountWhenNomisThrows() {
         // It may throw because, for example, the table does not exist
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenThrow(
-                new NomisDataAccessException("Table does not exist")
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenThrow(
+                new ReconciliationDataSourceException("Table does not exist")
         );
         when(structured1.count()).thenReturn(1L);
         when(curated1.count()).thenReturn(1L);
@@ -198,7 +196,7 @@ class CurrentStateCountServiceTest {
 
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
-        assertEquals(0L, result.getNomisCount());
+        assertEquals(0L, result.getDataSourceCount());
         assertEquals(1L, result.getStructuredCount());
         assertEquals(1L, result.getCuratedCount());
         assertEquals(1L, result.getOperationalDataStoreCount());
@@ -206,7 +204,7 @@ class CurrentStateCountServiceTest {
 
     @Test
     void shouldReturnZeroCountWhenStructuredTablePathDoesNotExist() {
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(1L);
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
         when(analysisException.getMessage()).thenReturn("Path does not exist");
         when(structured1.count()).thenAnswer(i -> {
             throw analysisException;
@@ -219,7 +217,7 @@ class CurrentStateCountServiceTest {
 
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
-        assertEquals(1L, result.getNomisCount());
+        assertEquals(1L, result.getDataSourceCount());
         assertEquals(0L, result.getStructuredCount());
         assertEquals(1L, result.getCuratedCount());
         assertEquals(1L, result.getOperationalDataStoreCount());
@@ -227,7 +225,7 @@ class CurrentStateCountServiceTest {
 
     @Test
     void shouldReturnZeroCountWhenCuratedTablePathDoesNotExist() {
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(1L);
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
         when(analysisException.getMessage()).thenReturn("Path does not exist");
         when(structured1.count()).thenReturn(1L);
         when(curated1.count()).thenAnswer(i -> {
@@ -240,7 +238,7 @@ class CurrentStateCountServiceTest {
 
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
-        assertEquals(1L, result.getNomisCount());
+        assertEquals(1L, result.getDataSourceCount());
         assertEquals(1L, result.getStructuredCount());
         assertEquals(0L, result.getCuratedCount());
         assertEquals(1L, result.getOperationalDataStoreCount());
@@ -248,7 +246,7 @@ class CurrentStateCountServiceTest {
 
     @Test
     void shouldReturnZeroCountWhenODSThrows() {
-        when(nomisDataAccessService.getTableRowCount("OMS_OWNER.TABLE")).thenReturn(1L);
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
         when(structured1.count()).thenReturn(1L);
         when(curated1.count()).thenReturn(1L);
 
@@ -260,7 +258,7 @@ class CurrentStateCountServiceTest {
 
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
-        assertEquals(1L, result.getNomisCount());
+        assertEquals(1L, result.getDataSourceCount());
         assertEquals(1L, result.getStructuredCount());
         assertEquals(1L, result.getCuratedCount());
         assertEquals(0L, result.getOperationalDataStoreCount());

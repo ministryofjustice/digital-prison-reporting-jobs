@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service;
+package uk.gov.justice.digital.service.datareconciliation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,8 +8,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.JDBCCredentials;
 import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
-import uk.gov.justice.digital.exception.NomisDataAccessException;
+import uk.gov.justice.digital.exception.ReconciliationDataSourceException;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class NomisDataAccessServiceTest {
+class ReconciliationDataSourceServiceTest {
 
     private static final String GLUE_CONNECTION_NAME = "connection";
 
@@ -45,7 +46,7 @@ class NomisDataAccessServiceTest {
     @Mock
     private ResultSet resultSet;
 
-    private NomisDataAccessService underTest;
+    private ReconciliationDataSourceService underTest;
 
     @BeforeEach
     public void setup() {
@@ -53,20 +54,20 @@ class NomisDataAccessServiceTest {
         JDBCGlueConnectionDetails connectionDetails = new JDBCGlueConnectionDetails(
                 "jdbc-url", "some-driver-class", credentials
         );
-        when(jobArguments.getNomisGlueConnectionName()).thenReturn(GLUE_CONNECTION_NAME);
+        when(jobArguments.getReconciliationDataSourceGlueConnectionName()).thenReturn(GLUE_CONNECTION_NAME);
         when(connectionDetailsService.getConnectionDetails(GLUE_CONNECTION_NAME)).thenReturn(connectionDetails);
         when(connectionPoolProvider.getConnectionPool(any(), any(), any(), any())).thenReturn(dataSource);
-
-        underTest = new NomisDataAccessService(jobArguments, connectionPoolProvider, connectionDetailsService);
     }
 
     @Test
     void shouldRetrieveConnectionDetailsInConstructor() {
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
         verify(connectionDetailsService, times(1)).getConnectionDetails(GLUE_CONNECTION_NAME);
     }
 
     @Test
     void shouldInitialiseConnectionPoolInConstructor() {
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
         verify(connectionPoolProvider, times(1)).getConnectionPool(
                 "jdbc-url",
                 "some-driver-class",
@@ -77,6 +78,7 @@ class NomisDataAccessServiceTest {
 
     @Test
     void shouldGetTableRowCount() throws Exception {
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
         long count = 9999L;
 
         when(dataSource.getConnection()).thenReturn(connection);
@@ -85,19 +87,57 @@ class NomisDataAccessServiceTest {
         when(resultSet.next()).thenReturn(true);
         when(resultSet.getLong(1)).thenReturn(count);
 
-        long result = underTest.getTableRowCount("some_schema.some_table");
+        long result = underTest.getTableRowCount("some_table");
         assertEquals(count, result);
     }
 
     @Test
+    void getTableRowCountShouldQueryWithTheSchema() throws Exception {
+        when(jobArguments.getReconciliationDataSourceSourceSchemaName()).thenReturn("my_schema");
+        when(jobArguments.shouldReconciliationDataSourceTableNamesBeUpperCase()).thenReturn(false);
+
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getLong(1)).thenReturn(1L);
+
+        underTest.getTableRowCount("some_table");
+        String expectedSql = "SELECT COUNT(1) FROM my_schema.some_table";
+        verify(statement, times(1)).executeQuery(expectedSql);
+    }
+
+    @Test
+    void getTableRowCountShouldUppercaseTableNameWhenConfiguredTo() throws Exception {
+        when(jobArguments.getReconciliationDataSourceSourceSchemaName()).thenReturn("my_schema");
+        when(jobArguments.shouldReconciliationDataSourceTableNamesBeUpperCase()).thenReturn(true);
+
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
+
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery(any())).thenReturn(resultSet);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getLong(1)).thenReturn(1L);
+
+        underTest.getTableRowCount("some_table");
+        String expectedSql = "SELECT COUNT(1) FROM MY_SCHEMA.SOME_TABLE";
+        verify(statement, times(1)).executeQuery(expectedSql);
+    }
+
+    @Test
     void getTableRowCountShouldCloseResources() throws Exception {
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
+
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
         when(statement.executeQuery(any())).thenReturn(resultSet);
         when(resultSet.next()).thenReturn(true);
         when(resultSet.getLong(anyInt())).thenReturn(1L);
 
-        underTest.getTableRowCount("some_schema.some_table");
+        underTest.getTableRowCount("some_table");
 
         verify(connection, times(1)).close();
         verify(statement, times(1)).close();
@@ -105,12 +145,14 @@ class NomisDataAccessServiceTest {
 
     @Test
     void getTableRowCountShouldCloseResourcesWhenSqlExecutionThrows() throws Exception {
+        underTest = new ReconciliationDataSourceService(jobArguments, connectionPoolProvider, connectionDetailsService);
+
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
         when(statement.executeQuery(any())).thenThrow(new SQLException());
 
-        assertThrows(NomisDataAccessException.class, () -> {
-            underTest.getTableRowCount("some_schema.some_table");
+        assertThrows(ReconciliationDataSourceException.class, () -> {
+            underTest.getTableRowCount("some_table");
         });
 
         verify(connection, times(1)).close();
