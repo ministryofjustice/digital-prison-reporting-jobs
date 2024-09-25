@@ -148,6 +148,8 @@ public class JobArguments {
     static final String RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES = "dpr.reconciliation.datasource.should.uppercase.tablenames";
     static final String RECONCILIATION_CHECKS_TO_RUN = "dpr.reconciliation.checks.to.run";
     static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationCheck.values()));
+    static final String RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW = "dpr.reconciliation.mismatched.primary.keys.toshow";
+    static final int RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW_DEFAULT = 10;
 
     private final Map<String, String> config;
 
@@ -523,6 +525,14 @@ public class JobArguments {
                             .collect(Collectors.toSet())
                 )
                 .orElse(RECONCILIATION_CHECKS_TO_RUN_DEFAULT);
+    }
+
+    public int getReconciliationNumPrimaryKeysToDisplay() {
+        int n = getArgument(RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW, RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW_DEFAULT);
+        if (n < 1) {
+            throw new IllegalStateException(RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW + " must be a positive integer");
+        }
+        return n;
     }
 
     private String getArgument(String argumentName) {

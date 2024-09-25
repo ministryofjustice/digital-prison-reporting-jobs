@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_CHECKS_TO_RUN_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
@@ -83,6 +84,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, "10000" },
             { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, "my-connection" },
             { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
+            { JobArguments.RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW, "100" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -144,6 +146,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, Long.toString(validArguments.getOperationalDataStoreJdbcBatchSize()) },
                 { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, validArguments.getReconciliationDataSourceGlueConnectionName() },
                 { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, validArguments.getReconciliationDataSourceSourceSchemaName() },
+                { JobArguments.RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW, Integer.toString(validArguments.getReconciliationNumPrimaryKeysToDisplay()) },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -588,7 +591,6 @@ class JobArgumentsIntegrationTest {
         assertEquals(RECONCILIATION_CHECKS_TO_RUN_DEFAULT, jobArguments.getReconciliationChecksToRun());
     }
 
-
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
     public void shouldGetShouldReconciliationDataSourceTableNamesBeUpperCase(String input, boolean expected) {
@@ -597,6 +599,15 @@ class JobArgumentsIntegrationTest {
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(expected, jobArguments.shouldReconciliationDataSourceTableNamesBeUpperCase());
     }
+
+    @Test
+    public void getReconciliationNumPrimaryKeysToDisplayShouldDefaultWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(RECONCILIATION_MISMATCHED_PRIMARY_KEYS_TO_SHOW_DEFAULT, jobArguments.getReconciliationNumPrimaryKeysToDisplay());
+    }
+
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {
         val mockContext = mock(ApplicationContext.class);

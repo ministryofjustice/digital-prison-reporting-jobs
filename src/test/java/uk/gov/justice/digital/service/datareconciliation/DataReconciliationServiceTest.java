@@ -14,6 +14,7 @@ import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCounts;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalRowDifferences;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_ROW_DIFFERENCES;
 
 @ExtendWith(MockitoExtension.class)
 class DataReconciliationServiceTest {
@@ -46,6 +48,8 @@ class DataReconciliationServiceTest {
     @Mock
     private ChangeDataCountService changeDataCountService;
     @Mock
+    private CurrentStateRowDifferenceService currentStateRowDifferenceService;
+    @Mock
     private SparkSession sparkSession;
     @Mock
     private SourceReference sourceReference1;
@@ -55,6 +59,8 @@ class DataReconciliationServiceTest {
     private CurrentStateTotalCounts currentStateResult;
     @Mock
     private ChangeDataTotalCounts changeDataResult;
+    @Mock
+    private CurrentStateTotalRowDifferences currentStateTotalRowDifferencesResult;
 
     @InjectMocks
     private DataReconciliationService underTest;
@@ -125,6 +131,27 @@ class DataReconciliationServiceTest {
         assertTrue(results.contains(changeDataResult));
         verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
         verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+    }
+
+    @Test
+    void shouldGetCurrentStateRowDifferences() {
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_ROW_DIFFERENCES));
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+        when(currentStateRowDifferenceService.currentStateRowDifferences(allSourceReferences)).thenReturn(currentStateTotalRowDifferencesResult);
+
+        List<DataReconciliationResult> results = ((DataReconciliationResults) underTest.reconcileData(sparkSession)).getResults();
+
+        assertEquals(1, results.size());
+        assertTrue(results.contains(currentStateTotalRowDifferencesResult));
+        verify(currentStateRowDifferenceService, times(1)).currentStateRowDifferences(allSourceReferences);
     }
 
     @Test

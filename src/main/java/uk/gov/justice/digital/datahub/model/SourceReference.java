@@ -1,7 +1,12 @@
 package uk.gov.justice.digital.datahub.model;
 
 import lombok.Data;
+import lombok.val;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.StructType;
+import scala.collection.JavaConverters;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -54,6 +59,14 @@ public class SourceReference {
 
         public Collection<String> getKeyColumnNames() {
             return Collections.unmodifiableCollection(keys);
+        }
+
+        public Dataset<Row> withOnlyPrimaryKeyColumns(Dataset<Row> df) {
+            val primaryKeys = JavaConverters
+                    .asScalaIteratorConverter(keys.stream().map(functions::col).iterator())
+                    .asScala()
+                    .toSeq();
+            return df.select(primaryKeys);
         }
 
         @Override

@@ -33,6 +33,7 @@ public class DataReconciliationService {
     private final SourceReferenceService sourceReferenceService;
     private final CurrentStateCountService currentStateCountService;
     private final ChangeDataCountService changeDataCountService;
+    private final CurrentStateRowDifferenceService currentStateRowDifferenceService;
 
     @Inject
     public DataReconciliationService(
@@ -40,13 +41,15 @@ public class DataReconciliationService {
             ConfigService configService,
             SourceReferenceService sourceReferenceService,
             CurrentStateCountService currentStateCountService,
-            ChangeDataCountService changeDataCountService
+            ChangeDataCountService changeDataCountService,
+            CurrentStateRowDifferenceService currentStateRowDifferenceService
     ) {
         this.jobArguments = jobArguments;
         this.configService = configService;
         this.sourceReferenceService = sourceReferenceService;
         this.currentStateCountService = currentStateCountService;
         this.changeDataCountService = changeDataCountService;
+        this.currentStateRowDifferenceService = currentStateRowDifferenceService;
     }
 
     public DataReconciliationResult reconcileData(SparkSession sparkSession) {
@@ -66,6 +69,8 @@ public class DataReconciliationService {
                     return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
                 case CURRENT_STATE_COUNTS:
                     return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
+                case CURRENT_STATE_ROW_DIFFERENCES:
+                    return currentStateRowDifferenceService.currentStateRowDifferences(allSourceReferences);
                 default:
                     throw new IllegalStateException("Unexpected reconciliation result: " + checkToRun);
             }
