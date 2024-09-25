@@ -80,7 +80,7 @@ public class ReconciliationDataSourceService {
         }
     }
 
-    public Dataset<Row> getDataframe(SparkSession sparkSession, String tableName) {
+    public Dataset<Row> readTableAsDataframe(SparkSession sparkSession, String tableName) {
         String fullTableName = toFullTableName(tableName);
         return sparkSession.read().jdbc(jdbcUrl, fullTableName, jdbcProps);
     }

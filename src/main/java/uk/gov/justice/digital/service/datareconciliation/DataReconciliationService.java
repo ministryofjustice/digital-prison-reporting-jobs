@@ -63,7 +63,7 @@ public class DataReconciliationService {
 
         Set<ReconciliationCheck> reconciliationChecksToRun = jobArguments.getReconciliationChecksToRun();
         List<DataReconciliationResult> results = reconciliationChecksToRun.stream().map(checkToRun -> {
-            logger.info("Configured to run {}", checkToRun);
+            logger.info("Will run {}", checkToRun);
             switch (checkToRun) {
                 case CHANGE_DATA_COUNTS:
                     return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);

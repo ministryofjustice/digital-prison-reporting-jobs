@@ -10,8 +10,8 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
-import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalRowDifferences;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTableRowDifferences;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalRowDifferences;
 
 import java.util.List;
 
@@ -49,14 +49,13 @@ public class CurrentStateRowDifferenceService {
         return currentStateTotalRowDifferences;
     }
 
-    // Return pair of (inSourceNotCurated, inCuratedNotSource)
     private CurrentStateTableRowDifferences differencesForTable(SourceReference sourceReference) {
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
         String curatedTablePath = tablePath(jobArguments.getCuratedS3Path(), sourceName, tableName);
         logger.info("Getting current state data across data stores for table {}.{}", sourceName, tableName);
-        Dataset<Row> sourceDataStoreData = dataSourceService.getDataframe(sparkSession, tableName);
-        Dataset<Row> curatedData = s3DataProvider.getBatchSourceData(sparkSession, curatedTablePath);
+        Dataset<Row> sourceDataStoreData = dataSourceService.readTableAsDataframe(sparkSession, tableName);
+        Dataset<Row> curatedData = s3DataProvider.getBatchDeltaTableData(sparkSession, curatedTablePath);
         Dataset<Row> inSourceNotCurated = diff(sourceDataStoreData, curatedData);
         Dataset<Row> inCuratedNotSource = diff(curatedData, sourceDataStoreData);
 
