@@ -39,7 +39,8 @@ public class CommonDataFields {
     private CommonDataFields() {}
 
     /**
-     * Returns a Dataframe with the non-core (i.e. metadata, checkpoint, etc.) columns dropped
+     * Returns a Dataframe with only the core data fields from DMS. The
+     * non-core (i.e. metadata, checkpoint, etc.) columns are dropped.
      */
     public static Dataset<Row> dropNonCoreColumns(Dataset<Row> df) {
         return df.drop(OPERATION, TIMESTAMP, CHECKPOINT_COL);

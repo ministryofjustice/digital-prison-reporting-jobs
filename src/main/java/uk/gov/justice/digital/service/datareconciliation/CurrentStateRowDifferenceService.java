@@ -53,25 +53,27 @@ public class CurrentStateRowDifferenceService {
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
         String curatedTablePath = tablePath(jobArguments.getCuratedS3Path(), sourceName, tableName);
-        logger.info("Getting current state data across data stores for table {}.{}", sourceName, tableName);
+        logger.info("Getting current state differences across data stores for table {}.{}", sourceName, tableName);
         Dataset<Row> sourceDataStoreData = dataSourceService.readTableAsDataframe(sparkSession, tableName);
         Dataset<Row> curatedData = s3DataProvider.getBatchDeltaTableData(sparkSession, curatedTablePath);
         Dataset<Row> inSourceNotCurated = diff(sourceDataStoreData, curatedData);
         Dataset<Row> inCuratedNotSource = diff(curatedData, sourceDataStoreData);
 
+        logger.info("Getting rows in Data Source but not Curated for table {}.{}", sourceName, tableName);
         Row[] inSourceNotCuratedPks = collectPrimaryKeys(sourceReference, inSourceNotCurated);
+        logger.info("Getting rows in Curated but not Data Source for table {}.{}", sourceName, tableName);
         Row[] inCuratedNotSourcePks = collectPrimaryKeys(sourceReference, inCuratedNotSource);
 
-
+        logger.info("Got current state differences across data stores for table {}.{}", sourceName, tableName);
         return new CurrentStateTableRowDifferences(inSourceNotCuratedPks, inCuratedNotSourcePks);
     }
 
-    private Row[] collectPrimaryKeys(SourceReference sourceReference, Dataset<Row> inSourceNotCurated) {
-        int numberOfPrimaryKeys = jobArguments.getReconciliationNumPrimaryKeysToDisplay();
+    private Row[] collectPrimaryKeys(SourceReference sourceReference, Dataset<Row> df) {
+        int numberOfPrimaryKeysToCollect = jobArguments.getReconciliationNumPrimaryKeysToDisplay();
         return sourceReference
                 .getPrimaryKey()
-                .withOnlyPrimaryKeyColumns(inSourceNotCurated)
-                .limit(numberOfPrimaryKeys)
+                .withOnlyPrimaryKeyColumns(df)
+                .limit(numberOfPrimaryKeysToCollect)
                 .collectAsList().toArray(new Row[0]);
     }
 
