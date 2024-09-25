@@ -65,8 +65,8 @@ class CurrentStateCountServiceTest {
         when(jobArguments.getStructuredS3Path()).thenReturn("s3://structured");
         when(jobArguments.getCuratedS3Path()).thenReturn("s3://curated");
 
-        when(s3DataProvider.getBatchSourceData(sparkSession, "s3://structured/source/table")).thenReturn(structured1);
-        when(s3DataProvider.getBatchSourceData(sparkSession, "s3://curated/source/table")).thenReturn(curated1);
+        when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://structured/source/table")).thenReturn(structured1);
+        when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://curated/source/table")).thenReturn(curated1);
     }
 
     @Test
@@ -91,8 +91,8 @@ class CurrentStateCountServiceTest {
         when(sourceReference2.getFullOperationalDataStoreTableNameWithSchema()).thenReturn("namespace.source_table2");
         when(sourceReference2.getFullDatahubTableName()).thenReturn("source.table2");
 
-        when(s3DataProvider.getBatchSourceData(sparkSession, "s3://structured/source/table2")).thenReturn(structured2);
-        when(s3DataProvider.getBatchSourceData(sparkSession, "s3://curated/source/table2")).thenReturn(curated2);
+        when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://structured/source/table2")).thenReturn(structured2);
+        when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://curated/source/table2")).thenReturn(curated2);
 
         long oracleCount2 = 4L;
         long structuredCount2 = 3L;
