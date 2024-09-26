@@ -2,12 +2,16 @@ package uk.gov.justice.digital.provider;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import jakarta.inject.Singleton;
+import io.micronaut.context.annotation.Prototype;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 
-@Singleton
+@Prototype
 public class ConnectionPoolProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConnectionPoolProvider.class);
 
     private static final int MAX_HIKARI_POOL_SIZE = 10;
 
@@ -17,6 +21,8 @@ public class ConnectionPoolProvider {
             String username,
             String password
     ) {
+        logger.debug("Setting up connection pool with user: {}, driver class {}, jdbcUrl: {}",
+                username, jdbcDriverClassName, jdbcUrl);
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(jdbcUrl);
         hikariConfig.setDriverClassName(jdbcDriverClassName);
