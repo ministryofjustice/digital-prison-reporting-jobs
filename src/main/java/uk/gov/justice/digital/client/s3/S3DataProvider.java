@@ -118,6 +118,13 @@ public class S3DataProvider {
                 .parquet(filePath);
     }
 
+    public Dataset<Row> getBatchDeltaTableData(SparkSession sparkSession, String filePath) {
+        return sparkSession
+                .read()
+                .format("delta")
+                .load(filePath);
+    }
+
     public StructType inferSchema(SparkSession sparkSession, String sourceName, String tableName) {
         // Attempt to infer schema from files in the raw zone.
         // If there is a failure due to FileNotFoundException which occurs when a file gets archived then the schema inference is done using data already in the raw archive

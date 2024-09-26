@@ -98,7 +98,7 @@ public class CurrentStateCountService {
     private long getStructuredCount(SparkSession sparkSession, String structuredTablePath, String sourceName, String tableName) {
         long structuredCount;
         try {
-            Dataset<Row> structured = s3DataProvider.getBatchSourceData(sparkSession, structuredTablePath);
+            Dataset<Row> structured = s3DataProvider.getBatchDeltaTableData(sparkSession, structuredTablePath);
             logger.info("Reading Structured count for table {}/{}", sourceName, tableName);
             structuredCount = structured.count();
         } catch (Exception e) {
@@ -115,7 +115,7 @@ public class CurrentStateCountService {
     private long getCuratedCount(SparkSession sparkSession, String curatedTablePath, String sourceName, String tableName, String structuredTablePath) {
         long curatedCount;
         try {
-            Dataset<Row> curated = s3DataProvider.getBatchSourceData(sparkSession, curatedTablePath);
+            Dataset<Row> curated = s3DataProvider.getBatchDeltaTableData(sparkSession, curatedTablePath);
             logger.info("Reading Curated count for table {}/{}", sourceName, tableName);
             curatedCount = curated.count();
         } catch (Exception e) {
