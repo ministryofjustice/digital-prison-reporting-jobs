@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class JDBCGlueConnectionDetailsServiceTest {
 
-    private final static String connectionName = "some-connection-name";
+    private static final String CONNECTION_NAME = "some-connection-name";
     @Mock
     private GlueClient mockGlueClient;
     @Mock
@@ -55,17 +55,17 @@ class JDBCGlueConnectionDetailsServiceTest {
 
         JDBCCredentials credentials = new JDBCCredentials(expectedUsername, expectedPassword);
 
-        when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);
+        when(mockGlueClient.getConnection(CONNECTION_NAME)).thenReturn(mockConnection);
         when(mockConnection.getConnectionProperties()).thenReturn(connectionProperties);
         when(mockSecretsManagerClient.getSecret(secretId, JDBCCredentials.class)).thenReturn(credentials);
 
-        JDBCGlueConnectionDetails result = underTest.getConnectionDetails(connectionName);
+        JDBCGlueConnectionDetails result = underTest.getConnectionDetails(CONNECTION_NAME);
         assertEquals(expectedUrl, result.getUrl());
         assertEquals(expectedDriver, result.getJdbcDriverClassName());
         assertEquals(expectedUsername, result.getCredentials().getUsername());
         assertEquals(expectedPassword, result.getCredentials().getPassword());
 
-        verify(mockGlueClient, times(1)).getConnection(connectionName);
+        verify(mockGlueClient, times(1)).getConnection(CONNECTION_NAME);
         verify(mockSecretsManagerClient, times(1)).getSecret(secretId, JDBCCredentials.class);
     }
 
@@ -77,10 +77,10 @@ class JDBCGlueConnectionDetailsServiceTest {
         connectionProperties.put("JDBC_DRIVER_CLASS_NAME", "driver");
         connectionProperties.put("SECRET_ID", "secret");
 
-        when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);
+        when(mockGlueClient.getConnection(CONNECTION_NAME)).thenReturn(mockConnection);
         when(mockConnection.getConnectionProperties()).thenReturn(connectionProperties);
 
-        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(connectionName));
+        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(CONNECTION_NAME));
     }
 
     @Test
@@ -91,15 +91,14 @@ class JDBCGlueConnectionDetailsServiceTest {
         connectionProperties.put("JDBC_DRIVER_CLASS_NAME", null);
         connectionProperties.put("SECRET_ID", "secret");
 
-        when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);
+        when(mockGlueClient.getConnection(CONNECTION_NAME)).thenReturn(mockConnection);
         when(mockConnection.getConnectionProperties()).thenReturn(connectionProperties);
 
-        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(connectionName));
+        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(CONNECTION_NAME));
     }
 
     @Test
     void shouldThrowForNullUsername() {
-        String connectionName = "some-connection-name";
         String secretId = "some-secret-id";
 
         Map<String, String> connectionProperties = new HashMap<>();
@@ -109,16 +108,15 @@ class JDBCGlueConnectionDetailsServiceTest {
 
         JDBCCredentials credentials = new JDBCCredentials(null, "password");
 
-        when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);
+        when(mockGlueClient.getConnection(CONNECTION_NAME)).thenReturn(mockConnection);
         when(mockConnection.getConnectionProperties()).thenReturn(connectionProperties);
         when(mockSecretsManagerClient.getSecret(secretId, JDBCCredentials.class)).thenReturn(credentials);
 
-        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(connectionName));
+        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(CONNECTION_NAME));
     }
 
     @Test
     void shouldThrowForNullPassword() {
-        String connectionName = "some-connection-name";
         String secretId = "some-secret-id";
 
         Map<String, String> connectionProperties = new HashMap<>();
@@ -128,10 +126,10 @@ class JDBCGlueConnectionDetailsServiceTest {
 
         JDBCCredentials credentials = new JDBCCredentials("user", null);
 
-        when(mockGlueClient.getConnection(connectionName)).thenReturn(mockConnection);
+        when(mockGlueClient.getConnection(CONNECTION_NAME)).thenReturn(mockConnection);
         when(mockConnection.getConnectionProperties()).thenReturn(connectionProperties);
         when(mockSecretsManagerClient.getSecret(secretId, JDBCCredentials.class)).thenReturn(credentials);
 
-        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(connectionName));
+        assertThrows(JDBCGlueConnectionDetailsException.class, () -> underTest.getConnectionDetails(CONNECTION_NAME));
     }
 }
