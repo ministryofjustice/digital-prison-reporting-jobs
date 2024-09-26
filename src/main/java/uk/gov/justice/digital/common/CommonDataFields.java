@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.common;
 
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 
@@ -35,6 +37,14 @@ public class CommonDataFields {
     }
 
     private CommonDataFields() {}
+
+    /**
+     * Returns a Dataframe with only the core data fields from DMS. The
+     * non-core (i.e. metadata, checkpoint, etc.) columns are dropped.
+     */
+    public static Dataset<Row> dropNonCoreColumns(Dataset<Row> df) {
+        return df.drop(OPERATION, TIMESTAMP, CHECKPOINT_COL);
+    }
 
     /**
      * Add the metadata fields to the provided schema
