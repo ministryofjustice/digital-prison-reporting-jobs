@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 public class JDBCCredentials {
-    @JsonProperty(required = true)
+    @JsonProperty(value = "username", required = true)
     private String username;
-    @JsonProperty(required = true)
+    @JsonProperty(value = "password", required = true)
     private String password;
 }
