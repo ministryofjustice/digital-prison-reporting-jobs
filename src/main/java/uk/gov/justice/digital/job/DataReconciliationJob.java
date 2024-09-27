@@ -13,7 +13,6 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.datareconciliation.DataReconciliationService;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
-import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
 import javax.inject.Inject;
 
