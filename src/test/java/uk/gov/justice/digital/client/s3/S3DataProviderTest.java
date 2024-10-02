@@ -4,6 +4,7 @@ import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,8 @@ class S3DataProviderTest {
     private DataFrameReader dfReader;
     @Mock
     private AnalysisException analysisException;
+    @Mock
+    private DeltaAnalysisException deltaAnalysisException;
 
     private S3DataProvider underTest;
 
@@ -83,6 +86,12 @@ class S3DataProviderTest {
     void isPathDoesNotExistExceptionShouldReturnTrueWhenPathDoesNotExist() {
         when(analysisException.getMessage()).thenReturn("Path does not exist");
         assertTrue(S3DataProvider.isPathDoesNotExistException(analysisException));
+    }
+
+    @Test
+    void isPathDoesNotExistExceptionShouldReturnTrueWhenDeltaPathDoesNotExist() {
+        when(deltaAnalysisException.getMessage()).thenReturn("Delta table `s3://some-bucket/some-path` doesn't exist.");
+        assertTrue(S3DataProvider.isPathDoesNotExistException(deltaAnalysisException));
     }
 
     @Test
