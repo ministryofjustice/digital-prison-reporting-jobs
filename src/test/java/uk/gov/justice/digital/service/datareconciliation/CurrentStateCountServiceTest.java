@@ -1,9 +1,9 @@
 package uk.gov.justice.digital.service.datareconciliation;
 
-import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,8 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
-import uk.gov.justice.digital.exception.ReconciliationDataSourceException;
 import uk.gov.justice.digital.exception.OperationalDataStoreException;
+import uk.gov.justice.digital.exception.ReconciliationDataSourceException;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTableCount;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
@@ -51,7 +51,7 @@ class CurrentStateCountServiceTest {
     @Mock
     private Dataset<Row> curated2;
     @Mock
-    private AnalysisException analysisException;
+    private DeltaAnalysisException deltaAnalysisException;
 
     @InjectMocks
     private CurrentStateCountService underTest;
@@ -205,9 +205,9 @@ class CurrentStateCountServiceTest {
     @Test
     void shouldReturnZeroCountWhenStructuredTablePathDoesNotExist() {
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
-        when(analysisException.getMessage()).thenReturn("Path does not exist");
+        when(deltaAnalysisException.getMessage()).thenReturn("Delta table `s3://bucket/path/path` doesn't exist.");
         when(structured1.count()).thenAnswer(i -> {
-            throw analysisException;
+            throw deltaAnalysisException;
         });
         when(curated1.count()).thenReturn(1L);
 
@@ -226,10 +226,10 @@ class CurrentStateCountServiceTest {
     @Test
     void shouldReturnZeroCountWhenCuratedTablePathDoesNotExist() {
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
-        when(analysisException.getMessage()).thenReturn("Path does not exist");
+        when(deltaAnalysisException.getMessage()).thenReturn("Delta table `s3://bucket/path/path` doesn't exist.");
         when(structured1.count()).thenReturn(1L);
         when(curated1.count()).thenAnswer(i -> {
-            throw analysisException;
+            throw deltaAnalysisException;
         });
 
         when(operationalDataStoreService.isEnabled()).thenReturn(true);
