@@ -23,4 +23,12 @@ public class ConfigService {
         if (configuredTables.isEmpty()) throw new ConfigServiceException("No tables configured for key " + configKey);
         return configuredTables;
     }
+
+    public ImmutableSet<String> getConfiguredTablePaths(String configKey) {
+        return ImmutableSet.copyOf(getConfiguredTables(configKey)
+                .stream()
+                .map(pair -> pair.left + "/" + pair.right)
+                .iterator()
+        );
+    }
 }

@@ -1,13 +1,16 @@
 package uk.gov.justice.digital.service;
 
+import com.google.common.collect.ImmutableSet;
 import jakarta.inject.Inject;
 import org.apache.spark.sql.SparkSession;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.MaintenanceOperationFailedException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
@@ -27,24 +30,33 @@ public class MaintenanceService {
     /**
      * Runs a delta lake compaction on all delta lake tables recursively below rootPath with the given depth limit
      */
-    public void compactDeltaTables(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
+    public void compactDeltaTables(SparkSession spark, String rootPath, ImmutableSet<String> configuredTablePaths, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table compaction for tables under root path: {}", rootPath);
         List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
-        logger.info("Found {} delta tables", deltaTablePaths.size());
-        logger.debug("Found delta tables at the following paths: {}", String.join(", ", (deltaTablePaths)));
-        attemptAll(deltaTablePaths, path -> storageService.compactDeltaTable(spark, path));
+        List<String> filteredDeltaTablePaths = configuredTablePaths.isEmpty()
+                ? deltaTablePaths
+                : filterPathsForConfig(configuredTablePaths, deltaTablePaths);
+        logger.info("Found {} delta tables", filteredDeltaTablePaths.size());
+        String paths = String.join(", ", (filteredDeltaTablePaths));
+        logger.debug("Found delta tables at the following paths: {}", paths);
+        attemptAll(filteredDeltaTablePaths, path -> storageService.compactDeltaTable(spark, path));
         logger.info("Finished delta table compaction for root path: {}", rootPath);
     }
 
     /**
      * Runs a delta lake vacuum on all delta lake tables recursively below rootPath with the given depth limit
      */
-    public void vacuumDeltaTables(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
+    public void vacuumDeltaTables(SparkSession spark, String rootPath, ImmutableSet<String> configuredTablePaths, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table vacuum for tables under root path {}", rootPath);
         List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
-        logger.info("Found {} delta tables", deltaTablePaths.size());
-        logger.debug("Found delta tables at the following paths: {}", String.join(", ", (deltaTablePaths)));
-        attemptAll(deltaTablePaths, path -> storageService.vacuum(spark, path));
+        List<String> filteredDeltaTablePaths = configuredTablePaths.isEmpty()
+                ? deltaTablePaths
+                : filterPathsForConfig(configuredTablePaths, deltaTablePaths);
+
+        logger.info("Found {} delta tables", filteredDeltaTablePaths.size());
+        String paths = String.join(", ", (filteredDeltaTablePaths));
+        logger.debug("Found delta tables at the following paths: {}", paths);
+        attemptAll(filteredDeltaTablePaths, path -> storageService.vacuum(spark, path));
         logger.info("Finished delta table vacuum for tables under root path: {}", rootPath);
     }
 
@@ -76,5 +88,12 @@ public class MaintenanceService {
             logger.error(msg);
             throw new MaintenanceOperationFailedException(msg);
         }
+    }
+
+    @NotNull
+    private static List<String> filterPathsForConfig(ImmutableSet<String> configuredTablePaths, List<String> deltaTablePaths) {
+        return deltaTablePaths.stream()
+                .filter(path -> configuredTablePaths.stream().anyMatch(configuredTablePath -> path.toLowerCase().contains(configuredTablePath.toLowerCase())))
+                .collect(Collectors.toList());
     }
 }
