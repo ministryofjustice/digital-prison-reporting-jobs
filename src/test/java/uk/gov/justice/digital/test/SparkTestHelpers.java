@@ -5,22 +5,14 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
-import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
-import org.jetbrains.annotations.NotNull;
-import scala.collection.JavaConverters;
-import scala.collection.Seq;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.hamcrest.Matchers.contains;
 
 public class SparkTestHelpers {
 
@@ -61,14 +53,5 @@ public class SparkTestHelpers {
                     .filter(p -> p.toFile().getName().endsWith(".parquet"))
                     .count();
         }
-    }
-
-    public static <T> Seq<T> convertListToSeq(List<T> inputList) {
-        return JavaConverters.asScalaIteratorConverter(inputList.iterator()).asScala().toSeq();
-    }
-
-    @NotNull
-    public static <T> Matcher<Iterable<? extends T>> containsTheSameElementsInOrderAs(List<T> expectedItems) {
-        return contains(expectedItems.stream().map(Matchers::equalTo).collect(Collectors.toList()));
     }
 }

@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,10 +10,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
+import uk.gov.justice.digital.config.JobArguments;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
+import java.util.HashSet;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
@@ -21,9 +27,15 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doNothing;
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
+import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
 class S3FileServiceTest {
@@ -39,18 +51,20 @@ class S3FileServiceTest {
 
     @Mock
     private S3ObjectClient mockS3Client;
+    @Mock
+    private JobArguments mockJobArguments;
 
     private S3FileService undertest;
 
     @BeforeEach
     public void setup() {
-        reset(mockS3Client);
-
-        undertest = new S3FileService(mockS3Client, fixedClock);
+        reset(mockS3Client, mockJobArguments);
+        givenConfiguredRetriesJobArgs(1, mockJobArguments);
+        undertest = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
     }
 
     @Test
-    public void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
+    void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
         List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod);
@@ -59,7 +73,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void listFilesShouldReturnListOfParquetFiles() {
+    void listFilesShouldReturnListOfParquetFiles() {
         List<String> expected = new ArrayList<>();
         expected.add("file1.parquet");
         expected.add("file2.parquet");
@@ -75,7 +89,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void listFilesForConfigShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
+    void listFilesForConfigShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -113,7 +127,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void listFilesForConfigShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
+    void listFilesForConfigShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
         String configuredTable1 = "schema_1/table_1";
         String configuredTable2 = "schema_2/table_2";
 
@@ -155,7 +169,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void copyObjectsShouldCopyGivenObjectsFromSourceToDestinationBucketsWhenDeleteCopiedFilesIsFalse() {
+    void copyObjectsShouldCopyGivenObjectsFromSourceToDestinationBucketsWhenDeleteCopiedFilesIsFalse() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -218,7 +232,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void copyObjectsShouldReturnListOfFailedObjectsWhenDeleteCopiedFilesIsFalse() {
+    void copyObjectsShouldReturnListOfFailedObjectsWhenDeleteCopiedFilesIsFalse() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -239,7 +253,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void copyObjectsShouldCopyAndDeleteGivenObjectsFromSourceToDestinationBucketsWhenDeleteCopiedFilesIsTrue() {
+    void copyObjectsShouldCopyAndDeleteGivenObjectsFromSourceToDestinationBucketsWhenDeleteCopiedFilesIsTrue() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -255,7 +269,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void copyObjectsShouldReturnListOfObjectsWhichFailedToBeCopiedWhenDeleteCopiedFilesIsTrue() {
+    void copyObjectsShouldReturnListOfObjectsWhichFailedToBeCopiedWhenDeleteCopiedFilesIsTrue() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -276,7 +290,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void copyObjectsShouldReturnListOfObjectsWhichFailedToBeDeletedWhenDeleteCopiedFilesIsTrue() {
+    void copyObjectsShouldReturnListOfObjectsWhichFailedToBeDeletedWhenDeleteCopiedFilesIsTrue() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -298,7 +312,36 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void deleteObjectsShouldDeleteGivenObjectsFromS3() {
+    void copyObjectsShouldRetryWhenAnErrorOccursCopyingFileAndThereIsARetryConfig() {
+        int numRetries = 2;
+        List<String> objectKeys = Collections.singletonList("file1.parquet");
+        givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
+        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).copyObject(any(), any(), any(), any());
+
+        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+
+        s3FileService.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX,false);
+
+        verify(mockS3Client, times(numRetries)).copyObject(any(), any(), any(), any());
+    }
+
+    @Test
+    void copyObjectsShouldRetryWhenAnErrorOccursDeletingFileAndThereIsARetryConfig() {
+        int numRetries = 2;
+        List<String> objectKeys = Collections.singletonList("file1.parquet");
+        givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
+        doNothing().when(mockS3Client).copyObject(any(), any(), any(), any());
+        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).deleteObject(any(), any());
+
+        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+
+        s3FileService.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX,true);
+
+        verify(mockS3Client, times(numRetries)).deleteObject(any(), any());
+    }
+
+    @Test
+    void deleteObjectsShouldDeleteGivenObjectsFromS3() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -313,7 +356,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    public void deleteObjectsShouldReturnListOfObjectsWhichFailedDeletion() {
+    void deleteObjectsShouldReturnListOfObjectsWhichFailedDeletion() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
         objectKeys.add("file2.parquet");
@@ -332,5 +375,19 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file2.parquet");
         expectedFailedObjects.add("file4.parquet");
         assertThat(failedObjects, containsInAnyOrder(expectedFailedObjects.toArray()));
+    }
+
+    @Test
+    void deleteObjectsShouldRetryWhenAnErrorOccursDeletingFile() {
+        int numRetries = 2;
+        List<String> objectKeys = Collections.singletonList("file1.parquet");
+        givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
+        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).deleteObject(any(), any());
+
+        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+
+        s3FileService.deleteObjects(objectKeys, SOURCE_BUCKET);
+
+        verify(mockS3Client, times(numRetries)).deleteObject(any(), any());
     }
 }

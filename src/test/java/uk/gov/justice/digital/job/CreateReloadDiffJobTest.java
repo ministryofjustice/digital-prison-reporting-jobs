@@ -53,7 +53,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.CHECKPOINT_COL_VALUE;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
-import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
+import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
 class CreateReloadDiffJobTest extends BaseSparkTest {

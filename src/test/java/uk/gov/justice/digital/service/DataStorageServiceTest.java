@@ -45,6 +45,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
 class DataStorageServiceTest extends BaseSparkTest {
@@ -484,13 +485,6 @@ class DataStorageServiceTest extends BaseSparkTest {
         doThrow(toBeThrown)
                 .doNothing()
                 .when(mockDataFrameWriter).save();
-    }
-
-    private void givenConfiguredRetriesJobArgs(int numRetries, JobArguments mockJobArguments) {
-        when(mockJobArguments.getDataStorageRetryMaxAttempts()).thenReturn(numRetries);
-        when(mockJobArguments.getDataStorageRetryMinWaitMillis()).thenReturn(1L);
-        when(mockJobArguments.getDataStorageRetryMaxWaitMillis()).thenReturn(10L);
-        when(mockJobArguments.getDataStorageRetryJitterFactor()).thenReturn(0.1D);
     }
 
     private void givenMergeThrowsEveryTime(Class<? extends Throwable> toBeThrown) {
