@@ -43,7 +43,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.test.Fixtures.JSON_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
-import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
+import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
 public class HiveTableServiceTest extends BaseSparkTest {

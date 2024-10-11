@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.client.s3.S3SchemaClient.S3SchemaResponse;
 import static uk.gov.justice.digital.test.ResourceLoader.getResource;
-import static uk.gov.justice.digital.test.SparkTestHelpers.containsTheSameElementsInOrderAs;
+import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
 public class SourceReferenceServiceTest {

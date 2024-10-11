@@ -28,7 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
-import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
+import static uk.gov.justice.digital.test.TestHelpers.convertListToSeq;
 
 @ExtendWith(MockitoExtension.class)
 class TableStreamingQueryTest extends BaseSparkTest {

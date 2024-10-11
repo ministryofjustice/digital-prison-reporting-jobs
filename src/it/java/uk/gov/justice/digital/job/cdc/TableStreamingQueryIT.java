@@ -67,7 +67,7 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCred
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
-import static uk.gov.justice.digital.test.SparkTestHelpers.convertListToSeq;
+import static uk.gov.justice.digital.test.TestHelpers.convertListToSeq;
 
 
 /**

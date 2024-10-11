@@ -2,7 +2,6 @@ package uk.gov.justice.digital.service;
 
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
-import dev.failsafe.RetryPolicyBuilder;
 import dev.failsafe.function.CheckedRunnable;
 import io.delta.tables.DeltaTable;
 import jakarta.inject.Inject;
@@ -19,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.common.CommonDataFields;
+import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.datahub.model.TableIdentifier;
@@ -29,7 +29,6 @@ import javax.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,6 +42,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.common.retry.RetryPolicyBuilder.buildRetryPolicy;
 
 @Singleton
 public class DataStorageService {
@@ -61,7 +61,8 @@ public class DataStorageService {
 
     @Inject
     public DataStorageService(JobArguments jobArguments) {
-        this.retryPolicy = buildRetryPolicy(jobArguments);
+        RetryConfig retryConfig = new RetryConfig(jobArguments);
+        this.retryPolicy = buildRetryPolicy(retryConfig, DeltaConcurrentModificationException.class);
     }
 
     public boolean exists(SparkSession spark, TableIdentifier tableId) {
@@ -359,42 +360,6 @@ public class DataStorageService {
         } catch (DeltaConcurrentModificationException e) {
             throw new DataStorageRetriesExhaustedException(e);
         }
-    }
-
-    private static RetryPolicy<Void> buildRetryPolicy(JobArguments jobArguments) {
-        long minWaitMillis = jobArguments.getDataStorageRetryMinWaitMillis();
-        long maxWaitMillis = jobArguments.getDataStorageRetryMaxWaitMillis();
-        double jitterFactor = jobArguments.getDataStorageRetryJitterFactor();
-        // You can turn off retries by setting max attempts to 1
-        int maxAttempts = jobArguments.getDataStorageRetryMaxAttempts();
-        logger.info("Retry Policy Settings: max attempts: {}, min wait: {}ms, max wait: {}ms, jitter factor: {}", maxAttempts, minWaitMillis, maxWaitMillis, jitterFactor);
-        RetryPolicyBuilder<Void> builder = RetryPolicy.builder();
-        // Specify the Throwables we will retry
-        builder.handle(DeltaConcurrentModificationException.class)
-                // Exponential backoff
-                .withBackoff(minWaitMillis, maxWaitMillis, ChronoUnit.MILLIS)
-                .withJitter(jitterFactor)
-                .withMaxAttempts(maxAttempts)
-                .onFailedAttempt(e -> {
-                    Throwable lastException = e.getLastException();
-                    int thisAttempt = e.getAttemptCount();
-                    String msg = format("Failed attempt %,d.", thisAttempt);
-                    logger.debug(msg, lastException);
-                })
-                .onRetry(e -> {
-                    int lastAttempt = e.getAttemptCount();
-                    long elapsedTimeTotal = e.getElapsedTime().toMillis();
-                    String msg = format("Retrying after attempt %,d. Elapsed time total: %,dms.", lastAttempt, elapsedTimeTotal);
-                    logger.debug(msg);
-                })
-                .onRetriesExceeded(e -> {
-                    Throwable lastException = e.getException();
-                    int thisAttempt = e.getAttemptCount();
-                    long elapsedTimeTotal = e.getElapsedTime().toMillis();
-                    String msg = format("Retries exceeded on attempt %,d. Elapsed time total: %,dms.", thisAttempt, elapsedTimeTotal);
-                    logger.error(msg, lastException);
-                });
-        return builder.build();
     }
 
     @NotNull
