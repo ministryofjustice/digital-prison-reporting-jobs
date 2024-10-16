@@ -150,6 +150,7 @@ public class JobArguments {
     static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationCheck.values()));
     static final String RECONCILIATION_NON_ZERO_EXIT_CODE_WHEN_FAILED = "dpr.reconciliation.non.zero.exit.code.when.failed";
     static final String RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH = "dpr.reconciliation.report.results.to.cloudwatch";
+    static final String RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE = "dpr.reconciliation.cloudwatch.metrics.namespace";
 
     private final Map<String, String> config;
 
@@ -533,6 +534,10 @@ public class JobArguments {
 
     public boolean shouldReportReconciliationResultsToCloudwatch() {
         return getArgument(RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH, false);
+    }
+
+    public String getReconciliationCloudwatchMetricsNamespace() {
+        return getArgument(RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE);
     }
 
     private String getArgument(String argumentName) {

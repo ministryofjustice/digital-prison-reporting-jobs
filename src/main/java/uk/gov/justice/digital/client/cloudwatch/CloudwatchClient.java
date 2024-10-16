@@ -15,11 +15,11 @@ public class CloudwatchClient {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudwatchClient.class);
 
-    private final AmazonCloudWatch cloudWatchClient;
+    private final AmazonCloudWatch client;
 
     @Inject
     public CloudwatchClient(CloudwatchClientProvider cloudwatchClientProvider) {
-        this.cloudWatchClient = cloudwatchClientProvider.getClient();
+        this.client = cloudwatchClientProvider.getClient();
     }
 
     public void putMetrics(String namespace, Collection<MetricDatum> metricData) {
@@ -27,7 +27,7 @@ public class CloudwatchClient {
         PutMetricDataRequest putMetricDataRequest = new PutMetricDataRequest();
         putMetricDataRequest.setNamespace(namespace);
         putMetricDataRequest.setMetricData(metricData);
-        cloudWatchClient.putMetricData(putMetricDataRequest);
+        client.putMetricData(putMetricDataRequest);
         logger.debug("Finished putting metrics to namespace {}", namespace);
     }
 }
