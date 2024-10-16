@@ -12,13 +12,19 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
@@ -591,11 +597,45 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldGetShouldReconciliationDataSourceTableNamesBeUpperCase(String input, boolean expected) {
+    public void shouldReconciliationDataSourceTableNamesBeUpperCaseShouldParseInput(String input, boolean expected) {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(expected, jobArguments.shouldReconciliationDataSourceTableNamesBeUpperCase());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldReconciliationExitWithNonZeroExitCodeWhenFailedShouldParseInput(String input, boolean expected) {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_NON_ZERO_EXIT_CODE_WHEN_FAILED, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.shouldReconciliationExitWithNonZeroExitCodeWhenFailed());
+    }
+
+    @Test
+    public void shouldReconciliationExitWithNonZeroExitCodeWhenFailedShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_NON_ZERO_EXIT_CODE_WHEN_FAILED);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(false, jobArguments.shouldReconciliationExitWithNonZeroExitCodeWhenFailed());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldReportReconciliationResultsToCloudwatchShouldParseInput(String input, boolean expected) {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.shouldReportReconciliationResultsToCloudwatch());
+    }
+
+    @Test
+    public void shouldReportReconciliationResultsToCloudwatchShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(false, jobArguments.shouldReportReconciliationResultsToCloudwatch());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

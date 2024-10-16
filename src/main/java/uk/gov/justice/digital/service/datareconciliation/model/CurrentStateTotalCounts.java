@@ -1,11 +1,17 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+import com.amazonaws.services.cloudwatch.model.Dimension;
+import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.val;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+
+import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 
 /**
  * Represents the results of running the total counts data reconciliation for the "current state" data in DataHub
@@ -13,6 +19,8 @@ import java.util.Map;
 @EqualsAndHashCode
 @ToString
 public class CurrentStateTotalCounts implements DataReconciliationResult {
+
+    private static final String COUNT_METRIC_NAME = "CurrentStateCount";
 
     private final Map<String, CurrentStateTableCount> tableToResult = new HashMap<>();
 
@@ -50,5 +58,37 @@ public class CurrentStateTotalCounts implements DataReconciliationResult {
         }
 
         return sb.toString();
+    }
+
+    @Override
+    public Set<MetricDatum> toCloudwatchMetricData() {
+        Set<MetricDatum> metrics = new HashSet<>();
+
+        for (Map.Entry<String, CurrentStateTableCount> entry : tableToResult.entrySet()) {
+            String table = entry.getKey();
+            CurrentStateTableCount counts = entry.getValue();
+
+            metrics.add(currentStateCountMetricDatum("source", table, counts.getDataSourceCount()));
+            metrics.add(currentStateCountMetricDatum("structured", table, counts.getStructuredCount()));
+            metrics.add(currentStateCountMetricDatum("curated", table, counts.getCuratedCount()));
+            Long operationalDataStoreCount = counts.getOperationalDataStoreCount();
+            if (operationalDataStoreCount != null) {
+                currentStateCountMetricDatum("ods", table, operationalDataStoreCount);
+            }
+        }
+        return metrics;
+    }
+
+    private MetricDatum currentStateCountMetricDatum(String dataStore, String tableName, long count) {
+        return new MetricDatum()
+                .withMetricName(COUNT_METRIC_NAME)
+                .withUnit(Count)
+                .withDimensions(
+                        // Data store, e.g. source or curated
+                        new Dimension().withName("datastore").withValue(dataStore),
+                        // The table name
+                        new Dimension().withName("table").withValue(tableName)
+                )
+                .withValue((double) count);
     }
 }
