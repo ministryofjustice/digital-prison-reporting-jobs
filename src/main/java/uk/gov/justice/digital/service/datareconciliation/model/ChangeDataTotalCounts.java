@@ -1,12 +1,20 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+import com.amazonaws.services.cloudwatch.model.Dimension;
+import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.digital.common.CommonDataFields;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 
 @Data
 @NoArgsConstructor
@@ -14,6 +22,9 @@ import java.util.stream.Collectors;
 public class ChangeDataTotalCounts implements DataReconciliationResult {
 
     private static final String MISSING_COUNTS_MESSAGE = "MISSING COUNTS";
+    private static final String COUNT_METRIC_NAME = "ChangeDataCount";
+    private static final String IN_RAW_NOT_DMS_METRIC_NAME = "RawTablesMissingInDMS";
+    private static final String IN_DMS_NOT_RAW_METRIC_NAME = "DMSTablesMissingInRaw";
 
     private Map<String, ChangeDataTableCount> rawZoneCounts;
     private Map<String, ChangeDataTableCount> dmsCounts;
@@ -35,12 +46,8 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
 
         if (!sameTables()) {
             sb.append("\nThe set of tables for DMS vs Raw zone DO NOT MATCH\n\n");
-            String dmsTables = sortedListOfTables(dmsCounts.keySet());
-            String dmsAppliedTables = sortedListOfTables(dmsAppliedCounts.keySet());
-            String rawTables = sortedListOfTables(rawZoneCounts.keySet());
-            sb.append("DMS Tables: ").append(dmsTables).append("\n");
-            sb.append("DMS Applied Tables: ").append(dmsAppliedTables).append("\n");
-            sb.append("Raw Zone/Raw Archive Tables: ").append(rawTables).append("\n");
+            sb.append("DMS Tables missing in Raw: ").append(tablesInDmsMissingFromRaw()).append("\n");
+            sb.append("Raw Zone/Raw Archive Tables missing in DMS: ").append(tablesInRawMissingFromDms()).append("\n");
             sb.append("\n");
         }
 
@@ -74,8 +81,68 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
         return sb.toString();
     }
 
-    private static String sortedListOfTables(Set<String> tables) {
-        return tables.stream().sorted().collect(Collectors.joining(", "));
+    @Override
+    public Set<MetricDatum> toCloudwatchMetricData() {
+        Set<MetricDatum> metrics = new HashSet<>();
+
+        addMissingTablesMetrics(metrics);
+        addCountMetricsForDataStore("raw", rawZoneCounts, metrics);
+        addCountMetricsForDataStore("dms", dmsCounts, metrics);
+        addCountMetricsForDataStore("dmsApplied", dmsAppliedCounts, metrics);
+
+        return metrics;
+    }
+
+    private void addMissingTablesMetrics(Set<MetricDatum> metricsToUpdate) {
+        int inRawNotDms = tablesInRawMissingFromDms().size();
+
+        if (inRawNotDms > 0) {
+            metricsToUpdate.add(
+                    new MetricDatum()
+                            .withMetricName(IN_RAW_NOT_DMS_METRIC_NAME)
+                            .withUnit(Count)
+                            .withValue((double) inRawNotDms)
+            );
+        }
+
+        int inDmsNotRaw = tablesInDmsMissingFromRaw().size();
+
+        if (inDmsNotRaw > 0) {
+            metricsToUpdate.add(
+                    new MetricDatum()
+                            .withMetricName(IN_DMS_NOT_RAW_METRIC_NAME)
+                            .withUnit(Count)
+                            .withValue((double) inDmsNotRaw)
+            );
+        }
+    }
+
+
+    private void addCountMetricsForDataStore(String dataStoreName, Map<String, ChangeDataTableCount> dataStoreCounts, Set<MetricDatum> metricsToUpdate) {
+        for (Map.Entry<String, ChangeDataTableCount> entry : dataStoreCounts.entrySet()) {
+            String tableName = entry.getKey();
+            ChangeDataTableCount counts = entry.getValue();
+
+            metricsToUpdate.add(changeDataCountMetricDatum(dataStoreName, Insert, tableName, counts.getInsertCount()));
+            metricsToUpdate.add(changeDataCountMetricDatum(dataStoreName, Update, tableName, counts.getUpdateCount()));
+            metricsToUpdate.add(changeDataCountMetricDatum(dataStoreName, Delete, tableName, counts.getDeleteCount()));
+
+        }
+    }
+
+    private MetricDatum changeDataCountMetricDatum(String dataStore, CommonDataFields.ShortOperationCode op, String tableName, long count) {
+        return new MetricDatum()
+                .withMetricName(COUNT_METRIC_NAME)
+                .withUnit(Count)
+                .withDimensions(
+                        // Data store, e.g. dms
+                        new Dimension().withName("datastore").withValue(dataStore),
+                        // Operation, e.g. U for update
+                        new Dimension().withName("operation").withValue(op.getName()),
+                        // The table name
+                        new Dimension().withName("table").withValue(tableName)
+                )
+                .withValue((double) count);
     }
 
     private boolean rawCountsMatchDmsCounts() {
@@ -90,6 +157,18 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
 
     private boolean sameTables() {
         return rawZoneCounts.keySet().equals(dmsCounts.keySet()) && rawZoneCounts.keySet().equals(dmsAppliedCounts.keySet());
+    }
+
+    private Set<String> tablesInDmsMissingFromRaw() {
+        HashSet<String> result = new HashSet<>(dmsCounts.keySet());
+        result.removeAll(rawZoneCounts.keySet());
+        return result;
+    }
+
+    private Set<String> tablesInRawMissingFromDms() {
+        HashSet<String> result = new HashSet<>(rawZoneCounts.keySet());
+        result.removeAll(dmsCounts.keySet());
+        return result;
     }
 
     private String nullSafeCountString(ChangeDataTableCount count) {

@@ -53,6 +53,17 @@ class DataReconciliationJobTest {
     void runJobShouldSystemExitWithErrorExitCodeWhenResultIsFailure() {
         when(dataReconciliationService.reconcileData(sparkSession)).thenReturn(results);
         when(results.isSuccess()).thenReturn(false);
+        when(jobArguments.shouldReconciliationExitWithNonZeroExitCodeWhenFailed()).thenReturn(true);
+
+        underTest.runJob(sparkSession);
+    }
+
+    @Test
+    @SuppressWarnings("java:S2699")
+    void runJobShouldNotSystemExitWithErrorExitCodeWhenConfiguredNotTo() {
+        when(dataReconciliationService.reconcileData(sparkSession)).thenReturn(results);
+        when(results.isSuccess()).thenReturn(false);
+        when(jobArguments.shouldReconciliationExitWithNonZeroExitCodeWhenFailed()).thenReturn(false);
 
         underTest.runJob(sparkSession);
     }

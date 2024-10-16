@@ -170,9 +170,8 @@ class ChangeDataTotalCountsTest {
                 "\n" +
                 "The set of tables for DMS vs Raw zone DO NOT MATCH\n" +
                 "\n" +
-                "DMS Tables: table1\n" +
-                "DMS Applied Tables: table1\n" +
-                "Raw Zone/Raw Archive Tables: different table\n" +
+                "DMS Tables missing in Raw: [table1]\n" +
+                "Raw Zone/Raw Archive Tables missing in DMS: [different table]\n" +
                 "\n" +
                 "For table table1 DOES NOT MATCH:\n" +
                 "\tMISSING COUNTS\t - Raw\n" +
@@ -200,9 +199,8 @@ class ChangeDataTotalCountsTest {
                 "\n" +
                 "The set of tables for DMS vs Raw zone DO NOT MATCH\n" +
                 "\n" +
-                "DMS Tables: table1\n" +
-                "DMS Applied Tables: different table\n" +
-                "Raw Zone/Raw Archive Tables: table1, table2\n" +
+                "DMS Tables missing in Raw: []\n" +
+                "Raw Zone/Raw Archive Tables missing in DMS: [table2]\n" +
                 "\n" +
                 "For table table1 DOES NOT MATCH:\n" +
                 "\tInserts: 1, Updates: 1, Deletes: 1\t - Raw\n" +
