@@ -83,6 +83,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, "10000" },
             { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, "my-connection" },
             { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
+            { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, "SomeNamespace" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -144,6 +145,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, Long.toString(validArguments.getOperationalDataStoreJdbcBatchSize()) },
                 { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, validArguments.getReconciliationDataSourceGlueConnectionName() },
                 { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, validArguments.getReconciliationDataSourceSourceSchemaName() },
+                { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, validArguments.getReconciliationCloudwatchMetricsNamespace() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -588,14 +590,47 @@ class JobArgumentsIntegrationTest {
         assertEquals(RECONCILIATION_CHECKS_TO_RUN_DEFAULT, jobArguments.getReconciliationChecksToRun());
     }
 
-
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldGetShouldReconciliationDataSourceTableNamesBeUpperCase(String input, boolean expected) {
+    public void shouldReconciliationDataSourceTableNamesBeUpperCaseShouldParseInput(String input, boolean expected) {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(expected, jobArguments.shouldReconciliationDataSourceTableNamesBeUpperCase());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldReconciliationFailJobIfChecksFailShouldParseInput(String input, boolean expected) {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.shouldReconciliationFailJobIfChecksFail());
+    }
+
+    @Test
+    public void shouldReconciliationFailJobIfChecksFailShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.shouldReconciliationFailJobIfChecksFail());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldReportReconciliationResultsToCloudwatchShouldParseInput(String input, boolean expected) {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.shouldReportReconciliationResultsToCloudwatch());
+    }
+
+    @Test
+    public void shouldReportReconciliationResultsToCloudwatchShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.shouldReportReconciliationResultsToCloudwatch());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

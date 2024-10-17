@@ -55,6 +55,8 @@ class DataReconciliationServiceTest {
     private CurrentStateTotalCounts currentStateResult;
     @Mock
     private ChangeDataTotalCounts changeDataResult;
+    @Mock
+    private ReconciliationMetricReportingService metricReportingService;
 
     @InjectMocks
     private DataReconciliationService underTest;

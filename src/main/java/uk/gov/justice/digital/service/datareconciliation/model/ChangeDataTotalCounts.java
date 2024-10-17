@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,13 +36,8 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
 
         if (!sameTables()) {
             sb.append("\nThe set of tables for DMS vs Raw zone DO NOT MATCH\n\n");
-            String dmsTables = sortedListOfTables(dmsCounts.keySet());
-            String dmsAppliedTables = sortedListOfTables(dmsAppliedCounts.keySet());
-            String rawTables = sortedListOfTables(rawZoneCounts.keySet());
-            sb.append("DMS Tables: ").append(dmsTables).append("\n");
-            sb.append("DMS Applied Tables: ").append(dmsAppliedTables).append("\n");
-            sb.append("Raw Zone/Raw Archive Tables: ").append(rawTables).append("\n");
-            sb.append("\n");
+            sb.append("DMS Tables missing in Raw: ").append(tablesInDmsMissingFromRaw()).append("\n");
+            sb.append("Raw Zone/Raw Archive Tables missing in DMS: ").append(tablesInRawMissingFromDms()).append("\n");
         }
 
         dmsCounts.forEach((tableName, dmsCount) -> {
@@ -98,5 +94,17 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
         } else {
             return MISSING_COUNTS_MESSAGE;
         }
+    }
+
+    private Set<String> tablesInDmsMissingFromRaw() {
+        Set<String> result = new HashSet<>(dmsCounts.keySet());
+        result.removeAll(rawZoneCounts.keySet());
+        return result;
+    }
+
+    private Set<String> tablesInRawMissingFromDms() {
+        HashSet<String> result = new HashSet<>(rawZoneCounts.keySet());
+        result.removeAll(dmsCounts.keySet());
+        return result;
     }
 }

@@ -33,6 +33,7 @@ public class DataReconciliationService {
     private final SourceReferenceService sourceReferenceService;
     private final CurrentStateCountService currentStateCountService;
     private final ChangeDataCountService changeDataCountService;
+    private final ReconciliationMetricReportingService metricReportingService;
 
     @Inject
     public DataReconciliationService(
@@ -40,13 +41,15 @@ public class DataReconciliationService {
             ConfigService configService,
             SourceReferenceService sourceReferenceService,
             CurrentStateCountService currentStateCountService,
-            ChangeDataCountService changeDataCountService
+            ChangeDataCountService changeDataCountService,
+            ReconciliationMetricReportingService metricReportingService
     ) {
         this.jobArguments = jobArguments;
         this.configService = configService;
         this.sourceReferenceService = sourceReferenceService;
         this.currentStateCountService = currentStateCountService;
         this.changeDataCountService = changeDataCountService;
+        this.metricReportingService = metricReportingService;
     }
 
     public DataReconciliationResult reconcileData(SparkSession sparkSession) {
@@ -71,7 +74,9 @@ public class DataReconciliationService {
             }
         }).collect(Collectors.toList());
 
-        return new DataReconciliationResults(results);
+        DataReconciliationResults dataReconciliationResults = new DataReconciliationResults(results);
+        metricReportingService.reportMetrics(dataReconciliationResults);
+        return dataReconciliationResults;
     }
 }
 

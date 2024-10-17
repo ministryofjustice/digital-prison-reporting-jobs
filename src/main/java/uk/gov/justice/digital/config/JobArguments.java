@@ -148,6 +148,9 @@ public class JobArguments {
     static final String RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES = "dpr.reconciliation.datasource.should.uppercase.tablenames";
     static final String RECONCILIATION_CHECKS_TO_RUN = "dpr.reconciliation.checks.to.run";
     static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationCheck.values()));
+    static final String RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS = "dpr.reconciliation.fail.job.if.checks.fail";
+    static final String RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH = "dpr.reconciliation.report.results.to.cloudwatch";
+    static final String RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE = "dpr.reconciliation.cloudwatch.metrics.namespace";
 
     private final Map<String, String> config;
 
@@ -523,6 +526,18 @@ public class JobArguments {
                             .collect(Collectors.toSet())
                 )
                 .orElse(RECONCILIATION_CHECKS_TO_RUN_DEFAULT);
+    }
+
+    public boolean shouldReconciliationFailJobIfChecksFail() {
+        return getArgument(RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS, false);
+    }
+
+    public boolean shouldReportReconciliationResultsToCloudwatch() {
+        return getArgument(RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH, false);
+    }
+
+    public String getReconciliationCloudwatchMetricsNamespace() {
+        return getArgument(RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE);
     }
 
     private String getArgument(String argumentName) {
