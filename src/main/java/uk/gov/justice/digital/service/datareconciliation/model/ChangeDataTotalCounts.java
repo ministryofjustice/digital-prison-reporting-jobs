@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -68,10 +67,6 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
         });
 
         return sb.toString();
-    }
-
-    private static String sortedListOfTables(Set<String> tables) {
-        return tables.stream().sorted().collect(Collectors.joining(", "));
     }
 
     private boolean rawCountsMatchDmsCounts() {
