@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,6 +51,6 @@ class CloudwatchClientTest {
         PutMetricDataRequest putMetricDataRequest = putMetricDataCaptor.getValue();
 
         assertEquals(inputNamespace, putMetricDataRequest.getNamespace());
-        assertEquals(inputMetricData, putMetricDataRequest.getMetricData());
+        assertIterableEquals(inputMetricData, putMetricDataRequest.getMetricData());
     }
 }
