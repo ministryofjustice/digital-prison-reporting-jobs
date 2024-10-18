@@ -50,7 +50,7 @@ class DataReconciliationJobTest {
     @Test
     @ExpectSystemExitWithStatus(1)
     @SuppressWarnings("java:S2699")
-    void runJobShouldSystemExitWithErrorExitCodeWhenResultIsFailure() {
+    void runJobShouldExitWithErrorCodeWhenConfiguredToAndResultIsFailure() {
         when(dataReconciliationService.reconcileData(sparkSession)).thenReturn(results);
         when(results.isSuccess()).thenReturn(false);
         when(jobArguments.shouldReconciliationFailJobIfChecksFail()).thenReturn(true);
@@ -60,7 +60,7 @@ class DataReconciliationJobTest {
 
     @Test
     @SuppressWarnings("java:S2699")
-    void runJobShouldNotSystemExitWithErrorExitCodeWhenConfiguredNotTo() {
+    void runJobShouldNotExitWithErrorCodeWhenConfiguredNotToButResultIsFailure() {
         when(dataReconciliationService.reconcileData(sparkSession)).thenReturn(results);
         when(results.isSuccess()).thenReturn(false);
         when(jobArguments.shouldReconciliationFailJobIfChecksFail()).thenReturn(false);

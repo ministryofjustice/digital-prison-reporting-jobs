@@ -10,6 +10,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class DataReconciliationResultsTest {
 
@@ -89,5 +91,47 @@ class DataReconciliationResultsTest {
                 "\tInserts: 1, Updates: 1, Deletes: 1\t - DMS\n" +
                 "\tInserts: 1, Updates: 1, Deletes: 1\t - DMS Applied\n";
         assertEquals(expected, underTest.summary());
+    }
+
+    @Test
+    void shouldCalculateNumReconciliationChecksFailingForMixedSuccessAndFailure() {
+        DataReconciliationResult r1 = mock(DataReconciliationResult.class);
+        DataReconciliationResult r2 = mock(DataReconciliationResult.class);
+        DataReconciliationResult r3 = mock(DataReconciliationResult.class);
+
+        when(r1.isSuccess()).thenReturn(true);
+        when(r2.isSuccess()).thenReturn(true);
+        when(r3.isSuccess()).thenReturn(false);
+
+        DataReconciliationResults results = new DataReconciliationResults(Arrays.asList(r1, r2, r3));
+        assertEquals(1L, results.numReconciliationChecksFailing());
+    }
+
+    @Test
+    void shouldCalculateNumReconciliationChecksFailingForAllSuccess() {
+        DataReconciliationResult r1 = mock(DataReconciliationResult.class);
+        DataReconciliationResult r2 = mock(DataReconciliationResult.class);
+        DataReconciliationResult r3 = mock(DataReconciliationResult.class);
+
+        when(r1.isSuccess()).thenReturn(true);
+        when(r2.isSuccess()).thenReturn(true);
+        when(r3.isSuccess()).thenReturn(true);
+
+        DataReconciliationResults results = new DataReconciliationResults(Arrays.asList(r1, r2, r3));
+        assertEquals(0L, results.numReconciliationChecksFailing());
+    }
+
+    @Test
+    void shouldCalculateNumReconciliationChecksFailingForAllFailure() {
+        DataReconciliationResult r1 = mock(DataReconciliationResult.class);
+        DataReconciliationResult r2 = mock(DataReconciliationResult.class);
+        DataReconciliationResult r3 = mock(DataReconciliationResult.class);
+
+        when(r1.isSuccess()).thenReturn(false);
+        when(r2.isSuccess()).thenReturn(false);
+        when(r3.isSuccess()).thenReturn(false);
+
+        DataReconciliationResults results = new DataReconciliationResults(Arrays.asList(r1, r2, r3));
+        assertEquals(3L, results.numReconciliationChecksFailing());
     }
 }
