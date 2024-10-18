@@ -5,6 +5,8 @@ import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
@@ -17,6 +19,8 @@ import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 @Singleton
 @Requires(property = "dpr.reconciliation.report.results.to.cloudwatch")
 public class ReconciliationMetricReportingServiceImpl implements ReconciliationMetricReportingService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReconciliationMetricReportingServiceImpl.class);
 
     private static final String FAILED_RECONCILIATION_CHECKS_METRIC_NAME = "FailedReconciliationChecks";
 
@@ -35,7 +39,11 @@ public class ReconciliationMetricReportingServiceImpl implements ReconciliationM
 
     @Override
     public void reportMetrics(DataReconciliationResults dataReconciliationResults) {
+        String metricNamespace = jobArguments.getReconciliationCloudwatchMetricsNamespace();
         String inputDomain = jobArguments.getConfigKey();
+        double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
+        logger.debug("Reporting {} metric to namespace {} for domain {} with value {}",
+                FAILED_RECONCILIATION_CHECKS_METRIC_NAME, metricNamespace, inputDomain, numChecksFailing);
         Set<MetricDatum> metrics = new HashSet<>();
         metrics.add(
                 new MetricDatum()
@@ -46,8 +54,10 @@ public class ReconciliationMetricReportingServiceImpl implements ReconciliationM
                                         .withName("InputDomain")
                                         .withValue(inputDomain)
                         )
-                        .withValue((double) dataReconciliationResults.numReconciliationChecksFailing())
+                        .withValue(numChecksFailing)
         );
-        cloudwatchClient.putMetrics(jobArguments.getReconciliationCloudwatchMetricsNamespace(), metrics);
+        cloudwatchClient.putMetrics(metricNamespace, metrics);
+        logger.debug("Finished reporting {} metric to namespace {} for domain {} with value {}",
+                FAILED_RECONCILIATION_CHECKS_METRIC_NAME, metricNamespace, inputDomain, numChecksFailing);
     }
 }
