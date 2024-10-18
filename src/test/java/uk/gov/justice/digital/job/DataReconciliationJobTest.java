@@ -60,11 +60,12 @@ class DataReconciliationJobTest {
 
     @Test
     @SuppressWarnings("java:S2699")
-    void runJobShouldNotExitWithErrorCodeWhenConfiguredNotToButResultIsFailure() {
+    void runJobShouldNotExitWhenConfiguredNotToButResultIsFailure() {
         when(dataReconciliationService.reconcileData(sparkSession)).thenReturn(results);
         when(results.isSuccess()).thenReturn(false);
         when(jobArguments.shouldReconciliationFailJobIfChecksFail()).thenReturn(false);
 
+        // If this call completes without a System.exit crashing the test then the test is successful
         underTest.runJob(sparkSession);
     }
 }
