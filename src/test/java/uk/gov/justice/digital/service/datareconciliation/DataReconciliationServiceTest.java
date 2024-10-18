@@ -55,6 +55,8 @@ class DataReconciliationServiceTest {
     private CurrentStateTotalCounts currentStateResult;
     @Mock
     private ChangeDataTotalCounts changeDataResult;
+    @Mock
+    private ReconciliationMetricReportingService metricReportingService;
 
     @InjectMocks
     private DataReconciliationService underTest;
@@ -199,5 +201,26 @@ class DataReconciliationServiceTest {
         underTest.reconcileData(sparkSession);
 
         verify(sourceReferenceService, times(1)).getAllSourceReferences(configuredTables);
+    }
+
+    @Test
+    void shouldReportMetrics() {
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
+        when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+        when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(currentStateResult);
+        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID)).thenReturn(changeDataResult);
+
+        DataReconciliationResults results = ((DataReconciliationResults) underTest.reconcileData(sparkSession));
+
+        verify(metricReportingService, times(1)).reportMetrics(results);
     }
 }

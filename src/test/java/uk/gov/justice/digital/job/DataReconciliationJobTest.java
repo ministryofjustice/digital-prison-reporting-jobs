@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.job;
 
 import com.ginsberg.junit.exit.ExpectSystemExitWithStatus;
+import com.ginsberg.junit.exit.FailOnSystemExit;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,10 +51,24 @@ class DataReconciliationJobTest {
     @Test
     @ExpectSystemExitWithStatus(1)
     @SuppressWarnings("java:S2699")
-    void runJobShouldSystemExitWithErrorExitCodeWhenResultIsFailure() {
+    void runJobShouldExitWithErrorCodeWhenConfiguredToAndResultIsFailure() {
         when(dataReconciliationService.reconcileData(sparkSession)).thenReturn(results);
         when(results.isSuccess()).thenReturn(false);
+        when(jobArguments.shouldReconciliationFailJobIfChecksFail()).thenReturn(true);
 
+        // If this call completes with a System.exit(1) then the test is successful
+        underTest.runJob(sparkSession);
+    }
+
+    @Test
+    @FailOnSystemExit
+    @SuppressWarnings("java:S2699")
+    void runJobShouldNotExitWhenConfiguredNotToButResultIsFailure() {
+        when(dataReconciliationService.reconcileData(sparkSession)).thenReturn(results);
+        when(results.isSuccess()).thenReturn(false);
+        when(jobArguments.shouldReconciliationFailJobIfChecksFail()).thenReturn(false);
+
+        // If this call completes without a System.exit then the test is successful
         underTest.runJob(sparkSession);
     }
 }

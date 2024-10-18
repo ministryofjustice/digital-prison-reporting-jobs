@@ -24,4 +24,8 @@ public class DataReconciliationResults implements DataReconciliationResult {
                 .map(DataReconciliationResult::summary)
                 .reduce("", (s1, s2) -> s1 + "\n\n" + s2);
     }
+
+    public long numReconciliationChecksFailing() {
+        return results.stream().filter(r -> !r.isSuccess()).count();
+    }
 }

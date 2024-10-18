@@ -83,7 +83,9 @@ public class DataReconciliationJob implements Runnable {
             logger.info("Data reconciliation SUCCEEDED:\n\n{}", resultSummary);
         } else {
             logger.error("Data reconciliation FAILED WITH DIFFERENCES:\n\n{}", resultSummary);
-            System.exit(1);
+            if (jobArguments.shouldReconciliationFailJobIfChecksFail()) {
+                System.exit(1);
+            }
         }
     }
 
