@@ -69,6 +69,10 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
         return sb.toString();
     }
 
+    public int mismatchedTables() {
+
+    }
+
     private boolean rawCountsMatchDmsCounts() {
         return rawZoneCounts.entrySet().stream().allMatch(entry -> {
             String tableName = entry.getKey();

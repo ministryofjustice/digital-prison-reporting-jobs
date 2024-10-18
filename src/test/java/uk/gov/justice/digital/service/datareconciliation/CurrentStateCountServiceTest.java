@@ -105,8 +105,7 @@ class CurrentStateCountServiceTest {
         when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference2)).thenReturn(true);
         when(operationalDataStoreService.getTableRowCount("namespace.source_table2")).thenReturn(odsCount2);
 
-        CurrentStateTotalCounts results =
-                (CurrentStateTotalCounts) underTest.currentStateCounts(sparkSession, Arrays.asList(sourceReference1, sourceReference2));
+        CurrentStateTotalCounts results = underTest.currentStateCounts(sparkSession, Arrays.asList(sourceReference1, sourceReference2));
 
         CurrentStateTableCount expectedTable1Counts = new CurrentStateTableCount(1L, 1L, 1L, 1L);
         CurrentStateTableCount table1Result = results.get("source.table");

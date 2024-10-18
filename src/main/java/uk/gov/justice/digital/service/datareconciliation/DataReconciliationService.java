@@ -11,6 +11,8 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
+import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCounts;
+import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
 import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
@@ -66,9 +68,11 @@ public class DataReconciliationService {
             logger.info("Configured to run {}", checkToRun);
             switch (checkToRun) {
                 case CHANGE_DATA_COUNTS:
-                    return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+                    ChangeDataTotalCounts changeDataTotalCounts = changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+                    return changeDataTotalCounts;
                 case CURRENT_STATE_COUNTS:
-                    return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
+                    CurrentStateTotalCounts currentStateTotalCounts = currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
+                    return currentStateTotalCounts;
                 default:
                     throw new IllegalStateException("Unexpected reconciliation result: " + checkToRun);
             }

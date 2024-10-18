@@ -15,7 +15,6 @@ import uk.gov.justice.digital.exception.OperationalDataStoreException;
 import uk.gov.justice.digital.exception.ReconciliationDataSourceException;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTableCount;
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
-import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 
 import java.util.List;
@@ -49,7 +48,7 @@ public class CurrentStateCountService {
     /**
      * Retrieve record counts from data stores that contain current state for every SourceReference/table.
      */
-    DataReconciliationResult currentStateCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
+    CurrentStateTotalCounts currentStateCounts(SparkSession sparkSession, List<SourceReference> sourceReferences) {
         CurrentStateTotalCounts currentStateCountResults = new CurrentStateTotalCounts();
         sourceReferences.forEach(sourceReference -> {
             CurrentStateTableCount countResults = currentStateCountForTable(sparkSession, sourceReference);
