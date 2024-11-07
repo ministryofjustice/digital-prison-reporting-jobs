@@ -30,7 +30,8 @@ public class S3FileService {
     private static final Logger logger = LoggerFactory.getLogger(S3FileService.class);
     private final S3ObjectClient s3Client;
     private final Clock clock;
-    private final RetryPolicy<Void> retryPolicy;
+    private final RetryPolicy<Void> voidRetryPolicy;
+    private final RetryPolicy<List<String>> retryPolicy;
 
     @Inject
     public S3FileService(
@@ -41,11 +42,12 @@ public class S3FileService {
         this.s3Client = s3Client;
         this.clock = clock;
         RetryConfig retryConfig = new RetryConfig(jobArguments);
+        this.voidRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
         this.retryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
     }
 
     public List<String> listFiles(String bucket, String sourcePrefix, ImmutableSet<String> allowedExtensions, Duration retentionPeriod) {
-        return s3Client.getObjectsOlderThan(bucket, sourcePrefix, allowedExtensions, retentionPeriod, clock);
+        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(bucket, sourcePrefix, allowedExtensions, retentionPeriod, clock));
     }
 
     public List<String> listFilesForConfig(
@@ -83,8 +85,8 @@ public class S3FileService {
                             destinationPrefix + DELIMITER + objectKey;
                 }
 
-                Failsafe.with(retryPolicy).run(() -> s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket));
-                if (deleteCopiedFiles) Failsafe.with(retryPolicy).run(() -> s3Client.deleteObject(objectKey, sourceBucket));
+                Failsafe.with(voidRetryPolicy).run(() -> s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket));
+                if (deleteCopiedFiles) Failsafe.with(voidRetryPolicy).run(() -> s3Client.deleteObject(objectKey, sourceBucket));
             } catch (AmazonServiceException e) {
                 logger.warn("Failed to move S3 object {}", objectKey, e);
                 failedObjects.add(objectKey);
@@ -99,7 +101,7 @@ public class S3FileService {
 
         for (String objectKey : objectKeys) {
             try {
-                Failsafe.with(retryPolicy).run(() -> s3Client.deleteObject(objectKey, sourceBucket));
+                Failsafe.with(voidRetryPolicy).run(() -> s3Client.deleteObject(objectKey, sourceBucket));
             } catch (AmazonServiceException e) {
                 logger.warn("Failed to delete S3 object {}: {}", objectKey, e.getErrorMessage());
                 failedObjects.add(objectKey);
@@ -120,12 +122,12 @@ public class S3FileService {
                 configuredTable.left + DELIMITER + configuredTable.right + DELIMITER :
                 sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         logger.info("Listing files in S3 source location {} for table {}", sourceBucket, tableKey);
-        return s3Client.getObjectsOlderThan(
+        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(
                 sourceBucket,
                 tableKey,
                 allowedExtensions,
                 retentionPeriod,
                 clock
-        );
+        ));
     }
 }

@@ -25,16 +25,17 @@ public class RetryPolicyBuilder {
      *
      * @param retryConfig the retry config
      * @param exception   the throwable for which the retry should be applied
+     * @param <T> result type
      * @return the RetryPolicy
      */
-    public static RetryPolicy<Void> buildRetryPolicy(RetryConfig retryConfig, Class<? extends Throwable> exception) {
+    public static <T> RetryPolicy<T> buildRetryPolicy(RetryConfig retryConfig, Class<? extends Throwable> exception) {
         long minWaitMillis = retryConfig.getMinWaitMillis();
         long maxWaitMillis = retryConfig.getMaxWaitMillis();
         double jitterFactor = retryConfig.getJitterFactor();
         // You can turn off retries by setting max attempts to 1
         int maxAttempts = retryConfig.getMaxAttempts();
         logger.info("Retry Policy Settings: max attempts: {}, min wait: {}ms, max wait: {}ms, jitter factor: {}", maxAttempts, minWaitMillis, maxWaitMillis, jitterFactor);
-        dev.failsafe.RetryPolicyBuilder<Void> builder = dev.failsafe.RetryPolicy.builder();
+        dev.failsafe.RetryPolicyBuilder<T> builder = dev.failsafe.RetryPolicy.builder();
         // Specify the Throwables we will retry
         builder.handle(exception)
                 // Exponential backoff
