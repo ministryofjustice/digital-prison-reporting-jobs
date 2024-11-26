@@ -129,6 +129,8 @@ public class JobArguments {
     static final String MAX_S3_PAGE_SIZE = "dpr.s3.max.page.size";
     static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
     static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
+    static final String CDC_TRIGGER_INTERVAL_SECONDS = "dpr.cdc.trigger.interval.seconds";
+    static final long DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS = 60;
     static final String SPARK_BROADCAST_TIMEOUT_SECONDS = "dpr.spark.broadcast.timeout.seconds";
     public static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
     static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
@@ -487,6 +489,10 @@ public class JobArguments {
 
     public boolean cleanCdcCheckpoint() {
         return getArgument(CLEAN_CDC_CHECKPOINT, false);
+    }
+
+    public long getCdcTriggerIntervalSeconds() {
+        return getArgument(CDC_TRIGGER_INTERVAL_SECONDS, DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS);
     }
 
     public String getGlueTriggerName() {

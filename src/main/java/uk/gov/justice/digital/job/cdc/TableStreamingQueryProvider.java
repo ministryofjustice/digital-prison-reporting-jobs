@@ -79,6 +79,7 @@ public class TableStreamingQueryProvider {
                 inputSourceName,
                 inputTableName,
                 arguments.getCheckpointLocation(),
+                arguments.getCdcTriggerIntervalSeconds(),
                 sourceData,
                 batchProcessingFunc
         );
@@ -95,6 +96,7 @@ public class TableStreamingQueryProvider {
                 inputSourceName,
                 inputTableName,
                 arguments.getCheckpointLocation(),
+                arguments.getCdcTriggerIntervalSeconds(),
                 sourceData,
                 batchProcessingFunc
         );

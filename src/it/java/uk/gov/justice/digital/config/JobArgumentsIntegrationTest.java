@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_CHECKS_TO_RUN_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 
@@ -73,6 +74,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, "10" },
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
             { JobArguments.CLEAN_CDC_CHECKPOINT, "false" },
+            { JobArguments.CDC_TRIGGER_INTERVAL_SECONDS, "30" },
             { JobArguments.GLUE_TRIGGER_NAME, "dpr-glue-trigger-name" },
             { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, "60" },
             { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, "false" },
@@ -135,6 +137,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, validArguments.orchestrationMaxAttempts() },
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
                 { JobArguments.CLEAN_CDC_CHECKPOINT, validArguments.cleanCdcCheckpoint() },
+                { JobArguments.CDC_TRIGGER_INTERVAL_SECONDS, validArguments.getCdcTriggerIntervalSeconds() },
                 { JobArguments.GLUE_TRIGGER_NAME, validArguments.getGlueTriggerName() },
                 { JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS, validArguments.getBroadcastTimeoutSeconds() },
                 { JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, validArguments.disableAutoBroadcastJoinThreshold() },
@@ -411,6 +414,14 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.MAX_S3_PAGE_SIZE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(1000, jobArguments.getMaxObjectsPerPage());
+    }
+
+    @Test
+    public void getCdcTriggerIntervalSecondsShouldUseDefaultWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.CDC_TRIGGER_INTERVAL_SECONDS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS, jobArguments.getCdcTriggerIntervalSeconds());
     }
 
     @Test
