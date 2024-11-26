@@ -34,6 +34,7 @@ import static uk.gov.justice.digital.test.TestHelpers.convertListToSeq;
 class TableStreamingQueryTest extends BaseSparkTest {
     private static final String source = "some-source";
     private static final String table = "some-table";
+    private static final long TEST_CDC_TRIGGER_INTERVAL_SECONDS = 5;
     private static List<Row> testData;
     private static Seq<Row> testDataSeq;
     @Mock
@@ -62,6 +63,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
                 source,
                 table,
                 checkpointPath,
+                TEST_CDC_TRIGGER_INTERVAL_SECONDS,
                 streamingDataframe,
                 batchProcessingFunc
         );

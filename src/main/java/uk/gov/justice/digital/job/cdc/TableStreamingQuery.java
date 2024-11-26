@@ -4,10 +4,12 @@ import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.streaming.StreamingQuery;
+import org.apache.spark.sql.streaming.Trigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.TableStreamingQueryTimeoutDuringStopException;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static uk.gov.justice.digital.common.StreamingQuery.getQueryCheckpointPath;
@@ -24,6 +26,7 @@ public class TableStreamingQuery {
     private final String inputSourceName;
     private final String inputTableName;
     private final String checkpointLocation;
+    private final long triggerIntervalSeconds;
 
     private final Dataset<Row> sourceData;
     private final VoidFunction2<Dataset<Row>, Long> batchProcessingFunc;
@@ -34,11 +37,13 @@ public class TableStreamingQuery {
             String inputSourceName,
             String inputTableName,
             String checkpointLocation,
+            long triggerIntervalSeconds,
             Dataset<Row> sourceData,
             VoidFunction2<Dataset<Row>, Long> batchProcessingFunc) {
         this.inputSourceName = inputSourceName;
         this.inputTableName = inputTableName;
         this.checkpointLocation = checkpointLocation;
+        this.triggerIntervalSeconds = triggerIntervalSeconds;
         this.sourceData = sourceData;
         this.batchProcessingFunc = batchProcessingFunc;
     }
@@ -58,6 +63,7 @@ public class TableStreamingQuery {
                     .foreachBatch(batchProcessingFunc)
                     .outputMode("update")
                     .option("checkpointLocation", queryCheckpointPath)
+                    .trigger(Trigger.ProcessingTime(triggerIntervalSeconds, TimeUnit.SECONDS))
                     .start();
             logger.info("Started query {}", queryName);
             return query;
