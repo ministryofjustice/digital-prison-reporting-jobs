@@ -27,6 +27,7 @@ import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_M
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.PRIMARY_KEY_RECONCILIATION;
 
 class JobArgumentsIntegrationTest {
 
@@ -570,6 +571,14 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, "change_data_counts");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(ImmutableSet.of(CHANGE_DATA_COUNTS), jobArguments.getReconciliationChecksToRun());
+    }
+
+    @Test
+    public void shouldGetPrimaryKeyReconciliationCheckToRun() {
+        HashMap<String, String> args = new HashMap<>();
+        args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, "primary_key_reconciliation");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(ImmutableSet.of(PRIMARY_KEY_RECONCILIATION), jobArguments.getReconciliationChecksToRun());
     }
 
     @ParameterizedTest

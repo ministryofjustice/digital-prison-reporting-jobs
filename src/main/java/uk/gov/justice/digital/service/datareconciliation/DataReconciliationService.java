@@ -11,9 +11,9 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.SourceReferenceService;
-import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
+import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
 
 import java.util.List;
 import java.util.Set;
@@ -34,6 +34,7 @@ public class DataReconciliationService {
     private final CurrentStateCountService currentStateCountService;
     private final ChangeDataCountService changeDataCountService;
     private final ReconciliationMetricReportingService metricReportingService;
+    private final PrimaryKeyReconciliationService primaryKeyReconciliationService;
 
     @Inject
     public DataReconciliationService(
@@ -42,7 +43,8 @@ public class DataReconciliationService {
             SourceReferenceService sourceReferenceService,
             CurrentStateCountService currentStateCountService,
             ChangeDataCountService changeDataCountService,
-            ReconciliationMetricReportingService metricReportingService
+            ReconciliationMetricReportingService metricReportingService,
+            PrimaryKeyReconciliationService primaryKeyReconciliationService
     ) {
         this.jobArguments = jobArguments;
         this.configService = configService;
@@ -50,6 +52,7 @@ public class DataReconciliationService {
         this.currentStateCountService = currentStateCountService;
         this.changeDataCountService = changeDataCountService;
         this.metricReportingService = metricReportingService;
+        this.primaryKeyReconciliationService = primaryKeyReconciliationService;
     }
 
     public DataReconciliationResult reconcileData(SparkSession sparkSession) {
@@ -69,6 +72,8 @@ public class DataReconciliationService {
                     return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
                 case CURRENT_STATE_COUNTS:
                     return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
+                case PRIMARY_KEY_RECONCILIATION:
+                    return primaryKeyReconciliationService.primaryKeyReconciliation(sparkSession, allSourceReferences);
                 default:
                     throw new IllegalStateException("Unexpected reconciliation result: " + checkToRun);
             }
