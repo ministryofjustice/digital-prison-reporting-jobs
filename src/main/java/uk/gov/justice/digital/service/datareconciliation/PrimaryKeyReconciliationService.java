@@ -15,8 +15,8 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCount;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCounts;
 
-import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
 
@@ -53,9 +53,9 @@ public class PrimaryKeyReconciliationService {
 
     private PrimaryKeyReconciliationCount primaryKeyReconciliationCountsPerTable(SparkSession sparkSession, SourceReference sourceReference) {
         Dataset<Row> curatedPks = primaryKeysInCurated(sparkSession, sourceReference);
-        logger.debug("Curated schema: {}", curatedPks.schema().treeString());
+        logger.debug("Curated schema: {}", (Supplier<String>) () -> curatedPks.schema().treeString());
         Dataset<Row> dataSourcePks = reconciliationDataSourceService.primaryKeysAsDataframe(sparkSession, sourceReference);
-        logger.debug("Data Source schema: {}", dataSourcePks.schema().treeString());
+        logger.debug("Data Source schema: {}", (Supplier<String>) () -> dataSourcePks.schema().treeString());
 
         // We cannot use Dataset#exceptAll method with the version of Spark Glue 4.0 provides so
         // we use join instead. See https://issues.apache.org/jira/browse/SPARK-39612
@@ -65,12 +65,12 @@ public class PrimaryKeyReconciliationService {
 
         long countInCuratedNotDataSource = inCuratedNotDataSource.count();
         if (countInCuratedNotDataSource > 0) {
-            logger.error("In Curated not Data Source: {}", inCuratedNotDataSource.showString(20, 0, false));
+            logger.error("In Curated not Data Source: {}", (Supplier<String>) () -> inCuratedNotDataSource.showString(20, 0, false));
         }
 
         long countInDataSourceNotCurated = inDataSourceNotCurated.count();
         if (countInDataSourceNotCurated > 0) {
-            logger.error("In Data Source not Curated: {}", inDataSourceNotCurated.showString(20, 0, false));
+            logger.error("In Data Source not Curated: {}", (Supplier<String>) () -> inDataSourceNotCurated.showString(20, 0, false));
         }
 
         return new PrimaryKeyReconciliationCount(countInCuratedNotDataSource, countInDataSourceNotCurated);

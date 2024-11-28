@@ -37,9 +37,9 @@ public class PrimaryKeyReconciliationCounts implements DataReconciliationResult 
 
         for (val entrySet: counts.entrySet()) {
             val tableName = entrySet.getKey();
-            val counts = entrySet.getValue();
+            val count = entrySet.getValue();
             sb.append("For table ").append(tableName).append(":\n");
-            sb.append("\t").append(counts.toString()).append("\n");
+            sb.append("\t").append(count.toString()).append("\n");
         }
 
         return sb.toString();
