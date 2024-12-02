@@ -4,6 +4,20 @@ orbs:
   reporting: ministryofjustice/hmpps-reporting@1.0.38
   slack: circleci/slack@4.12.5  
 
+parameters:
+  GHA_Actor:
+    type: string
+    default: ""
+  GHA_Action:
+    type: string
+    default: ""
+  GHA_Event:
+    type: string
+    default: ""
+  GHA_Meta:
+    type: string
+    default: ""
+
 workflows:
   checkout-build-publish:
     jobs:
@@ -22,7 +36,7 @@ workflows:
           deploy_script: true
           deploy_to_test: true # Deploy to Test Environment
           notify_jira: true
-          notify_slack: true
+          notify_slack: false
           channel: dpr_cicd_alerts
           command: jar shadowJar # Skip tests when building jar, they've already run
           filters:
@@ -61,7 +75,7 @@ workflows:
           sync_args: "--exclude '*' --include '*-all*jar'"
           deploy_script: true
           release_ready: true
-          notify_slack: true
+          notify_slack: false
           filters:
             branches:
               only: main
@@ -69,7 +83,12 @@ workflows:
               ignore: /.*/
           requires: [pause_workflow]
           context:
-            - hmpps-reporting-common          
+            - hmpps-reporting-common
+
+  release:
+    when: << pipeline.parameters.GHA_Action >>
+    jobs:
+      - test
 
   owasp-security:
     triggers:
@@ -81,9 +100,19 @@ workflows:
                 - main
     jobs:
       - reporting/gradle_owasp_check:
-          notify_slack: true
+          notify_slack: false
           channel: dpr_cicd_alerts
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache"
+
+
+jobs:
+  test:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - run:
+          name: release run succefully
+          command: echo "Release DPR Jobs Successfully"
