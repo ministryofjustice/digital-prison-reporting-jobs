@@ -72,6 +72,24 @@ class S3CheckpointReaderClientTest {
     }
 
     @Test
+    void shouldIgnoreTempFilesFromCheckpointFilesList() {
+        List<String> checkpointFiles = new ArrayList<>();
+        checkpointFiles.add("checkpoint-path/2");
+        checkpointFiles.add("checkpoint-path/0.tmp");
+
+        when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/2")).thenReturn(CHECKPOINT_FILE_2);
+
+        Set<String> committedFiles = underTest.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles);
+
+        Set<String> expectedCommittedFiles = new HashSet<>();
+        expectedCommittedFiles.add("source/table2/committed-file-1.parquet");
+        expectedCommittedFiles.add("source/table2/committed-file-2.parquet");
+        expectedCommittedFiles.add("source/table2/committed-file-3.parquet");
+
+        assertThat(committedFiles, containsInAnyOrder(expectedCommittedFiles.toArray()));
+    }
+
+    @Test
     void shouldIgnoreCheckpointFilesWithNameHavingLowerNaturalOrderThanTheMostRecentCompactFile() {
         List<String> checkpointFiles = new ArrayList<>();
         checkpointFiles.add("checkpoint-path/0"); // this file has name with lower natural order than the compact file and will be ignored

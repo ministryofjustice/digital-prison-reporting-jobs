@@ -59,6 +59,7 @@ public class S3CheckpointReaderClient {
     @NotNull
     private List<CheckpointFile> orderCheckpointFilesInReverseOrdering(List<String> checkpointFiles) {
         return checkpointFiles.stream()
+                .filter(checkpointFile -> !checkpointFile.toLowerCase().endsWith(".tmp"))
                 .map(checkpointFile -> {
                     Matcher matcher = checkpointFileRegexPattern.matcher(checkpointFile);
                     if (matcher.matches()) {
