@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.JobArguments;
@@ -37,8 +36,8 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     public void shouldVacuumDeltaTablesWhenRecursingWithDepth1() throws Exception {
         int depthLimit = 1;
         // Compaction followed by vacuum on a table with zero retention should result in a single parquet file
-        underTest.compactDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
-        underTest.vacuumDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
+        underTest.vacuumDeltaTables(spark, rootPath.toString(), depthLimit);
 
         // The tables in the root have been compacted
         assertEquals(1, countParquetFiles(offendersTablePath));
@@ -52,8 +51,8 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     public void shouldVacuumDeltaTablesWhenRecursingWithDepth2() throws Exception {
         int depthLimit = 2;
         // Compaction followed by vacuum on a table with zero retention should result in a single parquet file
-        underTest.compactDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
-        underTest.vacuumDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
+        underTest.vacuumDeltaTables(spark, rootPath.toString(), depthLimit);
 
         // The tables in the root and 2nd level have been compacted
         assertEquals(1, countParquetFiles(offendersTablePath));
@@ -67,8 +66,8 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     public void shouldVacuumDeltaTablesWhenRecursingWithDepth3() throws Exception {
         int depthLimit = 3;
         // Compaction followed by vacuum on a table with zero retention should result in a single parquet file
-        underTest.compactDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
-        underTest.vacuumDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
+        underTest.vacuumDeltaTables(spark, rootPath.toString(), depthLimit);
 
         // The tables have all been compacted down to level 3 subdirectories
         assertEquals(1, countParquetFiles(offendersTablePath));
