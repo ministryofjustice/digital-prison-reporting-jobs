@@ -20,6 +20,8 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 
 /**
  * Class that defines and provides access to the job arguments that we support.
@@ -149,7 +151,7 @@ public class JobArguments {
     static final String RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME = "dpr.reconciliation.datasource.glue.connection.name";
     static final String RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES = "dpr.reconciliation.datasource.should.uppercase.tablenames";
     static final String RECONCILIATION_CHECKS_TO_RUN = "dpr.reconciliation.checks.to.run";
-    static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(ReconciliationCheck.values()));
+    static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
     static final String RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS = "dpr.reconciliation.fail.job.if.checks.fail";
     static final String RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH = "dpr.reconciliation.report.results.to.cloudwatch";
     static final String RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE = "dpr.reconciliation.cloudwatch.metrics.namespace";

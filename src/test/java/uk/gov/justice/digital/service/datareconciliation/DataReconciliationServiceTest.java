@@ -16,6 +16,7 @@ import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTotalCo
 import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotalCounts;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
+import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCounts;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
+import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.PRIMARY_KEY_RECONCILIATION;
 
 @ExtendWith(MockitoExtension.class)
 class DataReconciliationServiceTest {
@@ -46,6 +48,8 @@ class DataReconciliationServiceTest {
     @Mock
     private ChangeDataCountService changeDataCountService;
     @Mock
+    private PrimaryKeyReconciliationService primaryKeyReconciliationService;
+    @Mock
     private SparkSession sparkSession;
     @Mock
     private SourceReference sourceReference1;
@@ -55,6 +59,8 @@ class DataReconciliationServiceTest {
     private CurrentStateTotalCounts currentStateResult;
     @Mock
     private ChangeDataTotalCounts changeDataResult;
+    @Mock
+    private PrimaryKeyReconciliationCounts primaryKeyResult;
     @Mock
     private ReconciliationMetricReportingService metricReportingService;
 
@@ -102,6 +108,27 @@ class DataReconciliationServiceTest {
         assertEquals(1, results.size());
         assertTrue(results.contains(changeDataResult));
         verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+    }
+
+    @Test
+    void shouldGetPrimaryKeyReconciliationCounts() {
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(PRIMARY_KEY_RECONCILIATION));
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+        when(primaryKeyReconciliationService.primaryKeyReconciliation(sparkSession, allSourceReferences)).thenReturn(primaryKeyResult);
+
+        List<DataReconciliationResult> results = ((DataReconciliationResults) underTest.reconcileData(sparkSession)).getResults();
+
+        assertEquals(1, results.size());
+        assertTrue(results.contains(primaryKeyResult));
+        verify(primaryKeyReconciliationService, times(1)).primaryKeyReconciliation(sparkSession, allSourceReferences);
     }
 
     @Test

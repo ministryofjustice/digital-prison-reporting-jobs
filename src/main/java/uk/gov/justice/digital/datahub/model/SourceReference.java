@@ -1,10 +1,14 @@
 package uk.gov.justice.digital.datahub.model;
 
 import lombok.Data;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.StructType;
+import scala.collection.JavaConverters;
+import scala.collection.Seq;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -54,6 +58,11 @@ public class SourceReference {
 
         public Collection<String> getKeyColumnNames() {
             return Collections.unmodifiableCollection(keys);
+        }
+
+        public Seq<Column> getSparkKeyColumns() {
+            List<Column> javaPkCols = getKeyColumnNames().stream().map(Column::new).collect(Collectors.toList());
+            return JavaConverters.asScalaBufferConverter(javaPkCols).asScala().toSeq();
         }
 
         @Override
