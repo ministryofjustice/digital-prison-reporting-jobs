@@ -2,8 +2,6 @@ package uk.gov.justice.digital.datahub.model;
 
 import lombok.Data;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.StructType;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
@@ -56,14 +54,6 @@ public class SourceReference {
             return keys.stream()
                     .map(s -> source + "." + s + " = " + target + "." + s)
                     .collect(Collectors.joining(" and "));
-        }
-
-        public Column getJoinExpr(Dataset<Row> left, Dataset<Row> right) {
-            return getKeyColumnNames()
-                    .stream()
-                    .map(colName -> left.col(colName).equalTo(right.col(colName)))
-                    .reduce(Column::and)
-                    .orElseThrow(() -> new IllegalArgumentException("Unable to find join expression for " + left + " and " + right));
         }
 
         public Collection<String> getKeyColumnNames() {

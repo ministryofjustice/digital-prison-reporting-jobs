@@ -5,6 +5,7 @@ import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.spark.SparkException;
 import org.apache.spark.sql.AnalysisException;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
+import scala.collection.Seq;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataProviderFailedMergingSchemasException;
@@ -148,6 +150,14 @@ public class S3DataProvider {
                 throw ex;
             }
         }
+    }
+
+    public Dataset<Row> getPrimaryKeysInCurated(SparkSession sparkSession, SourceReference sourceReference) {
+        logger.debug("Getting Curated Zone primary keys");
+        String fullCuratedPath = tablePath(arguments.getCuratedS3Path(), sourceReference.getSource(), sourceReference.getTable());
+        Dataset<Row> curated = getBatchSourceData(sparkSession, fullCuratedPath);
+        Seq<Column> sparkKeyColumns = sourceReference.getPrimaryKey().getSparkKeyColumns();
+        return curated.select(sparkKeyColumns);
     }
 
     private Dataset<Row> getStreamingDataset(SparkSession sparkSession, String fileGlobPath, StructType schema) {

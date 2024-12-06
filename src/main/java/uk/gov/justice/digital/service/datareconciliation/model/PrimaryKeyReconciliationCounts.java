@@ -1,10 +1,12 @@
 package uk.gov.justice.digital.service.datareconciliation.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.val;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@EqualsAndHashCode
 public class PrimaryKeyReconciliationCounts implements DataReconciliationResult {
 
     private final Map<String, PrimaryKeyReconciliationCount> counts = new HashMap<>();
@@ -23,7 +25,11 @@ public class PrimaryKeyReconciliationCounts implements DataReconciliationResult 
 
     @Override
     public boolean isSuccess() {
-        return counts.values().stream().allMatch(PrimaryKeyReconciliationCount::countsAreZero);
+        if (counts.isEmpty()) {
+            return false;
+        } else {
+            return counts.values().stream().allMatch(PrimaryKeyReconciliationCount::countsAreZero);
+        }
     }
 
     @Override

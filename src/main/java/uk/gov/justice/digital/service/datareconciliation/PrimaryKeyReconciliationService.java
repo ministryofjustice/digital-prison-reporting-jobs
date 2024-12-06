@@ -8,9 +8,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.collection.Seq;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCount;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCounts;
@@ -18,24 +16,19 @@ import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconci
 import java.util.List;
 import java.util.function.Supplier;
 
-import static uk.gov.justice.digital.common.ResourcePath.tablePath;
-
 @Singleton
 public class PrimaryKeyReconciliationService {
 
     private static final Logger logger = LoggerFactory.getLogger(PrimaryKeyReconciliationService.class);
 
-    private final JobArguments jobArguments;
     private final S3DataProvider s3DataProvider;
     private final ReconciliationDataSourceService reconciliationDataSourceService;
 
     @Inject
     public PrimaryKeyReconciliationService(
-            JobArguments jobArguments,
             S3DataProvider s3DataProvider,
             ReconciliationDataSourceService reconciliationDataSourceService
     ) {
-        this.jobArguments = jobArguments;
         this.s3DataProvider = s3DataProvider;
         this.reconciliationDataSourceService = reconciliationDataSourceService;
     }
@@ -52,14 +45,14 @@ public class PrimaryKeyReconciliationService {
     }
 
     private PrimaryKeyReconciliationCount primaryKeyReconciliationCountsPerTable(SparkSession sparkSession, SourceReference sourceReference) {
-        Dataset<Row> curatedPks = primaryKeysInCurated(sparkSession, sourceReference);
+        Dataset<Row> curatedPks = s3DataProvider.getPrimaryKeysInCurated(sparkSession, sourceReference);
         logger.debug("Curated schema: {}", (Supplier<String>) () -> curatedPks.schema().treeString());
         Dataset<Row> dataSourcePks = reconciliationDataSourceService.primaryKeysAsDataframe(sparkSession, sourceReference);
         logger.debug("Data Source schema: {}", (Supplier<String>) () -> dataSourcePks.schema().treeString());
 
         // We cannot use Dataset#exceptAll method with the version of Spark Glue 4.0 provides so
         // we use join instead. See https://issues.apache.org/jira/browse/SPARK-39612
-        Column joinExpr = sourceReference.getPrimaryKey().getJoinExpr(curatedPks, dataSourcePks);
+        Column joinExpr = getJoinExpr(sourceReference.getPrimaryKey(), curatedPks, dataSourcePks);
         Dataset<Row> inCuratedNotDataSource = curatedPks.join(dataSourcePks, joinExpr, "left_anti");
         Dataset<Row> inDataSourceNotCurated = dataSourcePks.join(curatedPks, joinExpr, "left_anti");
 
@@ -76,12 +69,11 @@ public class PrimaryKeyReconciliationService {
         return new PrimaryKeyReconciliationCount(countInCuratedNotDataSource, countInDataSourceNotCurated);
     }
 
-
-    private Dataset<Row> primaryKeysInCurated(SparkSession sparkSession, SourceReference sourceReference) {
-        logger.debug("Getting Curated Zone primary keys");
-        String fullCuratedPath = tablePath(jobArguments.getCuratedS3Path(), sourceReference.getSource(), sourceReference.getTable());
-        Dataset<Row> curated = s3DataProvider.getBatchSourceData(sparkSession, fullCuratedPath);
-        Seq<Column> sparkKeyColumns = sourceReference.getPrimaryKey().getSparkKeyColumns();
-        return curated.select(sparkKeyColumns);
+    private Column getJoinExpr(SourceReference.PrimaryKey pk, Dataset<Row> left, Dataset<Row> right) {
+        return pk.getKeyColumnNames()
+                .stream()
+                .map(colName -> left.col(colName).equalTo(right.col(colName)))
+                .reduce(Column::and)
+                .orElseThrow(() -> new IllegalArgumentException("Unable to find join expression for " + left + " and " + right));
     }
 }
