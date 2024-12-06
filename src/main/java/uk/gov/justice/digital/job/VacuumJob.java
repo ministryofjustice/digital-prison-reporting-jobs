@@ -12,7 +12,9 @@ import uk.gov.justice.digital.service.MaintenanceService;
 import javax.inject.Inject;
 import java.util.Optional;
 
+import static java.lang.String.format;
 import static picocli.CommandLine.Command;
+import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 
 /**
  * Job that runs a delta lake vacuum on tables belonging to a provided domain or otherwise any tables it finds immediately under the provided Hadoop compatible path.
@@ -58,9 +60,9 @@ public class VacuumJob implements Runnable {
 
             if (optionalConfigKey.isPresent()) {
                 ImmutableSet<String> configuredTablePaths = configService.getConfiguredTablePaths(optionalConfigKey.get());
-                maintenanceService.vacuumDeltaTables(spark, rootPath, configuredTablePaths, maxDepth);
+                configuredTablePaths.forEach(tablePath -> maintenanceService.vacuumDeltaTables(spark, format("%s%s", ensureEndsWithSlash(rootPath), tablePath), 0));
             } else {
-                maintenanceService.vacuumDeltaTables(spark, rootPath, ImmutableSet.of(), maxDepth);
+                maintenanceService.vacuumDeltaTables(spark, ensureEndsWithSlash(rootPath), maxDepth);
             }
 
             logger.info("Vacuum finished");
