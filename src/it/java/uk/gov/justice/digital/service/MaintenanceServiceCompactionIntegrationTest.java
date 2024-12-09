@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.digital.config.JobArguments;
@@ -36,7 +35,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
         long originalNumFilesAgencyLocations = countParquetFiles(agencyLocationsTablePathDepth2);
         long originalNumFilesInternalLocations = countParquetFiles(internalLocationsTablePathDepth3);
 
-        underTest.compactDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
         // In this test we verify compaction using both the effect on number of files and the reported delta operations.
         // In other tests we just check the delta operations in metadata.
@@ -58,7 +57,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     public void shouldCompactDeltaTablesWhenRecursingWithDepth2() {
         int depthLimit = 2;
 
-        underTest.compactDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
         assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
         assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
@@ -70,7 +69,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     public void shouldCompactDeltaTablesWhenRecursingWithDepth3() {
         int depthLimit = 3;
 
-        underTest.compactDeltaTables(spark, rootPath.toString(), ImmutableSet.of(), depthLimit);
+        underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
         assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
         assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
