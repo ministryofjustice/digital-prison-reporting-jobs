@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.job;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +60,8 @@ public class VacuumJob implements Runnable {
             Optional<String> optionalConfigKey = jobArguments.getOptionalConfigKey();
 
             if (optionalConfigKey.isPresent()) {
-                ImmutableSet<String> configuredTablePaths = configService.getConfiguredTablePaths(optionalConfigKey.get());
-                configuredTablePaths.forEach(tablePath -> maintenanceService.vacuumDeltaTables(spark, format("%s%s", ensureEndsWithSlash(rootPath), tablePath), 0));
+                ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(optionalConfigKey.get());
+                configuredTables.forEach(table -> maintenanceService.vacuumDeltaTables(spark, format("%s%s", ensureEndsWithSlash(rootPath), table.right), 0));
             } else {
                 maintenanceService.vacuumDeltaTables(spark, ensureEndsWithSlash(rootPath), maxDepth);
             }

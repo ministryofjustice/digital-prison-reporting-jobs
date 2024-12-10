@@ -28,6 +28,13 @@ public class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
+    public void shouldAdoptCurrentPathAsDeltaTablePathWhenRecurseDepthIsZero() {
+        int depthLimitToRecurseDeltaTables = 0;
+        List<String> deltaTables = underTest.listDeltaTablePaths(spark, offendersTablePath.toString(), depthLimitToRecurseDeltaTables);
+        assertEquals(1, deltaTables.size());
+    }
+
+    @Test
     public void shouldListDeltaTablePathsWhenRecursingDepth2() {
         int depthLimitToRecurseDeltaTables = 2;
         List<String> deltaTables = underTest.listDeltaTablePaths(spark, rootPath.toString(), depthLimitToRecurseDeltaTables);
