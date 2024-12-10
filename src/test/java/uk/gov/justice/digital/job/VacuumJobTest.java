@@ -2,6 +2,7 @@ package uk.gov.justice.digital.job;
 
 import com.github.stefanbirkner.systemlambda.SystemLambda;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,10 +45,11 @@ class VacuumJobTest extends BaseSparkTest {
     @Captor
     ArgumentCaptor<String> deltaPathCaptor;
 
-    private static final String ROOT_PATH = "s3://some-bucket";
+    private static final String ROOT_PATH = "s3://some-bucket/root";
     private static final String TEST_CONFIG_KEY = "test-config-key";
-    private static final String DOMAIN_CONFIG_TABLE_1 = "source1/table1";
-    private static final String DOMAIN_CONFIG_TABLE_2 = "source2/table2";
+    private static final String DOMAIN_CONFIG_PATH = "root";
+    private static final String DOMAIN_CONFIG_TABLE_1 = "table1";
+    private static final String DOMAIN_CONFIG_TABLE_2 = "table2";
     private static final int RECURSE_MAX_DEPTH = 2;
     private VacuumJob underTest;
 
@@ -62,7 +64,8 @@ class VacuumJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
-        when(configService.getConfiguredTablePaths(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.of(DOMAIN_CONFIG_TABLE_1, DOMAIN_CONFIG_TABLE_2));
+        when(configService.getConfiguredTables(TEST_CONFIG_KEY))
+                .thenReturn(ImmutableSet.of(ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_1), ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_2)));
         doNothing().when(maintenanceService).vacuumDeltaTables(eq(spark), deltaPathCaptor.capture(), eq(0));
 
         List<String> expectedPaths = Arrays.asList(
@@ -93,7 +96,7 @@ class VacuumJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
-        doThrow(new ConfigServiceException("config error")).when(configService).getConfiguredTablePaths(TEST_CONFIG_KEY);
+        doThrow(new ConfigServiceException("config error")).when(configService).getConfiguredTables(TEST_CONFIG_KEY);
 
         assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
 
@@ -105,8 +108,8 @@ class VacuumJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
-        when(configService.getConfiguredTablePaths(TEST_CONFIG_KEY))
-                .thenReturn(ImmutableSet.of(DOMAIN_CONFIG_TABLE_1, DOMAIN_CONFIG_TABLE_2));
+        when(configService.getConfiguredTables(TEST_CONFIG_KEY))
+                .thenReturn(ImmutableSet.of(ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_1), ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_2)));
         doThrow(new RuntimeException("Maintenance service exception"))
                 .when(maintenanceService).vacuumDeltaTables(eq(spark), any(), eq(RECURSE_MAX_DEPTH));
 

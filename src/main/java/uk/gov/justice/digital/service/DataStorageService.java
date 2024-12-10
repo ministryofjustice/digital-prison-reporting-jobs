@@ -173,28 +173,6 @@ public class DataStorageService {
         }
     }
 
-    public void deleteRecords(
-            SparkSession spark,
-            String tablePath,
-            Dataset<Row> dataFrame,
-            SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        val dt = getTable(spark, tablePath);
-
-        if (dt.isPresent()) {
-            val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
-            logger.debug("Deleting records from {} using condition: {}", tablePath, condition);
-            doWithRetryOnConcurrentModification(() ->
-                    dt.get().as(SOURCE)
-                            .merge(dataFrame.as(TARGET), condition)
-                            .whenMatched()
-                            .delete()
-                            .execute()
-            );
-        } else {
-            logger.error("Failed to delete table {}. Delta table is not present", tablePath);
-        }
-    }
-
     public void create(@NotNull String tablePath, @NotNull Dataset<Row> df) {
         logger.info("Inserting schema and data to " + tablePath);
         df.write()
@@ -330,12 +308,14 @@ public class DataStorageService {
         logger.debug("Listing all delta table paths below: {}", rootPath);
         val path = new Path(rootPath);
 
-        Map<Boolean, List<String>> deltaTablesAndOtherDirs = Arrays.stream(fs.listStatus(path))
-                .filter(FileStatus::isDirectory)
-                .map(FileStatus::getPath)
-                .map(Path::toUri)
-                .map(URI::toString)
-                .collect(Collectors.partitioningBy(tablePath -> DeltaTable.isDeltaTable(spark, tablePath)));
+        Map<Boolean, List<String>> deltaTablesAndOtherDirs = (depthLimit == 0) ?
+                Collections.singletonMap(true, Collections.singletonList(rootPath)) :
+                Arrays.stream(fs.listStatus(path))
+                        .filter(FileStatus::isDirectory)
+                        .map(FileStatus::getPath)
+                        .map(Path::toUri)
+                        .map(URI::toString)
+                        .collect(Collectors.partitioningBy(tablePath -> DeltaTable.isDeltaTable(spark, tablePath)));
 
         val deltaTables = deltaTablesAndOtherDirs.get(true);
         accumulator.addAll(deltaTables);
