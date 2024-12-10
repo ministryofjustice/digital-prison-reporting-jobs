@@ -34,6 +34,7 @@ import java.util.Collections;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
@@ -222,6 +223,11 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
+    void shouldNotFailDuringVacuumWhenDeltaTableDoesNotExist() {
+        assertDoesNotThrow(() -> underTest.vacuum(spark, tableId.toPath()));
+    }
+
+    @Test
     public void shouldCompactDeltaTable() {
         givenDeltaTableExists();
         when(mockDeltaTable.optimize()).thenReturn(mockDeltaOptimize);
@@ -229,6 +235,11 @@ class DataStorageServiceTest extends BaseSparkTest {
         underTest.compactDeltaTable(spark, tableId.toPath());
         verify(mockDeltaTable).optimize();
         verify(mockDeltaOptimize).executeCompaction();
+    }
+
+    @Test
+    void shouldNotFailDuringCompactionWhenDeltaTableDoesNotExist() {
+        assertDoesNotThrow(() -> underTest.compactDeltaTable(spark, tableId.toPath()));
     }
 
     @Test

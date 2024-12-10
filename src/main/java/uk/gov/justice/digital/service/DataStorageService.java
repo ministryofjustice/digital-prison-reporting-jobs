@@ -218,13 +218,17 @@ public class DataStorageService {
      */
     public void vacuum(SparkSession spark, String tablePath) throws DataStorageException {
         logger.info("Vacuuming Delta table at {}", tablePath);
-        val deltaTable = getTable(spark, tablePath)
-                .orElseThrow(() -> new DataStorageException("Failed to vacuum table. Table does not exist"));
+        val optionalDeltaTable = getTable(spark, tablePath);
 
-        doWithRetryOnConcurrentModification(deltaTable::vacuum);
-
-        updateManifest(deltaTable);
-        logger.info("Finished vacuuming Delta table at {}", tablePath);
+        if (optionalDeltaTable.isPresent()) {
+            val deltaTable = optionalDeltaTable.get();
+            doWithRetryOnConcurrentModification(deltaTable::vacuum);
+            updateManifest(deltaTable);
+            logger.info("Finished vacuuming Delta table at {}", tablePath);
+        } else {
+            String missingDeltaTableMessage = format("Failed to vacuum table at path %s. Table does not exist", tablePath);
+            logger.warn(missingDeltaTableMessage);
+        }
     }
 
     public Dataset<Row> get(SparkSession spark, TableIdentifier tableId) {
@@ -271,11 +275,17 @@ public class DataStorageService {
 
     public void compactDeltaTable(SparkSession spark, String tablePath) throws DataStorageException {
         logger.info("Compacting table at path: {}", tablePath);
-        val deltaTable = getTable(spark, tablePath)
-                .orElseThrow(() -> new DataStorageException(format("Failed to compact table at path %s. Table does not exist", tablePath)));
-        doWithRetryOnConcurrentModification(() -> deltaTable.optimize().executeCompaction());
-        updateManifest(deltaTable);
-        logger.info("Finished compacting table at path: {}", tablePath);
+        val optionalDeltaTable = getTable(spark, tablePath);
+
+        if (optionalDeltaTable.isPresent()) {
+            val deltaTable = optionalDeltaTable.get();
+            doWithRetryOnConcurrentModification(() -> deltaTable.optimize().executeCompaction());
+            updateManifest(deltaTable);
+            logger.info("Finished compacting table at path: {}", tablePath);
+        } else {
+            String missingDeltaTableMessage = format("Failed to compact table at path %s. Table does not exist", tablePath);
+            logger.warn(missingDeltaTableMessage);
+        }
     }
 
     /**
