@@ -293,7 +293,7 @@ public class DataStorageService {
      * @return The list of delta table paths (including hadoop filesystem prefix, e.g. s3://)
      */
     public List<String> listDeltaTablePaths(SparkSession spark, String rootPath, int depthLimit) throws DataStorageException {
-        logger.info("Listing all delta table paths below: {}", rootPath);
+        logger.info("Listing all delta table paths within recurse depth: {} below: {}", depthLimit, rootPath);
         try {
             val fs = FileSystem.get(new URI(rootPath), spark.sparkContext().hadoopConfiguration());
             List<String> deltaTablePathAccumulator = new ArrayList<>();
@@ -315,7 +315,7 @@ public class DataStorageService {
      * Uses an accumulator rather than keeping intermediate results on the stack.
      */
     private void collectDeltaTablePaths(SparkSession spark, FileSystem fs, String rootPath, int depthLimit, List<String> accumulator) throws IOException {
-        logger.debug("Listing all delta table paths below: {}", rootPath);
+        logger.debug("Listing all delta table paths within recurse depth: {} below: {}", depthLimit, rootPath);
         val path = new Path(rootPath);
 
         Map<Boolean, List<String>> deltaTablesAndOtherDirs = (depthLimit == 0) ?
