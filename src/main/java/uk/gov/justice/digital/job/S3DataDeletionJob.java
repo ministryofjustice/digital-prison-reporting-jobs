@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Job that deletes s3 files from a list of bucket(s).
@@ -61,13 +62,13 @@ public class S3DataDeletionJob implements Runnable {
 
         final ImmutableSet<String> bucketsToDeleteFilesFrom = jobArguments.getBucketsToDeleteFilesFrom();
         final String sourcePrefix = jobArguments.getSourcePrefix();
-        final ImmutableSet<String> allowedExtensions = jobArguments.getAllowedS3FileExtensions();
+        final Pattern allowedFileNameRegex = jobArguments.getAllowedS3FileNameRegex();
 
         Set<String> failedObjects = new HashSet<>();
 
         for (String bucketToDeleteFilesFrom : bucketsToDeleteFilesFrom) {
             List<String> listedFiles = s3FileService
-                    .listFilesForConfig(bucketToDeleteFilesFrom, sourcePrefix, configuredTables, allowedExtensions, Duration.ZERO);
+                    .listFilesForConfig(bucketToDeleteFilesFrom, sourcePrefix, configuredTables, allowedFileNameRegex, Duration.ZERO);
 
             logger.info("Deleting S3 objects from {} ", bucketToDeleteFilesFrom);
             failedObjects = s3FileService.deleteObjects(listedFiles, bucketToDeleteFilesFrom);

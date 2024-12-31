@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.service;
 
 import com.amazonaws.AmazonClientException;
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +30,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,7 +84,7 @@ class CheckpointReaderServiceTest {
         expectedCommittedFiles.add("committed-file-2");
 
         when(mockJobArguments.getCheckpointLocation()).thenReturn(CHECKPOINT_LOCATION);
-        when(mockS3Client.getObjectsOlderThan(CHECKPOINT_BUCKET, checkpointFolder, ImmutableSet.of("*"), Duration.ZERO, fixedClock)).thenReturn(checkpointFiles);
+        when(mockS3Client.getObjectsOlderThan(CHECKPOINT_BUCKET, checkpointFolder, matchAllFiles, Duration.ZERO, fixedClock)).thenReturn(checkpointFiles);
         when(mockCheckpointReaderClient.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles)).thenReturn(expectedCommittedFiles);
 
         Set<String> committedFiles = underTest.getCommittedFilesForTable(configuredTable);

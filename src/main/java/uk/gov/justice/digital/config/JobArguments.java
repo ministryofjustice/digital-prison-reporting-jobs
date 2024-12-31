@@ -15,8 +15,14 @@ import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationChe
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
@@ -121,7 +127,8 @@ public class JobArguments {
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
     // A comma separated list of s3 file extensions. The wildcard '*' includes all extensions.
-    static final String ALLOWED_S3_FILE_EXTENSIONS = "dpr.allowed.s3.file.extensions";
+    static final String ALLOWED_S3_FILE_NAME_REGEX = "dpr.allowed.s3.file.regex";
+    public static final String DEFAULT_FILE_NAME_REGEX = ".+";
     static final String ORCHESTRATION_WAIT_INTERVAL_SECONDS = "dpr.orchestration.wait.interval.seconds";
     static final int DEFAULT_ORCHESTRATION_WAIT_INTERVAL_SECONDS = 10;
     static final String ORCHESTRATION_MAX_ATTEMPTS = "dpr.orchestration.max.attempts";
@@ -421,19 +428,8 @@ public class JobArguments {
         return ImmutableSet.copyOf(buckets);
     }
 
-    public ImmutableSet<String> getAllowedS3FileExtensions() {
-        Set<String> extensions = Arrays.stream(getArgument(ALLOWED_S3_FILE_EXTENSIONS).toLowerCase().split(","))
-                .map(item -> item.trim().toLowerCase())
-                .filter(item -> !item.isEmpty())
-                .collect(Collectors.toSet());
-
-        if (extensions.isEmpty()) throw new IllegalStateException("Argument " + ALLOWED_S3_FILE_EXTENSIONS + " evaluated to empty set");
-
-        if (extensions.contains("*")) {
-            return ImmutableSet.of("*");
-        } else {
-            return ImmutableSet.copyOf(extensions);
-        }
+    public Pattern getAllowedS3FileNameRegex() {
+        return Pattern.compile(getArgument(ALLOWED_S3_FILE_NAME_REGEX, DEFAULT_FILE_NAME_REGEX));
     }
 
     public String getStopGlueInstanceJobName() {

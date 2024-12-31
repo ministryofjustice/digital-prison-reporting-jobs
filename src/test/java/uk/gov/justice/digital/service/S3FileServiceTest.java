@@ -36,6 +36,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doNothing;
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,8 +48,6 @@ class S3FileServiceTest {
     private static final String DESTINATION_PREFIX = "destination-prefix";
     private static final long RETENTION_AMOUNT = 2L;
     private static final Duration retentionPeriod = Duration.of(RETENTION_AMOUNT, ChronoUnit.DAYS);
-
-    private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
 
     @Mock
     private S3ObjectClient mockS3Client;
@@ -68,7 +67,7 @@ class S3FileServiceTest {
     void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod);
 
         assertThat(result, is(empty()));
     }
@@ -81,10 +80,10 @@ class S3FileServiceTest {
         expected.add("file3.parquet");
         expected.add("file4.parquet");
 
-        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod, fixedClock))
+        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod, fixedClock))
                 .thenReturn(expected);
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod);
 
         assertThat(result, containsInAnyOrder(expected.toArray()));
     }
@@ -97,7 +96,7 @@ class S3FileServiceTest {
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
-        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod));
+        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod));
 
         verify(mockS3Client, times(numRetries)).getObjectsOlderThan(any(), any(), any(), any(), any());
     }
@@ -111,7 +110,7 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod);
 
         assertThat(result, is(empty()));
     }
@@ -121,7 +120,7 @@ class S3FileServiceTest {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
-        undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod);
+        undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod);
 
         String folder = SOURCE_PREFIX + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         verify(mockS3Client, times(1))
@@ -133,7 +132,7 @@ class S3FileServiceTest {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
-        undertest.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileExtension, retentionPeriod);
+        undertest.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, retentionPeriod);
 
         String folder = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         verify(mockS3Client, times(1))
@@ -162,18 +161,18 @@ class S3FileServiceTest {
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
-                parquetFileExtension,
+                parquetFileRegex,
                 retentionPeriod,
                 fixedClock)).thenReturn(expectedFilesForTable1);
 
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
-                parquetFileExtension,
+                parquetFileRegex,
                 retentionPeriod,
                 fixedClock)).thenReturn(expectedFilesForTable2);
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod);
+        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod);
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);
@@ -191,7 +190,7 @@ class S3FileServiceTest {
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
-        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod));
+        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod));
 
         verify(mockS3Client, times(numRetries)).getObjectsOlderThan(any(), any(), any(), any(), any());
     }

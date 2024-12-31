@@ -17,12 +17,20 @@ import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class S3DataDeletionJobTest extends BaseSparkTest {
@@ -43,8 +51,6 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
 
     private final static ImmutableSet<String> bucketsToDeleteFrom = ImmutableSet
             .of("bucket-to-delete-from-1", "bucket-to-delete-from-2");
-
-    private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
 
     private S3DataDeletionJob underTest;
 
@@ -74,14 +80,14 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobArguments.getBucketsToDeleteFilesFrom()).thenReturn(bucketsToDeleteFrom);
         when(mockJobArguments.getSourcePrefix()).thenReturn(SOURCE_PREFIX);
-        when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
+        when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         when(mockS3FileService.listFilesForConfig(
                 listObjectsBucketCaptor.capture(),
                 eq(SOURCE_PREFIX),
                 eq(configuredTables),
-                eq(parquetFileExtension),
+                eq(parquetFileRegex),
                 eq(Duration.ZERO)
         )).thenReturn(objectsToDelete);
 
@@ -120,13 +126,13 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
         when(mockJobArguments.getBucketsToDeleteFilesFrom()).thenReturn(bucketsToDeleteFrom);
         when(mockJobArguments.getSourcePrefix()).thenReturn(SOURCE_PREFIX);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
-        when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
+        when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
         when(mockS3FileService.listFilesForConfig(
                 listObjectsBucketCaptor.capture(),
                 eq(SOURCE_PREFIX),
                 eq(configuredTables),
-                eq(parquetFileExtension),
+                eq(parquetFileRegex),
                 eq(Duration.ZERO)
         )).thenReturn(objectsToDelete);
 

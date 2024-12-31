@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
@@ -46,19 +47,19 @@ public class S3FileService {
         this.retryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
     }
 
-    public List<String> listFiles(String bucket, String sourcePrefix, ImmutableSet<String> allowedExtensions, Duration retentionPeriod) {
-        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(bucket, sourcePrefix, allowedExtensions, retentionPeriod, clock));
+    public List<String> listFiles(String bucket, String sourcePrefix, Pattern fileNameMatchRegex, Duration retentionPeriod) {
+        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(bucket, sourcePrefix, fileNameMatchRegex, retentionPeriod, clock));
     }
 
     public List<String> listFilesForConfig(
             String sourceBucket,
             String sourcePrefix,
             ImmutableSet<ImmutablePair<String, String>> configuredTables,
-            ImmutableSet<String> allowedExtensions,
+            Pattern fileNameMatchRegex,
             Duration retentionPeriod
     ) {
         return configuredTables.stream()
-                .flatMap(configuredTable -> listFilesForTable(sourceBucket, sourcePrefix, allowedExtensions, retentionPeriod, configuredTable).stream())
+                .flatMap(configuredTable -> listFilesForTable(sourceBucket, sourcePrefix, fileNameMatchRegex, retentionPeriod, configuredTable).stream())
                 .collect(Collectors.toList());
     }
 
@@ -114,7 +115,7 @@ public class S3FileService {
     private List<String> listFilesForTable(
             String sourceBucket,
             String sourcePrefix,
-            ImmutableSet<String> allowedExtensions,
+            Pattern fileNameMatchRegex,
             Duration retentionPeriod,
             ImmutablePair<String, String> configuredTable
     ) {
@@ -125,7 +126,7 @@ public class S3FileService {
         return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(
                 sourceBucket,
                 tableKey,
-                allowedExtensions,
+                fileNameMatchRegex,
                 retentionPeriod,
                 clock
         ));

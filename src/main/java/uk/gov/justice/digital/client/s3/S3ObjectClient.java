@@ -4,7 +4,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.config.JobArguments;
@@ -16,6 +15,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Singleton
 public class S3ObjectClient {
@@ -32,23 +32,23 @@ public class S3ObjectClient {
         this.maxObjectsPerPage = jobArguments.getMaxObjectsPerPage();
     }
 
-    public List<String> getObjectsOlderThan(String bucket, ImmutableSet<String> allowedExtensions, Duration retentionPeriod, Clock clock) {
+    public List<String> getObjectsOlderThan(String bucket, Pattern fileNameRegex, Duration retentionPeriod, Clock clock) {
         ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withMaxKeys(maxObjectsPerPage);
-        return listObjects(allowedExtensions, retentionPeriod, clock, request);
+        return listObjects(fileNameRegex, retentionPeriod, clock, request);
     }
 
     public List<String> getObjectsOlderThan(
             String bucket,
             String folder,
-            ImmutableSet<String> allowedExtensions,
+            Pattern fileNameMatchRegex,
             Duration retentionPeriod,
             Clock clock
     ) {
         ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
-        return listObjects(allowedExtensions, retentionPeriod, clock, request);
+        return listObjects(fileNameMatchRegex, retentionPeriod, clock, request);
     }
 
-    private List<String> listObjects(ImmutableSet<String> allowedExtensions, Duration retentionPeriod, Clock clock, ListObjectsRequest request) {
+    private List<String> listObjects(Pattern fileNameMatchRegex, Duration retentionPeriod, Clock clock, ListObjectsRequest request) {
         LocalDateTime currentDate = LocalDateTime.now(clock);
         List<String> objectPaths = new LinkedList<>();
         ObjectListing objectList;
@@ -64,9 +64,9 @@ public class S3ObjectClient {
                 String summaryKey = summary.getKey();
                 logger.debug("Listed {}", summaryKey);
 
-                boolean extensionAllowed = allowedExtensions.contains("*") || allowedExtensions.contains(getFileExtension(summaryKey));
+                boolean fileNameMatches = fileNameMatchRegex.matcher(summaryKey).matches();
 
-                if (!summaryKey.endsWith(DELIMITER) && extensionAllowed && isBeforeRetentionPeriod) {
+                if (!summaryKey.endsWith(DELIMITER) && fileNameMatches && isBeforeRetentionPeriod) {
                     logger.debug("Adding {}", summaryKey);
                     objectPaths.add(summaryKey);
                 }
@@ -85,10 +85,5 @@ public class S3ObjectClient {
     public void deleteObject(String objectKey, String sourceBucket) {
         logger.info("Deleting {}", objectKey);
         s3.deleteObject(sourceBucket, objectKey);
-    }
-
-    private static String getFileExtension(String summaryKey) {
-        String[] splits = summaryKey.split("\\.");
-        return "." + splits[splits.length - 1].toLowerCase();
     }
 }

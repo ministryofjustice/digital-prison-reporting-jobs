@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 
 @ExtendWith(MockitoExtension.class)
 class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
@@ -78,11 +79,12 @@ class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
         when(mockJobArguments.orchestrationWaitIntervalSeconds()).thenReturn(1);
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getConfigKey()).thenReturn(CONFIG_KEY);
+        when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
-        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, ImmutableSet.of(".parquet"), Duration.ZERO))
+        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(rawFiles);
 
         assertDoesNotThrow(() -> underTest.run());
@@ -113,11 +115,12 @@ class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
         when(mockJobArguments.orchestrationWaitIntervalSeconds()).thenReturn(1);
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getConfigKey()).thenReturn(CONFIG_KEY);
+        when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
-        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, ImmutableSet.of(".parquet"), Duration.ZERO))
+        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(rawFiles);
 
         assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));

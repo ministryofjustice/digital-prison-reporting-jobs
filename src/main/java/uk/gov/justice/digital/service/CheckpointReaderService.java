@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +14,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+import static uk.gov.justice.digital.common.RegexPatterns.checkpointRegexPattern;
+import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
 import static uk.gov.justice.digital.common.StreamingQuery.getQueryCheckpointPath;
 
 @Singleton
@@ -28,12 +28,6 @@ public class CheckpointReaderService {
     private final S3CheckpointReaderClient checkpointReaderClient;
     private final JobArguments jobArguments;
     private final Clock clock;
-    // Extracts the bucket and the folder path from the checkpoint location
-    // As an example s3://dpr-glue-jobs-development/checkpoint/dpr-reporting-hub-cdc-establishments-development/
-    // is extracted to:
-    // bucket - dpr-glue-jobs-development
-    // folder path - checkpoint/dpr-reporting-hub-cdc-establishments-development/
-    private final Pattern checkpointRegexPattern = Pattern.compile("^s3[A-Za-z]?:\\/\\/([A-Za-z-]+)\\/([\\S\\s]+\\S+)");
 
     @Inject
     public CheckpointReaderService(
@@ -60,7 +54,7 @@ public class CheckpointReaderService {
             List<String> checkpointFiles = s3ObjectClient.getObjectsOlderThan(
                     checkpointBucket,
                     checkpointPath,
-                    ImmutableSet.of("*"),
+                    matchAllFiles,
                     Duration.ZERO,
                     clock
             );

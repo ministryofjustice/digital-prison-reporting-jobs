@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * Job that checks if all raw files have been processed.
@@ -86,6 +87,7 @@ public class UnprocessedRawFilesCheckJob implements Runnable {
 
     private boolean verifyRawFilesProcessed() {
         String rawBucket = jobArguments.getTransferSourceBucket();
+        Pattern fileNameRegex = jobArguments.getAllowedS3FileNameRegex();
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                 .getConfiguredTables(jobArguments.getConfigKey());
 
@@ -99,7 +101,7 @@ public class UnprocessedRawFilesCheckJob implements Runnable {
 
         logger.info("Listing files in raw bucket");
         List<String> rawFiles = s3FileService
-                .listFilesForConfig(rawBucket, "", configuredTables, ImmutableSet.of(".parquet"), Duration.ZERO);
+                .listFilesForConfig(rawBucket, "", configuredTables, fileNameRegex, Duration.ZERO);
 
         return committedFiles.containsAll(rawFiles);
     }

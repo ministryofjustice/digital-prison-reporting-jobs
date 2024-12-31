@@ -17,19 +17,17 @@ import javax.inject.Singleton;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
+import static uk.gov.justice.digital.common.RegexPatterns.TABLE_NAME_PATTERN;
+import static uk.gov.justice.digital.common.RegexPatterns.tableNameRegex;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
 public class HiveTableService {
 
     private static final Logger logger = LoggerFactory.getLogger(HiveTableService.class);
-
-    private static final String TABLE_NAME_PATTERN = "^[a-z_0-9]*$";
-    private static final Pattern tableNameRegex = Pattern.compile(TABLE_NAME_PATTERN);
 
     private final JobArguments jobArguments;
     private final SourceReferenceService sourceReferenceService;

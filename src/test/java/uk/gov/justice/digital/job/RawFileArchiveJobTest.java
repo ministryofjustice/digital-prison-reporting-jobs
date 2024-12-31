@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
 
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
@@ -90,7 +91,7 @@ class RawFileArchiveJobTest extends BaseSparkTest {
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
-        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, ImmutableSet.of(".parquet"), Duration.ZERO))
+        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(rawFiles);
         when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(true)))
                 .thenReturn(Collections.emptySet());
@@ -120,7 +121,7 @@ class RawFileArchiveJobTest extends BaseSparkTest {
 
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable)).thenReturn(committedFilesTable);
-        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, ImmutableSet.of(".parquet"), Duration.ZERO))
+        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(Collections.emptyList());
         when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(true)))
                 .thenReturn(Collections.emptySet());
