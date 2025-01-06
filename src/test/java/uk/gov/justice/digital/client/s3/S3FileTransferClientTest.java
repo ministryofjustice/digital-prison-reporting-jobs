@@ -33,6 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.Fixtures.fixedDateTime;
+import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
+import static uk.gov.justice.digital.common.RegexPatterns.jsonOrParquetFileRegex;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileTransferClientTest {
@@ -52,7 +55,6 @@ public class S3FileTransferClientTest {
     private static final String DESTINATION_KEY = "test-destination-key";
     private static final String SOURCE_BUCKET = "test-source-bucket";
     private static final String DESTINATION_BUCKET = "test-destination-bucket";
-    private static final ImmutableSet<String> allowedExtensions = ImmutableSet.of(".parquet", ".json");
     private static final Integer MAX_OBJECTS_PER_PAGE = 10;
     private static final Duration zeroDayRetentionPeriod = Duration.of(0L, ChronoUnit.DAYS);
 
@@ -115,7 +117,7 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, allowedExtensions, zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
 
         ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
         assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
@@ -150,7 +152,7 @@ public class S3FileTransferClientTest {
 
         givenMultiPageObjectListingSucceeds(firstPageSummaries, secondPageSummaries);
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, ImmutableSet.of(".parquet"), zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, parquetFileRegex, zeroDayRetentionPeriod, fixedClock);
 
         ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
         assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
@@ -181,7 +183,7 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, ImmutableSet.of("*"), zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, matchAllFiles, zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
@@ -216,7 +218,7 @@ public class S3FileTransferClientTest {
 
         givenObjectListingSucceeds(allObjectSummaries);
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, allowedExtensions, zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
@@ -236,7 +238,7 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        underTest.getObjectsOlderThan(SOURCE_BUCKET, folder, allowedExtensions, zeroDayRetentionPeriod, fixedClock);
+        underTest.getObjectsOlderThan(SOURCE_BUCKET, folder, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(listObjectsRequestCaptor.getValue().getPrefix(), is(equalTo(folder)));

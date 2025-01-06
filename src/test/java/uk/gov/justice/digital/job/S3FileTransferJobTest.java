@@ -16,10 +16,18 @@ import uk.gov.justice.digital.service.S3FileService;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class S3FileTransferJobTest extends BaseSparkTest {
@@ -39,8 +47,6 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
     private static final long RETENTION_AMOUNT = 2L;
     private static final Duration retentionPeriod = Duration.of(RETENTION_AMOUNT, ChronoUnit.DAYS);
-
-    private static final ImmutableSet<String> parquetFileExtension = ImmutableSet.of(".parquet");
 
     private S3FileTransferJob underTest;
 
@@ -74,11 +80,11 @@ public class S3FileTransferJobTest extends BaseSparkTest {
         when(mockJobArguments.getTransferDestinationPrefix()).thenReturn(DESTINATION_PREFIX);
         when(mockJobArguments.getFileTransferRetentionPeriod()).thenReturn(retentionPeriod);
         when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
-        when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
+        when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod))
+        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
                 .thenReturn(objectsToMove);
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
@@ -101,9 +107,9 @@ public class S3FileTransferJobTest extends BaseSparkTest {
         when(mockJobArguments.getTransferDestinationPrefix()).thenReturn(DESTINATION_PREFIX);
         when(mockJobArguments.getFileTransferRetentionPeriod()).thenReturn(retentionPeriod);
         when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
-        when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
+        when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
-        when(mockS3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileExtension, retentionPeriod))
+        when(mockS3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod))
                 .thenReturn(objectsToMove);
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
@@ -134,11 +140,11 @@ public class S3FileTransferJobTest extends BaseSparkTest {
         when(mockJobArguments.getTransferDestinationPrefix()).thenReturn(DESTINATION_PREFIX);
         when(mockJobArguments.getFileTransferRetentionPeriod()).thenReturn(retentionPeriod);
         when(mockJobArguments.getFileTransferDeleteCopiedFilesFlag()).thenReturn(true);
-        when(mockJobArguments.getAllowedS3FileExtensions()).thenReturn(parquetFileExtension);
+        when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileExtension, retentionPeriod))
+        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
                 .thenReturn(objectsToMove);
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))

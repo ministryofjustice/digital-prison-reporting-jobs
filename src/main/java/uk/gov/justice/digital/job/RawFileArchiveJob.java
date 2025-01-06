@@ -18,6 +18,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
+
 /**
  * Job that archives raw s3 files to a destination bucket.
  */
@@ -67,7 +69,7 @@ public class RawFileArchiveJob implements Runnable {
 
         List<String> committedFiles = getCommittedFilesForConfig(configuredTables);
         Set<String> rawFiles = new HashSet<>(s3FileService
-                .listFilesForConfig(rawBucket, "", configuredTables, ImmutableSet.of(".parquet"), Duration.ZERO));
+                .listFilesForConfig(rawBucket, "", configuredTables, parquetFileRegex, Duration.ZERO));
 
         List<String> filesToArchive = getCommittedFilesNotAlreadyArchived(committedFiles, rawFiles);
 

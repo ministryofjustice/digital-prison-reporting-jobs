@@ -15,8 +15,10 @@ import java.util.Optional;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static uk.gov.justice.digital.common.RegexPatterns.committedFileRegexPattern;
+import static uk.gov.justice.digital.common.RegexPatterns.checkpointFileRegexPattern;
 
 @Singleton
 public class S3CheckpointReaderClient {
@@ -24,12 +26,6 @@ public class S3CheckpointReaderClient {
     private static final Logger logger = LoggerFactory.getLogger(S3CheckpointReaderClient.class);
 
     private final AmazonS3 s3;
-
-    // Extracts the ordinal and optional compact extension from the checkpoint file name. Example checkpoint file names: 1 or 1.compact
-    private final Pattern checkpointFileRegexPattern = Pattern.compile("^.*\\/(\\d+)(.compact)?$");
-
-    // Extracts the committed file path from a line in the checkpoint file
-    private final Pattern committedFileRegexPattern = Pattern.compile("^\\{\"path\":\"s3:\\/\\/([a-zA-Z-]+)\\/(.*)\",.*");
 
     @Inject
     public S3CheckpointReaderClient(S3ClientProvider clientProvider) {

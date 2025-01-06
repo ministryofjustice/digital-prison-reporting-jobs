@@ -12,13 +12,18 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
@@ -28,6 +33,9 @@ import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INT
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.PRIMARY_KEY_RECONCILIATION;
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
+import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
+import static uk.gov.justice.digital.common.RegexPatterns.jsonOrParquetFileRegex;
 
 class JobArgumentsIntegrationTest {
 
@@ -361,27 +369,26 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldReturnLowerCasedSetOfAllowedS3FileExtensionsWithoutDuplicates() {
+    public void shouldReturnCompiledPatternOfAllowedS3FileNameRegexForParquetFiles() {
         HashMap<String, String> args = new HashMap<>();
-        args.put(JobArguments.ALLOWED_S3_FILE_EXTENSIONS, ".parquet,.jpg,.txt,.JPG");
+        args.put(JobArguments.ALLOWED_S3_FILE_NAME_REGEX, parquetFileRegex.pattern());
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(ImmutableSet.of(".parquet", ".jpg", ".txt"), jobArguments.getAllowedS3FileExtensions());
+        assertEquals(parquetFileRegex.pattern(), jobArguments.getAllowedS3FileNameRegex().pattern());
     }
 
     @Test
-    public void shouldThrowAnExceptionWhenSetOfAllowedS3FileExtensionsIsEmpty() {
+    public void shouldReturnCompiledPatternOfAllowedS3FileNameRegexForJsonOrParquetFiles() {
         HashMap<String, String> args = new HashMap<>();
-        args.put(JobArguments.ALLOWED_S3_FILE_EXTENSIONS, "");
+        args.put(JobArguments.ALLOWED_S3_FILE_NAME_REGEX, jsonOrParquetFileRegex.pattern());
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertThrows(IllegalStateException.class, jobArguments::getAllowedS3FileExtensions);
+        assertEquals(jsonOrParquetFileRegex.pattern(), jobArguments.getAllowedS3FileNameRegex().pattern());
     }
 
     @Test
-    public void shouldReturnWildcardWhenTheAllowedS3FileExtensionsContainsOne() {
+    public void shouldMatchAllFilesWhenAllowedS3FileNameRegexNotProvided() {
         HashMap<String, String> args = new HashMap<>();
-        args.put(JobArguments.ALLOWED_S3_FILE_EXTENSIONS, ".parquet,*,.txt");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(ImmutableSet.of("*"), jobArguments.getAllowedS3FileExtensions());
+        assertEquals(matchAllFiles.pattern(), jobArguments.getAllowedS3FileNameRegex().pattern());
     }
 
     @Test
