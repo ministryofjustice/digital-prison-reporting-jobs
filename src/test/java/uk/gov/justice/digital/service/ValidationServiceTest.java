@@ -77,7 +77,7 @@ class ValidationServiceTest extends BaseSparkTest {
     private ValidationService underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new ValidationService(violationService);
         List<Row> input = Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.000000", Delete, "data"),
@@ -99,7 +99,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldValidateBasedOnNullPrimaryKeysAndNonNullColumns() {
+    void validateRowsShouldValidateBasedOnNullPrimaryKeysAndNonNullColumns() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
@@ -128,7 +128,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldValidateCompositePrimaryKeys() {
+    void validateRowsShouldValidateCompositePrimaryKeys() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Arrays.asList(PRIMARY_KEY_COLUMN, TIMESTAMP));
@@ -155,7 +155,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldIgnoreNullNonPKColumnsForDeletes() {
+    void validateRowsShouldIgnoreNullNonPKColumnsForDeletes() {
         // Deletes from postgres may be output with just the primary key and metadata columns.
         // We shouldn't mark these as invalid because these columns aren't needed to apply a delete operation.
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN);
@@ -179,7 +179,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldValidateMismatchingSchemas() {
+    void validateRowsShouldValidateMismatchingSchemas() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getVersionId()).thenReturn(VERSION_ID);
 
@@ -205,7 +205,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void validateRowsShouldReturnInvalidWhenNoPrimaryKeyIsPresentInSchema() {
+    void validateRowsShouldReturnInvalidWhenNoPrimaryKeyIsPresentInSchema() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.emptyList());
@@ -325,7 +325,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void handleValidationShouldReturnValidRows() {
+    void handleValidationShouldReturnValidRows() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
@@ -345,7 +345,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void handleValidationShouldWriteViolationsWithInvalidRows() {
+    void handleValidationShouldWriteViolationsWithInvalidRows() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
@@ -377,7 +377,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void handleValidationShouldWriteWholeBatchAsViolationsForSchemaMisMatch() {
+    void handleValidationShouldWriteWholeBatchAsViolationsForSchemaMisMatch() {
         StructType misMatchingSchema = TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS.add(
                 new StructField("extra-column", DataTypes.IntegerType, false, Metadata.empty())
         );
@@ -413,7 +413,7 @@ class ValidationServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void handleValidationShouldThrowRTEWhenViolationServiceThrows() {
+    void handleValidationShouldThrowRTEWhenViolationServiceThrows() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
         when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
         when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
