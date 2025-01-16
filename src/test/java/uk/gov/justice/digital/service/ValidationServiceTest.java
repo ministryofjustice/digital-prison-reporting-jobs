@@ -37,6 +37,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
@@ -60,6 +61,7 @@ class ValidationServiceTest extends BaseSparkTest {
     private static final String source = "source";
     private static final String table = "table";
     private static final String requiredColumnIsNullMsg = "Required column is null";
+    private static final String missingOperationColumnMsg = "Missing Op column";
     private static final String noPkMsg = "Record does not have a primary key";
     private static final String VERSION_ID = UUID.randomUUID().toString();
     private static final String schemaMisMatchMsg = "Record does not match schema version " + VERSION_ID;
@@ -109,11 +111,11 @@ class ValidationServiceTest extends BaseSparkTest {
         List<Row> expected = Arrays.asList(
                 RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", CHECKPOINT_COL_VALUE, null),
                 RowFactory.create(2, "2023-11-13 10:49:28.000000", "D", null, CHECKPOINT_COL_VALUE, null),
-                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
                 RowFactory.create(4, null, "I", "data", CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
-                RowFactory.create(5, null, null, "data", CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
-                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
-                RowFactory.create(7, null, null, null, CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(5, null, null, "data", CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
+                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
+                RowFactory.create(7, null, null, null, CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
                 RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", CHECKPOINT_COL_VALUE, noPkMsg),
                 RowFactory.create(null, null, "U", "data", CHECKPOINT_COL_VALUE, noPkMsg),
                 RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, noPkMsg),
@@ -170,8 +172,32 @@ class ValidationServiceTest extends BaseSparkTest {
 
         Dataset<Row> resultDf = underTest.validateRows(thisInputDf, sourceReference, TEST_DATA_SCHEMA_NON_NULLABLE_DATA_COLUMN);
         List<Row> result = resultDf.collectAsList();
-        List<Row> expected = Arrays.asList(
+        List<Row> expected = Collections.singletonList(
                 RowFactory.create(1, "2023-11-13 10:49:29.000000", "D", null, CHECKPOINT_COL_VALUE, null)
+        );
+
+        assertEquals(expected.size(), result.size());
+        assertTrue(result.containsAll(expected));
+    }
+
+    @Test
+    void validateRowsShouldMarkNullNonPKColumnsAsErrorsForInsertsAndUpdates() {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
+
+        List<Row> input = Arrays.asList(
+                createRow(1, "2023-11-13 10:49:29.000000", Insert, null),
+                createRow(2, "2023-11-13 10:49:29.000000", Update, null)
+        );
+
+        Dataset<Row> thisInputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
+
+        Dataset<Row> resultDf = underTest.validateRows(thisInputDf, sourceReference, TEST_DATA_SCHEMA_NON_NULLABLE_DATA_COLUMN);
+        List<Row> result = resultDf.collectAsList();
+        List<Row> expected = Arrays.asList(
+                RowFactory.create(1, "2023-11-13 10:49:29.000000", "I", null, CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(2, "2023-11-13 10:49:29.000000", "U", null, CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg)
         );
 
         assertEquals(expected.size(), result.size());
@@ -355,11 +381,11 @@ class ValidationServiceTest extends BaseSparkTest {
         underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
-                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
                 RowFactory.create(4, null, "I", "data", CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
-                RowFactory.create(5, null, null, "data", CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
-                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
-                RowFactory.create(7, null, null, null, CHECKPOINT_COL_VALUE, requiredColumnIsNullMsg),
+                RowFactory.create(5, null, null, "data", CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
+                RowFactory.create(6, "2023-11-13 10:49:29.000000", null, null, CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
+                RowFactory.create(7, null, null, null, CHECKPOINT_COL_VALUE, missingOperationColumnMsg),
                 RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", CHECKPOINT_COL_VALUE, noPkMsg),
                 RowFactory.create(null, null, "U", "data", CHECKPOINT_COL_VALUE, noPkMsg),
                 RowFactory.create(null, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, noPkMsg),
