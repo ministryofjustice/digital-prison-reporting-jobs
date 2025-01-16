@@ -37,12 +37,21 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.common.CommonDataFields.*;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
-import static uk.gov.justice.digital.test.MinimalTestData.*;
+import static uk.gov.justice.digital.test.MinimalTestData.CHECKPOINT_COL_VALUE;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
+import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_DATA_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -139,6 +148,30 @@ class ValidationServiceTest extends BaseSparkTest {
                 RowFactory.create(2, null, "U", null, CHECKPOINT_COL_VALUE, noPkMsg),
                 RowFactory.create(null, "2023-11-13 10:49:29.000000", "U", "data", CHECKPOINT_COL_VALUE, noPkMsg),
                 RowFactory.create(null, null, "U", "data", CHECKPOINT_COL_VALUE, noPkMsg)
+        );
+
+        assertEquals(expected.size(), result.size());
+        assertTrue(result.containsAll(expected));
+    }
+
+    @Test
+    public void validateRowsShouldIgnoreNullNonPKColumnsForDeletes() {
+        // Deletes from postgres may be output with just the primary key and metadata columns.
+        // We shouldn't mark these as invalid because these columns aren't needed to apply a delete operation.
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN);
+        when(sourceReference.getPrimaryKey()).thenReturn(primaryKey);
+        when(primaryKey.getKeyColumnNames()).thenReturn(Collections.singletonList(PRIMARY_KEY_COLUMN));
+
+        List<Row> input = Collections.singletonList(
+                createRow(1, "2023-11-13 10:49:29.000000", Delete, null)
+        );
+
+        Dataset<Row> thisInputDf = spark.createDataFrame(input, TEST_DATA_SCHEMA);
+
+        Dataset<Row> resultDf = underTest.validateRows(thisInputDf, sourceReference, TEST_DATA_SCHEMA_NON_NULLABLE_DATA_COLUMN);
+        List<Row> result = resultDf.collectAsList();
+        List<Row> expected = Arrays.asList(
+                RowFactory.create(1, "2023-11-13 10:49:29.000000", "D", null, CHECKPOINT_COL_VALUE, null)
         );
 
         assertEquals(expected.size(), result.size());

@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.apache.spark.sql.functions.*;
 import static uk.gov.justice.digital.common.CommonDataFields.*;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 
 @Singleton
 public class ValidationService {
@@ -59,7 +60,7 @@ public class ValidationService {
                     // The order of the 'when' clauses determines the validation error message used - first wins.
                     // Null means there is no validation error.
                     when(pkIsNull(sourceReference), concatenateErrors("Record does not have a primary key"))
-                            .when(requiredColumnIsNull(schema.fields()), concatenateErrors("Required column is null"))
+                            .when(col(OPERATION).notEqual(lit(Delete.getName())).and(requiredColumnIsNull(schema.fields())), concatenateErrors("Required column is null"))
                             .otherwise(col(ERROR))
             );
         } else {
