@@ -23,7 +23,9 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
@@ -31,8 +33,6 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
-import uk.gov.justice.digital.provider.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -60,7 +60,9 @@ import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
+import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.encoder;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
@@ -111,7 +113,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemas();
         givenTablesToWriteToOperationalDataStoreTableNameIsConfigured(arguments, configurationSchemaName + "." + configurationTableName);
@@ -121,12 +123,12 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @AfterEach
-    public void tearDown() throws TimeoutException {
+    void tearDown() throws TimeoutException {
         streamingQuery.stop();
     }
 
     @Test
-    public void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() throws Exception {
+    void shouldHandleInsertsForMultiplePrimaryKeysInSameBatch() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -145,8 +147,9 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk2, testQueryConnection);
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
     }
+
     @Test
-    public void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
+    void shouldHandleMultiplePrimaryKeysAcrossBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -177,7 +180,39 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() throws Exception {
+    void shouldHandleDeleteMissingRequiredDataColumn() throws Exception {
+        /*
+         * For some database systems, e.g. Oracle, the DMS outputs the full row with a deletion event. Others,
+         * such as Postgres, cause the DMS to output only the primary key and metadata columns but not the rest of the
+         * row by default.
+         *
+         * This test tests the default Postgres case where deletes arrive with missing data columns (which appear as
+         * nulls).
+         */
+
+        givenSourceReference();
+        givenASourceReferenceSchemaWithNonNullableDataColumns();
+        givenASourceReferencePrimaryKey();
+        givenASchemaWithNonNullableDataColumn();
+        givenAnInputStream();
+        givenTableStreamingQuery();
+        givenTheStreamingQueryRuns();
+
+        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
+
+        whenDeleteOccursForPK(pk1, "2023-11-13 10:00:00.000000");
+
+        whenTheNextBatchIsProcessed();
+
+        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+    }
+
+    @Test
+    void shouldHandleInsertFollowedByUpdatesAndDeleteInSameBatchWithDifferentTimestamps() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -214,7 +249,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() throws Exception {
+    void shouldHandleInsertFollowedByUpdatesAndDeleteAcrossBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -249,7 +284,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldHandleUpdateAndDeleteWithNoInsertFirst() throws Exception {
+    void shouldHandleUpdateAndDeleteWithNoInsertFirst() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -268,7 +303,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
+    void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -291,7 +326,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() throws Exception {
+    void shouldWriteNoSchemaFoundToViolationsAcrossMultipleBatches() throws Exception {
         givenMissingSourceReference();
         givenAnInputStreamWithSchemaInference();
         givenTableStreamingQuery();
@@ -326,7 +361,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteSchemaMismatchesToViolationsAcrossMultipleBatches() throws Exception {
+    void shouldWriteSchemaMismatchesToViolationsAcrossMultipleBatches() throws Exception {
         givenSourceReference();
         givenASourceReferenceSchema();
         givenASourceReferencePrimaryKey();
@@ -373,6 +408,11 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     private void givenAMatchingSchema() {
         when(dataProvider.inferSchema(any(), eq(inputSchemaName), eq(inputTableName)))
                 .thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
+    }
+
+    private void givenASchemaWithNonNullableDataColumn() {
+        when(dataProvider.inferSchema(any(), eq(inputSchemaName), eq(inputTableName)))
+                .thenReturn(TEST_DATA_SCHEMA_NON_NULLABLE_DATA_COLUMN);
     }
 
     private void givenASchemaMismatch() {
@@ -423,6 +463,10 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     private void givenASourceReferenceSchema() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+    }
+
+    private void givenASourceReferenceSchemaWithNonNullableDataColumns() {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN);
     }
 
     private void givenASourceReferencePrimaryKey() {
