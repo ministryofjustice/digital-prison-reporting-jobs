@@ -64,17 +64,26 @@ public class RawFileArchiveJob implements Runnable {
     private void archiveFiles() {
         String rawBucket = jobArguments.getTransferSourceBucket();
         String destinationBucket = jobArguments.getTransferDestinationBucket();
+        Duration retentionPeriod = jobArguments.getRawFileRetentionPeriod();
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                 .getConfiguredTables(jobArguments.getConfigKey());
 
         List<String> committedFiles = getCommittedFilesForConfig(configuredTables);
+        Set<String> oldFiles = new HashSet<>(s3FileService
+                .listFilesForConfig(rawBucket, "", configuredTables, parquetFileRegex, retentionPeriod));
+
+        List<String> filesToDelete = getCommittedFilesInProvidedFiles(committedFiles, oldFiles);
+
+        logger.info("Deleting {} files older than {} in S3 source location: {}", filesToDelete.size(), retentionPeriod, rawBucket);
+        s3FileService.deleteObjects(filesToDelete, rawBucket);
+
         Set<String> rawFiles = new HashSet<>(s3FileService
                 .listFilesForConfig(rawBucket, "", configuredTables, parquetFileRegex, Duration.ZERO));
 
-        List<String> filesToArchive = getCommittedFilesNotAlreadyArchived(committedFiles, rawFiles);
+        List<String> filesToArchive = getCommittedFilesInProvidedFiles(committedFiles, rawFiles);
 
-        logger.info("Archiving files in S3 source location: {}", rawBucket);
-        Set<String> failedFiles = s3FileService.copyObjects(filesToArchive, rawBucket, "", destinationBucket, "", true);
+        logger.info("Archiving {} files in S3 source location: {}", filesToArchive.size(), rawBucket);
+        Set<String> failedFiles = s3FileService.copyObjects(filesToArchive, rawBucket, "", destinationBucket, "", false);
 
         if (failedFiles.isEmpty()) {
             logger.info("Successfully archived {} S3 files", committedFiles.size());
@@ -96,13 +105,13 @@ public class RawFileArchiveJob implements Runnable {
     }
 
     @NotNull
-    private List<String> getCommittedFilesNotAlreadyArchived(List<String> committedFiles, Set<String> rawFiles) {
-        List<String> filesToArchive = new ArrayList<>();
+    private List<String> getCommittedFilesInProvidedFiles(List<String> committedFiles, Set<String> providedFiles) {
+        List<String> result = new ArrayList<>();
         for (String committedFile : committedFiles) {
-            if (rawFiles.contains(committedFile)) {
-                filesToArchive.add(committedFile);
+            if (providedFiles.contains(committedFile)) {
+                result.add(committedFile);
             }
         }
-        return filesToArchive;
+        return result;
     }
 }
