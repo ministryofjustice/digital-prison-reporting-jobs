@@ -7,6 +7,9 @@ import static java.lang.String.format;
 
 public class ReconciliationTolerance {
 
+    private ReconciliationTolerance() {
+    }
+
     /**
      * Determines if the provided values are equal with the allowed tolerances.
      * @param value1 The 1st value to compare
