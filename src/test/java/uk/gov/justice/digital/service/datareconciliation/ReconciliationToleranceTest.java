@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.service.datareconciliation;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static uk.gov.justice.digital.service.datareconciliation.ReconciliationTolerance.equalWithTolerance;
@@ -181,6 +183,38 @@ class ReconciliationToleranceTest {
 
         boolean result = equalWithTolerance(value1, value2, absoluteTolerance, relativeTolerance);
         assertTrue(result);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "-1,-1",
+            "-1,0",
+            "-1,1",
+            "0,-1",
+            "1,-1"
+    })
+    void shouldThrowForNegativeValues(long value1, long value2) {
+        assertThrows(IllegalArgumentException.class, () -> equalWithTolerance(value1, value2, 0L, 0.0));
+    }
+
+    @Test
+    void shouldThrowForNegativeAbsoluteTolerance() {
+        assertThrows(IllegalArgumentException.class, () -> equalWithTolerance(1, 1, -1L, 0.0));
+    }
+
+    @Test
+    void shouldThrowForNegativeRelativeTolerance() {
+        assertThrows(IllegalArgumentException.class, () -> equalWithTolerance(1, 1, 0L, -0.01));
+    }
+
+    @Test
+    void shouldThrowForRelativeToleranceGreaterThan1() {
+        assertThrows(IllegalArgumentException.class, () -> equalWithTolerance(1, 1, 0L, 1.01));
+    }
+
+    @Test
+    void shouldThrowForNaNRelativeTolerance() {
+        assertThrows(IllegalArgumentException.class, () -> equalWithTolerance(1, 1, 0L, Double.NaN));
     }
 
 }

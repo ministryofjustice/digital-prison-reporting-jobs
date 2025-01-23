@@ -22,7 +22,7 @@ public class ReconciliationTolerance {
      */
     public static boolean equalWithTolerance(long value1, long value2, long absoluteTolerance, double relativeTolerance) {
         if (value1 < 0 || value2 < 0) {
-            throw new IllegalArgumentException(format("Values must be positive. Actual values: %s, %s", value1, value2));
+            throw new IllegalArgumentException(format("Values must be non-negative. Actual values: %s, %s", value1, value2));
         }
         if (absoluteTolerance < 0) {
             throw new IllegalArgumentException("Absolute tolerance must be non-negative");

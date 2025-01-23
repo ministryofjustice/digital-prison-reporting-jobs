@@ -2,6 +2,7 @@ package uk.gov.justice.digital.service.datareconciliation.model;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.stream.Stream;
@@ -37,6 +38,112 @@ class CurrentStateTableCountTest {
     }
 
     @ParameterizedTest
+    @CsvSource({
+            "1,1,1,0",
+            "1,1,0,1",
+            "1,0,1,1",
+            "0,1,1,1",
+            "1,1,0,0",
+            "1,0,1,0",
+            "1,0,0,1",
+            "1,0,0,0",
+            "0,1,0,0",
+            "0,0,1,0",
+            "0,0,0,1",
+    })
+    void shouldGiveMatchForCountsThatAreWithinAbsoluteTolerance(
+            long dataSourceCount,
+            long structuredCount,
+            long curatedCount,
+            long odsCount
+    ) {
+        CurrentStateTableCount underTest = new CurrentStateTableCount(0.0, 1L, dataSourceCount, structuredCount, curatedCount, odsCount);
+        assertTrue(underTest.countsMatch());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "2,2,2,0",
+            "2,2,0,2",
+            "2,0,2,2",
+            "0,2,2,2",
+            "2,2,0,0",
+            "2,0,2,0",
+            "2,0,0,2",
+            "2,0,0,0",
+            "0,2,0,0",
+            "0,0,2,0",
+            "0,0,0,2",
+    })
+    void shouldGiveMisMatchForCountsThatAreOutsideAbsoluteTolerance(
+            long dataSourceCount,
+            long structuredCount,
+            long curatedCount,
+            long odsCount
+    ) {
+        CurrentStateTableCount underTest = new CurrentStateTableCount(0.0, 1L, dataSourceCount, structuredCount, curatedCount, odsCount);
+        assertFalse(underTest.countsMatch());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "100,100,100,99",
+            "100,100,99,100",
+            "100,99,100,100",
+            "99,100,100,100",
+            "100,100,99,99",
+            "100,99,100,99",
+            "100,99,99,100",
+            "100,99,99,99",
+            "99,100,99,99",
+            "99,99,100,99",
+            "99,99,99,100",
+    })
+    void shouldGiveMatchForCountsThatAreWithinRelativeTolerance(
+            long dataSourceCount,
+            long structuredCount,
+            long curatedCount,
+            long odsCount
+    ) {
+        CurrentStateTableCount underTest = new CurrentStateTableCount(0.01, 0L, dataSourceCount, structuredCount, curatedCount, odsCount);
+        assertTrue(underTest.countsMatch());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "100,100,100,98",
+            "100,100,98,100",
+            "100,98,100,100",
+            "98,100,100,100",
+            "100,100,98,98",
+            "100,98,100,98",
+            "100,98,98,100",
+            "100,98,98,98",
+            "98,100,98,98",
+            "98,98,100,98",
+            "98,98,98,100",
+    })
+    void shouldGiveMisMatchForCountsThatAreOutsideRelativeTolerance(
+            long dataSourceCount,
+            long structuredCount,
+            long curatedCount,
+            long odsCount
+    ) {
+        CurrentStateTableCount underTest = new CurrentStateTableCount(0.01, 0L, dataSourceCount, structuredCount, curatedCount, odsCount);
+        assertFalse(underTest.countsMatch());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0.05,1",
+            "0.01,5",
+    })
+    void shouldUseTheLargerOfTheTolerances(double relativeTolerance, long absoluteTolerance) {
+        CurrentStateTableCount underTest = new CurrentStateTableCount(relativeTolerance, absoluteTolerance, 100L, 100L, 95L, 100L);
+        assertTrue(underTest.countsMatch());
+    }
+
+    @ParameterizedTest
     @MethodSource("countsThatDoNotMatch")
     void shouldGiveNoMatchForCountsThatDoNotMatch(long nomisCount, long structuredCount, long curatedCount, long odsCount) {
         CurrentStateTableCount underTest = new CurrentStateTableCount(0.0, 0L, nomisCount, structuredCount, curatedCount, odsCount);
@@ -60,6 +167,13 @@ class CurrentStateTableCountTest {
     void shouldProvideSummaryWhenCountsMatch() {
         CurrentStateTableCount underTest = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L);
         String expected = "Data Source: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1	 - MATCH";
+        assertEquals(expected, underTest.summary());
+    }
+
+    @Test
+    void shouldProvideSummaryWhenCountsAreWithinTolerance() {
+        CurrentStateTableCount underTest = new CurrentStateTableCount(0.0, 1L, 1L, 2L, 1L, 1L);
+        String expected = "Data Source: 1, Structured Zone: 2, Curated Zone: 1, Operational DataStore: 1	 - MATCH (within tolerance)";
         assertEquals(expected, underTest.summary());
     }
 

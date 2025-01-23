@@ -79,7 +79,7 @@ public class CurrentStateCountService {
         Long operationalDataStoreCount = getOperationalDataStoreCount(sourceReference, operationalDataStoreFullTableName);
 
         logger.info("Finished current state counts across data stores for table {}.{}", sourceName, tableName);
-        double relativeTolerance = jobArguments.getReconciliationChangeDataCountsTolerancePercentage();
+        double relativeTolerance = jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage();
         long absoluteTolerance = jobArguments.getReconciliationChangeDataCountsToleranceAbsolute();
 
         return new CurrentStateTableCount(relativeTolerance, absoluteTolerance, sourceDataStoreCount, structuredCount, curatedCount, operationalDataStoreCount);
