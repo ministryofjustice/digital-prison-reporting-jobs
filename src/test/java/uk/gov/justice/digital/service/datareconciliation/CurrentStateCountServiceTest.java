@@ -108,11 +108,11 @@ class CurrentStateCountServiceTest {
         CurrentStateTotalCounts results =
                 (CurrentStateTotalCounts) underTest.currentStateCounts(sparkSession, Arrays.asList(sourceReference1, sourceReference2));
 
-        CurrentStateTableCount expectedTable1Counts = new CurrentStateTableCount(1L, 1L, 1L, 1L);
+        CurrentStateTableCount expectedTable1Counts = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L);
         CurrentStateTableCount table1Result = results.get("source.table");
         assertEquals(expectedTable1Counts, table1Result);
 
-        CurrentStateTableCount expectedTable2Counts = new CurrentStateTableCount(4L, 3L, 2L, 1L);
+        CurrentStateTableCount expectedTable2Counts = new CurrentStateTableCount(0.0, 0L, 4L, 3L, 2L, 1L);
         CurrentStateTableCount table2Result = results.get("source.table2");
         assertEquals(expectedTable2Counts, table2Result);
     }

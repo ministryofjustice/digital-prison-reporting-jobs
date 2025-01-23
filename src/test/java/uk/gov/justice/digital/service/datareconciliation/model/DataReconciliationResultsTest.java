@@ -23,8 +23,8 @@ class DataReconciliationResultsTest {
 
     @BeforeAll
     static void setUpSharedTestData() {
-        matchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(1L, 1L, 1L));
-        notMatchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(1L, 2L, 3L));
+        matchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
+        notMatchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 2L, 3L));
         changeDataTableCountMap1.put("table1", new ChangeDataTableCount(1L, 1L, 1L));
         changeDataTableCountMap2.put("table1", new ChangeDataTableCount(1L, 2L, 1L));
     }
