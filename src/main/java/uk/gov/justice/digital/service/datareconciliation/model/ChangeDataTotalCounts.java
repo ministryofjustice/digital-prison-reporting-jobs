@@ -47,6 +47,8 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
             sb.append("For table ").append(tableName);
             if (dmsCount != null && dmsCount.equals(dmsAppliedCount) && dmsCount.equals(rawCount)) {
                 sb.append(" MATCH:\n");
+            } else if (dmsCount != null && dmsCount.countsEqualWithinTolerance(dmsAppliedCount) && dmsCount.countsEqualWithinTolerance(rawCount)) {
+                sb.append(" MATCH (within tolerance):\n");
             } else {
                 sb.append(" DOES NOT MATCH:\n");
             }

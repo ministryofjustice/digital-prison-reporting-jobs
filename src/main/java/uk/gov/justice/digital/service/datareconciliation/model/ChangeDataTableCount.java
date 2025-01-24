@@ -42,17 +42,23 @@ public class ChangeDataTableCount {
         );
     }
 
-    // Defines our own notion of equality that doesn't include tolerances
+    // Defines our own notion of exact equality that disregards unequal tolerances
     public boolean countsEqual(ChangeDataTableCount other) {
+        if (other == null) {
+            return false;
+        }
         return this.insertCount == other.insertCount &&
                 this.updateCount == other.updateCount &&
                 this.deleteCount == other.deleteCount;
     }
 
-    // Defines equality within tolerance
+    // Defines equality within tolerance, disregarding unequal tolerances, and using this object's tolerances
     public boolean countsEqualWithinTolerance(ChangeDataTableCount other) {
-        return equalWithTolerance(this.insertCount, other.insertCount, absoluteTolerance, relativeTolerance) &&
-                equalWithTolerance(this.updateCount, other.updateCount, absoluteTolerance, relativeTolerance) &&
-                equalWithTolerance(this.deleteCount, other.deleteCount, absoluteTolerance, relativeTolerance);
+        if (other == null) {
+            return false;
+        }
+        return equalWithTolerance(this.insertCount, other.insertCount, this.absoluteTolerance, this.relativeTolerance) &&
+                equalWithTolerance(this.updateCount, other.updateCount, this.absoluteTolerance, this.relativeTolerance) &&
+                equalWithTolerance(this.deleteCount, other.deleteCount, this.absoluteTolerance, this.relativeTolerance);
     }
 }

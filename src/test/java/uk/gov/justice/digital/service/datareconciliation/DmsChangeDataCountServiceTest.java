@@ -134,6 +134,48 @@ class DmsChangeDataCountServiceTest {
     }
 
     @Test
+    void shouldPopulateTolerancesInChangeDataCounts() {
+        double relativeTolerance = 0.15;
+        long absoluteTolerance = 7L;
+
+        List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
+        List<TableStatistics> dmsTableStatistics = Arrays.asList(tableStats1, tableStats2);
+
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenReturn(dmsTableStatistics);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()).thenReturn(relativeTolerance);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceAbsolute()).thenReturn(absoluteTolerance);
+
+        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
+        ChangeDataTableCount table1Count = results.getDmsChangeDataCounts().get("source.table1");
+        ChangeDataTableCount table2Count = results.getDmsChangeDataCounts().get("source.table2");
+        assertEquals(relativeTolerance, table1Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table1Count.getAbsoluteTolerance());
+        assertEquals(relativeTolerance, table2Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table2Count.getAbsoluteTolerance());
+    }
+
+    @Test
+    void shouldPopulateTolerancesInAppliedChangeDataCounts() {
+        double relativeTolerance = 0.15;
+        long absoluteTolerance = 7L;
+
+        List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
+        List<TableStatistics> dmsTableStatistics = Arrays.asList(tableStats1, tableStats2);
+
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenReturn(dmsTableStatistics);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()).thenReturn(relativeTolerance);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceAbsolute()).thenReturn(absoluteTolerance);
+
+        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
+        ChangeDataTableCount table1Count = results.getDmsAppliedChangeDataCounts().get("source.table1");
+        ChangeDataTableCount table2Count = results.getDmsAppliedChangeDataCounts().get("source.table2");
+        assertEquals(relativeTolerance, table1Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table1Count.getAbsoluteTolerance());
+        assertEquals(relativeTolerance, table2Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table2Count.getAbsoluteTolerance());
+    }
+
+    @Test
     void shouldIgnoreTableStatisticsWithoutCorrespondingSourceReference() {
 
         List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);

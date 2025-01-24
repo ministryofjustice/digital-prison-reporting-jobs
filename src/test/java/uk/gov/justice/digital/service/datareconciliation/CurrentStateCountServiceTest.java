@@ -264,4 +264,23 @@ class CurrentStateCountServiceTest {
         assertEquals(0L, result.getOperationalDataStoreCount());
     }
 
+    @Test
+    void shouldPopulateTolerancesInCurrentStateTableCount() {
+        double relativeTolerance = 0.15;
+        long absoluteTolerance = 7L;
+
+        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(3L);
+        when(structured1.count()).thenReturn(2L);
+        when(curated1.count()).thenReturn(1L);
+        when(operationalDataStoreService.isEnabled()).thenReturn(false);
+
+        when(jobArguments.getReconciliationCurrentStateCountsToleranceRelativePercentage()).thenReturn(relativeTolerance);
+        when(jobArguments.getReconciliationCurrentStateCountsToleranceAbsolute()).thenReturn(absoluteTolerance);
+
+        CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
+
+        assertEquals(relativeTolerance, result.getRelativeTolerance());
+        assertEquals(absoluteTolerance, result.getAbsoluteTolerance());
+    }
+
 }
