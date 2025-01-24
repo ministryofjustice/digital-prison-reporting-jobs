@@ -170,6 +170,10 @@ public class JobArguments {
     static final double RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE_DEFAULT = 0.0;
     static final String RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE = "dpr.reconciliation.currentstatecounts.tolerance.absolute";
     static final long RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE_DEFAULT = 0L;
+    public static final String RAW_FILE_RETENTION_PERIOD_AMOUNT = "dpr.raw.file.retention.period.amount";
+    public static final Long DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT = 2L;
+    public static final String RAW_FILE_RETENTION_PERIOD_UNIT = "dpr.raw.file.retention.period.unit";
+    static final String DEFAULT_RAW_FILE_RETENTION_PERIOD_UNIT = "days";
 
     private final Map<String, String> config;
 
@@ -410,17 +414,14 @@ public class JobArguments {
         long retentionAmount = getArgument(FILE_TRANSFER_RETENTION_PERIOD_AMOUNT, DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
         String retentionUnit = getArgument(FILE_TRANSFER_RETENTION_PERIOD_UNIT, DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_UNIT);
 
-        switch (retentionUnit.toLowerCase()) {
-            case "minutes":
-                return Duration.of(retentionAmount, ChronoUnit.MINUTES);
-            case "hours":
-                return Duration.of(retentionAmount, ChronoUnit.HOURS);
-            case "days":
-                return Duration.of(retentionAmount, ChronoUnit.DAYS);
-            default:
-                String error = String.format("Unsupported %s=%s. Allowed values are: minutes, hours, days", FILE_TRANSFER_RETENTION_PERIOD_UNIT, retentionUnit);
-                throw new IllegalArgumentException(error);
-        }
+        return getRetentionPeriod(retentionUnit, retentionAmount, FILE_TRANSFER_RETENTION_PERIOD_UNIT);
+    }
+
+    public Duration getRawFileRetentionPeriod() {
+        long retentionAmount = getArgument(RAW_FILE_RETENTION_PERIOD_AMOUNT, DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT);
+        String retentionUnit = getArgument(RAW_FILE_RETENTION_PERIOD_UNIT, DEFAULT_RAW_FILE_RETENTION_PERIOD_UNIT);
+
+        return getRetentionPeriod(retentionUnit, retentionAmount, RAW_FILE_RETENTION_PERIOD_UNIT);
     }
 
     public boolean getFileTransferDeleteCopiedFilesFlag() {
@@ -648,5 +649,19 @@ public class JobArguments {
         if (prefix.startsWith(DELIMITER)) prefix = prefix.substring(1);
         if (prefix.endsWith(DELIMITER)) prefix = prefix.substring(0, prefix.length() - 2);
         return prefix;
+    }
+
+    private static Duration getRetentionPeriod(String retentionUnit, long retentionAmount, String argumentKey) {
+        switch (retentionUnit.toLowerCase()) {
+            case "minutes":
+                return Duration.of(retentionAmount, ChronoUnit.MINUTES);
+            case "hours":
+                return Duration.of(retentionAmount, ChronoUnit.HOURS);
+            case "days":
+                return Duration.of(retentionAmount, ChronoUnit.DAYS);
+            default:
+                String error = String.format("Unsupported %s=%s. Allowed values are: minutes, hours, days", argumentKey, retentionUnit);
+                throw new IllegalArgumentException(error);
+        }
     }
 }

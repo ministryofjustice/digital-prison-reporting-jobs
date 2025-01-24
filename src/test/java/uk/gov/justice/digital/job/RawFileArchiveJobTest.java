@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.job;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,15 +45,19 @@ class RawFileArchiveJobTest extends BaseSparkTest {
     JobArguments mockJobArguments;
     @Captor
     ArgumentCaptor<ArrayList<String>> filesToArchiveCaptor;
+    @Captor
+    ArgumentCaptor<ArrayList<String>> filesToDeleteCaptor;
 
-    private final static String SOURCE_BUCKET = "source-bucket";
-    private final static String DESTINATION_BUCKET = "destination-bucket";
-    private final static String CONFIG_KEY = "some-config";
-    private final static String COMMITTED_FILE_1 = "committed-file-1";
-    private final static String COMMITTED_FILE_2 = "committed-file-2";
-    private final static String COMMITTED_FILE_3 = "committed-file-3";
-    private final static String COMMITTED_FILE_4 = "committed-file-4";
-    private final static String UNCOMMITTED_FILE = "uncommitted-file";
+    private static final String SOURCE_BUCKET = "source-bucket";
+    private static final String DESTINATION_BUCKET = "destination-bucket";
+    private static final String CONFIG_KEY = "some-config";
+    private static final String COMMITTED_FILE_1 = "committed-file-1";
+    private static final String COMMITTED_FILE_2 = "committed-file-2";
+    private static final String COMMITTED_FILE_3 = "committed-file-3";
+    private static final String COMMITTED_OLD_FILE_4 = "committed-old-file-4";
+    private static final String UNCOMMITTED_FILE = "uncommitted-file";
+    private static final String UNCOMMITTED_OLD_FILE = "uncommitted-old-file";
+    private static final Duration retentionPeriod = Duration.ofDays(1L);
 
     private RawFileArchiveJob underTest;
 
@@ -63,6 +68,7 @@ class RawFileArchiveJobTest extends BaseSparkTest {
         underTest = new RawFileArchiveJob(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments);
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void shouldArchiveCommittedRawFilesForConfiguredTables() {
         ImmutablePair<String, String> configuredTable1 = ImmutablePair.of("source", "table-1");
@@ -73,8 +79,13 @@ class RawFileArchiveJobTest extends BaseSparkTest {
         rawFiles.add(COMMITTED_FILE_1);
         rawFiles.add(COMMITTED_FILE_2);
         rawFiles.add(COMMITTED_FILE_3);
-        rawFiles.add(COMMITTED_FILE_4);
+        rawFiles.add(COMMITTED_OLD_FILE_4);
         rawFiles.add(UNCOMMITTED_FILE);
+        rawFiles.add(UNCOMMITTED_OLD_FILE);
+
+        List<String> oldRawFiles = new ArrayList<>();
+        oldRawFiles.add(COMMITTED_OLD_FILE_4);
+        oldRawFiles.add(UNCOMMITTED_OLD_FILE);
 
         Set<String> committedFilesTable1 = new HashSet<>();
         committedFilesTable1.add(COMMITTED_FILE_1);
@@ -82,28 +93,36 @@ class RawFileArchiveJobTest extends BaseSparkTest {
 
         Set<String> committedFilesTable2 = new HashSet<>();
         committedFilesTable2.add(COMMITTED_FILE_3);
-        committedFilesTable2.add(COMMITTED_FILE_4);
+        committedFilesTable2.add(COMMITTED_OLD_FILE_4);
 
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
+        when(mockJobArguments.getRawFileRetentionPeriod()).thenReturn(retentionPeriod);
         when(mockJobArguments.getConfigKey()).thenReturn(CONFIG_KEY);
 
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
+        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, retentionPeriod))
+                .thenReturn(oldRawFiles);
         when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
-                .thenReturn(rawFiles);
-        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(true)))
+                .thenReturn(new ArrayList<String>(CollectionUtils.subtract(rawFiles, oldRawFiles)));
+        when(mockS3Service.deleteObjects(filesToDeleteCaptor.capture(), eq(SOURCE_BUCKET)))
+                .thenReturn(Collections.emptySet());
+        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
                 .thenReturn(Collections.emptySet());
 
         underTest.run();
 
-        List<String> expectedArchivedFiles = new ArrayList<>();
-        expectedArchivedFiles.add(COMMITTED_FILE_1);
-        expectedArchivedFiles.add(COMMITTED_FILE_2);
-        expectedArchivedFiles.add(COMMITTED_FILE_3);
-        expectedArchivedFiles.add(COMMITTED_FILE_4);
-        assertThat(filesToArchiveCaptor.getValue(), containsInAnyOrder(expectedArchivedFiles.toArray()));
+        List<String> expectedFilesToArchive = new ArrayList<>();
+        expectedFilesToArchive.add(COMMITTED_FILE_1);
+        expectedFilesToArchive.add(COMMITTED_FILE_2);
+        expectedFilesToArchive.add(COMMITTED_FILE_3);
+        assertThat(filesToArchiveCaptor.getValue(), containsInAnyOrder(expectedFilesToArchive.toArray()));
+
+        List<String> expectedFilesToDelete = new ArrayList<>();
+        expectedFilesToDelete.add(COMMITTED_OLD_FILE_4);
+        assertThat(filesToDeleteCaptor.getValue(), containsInAnyOrder(expectedFilesToDelete.toArray()));
     }
 
     @Test
@@ -117,17 +136,23 @@ class RawFileArchiveJobTest extends BaseSparkTest {
 
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
+        when(mockJobArguments.getRawFileRetentionPeriod()).thenReturn(retentionPeriod);
         when(mockJobArguments.getConfigKey()).thenReturn(CONFIG_KEY);
 
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable)).thenReturn(committedFilesTable);
+        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, retentionPeriod))
+                .thenReturn(Collections.emptyList());
         when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(Collections.emptyList());
-        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(true)))
+        when(mockS3Service.deleteObjects(filesToDeleteCaptor.capture(), eq(SOURCE_BUCKET)))
+                .thenReturn(Collections.emptySet());
+        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
                 .thenReturn(Collections.emptySet());
 
         underTest.run();
 
+        assertThat(filesToDeleteCaptor.getValue(), is(empty()));
         assertThat(filesToArchiveCaptor.getValue(), is(empty()));
     }
 }
