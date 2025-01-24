@@ -22,20 +22,21 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.RegexPatterns.jsonOrParquetFileRegex;
+import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
+import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_CHECKS_TO_RUN_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
-import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.PRIMARY_KEY_RECONCILIATION;
-import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
-import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
-import static uk.gov.justice.digital.common.RegexPatterns.jsonOrParquetFileRegex;
 
 class JobArgumentsIntegrationTest {
 
@@ -95,6 +96,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, "my-connection" },
             { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
             { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, "SomeNamespace" },
+            { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.02" },
+            { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, "12" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -158,6 +161,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, validArguments.getReconciliationDataSourceGlueConnectionName() },
                 { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, validArguments.getReconciliationDataSourceSourceSchemaName() },
                 { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, validArguments.getReconciliationCloudwatchMetricsNamespace() },
+                { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()) },
+                { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationChangeDataCountsToleranceAbsolute()) },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -658,6 +663,22 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.shouldReportReconciliationResultsToCloudwatch());
+    }
+
+    @Test
+    void getReconciliationChangeDataCountsToleranceRelativePercentageShouldDefaultToZero() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(0.0, jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage());
+    }
+
+    @Test
+    void getReconciliationChangeDataCountsToleranceAbsoluteShouldDefaultToZero() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(0L, jobArguments.getReconciliationChangeDataCountsToleranceAbsolute());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {
