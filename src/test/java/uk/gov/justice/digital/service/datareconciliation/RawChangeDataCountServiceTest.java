@@ -84,8 +84,8 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);
 
         Map<String, ChangeDataTableCount> expectedResult = new HashMap<>();
-        expectedResult.put("source.table1", new ChangeDataTableCount(6L, 1L, 1L));
-        expectedResult.put("source.table2", new ChangeDataTableCount(6L, 6L, 6L));
+        expectedResult.put("source.table1", new ChangeDataTableCount(0.0, 0L, 6L, 1L, 1L));
+        expectedResult.put("source.table2", new ChangeDataTableCount(0.0, 0L, 6L, 6L, 6L));
 
         assertEquals(expectedResult, result);
 
@@ -114,7 +114,7 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);
 
         Map<String, ChangeDataTableCount> expectedResult = new HashMap<>();
-        expectedResult.put("source.table1", new ChangeDataTableCount(0L, 0L, 0L));
+        expectedResult.put("source.table1", new ChangeDataTableCount(0.0, 0L, 0L, 0L, 0L));
 
         assertEquals(expectedResult, result);
     }
@@ -131,7 +131,7 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);
 
         Map<String, ChangeDataTableCount> expectedResult = new HashMap<>();
-        expectedResult.put("source.table1", new ChangeDataTableCount(6L, 0L, 0L));
+        expectedResult.put("source.table1", new ChangeDataTableCount(0.0, 0L, 6L, 0L, 0L));
 
         assertEquals(expectedResult, result);
     }

@@ -16,7 +16,8 @@ public class CurrentStateTableCount {
     private final long dataSourceCount;
     private final long structuredCount;
     private final long curatedCount;
-    // A null value indicates that there is no Operational DataStore count
+    // A null value indicates that there is no Operational DataStore count because this table is not stored in the
+    // Operational Data Store whereas it would have a value of zero if there was an issue reading the count.
     private final Long operationalDataStoreCount;
 
     public CurrentStateTableCount(double relativeTolerance, long absoluteTolerance, long dataSourceCount, long structuredCount, long curatedCount, Long operationalDataStoreCount) {

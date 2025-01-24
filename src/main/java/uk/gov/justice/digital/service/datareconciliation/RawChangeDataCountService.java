@@ -61,7 +61,10 @@ public class RawChangeDataCountService {
     }
 
     private ChangeDataTableCount changeDataCountsForTable(SparkSession sparkSession, SourceReference sourceReference, String s3Path) {
-        ChangeDataTableCount result = new ChangeDataTableCount();
+        double relativeTolerance = jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage();
+        long absoluteTolerance = jobArguments.getReconciliationChangeDataCountsToleranceAbsolute();
+
+        ChangeDataTableCount result = new ChangeDataTableCount(relativeTolerance, absoluteTolerance);
 
         String rawTablePath = tablePath(s3Path, sourceReference.getSource(), sourceReference.getTable());
         try {

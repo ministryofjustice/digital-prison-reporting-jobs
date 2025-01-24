@@ -47,12 +47,12 @@ class ChangeDataCountServiceTest {
     void setUp() {
         Map<String, ChangeDataTableCount> dmsChangeDataCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedChangeDataCounts = new HashMap<>();
-        dmsChangeDataCounts.put("table", new ChangeDataTableCount(1L, 1L, 1L));
-        dmsAppliedChangeDataCounts.put("table", new ChangeDataTableCount(1L, 2L, 3L));
+        dmsChangeDataCounts.put("table", new ChangeDataTableCount(0.0, 0L, 1L, 1L, 1L));
+        dmsAppliedChangeDataCounts.put("table", new ChangeDataTableCount(0.0, 0L, 1L, 2L, 3L));
         dmsChangeDataCountsPair = new DmsChangeDataCountsPair(dmsChangeDataCounts, dmsAppliedChangeDataCounts);
 
         rawChangeDataCounts = new HashMap<>();
-        rawChangeDataCounts.put("table", new ChangeDataTableCount(1L, 1L, 1L));
+        rawChangeDataCounts.put("table", new ChangeDataTableCount(0.0, 0L, 1L, 1L, 1L));
 
         sourceReferences = Collections.singletonList(sourceReference);
     }

@@ -96,8 +96,10 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, "my-connection" },
             { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
             { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, "SomeNamespace" },
-            { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.02" },
-            { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, "12" },
+            { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.02" },
+            { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, "12" },
+            { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.01" },
+            { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, "5" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -161,6 +163,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, validArguments.getReconciliationDataSourceGlueConnectionName() },
                 { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, validArguments.getReconciliationDataSourceSourceSchemaName() },
                 { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, validArguments.getReconciliationCloudwatchMetricsNamespace() },
+                { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationCurrentStateCountsToleranceRelativePercentage()) },
+                { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationCurrentStateCountsToleranceAbsolute()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationChangeDataCountsToleranceAbsolute()) },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
@@ -679,6 +683,22 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(0L, jobArguments.getReconciliationChangeDataCountsToleranceAbsolute());
+    }
+
+    @Test
+    void getReconciliationCurrentStateCountsToleranceRelativePercentageShouldDefaultToZero() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(0.0, jobArguments.getReconciliationCurrentStateCountsToleranceRelativePercentage());
+    }
+
+    @Test
+    void getReconciliationCurrentStateCountsToleranceAbsoluteShouldDefaultToZero() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(0L, jobArguments.getReconciliationCurrentStateCountsToleranceAbsolute());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

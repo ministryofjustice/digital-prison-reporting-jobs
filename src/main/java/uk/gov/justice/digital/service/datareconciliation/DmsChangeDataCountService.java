@@ -6,6 +6,7 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.dms.DmsClient;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
 import uk.gov.justice.digital.service.datareconciliation.model.DmsChangeDataCountsPair;
@@ -25,10 +26,12 @@ public class DmsChangeDataCountService {
 
     private static final Logger logger = LoggerFactory.getLogger(DmsChangeDataCountService.class);
 
+    private final JobArguments jobArguments;
     private final DmsClient dmsClient;
 
     @Inject
-    public DmsChangeDataCountService(DmsClient dmsClient) {
+    public DmsChangeDataCountService(JobArguments jobArguments, DmsClient dmsClient) {
+        this.jobArguments = jobArguments;
         this.dmsClient = dmsClient;
     }
 
@@ -63,21 +66,27 @@ public class DmsChangeDataCountService {
         return sourceReferences.stream().collect(Collectors.toMap(SourceReference::getTable, SourceReference::getSource));
     }
 
-    private static ChangeDataTableCount convertToChangeDataTableCount(TableStatistics tableStatistics) {
+    private ChangeDataTableCount convertToChangeDataTableCount(TableStatistics tableStatistics) {
         Long cdcInsertCount = tableStatistics.getInserts();
         Long fullLoadInserts = tableStatistics.getFullLoadRows();
         Long cdcUpdateCount = tableStatistics.getUpdates();
         Long cdcDeleteCount = tableStatistics.getDeletes();
 
-        return new ChangeDataTableCount(cdcInsertCount + fullLoadInserts, cdcUpdateCount, cdcDeleteCount);
+        double relativeTolerance = jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage();
+        long absoluteTolerance = jobArguments.getReconciliationChangeDataCountsToleranceAbsolute();
+
+        return new ChangeDataTableCount(relativeTolerance, absoluteTolerance, cdcInsertCount + fullLoadInserts, cdcUpdateCount, cdcDeleteCount);
     }
 
-    private static ChangeDataTableCount convertToAppliedChangeDataTableCount(TableStatistics tableStatistics) {
+    private ChangeDataTableCount convertToAppliedChangeDataTableCount(TableStatistics tableStatistics) {
         Long appliedInsertCount = tableStatistics.getAppliedInserts();
         Long fullLoadInserts = tableStatistics.getFullLoadRows();
         Long appliedCdcUpdateCount = tableStatistics.getAppliedUpdates();
         Long appliedCdcDeleteCount = tableStatistics.getAppliedDeletes();
 
-        return new ChangeDataTableCount(appliedInsertCount + fullLoadInserts, appliedCdcUpdateCount, appliedCdcDeleteCount);
+        double relativeTolerance = jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage();
+        long absoluteTolerance = jobArguments.getReconciliationChangeDataCountsToleranceAbsolute();
+
+        return new ChangeDataTableCount(relativeTolerance, absoluteTolerance, appliedInsertCount + fullLoadInserts, appliedCdcUpdateCount, appliedCdcDeleteCount);
     }
 }

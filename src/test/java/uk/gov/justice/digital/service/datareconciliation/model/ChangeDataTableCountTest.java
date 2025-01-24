@@ -26,8 +26,8 @@ class ChangeDataTableCountTest {
 
     @Test
     void shouldBeEqualIfCountsMatch() {
-        ChangeDataTableCount underTest1 = new ChangeDataTableCount(1L, 2L, 3L);
-        ChangeDataTableCount underTest2 = new ChangeDataTableCount(1L, 2L, 3L);
+        ChangeDataTableCount underTest1 = new ChangeDataTableCount(0.0, 0L, 1L, 2L, 3L);
+        ChangeDataTableCount underTest2 = new ChangeDataTableCount(0.0, 0L, 1L, 2L, 3L);
 
         assertEquals(underTest1, underTest2);
     }
@@ -37,14 +37,14 @@ class ChangeDataTableCountTest {
     void shouldNotBeEqualIfCountsDoNotMatch(
             long insertCount1, long updateCount1, long deleteCount1, long insertCount2, long updateCount2, long deleteCount2
     ) {
-        ChangeDataTableCount underTest1 = new ChangeDataTableCount(insertCount1, updateCount1, deleteCount1);
-        ChangeDataTableCount underTest2 = new ChangeDataTableCount(insertCount2, updateCount2, deleteCount2);
+        ChangeDataTableCount underTest1 = new ChangeDataTableCount(0.0, 0L, insertCount1, updateCount1, deleteCount1);
+        ChangeDataTableCount underTest2 = new ChangeDataTableCount(0.0, 0L, insertCount2, updateCount2, deleteCount2);
         assertNotEquals(underTest1, underTest2);
     }
 
     @Test
     void shouldDefaultToZeroCounts() {
-        ChangeDataTableCount underTest = new ChangeDataTableCount();
+        ChangeDataTableCount underTest = new ChangeDataTableCount(0.0, 0L);
         assertEquals(0L, underTest.getInsertCount());
         assertEquals(0L, underTest.getUpdateCount());
         assertEquals(0L, underTest.getDeleteCount());
@@ -52,7 +52,7 @@ class ChangeDataTableCountTest {
 
     @Test
     void toStringShouldBeReadable() {
-        ChangeDataTableCount underTest = new ChangeDataTableCount();
+        ChangeDataTableCount underTest = new ChangeDataTableCount(0.0, 0L);
         underTest.setInsertCount(1L);
         underTest.setUpdateCount(2L);
         underTest.setDeleteCount(3L);
@@ -62,8 +62,8 @@ class ChangeDataTableCountTest {
 
     @Test
     void shouldCombineCounts() {
-        ChangeDataTableCount underTest1 = new ChangeDataTableCount(1L, 2L, 3L);
-        ChangeDataTableCount underTest2 = new ChangeDataTableCount(2L, 3L, 4L);
+        ChangeDataTableCount underTest1 = new ChangeDataTableCount(0.0, 0L, 1L, 2L, 3L);
+        ChangeDataTableCount underTest2 = new ChangeDataTableCount(0.0, 0L, 2L, 3L, 4L);
 
         ChangeDataTableCount combined = underTest1.combineCounts(underTest2);
 
