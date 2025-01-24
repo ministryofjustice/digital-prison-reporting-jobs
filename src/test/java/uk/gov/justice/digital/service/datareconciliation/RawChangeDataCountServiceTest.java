@@ -84,8 +84,8 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);
 
         Map<String, ChangeDataTableCount> expectedResult = new HashMap<>();
-        expectedResult.put("source.table1", new ChangeDataTableCount(6L, 1L, 1L));
-        expectedResult.put("source.table2", new ChangeDataTableCount(6L, 6L, 6L));
+        expectedResult.put("source.table1", new ChangeDataTableCount(0.0, 0L, 6L, 1L, 1L));
+        expectedResult.put("source.table2", new ChangeDataTableCount(0.0, 0L, 6L, 6L, 6L));
 
         assertEquals(expectedResult, result);
 
@@ -114,7 +114,7 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);
 
         Map<String, ChangeDataTableCount> expectedResult = new HashMap<>();
-        expectedResult.put("source.table1", new ChangeDataTableCount(0L, 0L, 0L));
+        expectedResult.put("source.table1", new ChangeDataTableCount(0.0, 0L, 0L, 0L, 0L));
 
         assertEquals(expectedResult, result);
     }
@@ -131,9 +131,33 @@ class RawChangeDataCountServiceTest extends BaseSparkTest {
         Map<String, ChangeDataTableCount> result = underTest.changeDataCounts(spark, sourceReferences);
 
         Map<String, ChangeDataTableCount> expectedResult = new HashMap<>();
-        expectedResult.put("source.table1", new ChangeDataTableCount(6L, 0L, 0L));
+        expectedResult.put("source.table1", new ChangeDataTableCount(0.0, 0L, 6L, 0L, 0L));
 
         assertEquals(expectedResult, result);
+    }
+
+    @Test
+    void shouldPopulateTolerancesInCurrentStateTableCount() {
+        double relativeTolerance = 0.15;
+        long absoluteTolerance = 7L;
+
+        when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
+        when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
+
+        when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenReturn(inserts(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1")).thenReturn(rowPerPkDfSameTimestamp(spark));
+
+        when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table2")).thenReturn(manyRowsPerPkDfSameTimestamp(spark));
+        when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table2")).thenReturn(manyRowsPerPkDfSameTimestamp(spark));
+
+        when(jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()).thenReturn(relativeTolerance);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceAbsolute()).thenReturn(absoluteTolerance);
+
+        List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
+        ChangeDataTableCount result = underTest.changeDataCounts(spark, sourceReferences).get("source.table1");
+
+        assertEquals(relativeTolerance, result.getRelativeTolerance());
+        assertEquals(absoluteTolerance, result.getAbsoluteTolerance());
     }
 
     private static Dataset<Row> withUnknownOperations(SparkSession spark) {

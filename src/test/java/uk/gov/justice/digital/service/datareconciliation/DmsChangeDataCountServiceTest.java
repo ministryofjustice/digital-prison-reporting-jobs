@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.dms.DmsClient;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DmsClientException;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
@@ -94,6 +95,8 @@ class DmsChangeDataCountServiceTest {
 
     @Mock
     private DmsClient dmsClient;
+    @Mock
+    private JobArguments jobArguments;
 
     @InjectMocks
     private DmsChangeDataCountService underTest;
@@ -101,16 +104,16 @@ class DmsChangeDataCountServiceTest {
     @BeforeAll
     static void beforeAll() {
         expectedDmsChangeDataCounts.put("source.table1", new ChangeDataTableCount(
-                101L, 3L, 5L
+                0.0, 0L, 101L, 3L, 5L
         ));
         expectedDmsChangeDataCounts.put("source.table2", new ChangeDataTableCount(
-                107L, 9L, 11L
+                0.0, 0L, 107L, 9L, 11L
         ));
         expectedDmsAppliedChangeDataCounts.put("source.table1", new ChangeDataTableCount(
-                102L, 4L, 6L
+                0.0, 0L, 102L, 4L, 6L
         ));
         expectedDmsAppliedChangeDataCounts.put("source.table2", new ChangeDataTableCount(
-                108L, 10L, 12L
+                0.0, 0L, 108L, 10L, 12L
         ));
     }
 
@@ -128,6 +131,48 @@ class DmsChangeDataCountServiceTest {
         assertEquals(expectedDmsAppliedChangeDataCounts, results.getDmsAppliedChangeDataCounts());
 
         verify(dmsClient, times(1)).getReplicationTaskTableStatistics(DMS_TASK_ID);
+    }
+
+    @Test
+    void shouldPopulateTolerancesInChangeDataCounts() {
+        double relativeTolerance = 0.15;
+        long absoluteTolerance = 7L;
+
+        List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
+        List<TableStatistics> dmsTableStatistics = Arrays.asList(tableStats1, tableStats2);
+
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenReturn(dmsTableStatistics);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()).thenReturn(relativeTolerance);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceAbsolute()).thenReturn(absoluteTolerance);
+
+        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
+        ChangeDataTableCount table1Count = results.getDmsChangeDataCounts().get("source.table1");
+        ChangeDataTableCount table2Count = results.getDmsChangeDataCounts().get("source.table2");
+        assertEquals(relativeTolerance, table1Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table1Count.getAbsoluteTolerance());
+        assertEquals(relativeTolerance, table2Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table2Count.getAbsoluteTolerance());
+    }
+
+    @Test
+    void shouldPopulateTolerancesInAppliedChangeDataCounts() {
+        double relativeTolerance = 0.15;
+        long absoluteTolerance = 7L;
+
+        List<SourceReference> sourceReferences = Arrays.asList(sourceReference1, sourceReference2);
+        List<TableStatistics> dmsTableStatistics = Arrays.asList(tableStats1, tableStats2);
+
+        when(dmsClient.getReplicationTaskTableStatistics(DMS_TASK_ID)).thenReturn(dmsTableStatistics);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()).thenReturn(relativeTolerance);
+        when(jobArguments.getReconciliationChangeDataCountsToleranceAbsolute()).thenReturn(absoluteTolerance);
+
+        DmsChangeDataCountsPair results = underTest.dmsChangeDataCounts(sourceReferences, DMS_TASK_ID);
+        ChangeDataTableCount table1Count = results.getDmsAppliedChangeDataCounts().get("source.table1");
+        ChangeDataTableCount table2Count = results.getDmsAppliedChangeDataCounts().get("source.table2");
+        assertEquals(relativeTolerance, table1Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table1Count.getAbsoluteTolerance());
+        assertEquals(relativeTolerance, table2Count.getRelativeTolerance());
+        assertEquals(absoluteTolerance, table2Count.getAbsoluteTolerance());
     }
 
     @Test

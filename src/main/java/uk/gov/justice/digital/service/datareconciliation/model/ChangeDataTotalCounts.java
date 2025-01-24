@@ -21,14 +21,16 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
 
     @Override
     public boolean isSuccess() {
-        return sameTables() && rawCountsMatchDmsCounts();
+        return sameTables() && rawCountsMatchDmsCountsWithinTolerance();
     }
 
     @Override
     public String summary() {
         StringBuilder sb = new StringBuilder("Change Data Total Counts ");
-        if (isSuccess()) {
+        if (sameTables() && rawCountsExactMatchDmsCounts()) {
             sb.append("MATCH:\n\n");
+        } else if (isSuccess()) {
+            sb.append("MATCH (within tolerance):\n\n");
         } else {
             sb.append("DO NOT MATCH:\n\n");
         }
@@ -45,6 +47,8 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
             sb.append("For table ").append(tableName);
             if (dmsCount != null && dmsCount.equals(dmsAppliedCount) && dmsCount.equals(rawCount)) {
                 sb.append(" MATCH:\n");
+            } else if (dmsCount != null && dmsCount.countsEqualWithinTolerance(dmsAppliedCount) && dmsCount.countsEqualWithinTolerance(rawCount)) {
+                sb.append(" MATCH (within tolerance):\n");
             } else {
                 sb.append(" DOES NOT MATCH:\n");
             }
@@ -69,13 +73,23 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
         return sb.toString();
     }
 
-    private boolean rawCountsMatchDmsCounts() {
+    private boolean rawCountsMatchDmsCountsWithinTolerance() {
         return rawZoneCounts.entrySet().stream().allMatch(entry -> {
             String tableName = entry.getKey();
             ChangeDataTableCount rawCount = entry.getValue();
             ChangeDataTableCount dmsCount = dmsCounts.get(tableName);
             ChangeDataTableCount dmsAppliedCount = dmsAppliedCounts.get(tableName);
-            return rawCount.equals(dmsCount) && dmsCount.equals(dmsAppliedCount);
+            return rawCount.countsEqualWithinTolerance(dmsCount) && dmsCount.countsEqualWithinTolerance(dmsAppliedCount);
+        });
+    }
+
+    private boolean rawCountsExactMatchDmsCounts() {
+        return rawZoneCounts.entrySet().stream().allMatch(entry -> {
+            String tableName = entry.getKey();
+            ChangeDataTableCount rawCount = entry.getValue();
+            ChangeDataTableCount dmsCount = dmsCounts.get(tableName);
+            ChangeDataTableCount dmsAppliedCount = dmsAppliedCounts.get(tableName);
+            return rawCount.countsEqual(dmsCount) && dmsCount.countsEqual(dmsAppliedCount);
         });
     }
 

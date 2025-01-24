@@ -166,6 +166,10 @@ public class JobArguments {
     static final double RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE_DEFAULT = 0.0;
     static final String RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE = "dpr.reconciliation.changedatacounts.tolerance.absolute";
     static final long RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE_DEFAULT = 0L;
+    static final String RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE = "dpr.reconciliation.currentstatecounts.tolerance.relative.percentage";
+    static final double RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE_DEFAULT = 0.0;
+    static final String RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE = "dpr.reconciliation.currentstatecounts.tolerance.absolute";
+    static final long RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE_DEFAULT = 0L;
 
     private final Map<String, String> config;
 
@@ -554,6 +558,14 @@ public class JobArguments {
 
     public long getReconciliationChangeDataCountsToleranceAbsolute() {
         return getArgument(RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE_DEFAULT);
+    }
+
+    public double getReconciliationCurrentStateCountsToleranceRelativePercentage() {
+        return getArgument(RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE_DEFAULT);
+    }
+
+    public long getReconciliationCurrentStateCountsToleranceAbsolute() {
+        return getArgument(RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE_DEFAULT);
     }
 
     private String getArgument(String argumentName) {
