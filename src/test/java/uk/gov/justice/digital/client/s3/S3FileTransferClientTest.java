@@ -55,6 +55,7 @@ public class S3FileTransferClientTest {
     private static final String DESTINATION_KEY = "test-destination-key";
     private static final String SOURCE_BUCKET = "test-source-bucket";
     private static final String DESTINATION_BUCKET = "test-destination-bucket";
+    private static final String TEST_FOLDER = "test-folder";
     private static final Integer MAX_OBJECTS_PER_PAGE = 10;
     private static final Duration zeroDayRetentionPeriod = Duration.of(0L, ChronoUnit.DAYS);
 
@@ -69,35 +70,35 @@ public class S3FileTransferClientTest {
     }
 
     @Test
-    public void copyObjectShouldDeleteObjects() {
+    void copyObjectShouldDeleteObjects() {
         underTest.copyObject(SOURCE_KEY, DESTINATION_KEY, SOURCE_BUCKET, DESTINATION_BUCKET);
 
         verify(mockS3Client, times(1)).copyObject(SOURCE_BUCKET, SOURCE_KEY, DESTINATION_BUCKET, DESTINATION_KEY);
     }
 
     @Test
-    public void copyObjectShouldFailWhenClientThrowsAnException() {
+    void copyObjectShouldFailWhenClientThrowsAnException() {
         doThrow(new RuntimeException("client exception")).when(mockS3Client).copyObject(any(), any(), any(), any());
 
         assertThrows(RuntimeException.class, () -> underTest.copyObject(SOURCE_KEY, DESTINATION_KEY, SOURCE_BUCKET, DESTINATION_BUCKET));
     }
 
     @Test
-    public void deleteObjectShouldDeleteObjects() {
+    void deleteObjectShouldDeleteObjects() {
         underTest.deleteObject(SOURCE_KEY, SOURCE_BUCKET);
 
         verify(mockS3Client, times(1)).deleteObject(SOURCE_BUCKET, SOURCE_KEY);
     }
 
     @Test
-    public void deleteObjectShouldFailWhenClientThrowsAnException() {
+    void deleteObjectShouldFailWhenClientThrowsAnException() {
         doThrow(new RuntimeException("client exception")).when(mockS3Client).deleteObject(any(), any());
 
         assertThrows(RuntimeException.class, () -> underTest.deleteObject(SOURCE_KEY, SOURCE_BUCKET));
     }
 
     @Test
-    public void getObjectsOlderThanShouldReturnListOfObjectsMatchingAllowedExtensions() {
+    void getObjectsOlderThanShouldReturnListOfObjectsMatchingAllowedExtensionsWithinGivenFolderPrefix() {
         ImmutableSet<ImmutablePair<String, String>> objectKeys = ImmutableSet.of(
                 ImmutablePair.of("file1", ".txt"),
                 ImmutablePair.of("file2", ".parquet"),
@@ -117,16 +118,17 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
 
         ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
         assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
     @Test
-    public void getObjectsOlderThanShouldReturnListOfObjectsMatchingAllowedExtensionsWhenObjectsListExceedsOnePage() {
+    void getObjectsOlderThanShouldReturnListOfObjectsMatchingAllowedExtensionsWhenObjectsListExceedsOnePage() {
         ImmutableSet<ImmutablePair<String, String>> firstSetOfObjectKeys = ImmutableSet.of(
                 ImmutablePair.of("file1", ".txt"),
                 ImmutablePair.of("file2", ".parquet"),
@@ -152,16 +154,17 @@ public class S3FileTransferClientTest {
 
         givenMultiPageObjectListingSucceeds(firstPageSummaries, secondPageSummaries);
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, parquetFileRegex, zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, parquetFileRegex, zeroDayRetentionPeriod, fixedClock);
 
         ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
         assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
     @Test
-    public void getObjectsOlderThanShouldReturnListOfAllObjectsWhenGivenWildCardExtension() {
+    void getObjectsOlderThanShouldReturnListOfAllObjectsWhenGivenWildCardExtension() {
         ImmutableSet<ImmutablePair<String, String>> objectKeys = ImmutableSet.of(
                 ImmutablePair.of("file1", ".txt"),
                 ImmutablePair.of("file2", ".parquet"),
@@ -183,14 +186,14 @@ public class S3FileTransferClientTest {
         lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
         givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, matchAllFiles, zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, matchAllFiles, zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
     @Test
-    public void getObjectsOlderThanShouldReturnListOfObjectsOlderThanSpecifiedNumberOfRetentionDays() {
+    void getObjectsOlderThanShouldReturnListOfObjectsOlderThanSpecifiedNumberOfRetentionDays() {
         ImmutableSet<ImmutablePair<String, String>> recentObjectKeys = ImmutableSet.of(
                 ImmutablePair.of("file1", ".parquet"),
                 ImmutablePair.of("file2", ".parquet"),
@@ -218,30 +221,10 @@ public class S3FileTransferClientTest {
 
         givenObjectListingSucceeds(allObjectSummaries);
 
-        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
+        List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
 
         assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
-    }
-
-    @Test
-    public void getObjectsOlderThanShouldListObjectsWithinGivenFolderPrefix() {
-        String folder = "test-folder";
-
-        ImmutableSet<ImmutablePair<String, String>> objectKeys = ImmutableSet.of(
-                ImmutablePair.of("file1", ".parquet"),
-                ImmutablePair.of("file2", ".parquet"),
-                ImmutablePair.of("file6", ".parquet")
-        );
-
-        Date lastModifiedDate = new Date();
-        lastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
-        givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
-
-        underTest.getObjectsOlderThan(SOURCE_BUCKET, folder, jsonOrParquetFileRegex, zeroDayRetentionPeriod, fixedClock);
-
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequestCaptor.getValue().getPrefix(), is(equalTo(folder)));
     }
 
     @NotNull

@@ -32,23 +32,29 @@ public class S3ObjectClient {
         this.maxObjectsPerPage = jobArguments.getMaxObjectsPerPage();
     }
 
-    public List<String> getObjectsOlderThan(String bucket, Pattern fileNameRegex, Duration retentionPeriod, Clock clock) {
-        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withMaxKeys(maxObjectsPerPage);
-        return listObjects(fileNameRegex, retentionPeriod, clock, request);
-    }
-
     public List<String> getObjectsOlderThan(
             String bucket,
             String folder,
             Pattern fileNameMatchRegex,
-            Duration retentionPeriod,
+            Duration period,
             Clock clock
     ) {
         ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
-        return listObjects(fileNameMatchRegex, retentionPeriod, clock, request);
+        return listObjects(fileNameMatchRegex, period, clock, request);
     }
 
-    private List<String> listObjects(Pattern fileNameMatchRegex, Duration retentionPeriod, Clock clock, ListObjectsRequest request) {
+    public List<String> getObjectsNewerThan(
+            String bucket,
+            String folder,
+            Pattern fileNameMatchRegex,
+            Duration period,
+            Clock clock
+    ) {
+        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
+        return listObjects(fileNameMatchRegex, period.negated(), clock, request);
+    }
+
+    private List<String> listObjects(Pattern fileNameMatchRegex, Duration period, Clock clock, ListObjectsRequest request) {
         LocalDateTime currentDate = LocalDateTime.now(clock);
         List<String> objectPaths = new LinkedList<>();
         ObjectListing objectList;
@@ -59,14 +65,16 @@ public class S3ObjectClient {
             for (S3ObjectSummary summary : objectSummaries) {
 
                 LocalDateTime lastModifiedDate = summary.getLastModified().toInstant().atZone(clock.getZone()).toLocalDateTime();
-                boolean isBeforeRetentionPeriod = lastModifiedDate.isBefore(currentDate.minus(retentionPeriod));
+                boolean isWithinPeriod = period.isNegative() ?
+                        lastModifiedDate.isAfter(currentDate.minus(period))
+                        : lastModifiedDate.isBefore(currentDate.minus(period));
 
                 String summaryKey = summary.getKey();
                 logger.debug("Listed {}", summaryKey);
 
                 boolean fileNameMatches = fileNameMatchRegex.matcher(summaryKey).matches();
 
-                if (!summaryKey.endsWith(DELIMITER) && fileNameMatches && isBeforeRetentionPeriod) {
+                if (!summaryKey.endsWith(DELIMITER) && fileNameMatches && isWithinPeriod) {
                     logger.debug("Adding {}", summaryKey);
                     objectPaths.add(summaryKey);
                 }

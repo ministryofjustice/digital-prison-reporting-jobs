@@ -83,7 +83,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
         when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listFilesForConfig(
+        when(mockS3FileService.listFilesBeforePeriod(
                 listObjectsBucketCaptor.capture(),
                 eq(SOURCE_PREFIX),
                 eq(configuredTables),
@@ -128,7 +128,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
         when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
-        when(mockS3FileService.listFilesForConfig(
+        when(mockS3FileService.listFilesBeforePeriod(
                 listObjectsBucketCaptor.capture(),
                 eq(SOURCE_PREFIX),
                 eq(configuredTables),

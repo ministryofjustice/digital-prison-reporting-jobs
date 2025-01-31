@@ -47,7 +47,7 @@ class S3FileServiceTest {
     private static final String DESTINATION_BUCKET = "destination-bucket";
     private static final String DESTINATION_PREFIX = "destination-prefix";
     private static final long RETENTION_AMOUNT = 2L;
-    private static final Duration retentionPeriod = Duration.of(RETENTION_AMOUNT, ChronoUnit.DAYS);
+    private static final Duration period = Duration.of(RETENTION_AMOUNT, ChronoUnit.DAYS);
 
     @Mock
     private S3ObjectClient mockS3Client;
@@ -67,7 +67,7 @@ class S3FileServiceTest {
     void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period);
 
         assertThat(result, is(empty()));
     }
@@ -80,10 +80,10 @@ class S3FileServiceTest {
         expected.add("file3.parquet");
         expected.add("file4.parquet");
 
-        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod, fixedClock))
+        when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period, fixedClock))
                 .thenReturn(expected);
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod);
+        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period);
 
         assertThat(result, containsInAnyOrder(expected.toArray()));
     }
@@ -96,13 +96,13 @@ class S3FileServiceTest {
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
-        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod));
+        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period));
 
         verify(mockS3Client, times(numRetries)).getObjectsOlderThan(any(), any(), any(), any(), any());
     }
 
     @Test
-    void listFilesForConfigShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
+    void listFilesBeforePeriodShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -110,37 +110,37 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod);
+        List<String> result = undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period);
 
         assertThat(result, is(empty()));
     }
 
     @Test
-    void listFilesForConfigShouldListFilesInFolderPrefix() {
+    void listFilesBeforePeriodShouldListFilesInFolderPrefix() {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
-        undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod);
+        undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period);
 
         String folder = SOURCE_PREFIX + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         verify(mockS3Client, times(1))
-                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(retentionPeriod), any());
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(period), any());
     }
 
     @Test
-    void listFilesForConfigShouldListFilesWhenNoFolderPrefixIsGiven() {
+    void listFilesBeforePeriodShouldListFilesWhenNoFolderPrefixIsGiven() {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
 
-        undertest.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, retentionPeriod);
+        undertest.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, period);
 
         String folder = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         verify(mockS3Client, times(1))
-                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(retentionPeriod), any());
+                .getObjectsOlderThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(period), any());
     }
 
     @Test
-    void listFilesForConfigShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
+    void listFilesBeforePeriodShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
         String configuredTable1 = "schema_1/table_1";
         String configuredTable2 = "schema_2/table_2";
 
@@ -162,17 +162,17 @@ class S3FileServiceTest {
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
                 parquetFileRegex,
-                retentionPeriod,
+                period,
                 fixedClock)).thenReturn(expectedFilesForTable1);
 
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
                 parquetFileRegex,
-                retentionPeriod,
+                period,
                 fixedClock)).thenReturn(expectedFilesForTable2);
 
-        List<String> result = undertest.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod);
+        List<String> result = undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period);
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);
@@ -182,7 +182,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    void listFilesForConfigShouldRetryWhenErrorOccursDuringListingOfFiles() {
+    void listFilesBeforePeriodShouldRetryWhenErrorOccursDuringListingOfFiles() {
         int numRetries = 2;
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
@@ -190,9 +190,103 @@ class S3FileServiceTest {
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
-        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod));
+        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period));
 
         verify(mockS3Client, times(numRetries)).getObjectsOlderThan(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void listFilesAfterPeriodShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema_1", "table_1"),
+                ImmutablePair.of("schema_2", "table_2")
+        );
+
+        when(mockS3Client.getObjectsNewerThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
+
+        List<String> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
+
+        assertThat(result, is(empty()));
+    }
+
+    @Test
+    void listFilesAfterPeriodShouldListFilesInFolderPrefix() {
+        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
+
+        undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
+
+        String folder = SOURCE_PREFIX + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        verify(mockS3Client, times(1))
+                .getObjectsNewerThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(period.negated()), any());
+    }
+
+    @Test
+    void listFilesAfterPeriodShouldListFilesWhenNoFolderPrefixIsGiven() {
+        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
+
+        undertest.listFilesAfterPeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, period.negated());
+
+        String folder = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        verify(mockS3Client, times(1))
+                .getObjectsNewerThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(period.negated()), any());
+    }
+
+    @Test
+    void listFilesAfterPeriodShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
+        String configuredTable1 = "schema_1/table_1";
+        String configuredTable2 = "schema_2/table_2";
+
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema_1", "table_1"),
+                ImmutablePair.of("schema_2", "table_2")
+        );
+
+        List<String> expectedFilesForTable1 = new ArrayList<>();
+        expectedFilesForTable1.add("file1.parquet");
+        expectedFilesForTable1.add("file2.parquet");
+        expectedFilesForTable1.add("file3.parquet");
+
+        List<String> expectedFilesForTable2 = new ArrayList<>();
+        expectedFilesForTable2.add("file4.parquet");
+        expectedFilesForTable2.add("file5.parquet");
+
+        when(mockS3Client.getObjectsNewerThan(
+                SOURCE_BUCKET,
+                SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
+                parquetFileRegex,
+                period.negated(),
+                fixedClock)).thenReturn(expectedFilesForTable1);
+
+        when(mockS3Client.getObjectsNewerThan(
+                SOURCE_BUCKET,
+                SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
+                parquetFileRegex,
+                period.negated(),
+                fixedClock)).thenReturn(expectedFilesForTable2);
+
+        List<String> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
+
+        List<String> expectedResult = new ArrayList<>();
+        expectedResult.addAll(expectedFilesForTable1);
+        expectedResult.addAll(expectedFilesForTable2);
+
+        assertThat(result, containsInAnyOrder(expectedResult.toArray()));
+    }
+
+    @Test
+    void listFilesAfterPeriodShouldRetryWhenErrorOccursDuringListingOfFiles() {
+        int numRetries = 2;
+        givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
+        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObjectsNewerThan(any(), any(), any(), any(), any());
+
+        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+
+        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated()));
+
+        verify(mockS3Client, times(numRetries)).getObjectsNewerThan(any(), any(), any(), any(), any());
     }
 
     @Test

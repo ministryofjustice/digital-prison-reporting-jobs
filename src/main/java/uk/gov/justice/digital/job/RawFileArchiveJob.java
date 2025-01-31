@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 
@@ -63,27 +64,33 @@ public class RawFileArchiveJob implements Runnable {
 
     private void archiveFiles() {
         String rawBucket = jobArguments.getTransferSourceBucket();
-        String destinationBucket = jobArguments.getTransferDestinationBucket();
+        String archiveBucket = jobArguments.getTransferDestinationBucket();
         Duration retentionPeriod = jobArguments.getRawFileRetentionPeriod();
+        Duration archivedFilesCheckDuration = jobArguments.getArchivedFilesCheckDuration();
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                 .getConfiguredTables(jobArguments.getConfigKey());
 
         List<String> committedFiles = getCommittedFilesForConfig(configuredTables);
         Set<String> oldFiles = new HashSet<>(s3FileService
-                .listFilesForConfig(rawBucket, "", configuredTables, parquetFileRegex, retentionPeriod));
+                .listFilesBeforePeriod(rawBucket, "", configuredTables, parquetFileRegex, retentionPeriod));
 
-        List<String> filesToDelete = getCommittedFilesInProvidedFiles(committedFiles, oldFiles);
+        List<String> filesToDelete = oldFiles.stream().filter(committedFiles::contains).collect(Collectors.toList());
 
         logger.info("Deleting {} files older than {} in S3 source location: {}", filesToDelete.size(), retentionPeriod, rawBucket);
         s3FileService.deleteObjects(filesToDelete, rawBucket);
 
         Set<String> rawFiles = new HashSet<>(s3FileService
-                .listFilesForConfig(rawBucket, "", configuredTables, parquetFileRegex, Duration.ZERO));
+                .listFilesBeforePeriod(rawBucket, "", configuredTables, parquetFileRegex, Duration.ZERO));
 
-        List<String> filesToArchive = getCommittedFilesInProvidedFiles(committedFiles, rawFiles);
+        Set<String> recentlyArchivedFiles = new HashSet<>(s3FileService
+                .listFilesAfterPeriod(archiveBucket, "", configuredTables, parquetFileRegex, archivedFilesCheckDuration));
+
+        List<String> filesToArchive = rawFiles.stream()
+                .filter(elem -> !recentlyArchivedFiles.contains(elem))
+                .collect(Collectors.toList());
 
         logger.info("Archiving {} files in S3 source location: {}", filesToArchive.size(), rawBucket);
-        Set<String> failedFiles = s3FileService.copyObjects(filesToArchive, rawBucket, "", destinationBucket, "", false);
+        Set<String> failedFiles = s3FileService.copyObjects(filesToArchive, rawBucket, "", archiveBucket, "", false);
 
         if (failedFiles.isEmpty()) {
             logger.info("Successfully archived {} S3 files", committedFiles.size());
@@ -102,16 +109,5 @@ public class RawFileArchiveJob implements Runnable {
             committedFiles.addAll(new ArrayList<>(checkpointReaderService.getCommittedFilesForTable(configuredTable)));
         }
         return committedFiles;
-    }
-
-    @NotNull
-    private List<String> getCommittedFilesInProvidedFiles(List<String> committedFiles, Set<String> providedFiles) {
-        List<String> result = new ArrayList<>();
-        for (String committedFile : committedFiles) {
-            if (providedFiles.contains(committedFile)) {
-                result.add(committedFile);
-            }
-        }
-        return result;
     }
 }
