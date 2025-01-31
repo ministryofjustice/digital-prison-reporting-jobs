@@ -101,7 +101,7 @@ public class UnprocessedRawFilesCheckJob implements Runnable {
 
         logger.info("Listing files in raw bucket");
         List<String> rawFiles = s3FileService
-                .listFilesForConfig(rawBucket, "", configuredTables, fileNameRegex, Duration.ZERO);
+                .listFilesBeforePeriod(rawBucket, "", configuredTables, fileNameRegex, Duration.ZERO);
 
         return committedFiles.containsAll(rawFiles);
     }

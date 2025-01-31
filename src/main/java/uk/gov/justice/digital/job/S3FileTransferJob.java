@@ -72,7 +72,7 @@ public class S3FileTransferJob implements Runnable {
             // When config is provided, only files belonging to the configured tables are archived
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(optionalConfigKey.get());
-            objectKeys.addAll(s3FileService.listFilesForConfig(sourceBucket, sourcePrefix, configuredTables, allowedFileNameRegex, retentionPeriod));
+            objectKeys.addAll(s3FileService.listFilesBeforePeriod(sourceBucket, sourcePrefix, configuredTables, allowedFileNameRegex, retentionPeriod));
         } else {
             // When no config is provided, all files in s3 bucket are archived
             logger.info("Listing files in S3 source location: {}", sourceBucket);

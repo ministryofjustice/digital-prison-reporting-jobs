@@ -51,15 +51,27 @@ public class S3FileService {
         return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(bucket, sourcePrefix, fileNameMatchRegex, retentionPeriod, clock));
     }
 
-    public List<String> listFilesForConfig(
+    public List<String> listFilesBeforePeriod(
             String sourceBucket,
             String sourcePrefix,
             ImmutableSet<ImmutablePair<String, String>> configuredTables,
             Pattern fileNameMatchRegex,
-            Duration retentionPeriod
+            Duration period
     ) {
         return configuredTables.stream()
-                .flatMap(configuredTable -> listFilesForTable(sourceBucket, sourcePrefix, fileNameMatchRegex, retentionPeriod, configuredTable).stream())
+                .flatMap(configuredTable -> listFilesBeforePeriod(sourceBucket, sourcePrefix, fileNameMatchRegex, period, configuredTable).stream())
+                .collect(Collectors.toList());
+    }
+
+    public List<String> listFilesAfterPeriod(
+            String sourceBucket,
+            String sourcePrefix,
+            ImmutableSet<ImmutablePair<String, String>> configuredTables,
+            Pattern fileNameMatchRegex,
+            Duration period
+    ) {
+        return configuredTables.stream()
+                .flatMap(configuredTable -> listFilesAfterPeriod(sourceBucket, sourcePrefix, fileNameMatchRegex, period, configuredTable).stream())
                 .collect(Collectors.toList());
     }
 
@@ -112,22 +124,42 @@ public class S3FileService {
         return failedObjects;
     }
 
-    private List<String> listFilesForTable(
+    private List<String> listFilesBeforePeriod(
             String sourceBucket,
             String sourcePrefix,
             Pattern fileNameMatchRegex,
-            Duration retentionPeriod,
+            Duration period,
             ImmutablePair<String, String> configuredTable
     ) {
         String tableKey = sourcePrefix.isEmpty() ?
                 configuredTable.left + DELIMITER + configuredTable.right + DELIMITER :
                 sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
-        logger.info("Listing files in S3 source location {} for table {}", sourceBucket, tableKey);
+        logger.info("Listing files before current time - {} in S3 source location {} for table {}", period, sourceBucket, tableKey);
         return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(
                 sourceBucket,
                 tableKey,
                 fileNameMatchRegex,
-                retentionPeriod,
+                period,
+                clock
+        ));
+    }
+
+    private List<String> listFilesAfterPeriod(
+            String sourceBucket,
+            String sourcePrefix,
+            Pattern fileNameMatchRegex,
+            Duration period,
+            ImmutablePair<String, String> configuredTable
+    ) {
+        String tableKey = sourcePrefix.isEmpty() ?
+                configuredTable.left + DELIMITER + configuredTable.right + DELIMITER :
+                sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
+        logger.info("Listing files after current time - {} in S3 source location {} for table {}", period, sourceBucket, tableKey);
+        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsNewerThan(
+                sourceBucket,
+                tableKey,
+                fileNameMatchRegex,
+                period,
                 clock
         ));
     }
