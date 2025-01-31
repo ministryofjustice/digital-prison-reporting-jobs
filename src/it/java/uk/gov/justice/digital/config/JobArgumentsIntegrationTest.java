@@ -35,6 +35,7 @@ import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST
 import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_CHECKS_TO_RUN_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_ARCHIVED_FILES_CHECK_PERIOD_AMOUNT;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.PRIMARY_KEY_RECONCILIATION;
@@ -401,6 +402,59 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.RAW_FILE_RETENTION_PERIOD_UNIT, unsupportedUnit);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertThrows(IllegalArgumentException.class, jobArguments::getRawFileRetentionPeriod);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "1, 1", "0, 0", "12345, 12345", "0123, 123" })
+    public void shouldGetArchivedFilesCheckPeriodInDaysWhenNoUnitIsProvided(String input, long expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_AMOUNT, input);
+        args.remove(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_UNIT);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(Duration.of(expected, ChronoUnit.DAYS), jobArguments.getArchivedFilesCheckDuration());
+    }
+
+    @Test
+    public void shouldDefaultArchivedFilesCheckPeriodToTwoDays() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_AMOUNT);
+        args.remove(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_UNIT);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(Duration.of(2L, ChronoUnit.DAYS), jobArguments.getArchivedFilesCheckDuration());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "minutes", "hours", "days" })
+    public void shouldGetArchivedFilesCheckPeriodInTheProvidedUnit(String durationUnit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_AMOUNT);
+        args.put(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_UNIT, durationUnit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(Duration.of(DEFAULT_ARCHIVED_FILES_CHECK_PERIOD_AMOUNT, ChronoUnit.valueOf(durationUnit.toUpperCase())), jobArguments.getArchivedFilesCheckDuration());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "nanos",
+            "micros",
+            "millis",
+            "seconds",
+            "HalfDays",
+            "Weeks",
+            "Months",
+            "Years",
+            "Decades",
+            "Centuries",
+            "Millennia",
+            "Eras",
+            "Forever"
+    })
+    public void shouldFailToGetArchivedFilesCheckPeriodWhenGivenUnsupportedUnit(String unsupportedUnit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_AMOUNT);
+        args.put(JobArguments.ARCHIVED_FILES_CHECK_PERIOD_UNIT, unsupportedUnit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::getArchivedFilesCheckDuration);
     }
 
     @ParameterizedTest
