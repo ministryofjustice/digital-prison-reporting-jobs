@@ -6,7 +6,8 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.common.ListObjectsConfig;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
+import uk.gov.justice.digital.datahub.model.ListObjectsConfig;
 import uk.gov.justice.digital.config.JobArguments;
 
 import javax.inject.Inject;
@@ -33,7 +34,7 @@ public class S3ObjectClient {
         this.maxObjectsPerPage = jobArguments.getMaxObjectsPerPage();
     }
 
-    public List<String> getObjectsOlderThan(
+    public List<FileLastModifiedDate> getObjectsOlderThan(
             String bucket,
             String folder,
             Pattern fileNameMatchRegex,
@@ -45,7 +46,7 @@ public class S3ObjectClient {
         return listObjects(fileNameMatchRegex, listObjectConfig, clock, request);
     }
 
-    public List<String> getObjectsNewerThan(
+    public List<FileLastModifiedDate> getObjectsNewerThan(
             String bucket,
             String folder,
             Pattern fileNameMatchRegex,
@@ -57,8 +58,8 @@ public class S3ObjectClient {
         return listObjects(fileNameMatchRegex, listObjectConfig, clock, request);
     }
 
-    private List<String> listObjects(Pattern fileNameMatchRegex, ListObjectsConfig config, Clock clock, ListObjectsRequest request) {
-        List<String> objectPaths = new LinkedList<>();
+    private List<FileLastModifiedDate> listObjects(Pattern fileNameMatchRegex, ListObjectsConfig config, Clock clock, ListObjectsRequest request) {
+        List<FileLastModifiedDate> objectPaths = new LinkedList<>();
         ObjectListing objectList;
         do {
             objectList = s3.listObjects(request);
@@ -74,7 +75,7 @@ public class S3ObjectClient {
                 if (!summaryKey.endsWith(DELIMITER) && fileNameMatches) {
                     if (config.isWithinPeriod(lastModifiedDateTime)) {
                         logger.debug("Adding {}", summaryKey);
-                        objectPaths.add(summaryKey);
+                        objectPaths.add(new FileLastModifiedDate(summaryKey, lastModifiedDateTime));
                     } else if (config.exitWhenOutsidePeriod()) {
                         // The CDC files are ordered by their modified date-time.
                         // When listing objects which occur later than the given date-time we can exit on encountering the first item with an earlier date-time

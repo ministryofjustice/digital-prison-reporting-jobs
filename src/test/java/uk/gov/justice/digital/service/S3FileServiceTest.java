@@ -4,6 +4,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
@@ -67,23 +70,23 @@ class S3FileServiceTest {
     void listFilesShouldReturnEmptyListWhenThereAreNoParquetFiles() {
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period);
+        List<FileLastModifiedDate> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period);
 
         assertThat(result, is(empty()));
     }
 
     @Test
     void listFilesShouldReturnListOfParquetFiles() {
-        List<String> expected = new ArrayList<>();
-        expected.add("file1.parquet");
-        expected.add("file2.parquet");
-        expected.add("file3.parquet");
-        expected.add("file4.parquet");
+        List<FileLastModifiedDate> expected = new ArrayList<>();
+        expected.add(new FileLastModifiedDate("file1.parquet"));
+        expected.add(new FileLastModifiedDate("file2.parquet"));
+        expected.add(new FileLastModifiedDate("file3.parquet"));
+        expected.add(new FileLastModifiedDate("file4.parquet"));
 
         when(mockS3Client.getObjectsOlderThan(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period, fixedClock))
                 .thenReturn(expected);
 
-        List<String> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period);
+        List<FileLastModifiedDate> result = undertest.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period);
 
         assertThat(result, containsInAnyOrder(expected.toArray()));
     }
@@ -110,7 +113,7 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period);
+        List<FileLastModifiedDate> result = undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period);
 
         assertThat(result, is(empty()));
     }
@@ -163,16 +166,20 @@ class S3FileServiceTest {
                 SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
                 parquetFileRegex,
                 period,
-                fixedClock)).thenReturn(expectedFilesForTable1);
+                fixedClock))
+                .thenReturn(createFileSummaries(expectedFilesForTable1));
 
         when(mockS3Client.getObjectsOlderThan(
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
                 parquetFileRegex,
                 period,
-                fixedClock)).thenReturn(expectedFilesForTable2);
+                fixedClock))
+                .thenReturn(createFileSummaries(expectedFilesForTable2));
 
-        List<String> result = undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period);
+
+        List<String> result = undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period)
+                .stream().map(x -> x.key).collect(Collectors.toList());
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);
@@ -204,7 +211,7 @@ class S3FileServiceTest {
 
         when(mockS3Client.getObjectsNewerThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
 
-        List<String> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
+        List<FileLastModifiedDate> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
 
         assertThat(result, is(empty()));
     }
@@ -257,16 +264,17 @@ class S3FileServiceTest {
                 SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
                 parquetFileRegex,
                 period.negated(),
-                fixedClock)).thenReturn(expectedFilesForTable1);
+                fixedClock)).thenReturn(createFileSummaries(expectedFilesForTable1));
 
         when(mockS3Client.getObjectsNewerThan(
                 SOURCE_BUCKET,
                 SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
                 parquetFileRegex,
                 period.negated(),
-                fixedClock)).thenReturn(expectedFilesForTable2);
+                fixedClock)).thenReturn(createFileSummaries(expectedFilesForTable2));
 
-        List<String> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
+        List<String> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated())
+                .stream().map(x -> x.key).collect(Collectors.toList());
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);
@@ -510,5 +518,10 @@ class S3FileServiceTest {
         s3FileService.deleteObjects(objectKeys, SOURCE_BUCKET);
 
         verify(mockS3Client, times(numRetries)).deleteObject(any(), any());
+    }
+
+    @NotNull
+    private static List<FileLastModifiedDate> createFileSummaries(List<String> keys) {
+        return keys.stream().map(FileLastModifiedDate::new).collect(Collectors.toList());
     }
 }

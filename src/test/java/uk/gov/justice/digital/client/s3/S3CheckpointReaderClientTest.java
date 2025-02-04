@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -49,10 +50,10 @@ class S3CheckpointReaderClientTest {
 
     @Test
     void shouldRetrieveCommittedFilesFromCheckpointFiles() {
-        List<String> checkpointFiles = new ArrayList<>();
-        checkpointFiles.add("checkpoint-path/2");
-        checkpointFiles.add("checkpoint-path/1");
-        checkpointFiles.add("checkpoint-path/0.compact");
+        List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/2"));
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/1"));
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/0.compact"));
 
         when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/2")).thenReturn(CHECKPOINT_FILE_2);
         when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/1")).thenReturn(CHECKPOINT_FILE_1);
@@ -73,9 +74,9 @@ class S3CheckpointReaderClientTest {
 
     @Test
     void shouldIgnoreTempFilesFromCheckpointFilesList() {
-        List<String> checkpointFiles = new ArrayList<>();
-        checkpointFiles.add("checkpoint-path/2");
-        checkpointFiles.add("checkpoint-path/0.tmp");
+        List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/2"));
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/0.tmp"));
 
         when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/2")).thenReturn(CHECKPOINT_FILE_2);
 
@@ -91,11 +92,11 @@ class S3CheckpointReaderClientTest {
 
     @Test
     void shouldIgnoreCheckpointFilesWithNameHavingLowerNaturalOrderThanTheMostRecentCompactFile() {
-        List<String> checkpointFiles = new ArrayList<>();
-        checkpointFiles.add("checkpoint-path/0"); // this file has name with lower natural order than the compact file and will be ignored
-        checkpointFiles.add("checkpoint-path/8");
-        checkpointFiles.add("checkpoint-path/9.compact");
-        checkpointFiles.add("checkpoint-path/10"); // 10 is after 9.compact and should also be processed
+        List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/0")); // this file has name with lower natural order than the compact file and will be ignored
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/8"));
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/9.compact"));
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/10")); // 10 is after 9.compact and should also be processed
 
         when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/10")).thenReturn(CHECKPOINT_FILE_2);
         when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/9.compact")).thenReturn(CHECKPOINT_FILE_1);

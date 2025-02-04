@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.exception.ConfigServiceException;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
@@ -22,6 +23,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -89,7 +91,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
                 eq(configuredTables),
                 eq(parquetFileRegex),
                 eq(Duration.ZERO)
-        )).thenReturn(objectsToDelete);
+        )).thenReturn(objectsToDelete.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture()))
                 .thenReturn(Collections.emptySet());
@@ -134,7 +136,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
                 eq(configuredTables),
                 eq(parquetFileRegex),
                 eq(Duration.ZERO)
-        )).thenReturn(objectsToDelete);
+        )).thenReturn(objectsToDelete.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture())).thenReturn(failedFiles);
 

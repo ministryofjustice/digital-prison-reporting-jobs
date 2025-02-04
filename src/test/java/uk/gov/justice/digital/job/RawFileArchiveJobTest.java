@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.job;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,16 +11,20 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.service.CheckpointReaderService;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -30,7 +33,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
+import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 
 @ExtendWith(MockitoExtension.class)
 class RawFileArchiveJobTest extends BaseSparkTest {
@@ -68,27 +73,25 @@ class RawFileArchiveJobTest extends BaseSparkTest {
     public void setup() {
         reset(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments);
 
-        underTest = new RawFileArchiveJob(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments);
+        underTest = new RawFileArchiveJob(mockConfigService, mockS3Service, mockCheckpointReaderService, fixedClock, mockJobArguments);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     void shouldDeleteRawFilesBelongingToConfiguredTablesWhichAreOlderThanRetentionPeriodAndHaveBeenCommitted() {
         ImmutablePair<String, String> configuredTable1 = ImmutablePair.of("source", "table-1");
         ImmutablePair<String, String> configuredTable2 = ImmutablePair.of("source", "table-2");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable1, configuredTable2);
 
-        List<String> rawFiles = new ArrayList<>();
-        rawFiles.add(COMMITTED_FILE_1);
-        rawFiles.add(COMMITTED_FILE_2);
-        rawFiles.add(COMMITTED_FILE_3);
-        rawFiles.add(COMMITTED_OLD_FILE_4);
-        rawFiles.add(UNCOMMITTED_FILE);
-        rawFiles.add(UNCOMMITTED_OLD_FILE);
+        List<FileLastModifiedDate> oldRawFiles = new ArrayList<>();
+        LocalDateTime oldDateTime = LocalDateTime.now(fixedClock).minus(retentionPeriod).minusNanos(1L);
+        oldRawFiles.add(new FileLastModifiedDate(COMMITTED_OLD_FILE_4, oldDateTime));
+        oldRawFiles.add(new FileLastModifiedDate(UNCOMMITTED_OLD_FILE, oldDateTime));
 
-        List<String> oldRawFiles = new ArrayList<>();
-        oldRawFiles.add(COMMITTED_OLD_FILE_4);
-        oldRawFiles.add(UNCOMMITTED_OLD_FILE);
+        List<FileLastModifiedDate> recentRawFiles = new ArrayList<>();
+        recentRawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_1));
+        recentRawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_2));
+        recentRawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_3));
+        recentRawFiles.add(new FileLastModifiedDate(UNCOMMITTED_FILE));
 
         Set<String> committedFilesTable1 = new HashSet<>();
         committedFilesTable1.add(COMMITTED_FILE_1);
@@ -107,15 +110,13 @@ class RawFileArchiveJobTest extends BaseSparkTest {
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
-        when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, retentionPeriod))
-                .thenReturn(oldRawFiles);
         when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
-                .thenReturn(new ArrayList<String>(CollectionUtils.subtract(rawFiles, oldRawFiles)));
+                .thenReturn(Stream.concat(oldRawFiles.stream(), recentRawFiles.stream()).collect(Collectors.toList()));
         when(mockS3Service.listFilesAfterPeriod(DESTINATION_BUCKET, "", configuredTables, parquetFileRegex, archivePeriod))
                 .thenReturn(Collections.emptyList());
         when(mockS3Service.deleteObjects(filesToDeleteCaptor.capture(), eq(SOURCE_BUCKET)))
                 .thenReturn(Collections.emptySet());
-        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
+        when(mockS3Service.copyObjects(any(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
                 .thenReturn(Collections.emptySet());
 
         underTest.run();
@@ -126,23 +127,23 @@ class RawFileArchiveJobTest extends BaseSparkTest {
     }
 
     @Test
-    void shouldArchiveRawFilesBelongingToConfiguredTablesButNotAlreadyArchivedWithinThePastArchivePeriod() {
+    void shouldArchiveRawFilesBelongingToConfiguredTablesWhichHaveNotAlreadyArchivedWithinThePastArchivePeriod() {
         ImmutablePair<String, String> configuredTable1 = ImmutablePair.of("source", "table-1");
         ImmutablePair<String, String> configuredTable2 = ImmutablePair.of("source", "table-2");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable1, configuredTable2);
 
-        List<String> rawFiles = new ArrayList<>();
-        rawFiles.add(COMMITTED_FILE_1);
-        rawFiles.add(COMMITTED_FILE_2);
-        rawFiles.add(COMMITTED_FILE_3);
-        rawFiles.add(COMMITTED_OLD_FILE_4);
-        rawFiles.add(UNCOMMITTED_FILE);
-        rawFiles.add(ARCHIVED_FILE_2); // already archived file will be excluded from the list of files to archive
-        rawFiles.add(UNCOMMITTED_OLD_FILE);
+        List<FileLastModifiedDate> rawFiles = new ArrayList<>();
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_1));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_2));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_3));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_OLD_FILE_4));
+        rawFiles.add(new FileLastModifiedDate(UNCOMMITTED_FILE));
+        rawFiles.add(new FileLastModifiedDate(ARCHIVED_FILE_2)); // already archived file will be excluded from the list of files to archive
+        rawFiles.add(new FileLastModifiedDate(UNCOMMITTED_OLD_FILE));
 
-        List<String> previouslyArchivedFiles = new ArrayList<>();
-        previouslyArchivedFiles.add(ARCHIVED_FILE_1);
-        previouslyArchivedFiles.add(ARCHIVED_FILE_2);
+        List<FileLastModifiedDate> previouslyArchivedFiles = new ArrayList<>();
+        previouslyArchivedFiles.add(new FileLastModifiedDate(ARCHIVED_FILE_1));
+        previouslyArchivedFiles.add(new FileLastModifiedDate(ARCHIVED_FILE_2));
 
         when(mockJobArguments.getTransferSourceBucket()).thenReturn(SOURCE_BUCKET);
         when(mockJobArguments.getTransferDestinationBucket()).thenReturn(DESTINATION_BUCKET);
@@ -153,13 +154,11 @@ class RawFileArchiveJobTest extends BaseSparkTest {
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(Collections.emptySet());
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(Collections.emptySet());
-        when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, retentionPeriod))
-                .thenReturn(Collections.emptyList());
         when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(rawFiles);
         when(mockS3Service.listFilesAfterPeriod(DESTINATION_BUCKET, "", configuredTables, parquetFileRegex, archivePeriod))
                 .thenReturn(previouslyArchivedFiles);
-        when(mockS3Service.deleteObjects(filesToDeleteCaptor.capture(), eq(SOURCE_BUCKET)))
+        when(mockS3Service.deleteObjects(any(), eq(SOURCE_BUCKET)))
                 .thenReturn(Collections.emptySet());
         when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
                 .thenReturn(Collections.emptySet());
@@ -193,8 +192,6 @@ class RawFileArchiveJobTest extends BaseSparkTest {
 
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable)).thenReturn(committedFilesTable);
-        when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, retentionPeriod))
-                .thenReturn(Collections.emptyList());
         when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(Collections.emptyList());
         when(mockS3Service.listFilesAfterPeriod(DESTINATION_BUCKET, "", configuredTables, parquetFileRegex, archivePeriod))

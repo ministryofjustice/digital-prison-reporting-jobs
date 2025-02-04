@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.common;
+package uk.gov.justice.digital.datahub.model;
 
 import java.time.Clock;
 import java.time.Duration;

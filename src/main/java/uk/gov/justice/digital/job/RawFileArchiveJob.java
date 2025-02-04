@@ -7,12 +7,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.service.CheckpointReaderService;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import javax.inject.Inject;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +34,7 @@ public class RawFileArchiveJob implements Runnable {
     private final ConfigService configService;
     private final S3FileService s3FileService;
     private final CheckpointReaderService checkpointReaderService;
+    private final Clock clock;
     private final JobArguments jobArguments;
 
     @Inject
@@ -38,11 +42,13 @@ public class RawFileArchiveJob implements Runnable {
             ConfigService configService,
             S3FileService s3FileService,
             CheckpointReaderService checkpointReaderService,
+            Clock clock,
             JobArguments jobArguments
     ) {
         this.configService = configService;
         this.s3FileService = s3FileService;
         this.checkpointReaderService = checkpointReaderService;
+        this.clock = clock;
         this.jobArguments = jobArguments;
     }
 
@@ -70,15 +76,19 @@ public class RawFileArchiveJob implements Runnable {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                 .getConfiguredTables(jobArguments.getConfigKey());
 
-        Set<String> rawFiles = new HashSet<>(s3FileService
+        Set<FileLastModifiedDate> rawFiles = new HashSet<>(s3FileService
                 .listFilesBeforePeriod(rawBucket, "", configuredTables, parquetFileRegex, Duration.ZERO));
 
         Set<String> recentlyArchivedFiles = new HashSet<>(s3FileService
-                .listFilesAfterPeriod(archiveBucket, "", configuredTables, parquetFileRegex, archivedFilesCheckDuration));
+                .listFilesAfterPeriod(archiveBucket, "", configuredTables, parquetFileRegex, archivedFilesCheckDuration))
+                .stream()
+                .map(x -> x.key)
+                .collect(Collectors.toSet());
 
         // Exclude the files which were already archived within the past specified period
         List<String> filesToArchive = rawFiles.stream()
-                .filter(elem -> !recentlyArchivedFiles.contains(elem))
+                .filter(elem -> !recentlyArchivedFiles.contains(elem.key))
+                .map(x -> x.key)
                 .collect(Collectors.toList());
 
         logger.info("Archiving {} files in S3 source location: {}", filesToArchive.size(), rawBucket);
@@ -93,11 +103,13 @@ public class RawFileArchiveJob implements Runnable {
         }
 
         List<String> committedFiles = getCommittedFilesForConfig(configuredTables);
-        Set<String> oldFiles = new HashSet<>(s3FileService
-                .listFilesBeforePeriod(rawBucket, "", configuredTables, parquetFileRegex, retentionPeriod));
 
-        // Only delete files which have been committed to the checkpoint
-        List<String> filesToDelete = oldFiles.stream().filter(committedFiles::contains).collect(Collectors.toList());
+        // Only delete old files which have been committed to the checkpoint
+        List<String> filesToDelete = rawFiles.stream()
+                .filter(x -> x.lastModifiedDateTime.isBefore(LocalDateTime.now(clock).minus(retentionPeriod)))
+                .filter(x -> committedFiles.contains(x.key))
+                .map(x -> x.key)
+                .collect(Collectors.toList());
 
         logger.info("Deleting {} files older than {} in S3 source location: {}", filesToDelete.size(), retentionPeriod, rawBucket);
         s3FileService.deleteObjects(filesToDelete, rawBucket);
