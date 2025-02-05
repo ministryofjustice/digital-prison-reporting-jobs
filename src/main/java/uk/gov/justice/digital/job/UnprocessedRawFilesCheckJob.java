@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Job that checks if all raw files have been processed.
@@ -101,7 +102,10 @@ public class UnprocessedRawFilesCheckJob implements Runnable {
 
         logger.info("Listing files in raw bucket");
         List<String> rawFiles = s3FileService
-                .listFilesForConfig(rawBucket, "", configuredTables, fileNameRegex, Duration.ZERO);
+                .listFilesBeforePeriod(rawBucket, "", configuredTables, fileNameRegex, Duration.ZERO)
+                .stream()
+                .map(x -> x.key)
+                .collect(Collectors.toList());
 
         return committedFiles.containsAll(rawFiles);
     }

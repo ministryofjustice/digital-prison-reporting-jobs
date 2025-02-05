@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3CheckpointReaderClient;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -72,11 +73,11 @@ class CheckpointReaderServiceTest {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         String checkpointFolder = CHECKPOINT_FOLDER + "DataHubCdcJob/Datahub_CDC_" + configuredTable.left + "." + configuredTable.right + "/sources/0/";
 
-        List<String> checkpointFiles = new ArrayList<>();
-        checkpointFiles.add(checkpointFolder + "checkpoint-file-2");
-        checkpointFiles.add(checkpointFolder + "checkpoint-file-3");
-        checkpointFiles.add(checkpointFolder + "checkpoint-file-0.compact");
-        checkpointFiles.add(checkpointFolder + "checkpoint-file-1");
+        List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
+        checkpointFiles.add(new FileLastModifiedDate(checkpointFolder + "checkpoint-file-2"));
+        checkpointFiles.add(new FileLastModifiedDate(checkpointFolder + "checkpoint-file-3"));
+        checkpointFiles.add(new FileLastModifiedDate(checkpointFolder + "checkpoint-file-0.compact"));
+        checkpointFiles.add(new FileLastModifiedDate(checkpointFolder + "checkpoint-file-1"));
 
         Set<String> expectedCommittedFiles = new HashSet<>();
         expectedCommittedFiles.add("committed-file-1");

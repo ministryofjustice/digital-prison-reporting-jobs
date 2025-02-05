@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.service.CheckpointReaderService;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
@@ -61,11 +62,11 @@ class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
         ImmutablePair<String, String> configuredTable2 = ImmutablePair.of("source", "table-2");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable1, configuredTable2);
 
-        List<String> rawFiles = new ArrayList<>();
-        rawFiles.add(COMMITTED_FILE_1);
-        rawFiles.add(COMMITTED_FILE_2);
-        rawFiles.add(COMMITTED_FILE_3);
-        rawFiles.add(COMMITTED_FILE_4);
+        List<FileLastModifiedDate> rawFiles = new ArrayList<>();
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_1));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_2));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_3));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_4));
 
         Set<String> committedFilesTable1 = new HashSet<>();
         committedFilesTable1.add(COMMITTED_FILE_1);
@@ -84,7 +85,7 @@ class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
-        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
+        when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(rawFiles);
 
         assertDoesNotThrow(() -> underTest.run());
@@ -96,12 +97,12 @@ class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
         ImmutablePair<String, String> configuredTable2 = ImmutablePair.of("source", "table-2");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable1, configuredTable2);
 
-        List<String> rawFiles = new ArrayList<>();
-        rawFiles.add(COMMITTED_FILE_1);
-        rawFiles.add(COMMITTED_FILE_2);
-        rawFiles.add(COMMITTED_FILE_3);
-        rawFiles.add(COMMITTED_FILE_4);
-        rawFiles.add(UNCOMMITTED_FILE);
+        List<FileLastModifiedDate> rawFiles = new ArrayList<>();
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_1));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_2));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_3));
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_4));
+        rawFiles.add(new FileLastModifiedDate(UNCOMMITTED_FILE));
 
         Set<String> committedFilesTable1 = new HashSet<>();
         committedFilesTable1.add(COMMITTED_FILE_1);
@@ -120,7 +121,7 @@ class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
         when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
-        when(mockS3Service.listFilesForConfig(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
+        when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(rawFiles);
 
         assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));

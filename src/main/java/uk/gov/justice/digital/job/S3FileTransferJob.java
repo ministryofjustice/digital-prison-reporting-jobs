@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Job that moves/copies s3 files from a source bucket to a destination bucket.
@@ -72,11 +73,19 @@ public class S3FileTransferJob implements Runnable {
             // When config is provided, only files belonging to the configured tables are archived
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(optionalConfigKey.get());
-            objectKeys.addAll(s3FileService.listFilesForConfig(sourceBucket, sourcePrefix, configuredTables, allowedFileNameRegex, retentionPeriod));
+            List<String> fileKeys = s3FileService.listFilesBeforePeriod(sourceBucket, sourcePrefix, configuredTables, allowedFileNameRegex, retentionPeriod)
+                    .stream()
+                    .map(x -> x.key)
+                    .collect(Collectors.toList());
+            objectKeys.addAll(fileKeys);
         } else {
             // When no config is provided, all files in s3 bucket are archived
             logger.info("Listing files in S3 source location: {}", sourceBucket);
-            objectKeys.addAll(s3FileService.listFiles(sourceBucket, sourcePrefix, allowedFileNameRegex, retentionPeriod));
+            List<String> fileKeys = s3FileService.listFiles(sourceBucket, sourcePrefix, allowedFileNameRegex, retentionPeriod)
+                    .stream()
+                    .map(x -> x.key)
+                    .collect(Collectors.toList());
+            objectKeys.addAll(fileKeys);
         }
 
         logger.info("Processing S3 objects older than {} from {} to {}", retentionPeriod, sourceBucket, destinationBucket);

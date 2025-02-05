@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.s3.S3CheckpointReaderClient;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -51,7 +52,7 @@ public class CheckpointReaderService {
             String checkpointPath = getQueryCheckpointPath(matcher.group(2), configuredTable.left, configuredTable.right) + "/sources/0/";
 
             logger.info("Reading committed files from {}", checkpointPath);
-            List<String> checkpointFiles = s3ObjectClient.getObjectsOlderThan(
+            List<FileLastModifiedDate> checkpointFiles = s3ObjectClient.getObjectsOlderThan(
                     checkpointBucket,
                     checkpointPath,
                     matchAllFiles,

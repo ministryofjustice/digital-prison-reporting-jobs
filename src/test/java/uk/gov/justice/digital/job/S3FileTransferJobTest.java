@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.exception.ConfigServiceException;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.S3FileService;
@@ -22,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -84,8 +86,8 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
-                .thenReturn(objectsToMove);
+        when(mockS3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
+                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(Collections.emptySet());
@@ -110,7 +112,7 @@ public class S3FileTransferJobTest extends BaseSparkTest {
         when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
         when(mockS3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod))
-                .thenReturn(objectsToMove);
+                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(Collections.emptySet());
@@ -144,8 +146,8 @@ public class S3FileTransferJobTest extends BaseSparkTest {
 
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
-        when(mockS3FileService.listFilesForConfig(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
-                .thenReturn(objectsToMove);
+        when(mockS3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
+                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(failedFiles);

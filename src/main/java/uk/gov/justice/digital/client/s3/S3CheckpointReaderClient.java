@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.common.CheckpointFile;
+import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
 import javax.inject.Singleton;
 import java.util.Set;
@@ -32,7 +33,7 @@ public class S3CheckpointReaderClient {
         this.s3 = clientProvider.getClient();
     }
 
-    public Set<String> getCommittedFiles(String checkpointBucket, List<String> checkpointFiles) {
+    public Set<String> getCommittedFiles(String checkpointBucket, List<FileLastModifiedDate> checkpointFiles) {
         List<CheckpointFile> reverseOrderedCheckpointFiles = orderCheckpointFilesInReverseOrdering(checkpointFiles);
 
         Set<String> committedFiles = new HashSet<>();
@@ -53,14 +54,14 @@ public class S3CheckpointReaderClient {
     }
 
     @NotNull
-    private List<CheckpointFile> orderCheckpointFilesInReverseOrdering(List<String> checkpointFiles) {
+    private List<CheckpointFile> orderCheckpointFilesInReverseOrdering(List<FileLastModifiedDate> checkpointFiles) {
         return checkpointFiles.stream()
-                .filter(checkpointFile -> !checkpointFile.toLowerCase().endsWith(".tmp"))
+                .filter(checkpointFile -> !checkpointFile.key.toLowerCase().endsWith(".tmp"))
                 .map(checkpointFile -> {
-                    Matcher matcher = checkpointFileRegexPattern.matcher(checkpointFile);
+                    Matcher matcher = checkpointFileRegexPattern.matcher(checkpointFile.key);
                     if (matcher.matches()) {
                         boolean isCompactFile = Optional.ofNullable(matcher.group(2)).isPresent();
-                        return new CheckpointFile(Long.parseLong(matcher.group(1)), isCompactFile, checkpointFile);
+                        return new CheckpointFile(Long.parseLong(matcher.group(1)), isCompactFile, checkpointFile.key);
                     } else {
                         throw new IllegalStateException("Failed to extract file name from " + checkpointFile);
                     }
