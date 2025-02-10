@@ -4,6 +4,9 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
+import org.apache.commons.collections4.ListUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
@@ -15,9 +18,12 @@ import javax.inject.Singleton;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Singleton
 public class S3ObjectClient {
@@ -92,12 +98,34 @@ public class S3ObjectClient {
     }
 
     public void copyObject(String sourceKey, String destinationKey, String sourceBucket, String destinationBucket) {
-        logger.info("Copying {} to {}", sourceKey, destinationKey);
+        logger.info("Copying {} from {} to {}", sourceKey, sourceBucket, destinationBucket);
         s3.copyObject(sourceBucket, sourceKey, destinationBucket, destinationKey);
     }
 
-    public void deleteObject(String objectKey, String sourceBucket) {
-        logger.info("Deleting {}", objectKey);
-        s3.deleteObject(sourceBucket, objectKey);
+    public Set<String> deleteObjects(List<String> objectKeys, String sourceBucket) {
+        Set<String> successfullyDeletedObjects = new HashSet<>();
+        int deletedObjectsCount = 0;
+
+        List<List<String>> partitionedKeys = ListUtils.partition(objectKeys, maxObjectsPerPage);
+        for (List<String> partition: partitionedKeys) {
+            deletedObjectsCount = deletedObjectsCount + partition.size();
+            logger.info("Deleting {} of {} objects", deletedObjectsCount, objectKeys.size());
+            List<DeleteObjectsRequest.KeyVersion> objectKeyVersions = partition.stream()
+                    .map(DeleteObjectsRequest.KeyVersion::new)
+                    .collect(Collectors.toList());
+
+            DeleteObjectsRequest request = new DeleteObjectsRequest(sourceBucket).withKeys(objectKeyVersions).withQuiet(true);
+            Set<String> deletedObjects = s3.deleteObjects(request)
+                    .getDeletedObjects()
+                    .stream()
+                    .map(DeleteObjectsResult.DeletedObject::getKey)
+                    .collect(Collectors.toSet());
+
+            successfullyDeletedObjects.addAll(deletedObjects);
+        }
+
+        Set<String> failedObjects = new HashSet<>(objectKeys);
+        failedObjects.removeAll(successfullyDeletedObjects);
+        return failedObjects;
     }
 }

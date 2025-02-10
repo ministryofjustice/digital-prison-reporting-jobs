@@ -1,6 +1,9 @@
 package uk.gov.justice.digital.client.s3;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -20,17 +23,24 @@ import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.any;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.Fixtures.fixedDateTime;
 import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
@@ -48,8 +58,12 @@ class S3ClientTest {
     ObjectListing mockObjectListing;
     @Mock
     JobArguments mockJobArgs;
+    @Mock
+    DeleteObjectsResult mockDeleteObjectsResult;
     @Captor
     ArgumentCaptor<ListObjectsRequest> listObjectsRequestCaptor;
+    @Captor
+    ArgumentCaptor<DeleteObjectsRequest> deleteObjectsRequestCaptor;
 
     private static final String SOURCE_KEY = "test-source-key";
     private static final String DESTINATION_KEY = "test-destination-key";
@@ -64,7 +78,7 @@ class S3ClientTest {
 
     @BeforeEach
     public void setUp() {
-        reset(mockS3ClientProvider, mockS3Client, mockObjectListing, mockJobArgs);
+        reset(mockS3ClientProvider, mockS3Client, mockObjectListing, mockJobArgs, mockDeleteObjectsResult);
 
         when(mockS3ClientProvider.getClient()).thenReturn(mockS3Client);
         when(mockJobArgs.getMaxObjectsPerPage()).thenReturn(MAX_OBJECTS_PER_PAGE);
@@ -75,7 +89,7 @@ class S3ClientTest {
     void copyObjectShouldDeleteObjects() {
         underTest.copyObject(SOURCE_KEY, DESTINATION_KEY, SOURCE_BUCKET, DESTINATION_BUCKET);
 
-        verify(mockS3Client, times(1)).copyObject(SOURCE_BUCKET, SOURCE_KEY, DESTINATION_BUCKET, DESTINATION_KEY);
+        verify(mockS3Client).copyObject(SOURCE_BUCKET, SOURCE_KEY, DESTINATION_BUCKET, DESTINATION_KEY);
     }
 
     @Test
@@ -86,17 +100,58 @@ class S3ClientTest {
     }
 
     @Test
-    void deleteObjectShouldDeleteObjects() {
-        underTest.deleteObject(SOURCE_KEY, SOURCE_BUCKET);
+    void deleteObjectsShouldDeleteObjectsReturningEmptySetWhenNoObjectsFailed() {
+        DeleteObjectsResult.DeletedObject deletedObject = new DeleteObjectsResult.DeletedObject();
+        deletedObject.setKey(SOURCE_KEY);
 
-        verify(mockS3Client, times(1)).deleteObject(SOURCE_BUCKET, SOURCE_KEY);
+        when(mockDeleteObjectsResult.getDeletedObjects()).thenReturn(Collections.singletonList(deletedObject));
+        when(mockS3Client.deleteObjects(deleteObjectsRequestCaptor.capture())).thenReturn(mockDeleteObjectsResult);
+
+        Set<String> failedObjects = underTest.deleteObjects(Collections.singletonList(SOURCE_KEY), SOURCE_BUCKET);
+
+        List<String> keysToDelete = deleteObjectsRequestCaptor.getValue()
+                .getKeys()
+                .stream()
+                .map(DeleteObjectsRequest.KeyVersion::getKey)
+                .collect(Collectors.toList());
+
+        assertThat(failedObjects, is(empty()));
+        assertThat(keysToDelete, containsInAnyOrder(SOURCE_KEY));
     }
 
     @Test
-    void deleteObjectShouldFailWhenClientThrowsAnException() {
-        doThrow(new RuntimeException("client exception")).when(mockS3Client).deleteObject(any(), any());
+    void deleteObjectsShouldDeleteObjectsReturningSetOfFailedKeys() {
+        List<String> objectsKeysToDelete = new ArrayList<>();
+        objectsKeysToDelete.add("key1");
+        objectsKeysToDelete.add("key2");
+        objectsKeysToDelete.add("key3");
 
-        assertThrows(RuntimeException.class, () -> underTest.deleteObject(SOURCE_KEY, SOURCE_BUCKET));
+        DeleteObjectsResult.DeletedObject deletedObject1 = new DeleteObjectsResult.DeletedObject();
+        DeleteObjectsResult.DeletedObject deletedObject2 = new DeleteObjectsResult.DeletedObject();
+
+        List<DeleteObjectsResult.DeletedObject> deletedObjects = new ArrayList<>();
+        deletedObject1.setKey("key1");
+        deletedObject2.setKey("key2");
+
+        deletedObjects.add(deletedObject1);
+        deletedObjects.add(deletedObject2);
+
+
+        when(mockDeleteObjectsResult.getDeletedObjects()).thenReturn(deletedObjects);
+        when(mockS3Client.deleteObjects(any())).thenReturn(mockDeleteObjectsResult);
+
+        Set<String> failedObjects = underTest.deleteObjects(objectsKeysToDelete, SOURCE_BUCKET);
+
+        assertThat(failedObjects, containsInAnyOrder("key3"));
+    }
+
+    @Test
+    void deleteObjectsShouldFailWhenClientThrowsAnException() {
+        List<String> keysToDelete = Collections.singletonList(SOURCE_KEY);
+
+        doThrow(new RuntimeException("client exception")).when(mockS3Client).deleteObjects(any());
+
+        assertThrows(RuntimeException.class, () -> underTest.deleteObjects(keysToDelete, SOURCE_BUCKET));
     }
 
     @Test
