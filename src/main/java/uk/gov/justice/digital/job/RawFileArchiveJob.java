@@ -16,10 +16,7 @@ import javax.inject.Inject;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
@@ -76,8 +73,10 @@ public class RawFileArchiveJob implements Runnable {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                 .getConfiguredTables(jobArguments.getConfigKey());
 
-        Set<FileLastModifiedDate> rawFiles = new HashSet<>(s3FileService
-                .listFilesBeforePeriod(rawBucket, "", configuredTables, parquetFileRegex, Duration.ZERO));
+//        Set<FileLastModifiedDate> rawFiles = new HashSet<>(s3FileService
+//                .listFilesBeforePeriod(rawBucket, "", configuredTables, parquetFileRegex, Duration.ZERO));
+
+        Set<FileLastModifiedDate> rawFiles = Collections.emptySet();
 
         Set<String> recentlyArchivedFiles = new HashSet<>(s3FileService
                 .listFilesAfterPeriod(archiveBucket, "", configuredTables, parquetFileRegex, archivedFilesCheckDuration))
