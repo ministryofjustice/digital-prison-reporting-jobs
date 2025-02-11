@@ -1,8 +1,8 @@
 package uk.gov.justice.digital.client.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +41,7 @@ public class S3ObjectClient {
             Duration period,
             Clock clock
     ) {
-        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
+        ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
         ListObjectsConfig listObjectConfig = new ListObjectsConfig(ListObjectsConfig.ObjectModifiedDateTime.EARLIER, period, clock);
         return listObjects(fileNameMatchRegex, listObjectConfig, clock, request);
     }
@@ -53,16 +53,16 @@ public class S3ObjectClient {
             Duration period,
             Clock clock
     ) {
-        ListObjectsRequest request = new ListObjectsRequest().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
+        ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucket).withPrefix(folder).withMaxKeys(maxObjectsPerPage);
         ListObjectsConfig listObjectConfig = new ListObjectsConfig(ListObjectsConfig.ObjectModifiedDateTime.ON_OR_LATER, period, clock);
         return listObjects(fileNameMatchRegex, listObjectConfig, clock, request);
     }
 
-    private List<FileLastModifiedDate> listObjects(Pattern fileNameMatchRegex, ListObjectsConfig config, Clock clock, ListObjectsRequest request) {
+    private List<FileLastModifiedDate> listObjects(Pattern fileNameMatchRegex, ListObjectsConfig config, Clock clock, ListObjectsV2Request request) {
         List<FileLastModifiedDate> objectPaths = new LinkedList<>();
-        ObjectListing objectList;
+        ListObjectsV2Result objectList;
         do {
-            objectList = s3.listObjects(request);
+            objectList = s3.listObjectsV2(request);
             List<S3ObjectSummary> objectSummaries = objectList.getObjectSummaries();
             logger.info("Listed a total of {} objects", objectSummaries.size());
             for (S3ObjectSummary summary : objectSummaries) {
@@ -74,30 +74,30 @@ public class S3ObjectClient {
                 LocalDateTime lastModifiedDateTime = summary.getLastModified().toInstant().atZone(clock.getZone()).toLocalDateTime();
                 if (!summaryKey.endsWith(DELIMITER) && fileNameMatches) {
                     if (config.isWithinPeriod(lastModifiedDateTime)) {
-                        logger.debug("Adding {}", summaryKey);
+                        logger.info("Adding {} from bucket {}", summaryKey, request.getBucketName());
                         objectPaths.add(new FileLastModifiedDate(summaryKey, lastModifiedDateTime));
                     } else if (config.exitWhenOutsidePeriod()) {
                         // The CDC files are ordered by their modified date-time.
                         // When listing objects which occur later than the given date-time we can exit on encountering the first item with an earlier date-time
                         // This avoids searching though all the items.
-                        logger.debug("Exiting on encountering file {} which is outside period of interest", summaryKey);
+                        logger.info("Exiting on encountering file {} which is outside period of interest", summaryKey);
                         return objectPaths;
                     }
                 }
             }
-            request.setMarker(objectList.getNextMarker());
+            request.setContinuationToken(objectList.getNextContinuationToken());
         } while (objectList.isTruncated());
 
         return objectPaths;
     }
 
     public void copyObject(String sourceKey, String destinationKey, String sourceBucket, String destinationBucket) {
-        logger.info("Copying {} to {}", sourceKey, destinationKey);
+        logger.info("Copying {} from {} to {}", sourceKey, sourceBucket, destinationBucket);
         s3.copyObject(sourceBucket, sourceKey, destinationBucket, destinationKey);
     }
 
     public void deleteObject(String objectKey, String sourceBucket) {
-        logger.info("Deleting {}", objectKey);
+        logger.info("Deleting {} from {}", objectKey, sourceBucket);
         s3.deleteObject(sourceBucket, objectKey);
     }
 }

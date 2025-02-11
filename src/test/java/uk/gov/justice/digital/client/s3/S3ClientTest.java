@@ -1,9 +1,9 @@
 package uk.gov.justice.digital.client.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
@@ -30,7 +30,11 @@ import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInA
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.Fixtures.fixedDateTime;
 import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
@@ -45,11 +49,11 @@ class S3ClientTest {
     @Mock
     AmazonS3 mockS3Client;
     @Mock
-    ObjectListing mockObjectListing;
+    ListObjectsV2Result listObjectsV2Result;
     @Mock
     JobArguments mockJobArgs;
     @Captor
-    ArgumentCaptor<ListObjectsRequest> listObjectsRequestCaptor;
+    ArgumentCaptor<ListObjectsV2Request> listObjectsV2RequestCaptor;
 
     private static final String SOURCE_KEY = "test-source-key";
     private static final String DESTINATION_KEY = "test-destination-key";
@@ -64,7 +68,7 @@ class S3ClientTest {
 
     @BeforeEach
     public void setUp() {
-        reset(mockS3ClientProvider, mockS3Client, mockObjectListing, mockJobArgs);
+        reset(mockS3ClientProvider, mockS3Client, listObjectsV2Result, mockJobArgs);
 
         when(mockS3ClientProvider.getClient()).thenReturn(mockS3Client);
         when(mockJobArgs.getMaxObjectsPerPage()).thenReturn(MAX_OBJECTS_PER_PAGE);
@@ -75,7 +79,7 @@ class S3ClientTest {
     void copyObjectShouldDeleteObjects() {
         underTest.copyObject(SOURCE_KEY, DESTINATION_KEY, SOURCE_BUCKET, DESTINATION_BUCKET);
 
-        verify(mockS3Client, times(1)).copyObject(SOURCE_BUCKET, SOURCE_KEY, DESTINATION_BUCKET, DESTINATION_KEY);
+        verify(mockS3Client).copyObject(SOURCE_BUCKET, SOURCE_KEY, DESTINATION_BUCKET, DESTINATION_KEY);
     }
 
     @Test
@@ -89,7 +93,7 @@ class S3ClientTest {
     void deleteObjectShouldDeleteObjects() {
         underTest.deleteObject(SOURCE_KEY, SOURCE_BUCKET);
 
-        verify(mockS3Client, times(1)).deleteObject(SOURCE_BUCKET, SOURCE_KEY);
+        verify(mockS3Client).deleteObject(SOURCE_BUCKET, SOURCE_KEY);
     }
 
     @Test
@@ -125,10 +129,10 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
+        ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
+        assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2Request.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2Request.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -164,10 +168,10 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
+        ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
+        assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2Request.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2Request.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -199,7 +203,7 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -237,7 +241,7 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -267,10 +271,10 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
+        ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
+        assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2Request.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2Request.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -306,10 +310,10 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
+        ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
+        assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2Request.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2Request.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -341,7 +345,7 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -373,15 +377,15 @@ class S3ClientTest {
         List<S3ObjectSummary> oldObjectSummaries = createObjectSummaries(oldObjectKeys, oldLastModifiedDate);
         List<S3ObjectSummary> allObjectSummaries = Stream.concat(recentObjectSummaries.stream(), oldObjectSummaries.stream()).collect(Collectors.toList());
 
-        when(mockObjectListing.getObjectSummaries()).thenReturn(allObjectSummaries);
-        when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+        when(listObjectsV2Result.getObjectSummaries()).thenReturn(allObjectSummaries);
+        when(mockS3Client.listObjectsV2(listObjectsV2RequestCaptor.capture())).thenReturn(listObjectsV2Result);
 
         List<String> returnedObjectKeys = underTest.getObjectsNewerThan(SOURCE_BUCKET, TEST_FOLDER, jsonOrParquetFileRegex, oneHourPeriod, fixedClock)
                 .stream()
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -401,15 +405,15 @@ class S3ClientTest {
     }
 
     private void givenObjectListingSucceeds(List<S3ObjectSummary> objectSummaries) {
-        when(mockObjectListing.getObjectSummaries()).thenReturn(objectSummaries);
-        when(mockObjectListing.isTruncated()).thenReturn(false);
-        when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+        when(listObjectsV2Result.getObjectSummaries()).thenReturn(objectSummaries);
+        when(listObjectsV2Result.isTruncated()).thenReturn(false);
+        when(mockS3Client.listObjectsV2(listObjectsV2RequestCaptor.capture())).thenReturn(listObjectsV2Result);
     }
 
     @SuppressWarnings({"unchecked", "varargs"})
     private void givenMultiPageObjectListingSucceeds(List<S3ObjectSummary> firstPage, List<S3ObjectSummary> secondPage) {
-        when(mockObjectListing.getObjectSummaries()).thenReturn(firstPage, secondPage);
-        when(mockObjectListing.isTruncated()).thenReturn(true, false);
-        when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+        when(listObjectsV2Result.getObjectSummaries()).thenReturn(firstPage, secondPage);
+        when(listObjectsV2Result.isTruncated()).thenReturn(true, false);
+        when(mockS3Client.listObjectsV2(listObjectsV2RequestCaptor.capture())).thenReturn(listObjectsV2Result);
     }
 }
