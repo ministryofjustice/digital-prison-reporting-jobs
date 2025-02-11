@@ -3,7 +3,11 @@ package uk.gov.justice.digital.client.s3;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableSet;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -20,7 +24,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 
 import java.io.ByteArrayInputStream;
-import java.util.*;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -54,16 +63,16 @@ public class S3SchemaClientTest {
     private JobArguments mockArguments;
 
     @Mock
-    private ObjectListing mockObjectListing;
+    private ListObjectsV2Result mockListObjectsV2Result;
 
     @Captor
-    ArgumentCaptor<ListObjectsRequest> listObjectsRequestCaptor;
+    ArgumentCaptor<ListObjectsV2Request> listObjectsV2RequestCaptor;
 
     private S3SchemaClient underTest;
 
     @BeforeEach
-    public void setup() {
-        reset(mockClientProvider, mockClient, mockArguments, mockObjectListing);
+    void setup() {
+        reset(mockClientProvider, mockClient, mockArguments, mockListObjectsV2Result);
         givenSuccessfulJobArgumentCalls();
         givenClientProviderReturnsAClient();
         underTest = new S3SchemaClient(mockClientProvider, mockArguments);
@@ -133,14 +142,14 @@ public class S3SchemaClientTest {
         schemaNamesList.add(ImmutablePair.of("schema3", "some_table"));
         val schemaNames = ImmutableSet.copyOf(schemaNamesList);
 
-        givenObjectListingSucceeds(createObjectSummaries(schemaNames));
+        givenListObjectsV2ResultSucceeds(createObjectSummaries(schemaNames));
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema2/some_table" + SCHEMA_FILE_EXTENSION);
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema3/some_table" + SCHEMA_FILE_EXTENSION);
 
         val result = underTest.getAllSchemas(schemaNames);
 
-        assertThat(listObjectsRequestCaptor.getValue().getMaxKeys(), Is.is(IsEqual.equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getMaxKeys(), Is.is(IsEqual.equalTo(MAX_OBJECTS_PER_PAGE)));
         assertThat(result.size(), equalTo(schemaNames.size()));
     }
 
@@ -162,7 +171,7 @@ public class S3SchemaClientTest {
                 .collect(Collectors.toList());
         val allSchemaNames = ImmutableSet.copyOf(allSchemaList);
 
-        givenMultiPageObjectListingSucceeds(createObjectSummaries(firstPageSchemaNames), createObjectSummaries(secondPageSchemaNames));
+        givenMultiPageListObjectsV2ResultSucceeds(createObjectSummaries(firstPageSchemaNames), createObjectSummaries(secondPageSchemaNames));
 
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema2/some_table" + SCHEMA_FILE_EXTENSION);
@@ -174,7 +183,7 @@ public class S3SchemaClientTest {
 
         val result = underTest.getAllSchemas(allSchemaNames);
 
-        assertThat(listObjectsRequestCaptor.getValue().getMaxKeys(), Is.is(IsEqual.equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getMaxKeys(), Is.is(IsEqual.equalTo(MAX_OBJECTS_PER_PAGE)));
         assertThat(result.size(), is(equalTo(allSchemaNames.size())));
     }
 
@@ -194,7 +203,7 @@ public class S3SchemaClientTest {
                 ImmutablePair.of("schema2", "some_table")
         );
 
-        givenObjectListingSucceeds(createObjectSummaries(schemaNames));
+        givenListObjectsV2ResultSucceeds(createObjectSummaries(schemaNames));
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, "schema1/some_table" + SCHEMA_FILE_EXTENSION);
         when(mockClient.getObject(SCHEMA_REGISTRY, "schema2/some_table" + SCHEMA_FILE_EXTENSION))
                 .thenThrow(new AmazonClientException("Schema not found"));
@@ -207,7 +216,7 @@ public class S3SchemaClientTest {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet
                 .of(ImmutablePair.of("test_schema", "test_table"));
 
-        when(mockClient.listObjects(any(ListObjectsRequest.class))).thenThrow(new AmazonClientException("failed to list schemas"));
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenThrow(new AmazonClientException("failed to list schemas"));
 
         assertThrows(AmazonClientException.class, () -> underTest.getAllSchemas(schemaGroup));
     }
@@ -235,22 +244,22 @@ public class S3SchemaClientTest {
         when(mockClient.getObject(SCHEMA_REGISTRY, objectKey)).thenReturn(schemaObject);
     }
 
-    private void givenObjectListingSucceeds(List<S3ObjectSummary> objectSummaries) {
-        when(mockObjectListing.getObjectSummaries()).thenReturn(objectSummaries);
-        when(mockObjectListing.isTruncated()).thenReturn(false);
-        when(mockClient.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+    private void givenListObjectsV2ResultSucceeds(List<S3ObjectSummary> objectSummaries) {
+        when(mockListObjectsV2Result.getObjectSummaries()).thenReturn(objectSummaries);
+        when(mockListObjectsV2Result.isTruncated()).thenReturn(false);
+        when(mockClient.listObjectsV2(listObjectsV2RequestCaptor.capture())).thenReturn(mockListObjectsV2Result);
     }
 
     @SuppressWarnings({"unchecked", "varargs"})
-    private void givenMultiPageObjectListingSucceeds(List<S3ObjectSummary> firstPage, List<S3ObjectSummary> secondPage) {
-        when(mockObjectListing.getObjectSummaries()).thenReturn(firstPage, secondPage);
-        when(mockObjectListing.isTruncated()).thenReturn(true, false);
-        when(mockClient.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+    private void givenMultiPageListObjectsV2ResultSucceeds(List<S3ObjectSummary> firstPage, List<S3ObjectSummary> secondPage) {
+        when(mockListObjectsV2Result.getObjectSummaries()).thenReturn(firstPage, secondPage);
+        when(mockListObjectsV2Result.isTruncated()).thenReturn(true, false);
+        when(mockClient.listObjectsV2(listObjectsV2RequestCaptor.capture())).thenReturn(mockListObjectsV2Result);
     }
 
     private void givenObjectListIsEmpty() {
-        when(mockClient.listObjects(any(ListObjectsRequest.class))).thenReturn(mockObjectListing);
-        when(mockObjectListing.getObjectSummaries()).thenReturn(Collections.emptyList());
+        when(mockClient.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(mockListObjectsV2Result);
+        when(mockListObjectsV2Result.getObjectSummaries()).thenReturn(Collections.emptyList());
     }
 
     @NotNull

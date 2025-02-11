@@ -38,6 +38,7 @@ public class JobArguments {
 
     private static final Logger logger = LoggerFactory.getLogger(JobArguments.class);
 
+    public static final String JOBS_S3_BUCKET = "dpr.jobs.s3.bucket";
     public static final String CONFIG_S3_BUCKET = "dpr.config.s3.bucket";
     public static final String CONFIG_KEY = "dpr.config.key";
     public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
@@ -174,12 +175,6 @@ public class JobArguments {
     public static final Long DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT = 2L;
     public static final String RAW_FILE_RETENTION_PERIOD_UNIT = "dpr.raw.file.retention.period.unit";
     static final String DEFAULT_RAW_FILE_RETENTION_PERIOD_UNIT = "days";
-
-    public static final String ARCHIVED_FILES_CHECK_PERIOD_AMOUNT = "dpr.archived.files.check.period.amount";
-    public static final Long DEFAULT_ARCHIVED_FILES_CHECK_PERIOD_AMOUNT = 2L;
-    public static final String ARCHIVED_FILES_CHECK_PERIOD_UNIT = "dpr.archived.files.check.period.unit";
-    static final String DEFAULT_ARCHIVED_FILES_CHECK_PERIOD_UNIT = "days";
-
     private final Map<String, String> config;
 
     @Inject
@@ -359,6 +354,10 @@ public class JobArguments {
         return Optional.ofNullable(config.get(CONFIG_KEY));
     }
 
+    public String getJobsS3Bucket() {
+        return getArgument(JOBS_S3_BUCKET);
+    }
+
     public String getMaintenanceTablesRootPath() {
         return getArgument(MAINTENANCE_TABLES_ROOT_PATH);
     }
@@ -427,13 +426,6 @@ public class JobArguments {
         String retentionUnit = getArgument(RAW_FILE_RETENTION_PERIOD_UNIT, DEFAULT_RAW_FILE_RETENTION_PERIOD_UNIT);
 
         return convertToPeriod(retentionUnit, retentionAmount, RAW_FILE_RETENTION_PERIOD_UNIT);
-    }
-
-    public Duration getArchivedFilesCheckDuration() {
-        long archivePeriodAmount = getArgument(ARCHIVED_FILES_CHECK_PERIOD_AMOUNT, DEFAULT_ARCHIVED_FILES_CHECK_PERIOD_AMOUNT);
-        String archivePeriodUnit = getArgument(ARCHIVED_FILES_CHECK_PERIOD_UNIT, DEFAULT_ARCHIVED_FILES_CHECK_PERIOD_UNIT);
-
-        return convertToPeriod(archivePeriodUnit, archivePeriodAmount, ARCHIVED_FILES_CHECK_PERIOD_UNIT);
     }
 
     public boolean getFileTransferDeleteCopiedFilesFlag() {

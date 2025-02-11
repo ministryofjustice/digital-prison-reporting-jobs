@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableSet;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.http.entity.ContentType;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
@@ -15,10 +17,13 @@ import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -63,18 +68,6 @@ public class S3FileService {
     ) {
         return configuredTables.stream()
                 .flatMap(configuredTable -> listFilesBeforePeriod(sourceBucket, sourcePrefix, fileNameMatchRegex, period, configuredTable).stream())
-                .collect(Collectors.toList());
-    }
-
-    public List<FileLastModifiedDate> listFilesAfterPeriod(
-            String sourceBucket,
-            String sourcePrefix,
-            ImmutableSet<ImmutablePair<String, String>> configuredTables,
-            Pattern fileNameMatchRegex,
-            Duration period
-    ) {
-        return configuredTables.stream()
-                .flatMap(configuredTable -> listFilesAfterPeriod(sourceBucket, sourcePrefix, fileNameMatchRegex, period, configuredTable).stream())
                 .collect(Collectors.toList());
     }
 
@@ -130,6 +123,40 @@ public class S3FileService {
         }
     }
 
+    public Set<String> getPreviousArchivedKeys(String sourceBucket, String configKey) {
+        logger.info("Loading archived keys");
+        String lastArchivedFilesPath = getLastArchivedFilesPath(configKey);
+        try {
+            return Failsafe.with(stringSetRetryPolicy).get(() -> Arrays
+                    .stream(s3Client.getObject(sourceBucket, lastArchivedFilesPath).split("\n"))
+                    .map(String::trim)
+                    .collect(Collectors.toSet())
+            );
+        } catch (AmazonServiceException e) {
+            logger.warn(
+                    "Failed to get last archived keys from {}/{}. Returning empty set: {}",
+                    sourceBucket,
+                    lastArchivedFilesPath,
+                    e.getErrorMessage()
+            );
+            return Collections.emptySet();
+        }
+    }
+
+    public void saveArchivedKeys(String destinationBucket, String configKey, List<String> objectKeys) {
+        if (!objectKeys.isEmpty()) {
+            logger.info("Saving archived keys");
+            String data = String.join("\n", objectKeys);
+            String lastArchivedFilesPath = getLastArchivedFilesPath(configKey);
+            try {
+                byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
+                Failsafe.with(voidRetryPolicy).run(() -> s3Client.saveObject(destinationBucket, lastArchivedFilesPath, dataBytes, ContentType.DEFAULT_TEXT));
+            } catch (AmazonServiceException e) {
+                logger.warn("Failed to save archived keys to {}/{}: {}", destinationBucket, lastArchivedFilesPath, e.getErrorMessage());
+            }
+        }
+    }
+
     private List<FileLastModifiedDate> listFilesBeforePeriod(
             String sourceBucket,
             String sourcePrefix,
@@ -150,23 +177,8 @@ public class S3FileService {
         ));
     }
 
-    private List<FileLastModifiedDate> listFilesAfterPeriod(
-            String sourceBucket,
-            String sourcePrefix,
-            Pattern fileNameMatchRegex,
-            Duration period,
-            ImmutablePair<String, String> configuredTable
-    ) {
-        String tableKey = sourcePrefix.isEmpty() ?
-                configuredTable.left + DELIMITER + configuredTable.right + DELIMITER :
-                sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
-        logger.info("Listing files after current time - {} in S3 source location {} for table {}", period, sourceBucket, tableKey);
-        return Failsafe.with(fileListRetryPolicy).get(() -> s3Client.getObjectsNewerThan(
-                sourceBucket,
-                tableKey,
-                fileNameMatchRegex,
-                period,
-                clock
-        ));
+    @NotNull
+    private static String getLastArchivedFilesPath(String configKey) {
+        return String.format("last-archived-files/%s/archived.txt", configKey);
     }
 }

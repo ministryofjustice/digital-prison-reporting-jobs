@@ -1,13 +1,17 @@
 package uk.gov.justice.digital.client.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.http.entity.ContentType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,13 +22,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Collections;
 import java.util.Set;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,6 +40,7 @@ import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -55,15 +62,17 @@ class S3ClientTest {
     @Mock
     AmazonS3 mockS3Client;
     @Mock
-    ObjectListing mockObjectListing;
+    ListObjectsV2Result listObjectsV2Result;
     @Mock
     JobArguments mockJobArgs;
     @Mock
     DeleteObjectsResult mockDeleteObjectsResult;
     @Captor
-    ArgumentCaptor<ListObjectsRequest> listObjectsRequestCaptor;
+    ArgumentCaptor<ListObjectsV2Request> listObjectsV2RequestCaptor;
     @Captor
     ArgumentCaptor<DeleteObjectsRequest> deleteObjectsRequestCaptor;
+    @Captor
+    ArgumentCaptor<PutObjectRequest> putObjectRequestCaptor;
 
     private static final String SOURCE_KEY = "test-source-key";
     private static final String DESTINATION_KEY = "test-destination-key";
@@ -72,17 +81,54 @@ class S3ClientTest {
     private static final String TEST_FOLDER = "test-folder";
     private static final Integer MAX_OBJECTS_PER_PAGE = 10;
     private static final Duration zeroDayPeriod = Duration.of(0L, ChronoUnit.DAYS);
-    private static final Duration oneHourPeriod = Duration.of(1L, ChronoUnit.HOURS);
 
     private S3ObjectClient underTest;
 
     @BeforeEach
-    public void setUp() {
-        reset(mockS3ClientProvider, mockS3Client, mockObjectListing, mockJobArgs, mockDeleteObjectsResult);
+    void setUp() {
+        reset(mockS3ClientProvider, mockS3Client, listObjectsV2Result, mockJobArgs, mockDeleteObjectsResult);
 
         when(mockS3ClientProvider.getClient()).thenReturn(mockS3Client);
         when(mockJobArgs.getMaxObjectsPerPage()).thenReturn(MAX_OBJECTS_PER_PAGE);
         underTest = new S3ObjectClient(mockS3ClientProvider, mockJobArgs);
+    }
+
+    @Test
+    void getObjectShouldRetrieveObject() {
+        underTest.getObject(SOURCE_BUCKET, SOURCE_KEY);
+
+        verify(mockS3Client).getObjectAsString(SOURCE_BUCKET, SOURCE_KEY);
+    }
+
+    @Test
+    void getObjectShouldFailWhenClientThrowsAnException() {
+        doThrow(new RuntimeException("client exception")).when(mockS3Client).getObjectAsString(any(), any());
+
+        assertThrows(RuntimeException.class, () -> underTest.getObject(SOURCE_BUCKET, SOURCE_KEY));
+    }
+
+    @Test
+    void saveObjectShouldSaveGivenDataBytes() throws IOException {
+        byte[] data = new byte[0];
+        when(mockS3Client.putObject(putObjectRequestCaptor.capture())).thenReturn(new PutObjectResult());
+
+        underTest.saveObject(SOURCE_BUCKET, SOURCE_KEY, data, ContentType.DEFAULT_TEXT);
+
+        PutObjectRequest request = putObjectRequestCaptor.getValue();
+
+        assertEquals(SOURCE_BUCKET, request.getBucketName());
+        assertEquals(SOURCE_KEY, request.getKey());
+        assertEquals(Arrays.toString(data), Arrays.toString(IOUtils.toByteArray(request.getInputStream())));
+        assertEquals(data.length, request.getMetadata().getContentLength());
+        assertEquals(ContentType.DEFAULT_TEXT.getMimeType(), request.getMetadata().getContentType());
+    }
+
+    @Test
+    void saveObjectShouldFailWhenClientThrowsAnException() {
+        byte[] data = new byte[0];
+        doThrow(new RuntimeException("client exception")).when(mockS3Client).putObject(any());
+
+        assertThrows(RuntimeException.class, () -> underTest.saveObject(SOURCE_BUCKET, SOURCE_KEY, data, ContentType.DEFAULT_TEXT));
     }
 
     @Test
@@ -179,10 +225,10 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
+        ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
+        assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2Request.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2Request.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -218,10 +264,10 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
+        ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
+        assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2Request.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
+        assertThat(listObjectsV2Request.getPrefix(), is(equalTo(TEST_FOLDER)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -253,7 +299,7 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -291,151 +337,7 @@ class S3ClientTest {
                 .map(x -> x.key)
                 .collect(Collectors.toList());
 
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
-    }
-
-    @Test
-    void getObjectsNewerThanShouldReturnListOfObjectsMatchingAllowedExtensionsWithinGivenFolderPrefix() {
-        ImmutableSet<ImmutablePair<String, String>> objectKeys = ImmutableSet.of(
-                ImmutablePair.of("file1", ".txt"),
-                ImmutablePair.of("file2", ".parquet"),
-                ImmutablePair.of("file3", ".json"),
-                ImmutablePair.of("file4", ".jpg"),
-                ImmutablePair.of("file5", ".JSON"),
-                ImmutablePair.of("file6", ".PARQUET")
-        );
-
-        List<String> expectedObjectKeys = new ArrayList<>();
-        expectedObjectKeys.add("file2.parquet");
-        expectedObjectKeys.add("file6.PARQUET");
-        expectedObjectKeys.add("file3.json");
-        expectedObjectKeys.add("file5.JSON");
-
-        Date lastModifiedDate = new Date();
-        lastModifiedDate.setTime(fixedDateTime.plusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
-        givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
-
-        List<String> returnedObjectKeys = underTest.getObjectsNewerThan(SOURCE_BUCKET, TEST_FOLDER, jsonOrParquetFileRegex, zeroDayPeriod, fixedClock)
-                .stream()
-                .map(x -> x.key)
-                .collect(Collectors.toList());
-
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
-        assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
-    }
-
-    @Test
-    void getObjectsNewerThanShouldReturnListOfObjectsMatchingAllowedExtensionsWhenObjectsListExceedsOnePage() {
-        ImmutableSet<ImmutablePair<String, String>> firstSetOfObjectKeys = ImmutableSet.of(
-                ImmutablePair.of("file1", ".txt"),
-                ImmutablePair.of("file2", ".parquet"),
-                ImmutablePair.of("file3", ".json"),
-                ImmutablePair.of("file6", ".PARQUET")
-        );
-
-        ImmutableSet<ImmutablePair<String, String>> secondSetOfObjectKeys = ImmutableSet.of(
-                ImmutablePair.of("file7", ".txt"),
-                ImmutablePair.of("file8", ".parquet"),
-                ImmutablePair.of("file9", ".json")
-        );
-
-        List<String> expectedObjectKeys = new ArrayList<>();
-        expectedObjectKeys.add("file2.parquet");
-        expectedObjectKeys.add("file6.PARQUET");
-        expectedObjectKeys.add("file8.parquet");
-
-        Date lastModifiedDate = new Date();
-        lastModifiedDate.setTime(fixedDateTime.plusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
-        List<S3ObjectSummary> firstPageSummaries = createObjectSummaries(firstSetOfObjectKeys, lastModifiedDate);
-        List<S3ObjectSummary> secondPageSummaries = createObjectSummaries(secondSetOfObjectKeys, lastModifiedDate);
-
-        givenMultiPageObjectListingSucceeds(firstPageSummaries, secondPageSummaries);
-
-        List<String> returnedObjectKeys = underTest.getObjectsNewerThan(SOURCE_BUCKET, TEST_FOLDER, parquetFileRegex, zeroDayPeriod, fixedClock)
-                .stream()
-                .map(x -> x.key)
-                .collect(Collectors.toList());
-
-        ListObjectsRequest listObjectsRequest = listObjectsRequestCaptor.getValue();
-        assertThat(listObjectsRequest.getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(listObjectsRequest.getMaxKeys(), is(equalTo(MAX_OBJECTS_PER_PAGE)));
-        assertThat(listObjectsRequest.getPrefix(), is(equalTo(TEST_FOLDER)));
-        assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
-    }
-
-    @Test
-    void getObjectsNewerThanShouldReturnListOfAllObjectsWhenGivenWildCardExtension() {
-        ImmutableSet<ImmutablePair<String, String>> objectKeys = ImmutableSet.of(
-                ImmutablePair.of("file1", ".txt"),
-                ImmutablePair.of("file2", ".parquet"),
-                ImmutablePair.of("file3", ".json"),
-                ImmutablePair.of("file4", ".jpg"),
-                ImmutablePair.of("file5", ".JSON"),
-                ImmutablePair.of("file6", ".PARQUET")
-        );
-
-        List<String> expectedObjectKeys = new ArrayList<>();
-        expectedObjectKeys.add("file1.txt");
-        expectedObjectKeys.add("file2.parquet");
-        expectedObjectKeys.add("file3.json");
-        expectedObjectKeys.add("file4.jpg");
-        expectedObjectKeys.add("file5.JSON");
-        expectedObjectKeys.add("file6.PARQUET");
-
-        Date lastModifiedDate = new Date();
-        lastModifiedDate.setTime(fixedDateTime.plusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
-        givenObjectListingSucceeds(createObjectSummaries(objectKeys, lastModifiedDate));
-
-        List<String> returnedObjectKeys = underTest.getObjectsNewerThan(SOURCE_BUCKET, TEST_FOLDER, matchAllFiles, zeroDayPeriod, fixedClock)
-                .stream()
-                .map(x -> x.key)
-                .collect(Collectors.toList());
-
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
-        assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
-    }
-
-    @Test
-    void getObjectsNewerThanShouldReturnListOfObjectsNewerThanSpecifiedPeriod() {
-        ImmutableSet<ImmutablePair<String, String>> recentObjectKeys = ImmutableSet.of(
-                ImmutablePair.of("file1", ".parquet"),
-                ImmutablePair.of("file2", ".parquet"),
-                ImmutablePair.of("file3", ".parquet")
-        );
-
-        ImmutableSet<ImmutablePair<String, String>> oldObjectKeys = ImmutableSet.of(
-                ImmutablePair.of("file4", ".parquet"),
-                ImmutablePair.of("file5", ".parquet")
-        );
-
-        List<String> expectedObjectKeys = new ArrayList<>();
-        expectedObjectKeys.add("file1.parquet");
-        expectedObjectKeys.add("file2.parquet");
-        expectedObjectKeys.add("file3.parquet");
-
-        Date recentLastModifiedDate = new Date();
-        recentLastModifiedDate.setTime(fixedDateTime.minusHours(1).toInstant(ZoneOffset.UTC).toEpochMilli());
-
-        Date oldLastModifiedDate = new Date();
-        oldLastModifiedDate.setTime(fixedDateTime.minusHours(1).minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
-
-        List<S3ObjectSummary> recentObjectSummaries = createObjectSummaries(recentObjectKeys, recentLastModifiedDate);
-        List<S3ObjectSummary> oldObjectSummaries = createObjectSummaries(oldObjectKeys, oldLastModifiedDate);
-        List<S3ObjectSummary> allObjectSummaries = Stream.concat(recentObjectSummaries.stream(), oldObjectSummaries.stream()).collect(Collectors.toList());
-
-        when(mockObjectListing.getObjectSummaries()).thenReturn(allObjectSummaries);
-        when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
-
-        List<String> returnedObjectKeys = underTest.getObjectsNewerThan(SOURCE_BUCKET, TEST_FOLDER, jsonOrParquetFileRegex, oneHourPeriod, fixedClock)
-                .stream()
-                .map(x -> x.key)
-                .collect(Collectors.toList());
-
-        assertThat(listObjectsRequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
+        assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
@@ -455,15 +357,15 @@ class S3ClientTest {
     }
 
     private void givenObjectListingSucceeds(List<S3ObjectSummary> objectSummaries) {
-        when(mockObjectListing.getObjectSummaries()).thenReturn(objectSummaries);
-        when(mockObjectListing.isTruncated()).thenReturn(false);
-        when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+        when(listObjectsV2Result.getObjectSummaries()).thenReturn(objectSummaries);
+        when(listObjectsV2Result.isTruncated()).thenReturn(false);
+        when(mockS3Client.listObjectsV2(listObjectsV2RequestCaptor.capture())).thenReturn(listObjectsV2Result);
     }
 
     @SuppressWarnings({"unchecked", "varargs"})
     private void givenMultiPageObjectListingSucceeds(List<S3ObjectSummary> firstPage, List<S3ObjectSummary> secondPage) {
-        when(mockObjectListing.getObjectSummaries()).thenReturn(firstPage, secondPage);
-        when(mockObjectListing.isTruncated()).thenReturn(true, false);
-        when(mockS3Client.listObjects(listObjectsRequestCaptor.capture())).thenReturn(mockObjectListing);
+        when(listObjectsV2Result.getObjectSummaries()).thenReturn(firstPage, secondPage);
+        when(listObjectsV2Result.isTruncated()).thenReturn(true, false);
+        when(mockS3Client.listObjectsV2(listObjectsV2RequestCaptor.capture())).thenReturn(listObjectsV2Result);
     }
 }
