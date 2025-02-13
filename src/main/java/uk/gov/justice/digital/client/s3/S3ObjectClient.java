@@ -103,7 +103,7 @@ public class S3ObjectClient {
     }
 
     public Set<String> deleteObjects(List<String> objectKeys, String sourceBucket) {
-        Set<String> successfullyDeletedObjects = new HashSet<>();
+        Set<String> failedObjects = new HashSet<>();
         int deletedObjectsCount = 0;
 
         List<List<String>> partitionedKeys = ListUtils.partition(objectKeys, maxObjectsPerPage);
@@ -115,17 +115,15 @@ public class S3ObjectClient {
                     .collect(Collectors.toList());
 
             DeleteObjectsRequest request = new DeleteObjectsRequest(sourceBucket).withKeys(objectKeyVersions).withQuiet(true);
-            Set<String> deletedObjects = s3.deleteObjects(request)
+            Set<String> failedDeletesInCurrentBatch = s3.deleteObjects(request)
                     .getDeletedObjects()
                     .stream()
                     .map(DeleteObjectsResult.DeletedObject::getKey)
                     .collect(Collectors.toSet());
 
-            successfullyDeletedObjects.addAll(deletedObjects);
+            failedObjects.addAll(failedDeletesInCurrentBatch);
         }
 
-        Set<String> failedObjects = new HashSet<>(objectKeys);
-        failedObjects.removeAll(successfullyDeletedObjects);
         return failedObjects;
     }
 }

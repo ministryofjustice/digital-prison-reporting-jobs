@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.client.s3;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -36,6 +35,7 @@ import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInA
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.doThrow;
@@ -101,15 +101,13 @@ class S3ClientTest {
 
     @Test
     void deleteObjectsShouldDeleteObjectsReturningEmptySetWhenNoObjectsFailed() {
-        DeleteObjectsResult.DeletedObject deletedObject = new DeleteObjectsResult.DeletedObject();
-        deletedObject.setKey(SOURCE_KEY);
-
-        when(mockDeleteObjectsResult.getDeletedObjects()).thenReturn(Collections.singletonList(deletedObject));
+        when(mockDeleteObjectsResult.getDeletedObjects()).thenReturn(Collections.emptyList());
         when(mockS3Client.deleteObjects(deleteObjectsRequestCaptor.capture())).thenReturn(mockDeleteObjectsResult);
 
         Set<String> failedObjects = underTest.deleteObjects(Collections.singletonList(SOURCE_KEY), SOURCE_BUCKET);
 
-        List<String> keysToDelete = deleteObjectsRequestCaptor.getValue()
+        DeleteObjectsRequest deleteObjectsRequest = deleteObjectsRequestCaptor.getValue();
+        List<String> keysToDelete = deleteObjectsRequest
                 .getKeys()
                 .stream()
                 .map(DeleteObjectsRequest.KeyVersion::getKey)
@@ -117,6 +115,7 @@ class S3ClientTest {
 
         assertThat(failedObjects, is(empty()));
         assertThat(keysToDelete, containsInAnyOrder(SOURCE_KEY));
+        assertTrue(deleteObjectsRequest.getQuiet());
     }
 
     @Test
@@ -142,7 +141,7 @@ class S3ClientTest {
 
         Set<String> failedObjects = underTest.deleteObjects(objectsKeysToDelete, SOURCE_BUCKET);
 
-        assertThat(failedObjects, containsInAnyOrder("key3"));
+        assertThat(failedObjects, containsInAnyOrder("key1", "key2"));
     }
 
     @Test
