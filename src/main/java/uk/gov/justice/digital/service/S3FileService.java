@@ -33,7 +33,8 @@ public class S3FileService {
     private final S3ObjectClient s3Client;
     private final Clock clock;
     private final RetryPolicy<Void> voidRetryPolicy;
-    private final RetryPolicy<List<FileLastModifiedDate>> retryPolicy;
+    private final RetryPolicy<List<FileLastModifiedDate>> fileListRetryPolicy;
+    private final RetryPolicy<Set<String>> stringSetRetryPolicy;
 
     @Inject
     public S3FileService(
@@ -45,11 +46,12 @@ public class S3FileService {
         this.clock = clock;
         RetryConfig retryConfig = new RetryConfig(jobArguments);
         this.voidRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
-        this.retryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
+        this.fileListRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
+        this.stringSetRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
     }
 
     public List<FileLastModifiedDate> listFiles(String bucket, String sourcePrefix, Pattern fileNameMatchRegex, Duration retentionPeriod) {
-        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(bucket, sourcePrefix, fileNameMatchRegex, retentionPeriod, clock));
+        return Failsafe.with(fileListRetryPolicy).get(() -> s3Client.getObjectsOlderThan(bucket, sourcePrefix, fileNameMatchRegex, retentionPeriod, clock));
     }
 
     public List<FileLastModifiedDate> listFilesBeforePeriod(
@@ -100,29 +102,32 @@ public class S3FileService {
                 }
 
                 Failsafe.with(voidRetryPolicy).run(() -> s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket));
-                if (deleteCopiedFiles) Failsafe.with(voidRetryPolicy).run(() -> s3Client.deleteObject(objectKey, sourceBucket));
             } catch (AmazonServiceException e) {
                 logger.warn("Failed to move S3 object {}", objectKey, e);
                 failedObjects.add(objectKey);
             }
         }
 
-        return failedObjects;
+        if (deleteCopiedFiles && objectKeys.size() != failedObjects.size()) {
+            // Remove objects which failed to be copied from the final list to be deleted
+            List<String> objectsKeysToDelete = objectKeys.stream()
+                    .filter(x -> !failedObjects.contains(x))
+                    .collect(Collectors.toList());
+            Set<String> failedDeleteObjects = deleteObjects(objectsKeysToDelete, sourceBucket);
+            failedObjects.addAll(failedDeleteObjects);
+            return new HashSet<>(failedObjects);
+        } else {
+            return failedObjects;
+        }
     }
 
     public Set<String> deleteObjects(List<String> objectKeys, String sourceBucket) {
-        Set<String> failedObjects = new HashSet<>();
-
-        for (String objectKey : objectKeys) {
-            try {
-                Failsafe.with(voidRetryPolicy).run(() -> s3Client.deleteObject(objectKey, sourceBucket));
-            } catch (AmazonServiceException e) {
-                logger.warn("Failed to delete S3 object {}: {}", objectKey, e.getErrorMessage());
-                failedObjects.add(objectKey);
-            }
+        try {
+            return Failsafe.with(stringSetRetryPolicy).get(() -> s3Client.deleteObjects(objectKeys, sourceBucket));
+        } catch (AmazonServiceException e) {
+            logger.warn("Failed to delete S3 objects: {}", e.getErrorMessage());
+            return new HashSet<>(objectKeys);
         }
-
-        return failedObjects;
     }
 
     private List<FileLastModifiedDate> listFilesBeforePeriod(
@@ -136,7 +141,7 @@ public class S3FileService {
                 configuredTable.left + DELIMITER + configuredTable.right + DELIMITER :
                 sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         logger.info("Listing files before current time - {} in S3 source location {} for table {}", period, sourceBucket, tableKey);
-        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsOlderThan(
+        return Failsafe.with(fileListRetryPolicy).get(() -> s3Client.getObjectsOlderThan(
                 sourceBucket,
                 tableKey,
                 fileNameMatchRegex,
@@ -156,7 +161,7 @@ public class S3FileService {
                 configuredTable.left + DELIMITER + configuredTable.right + DELIMITER :
                 sourcePrefix + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
         logger.info("Listing files after current time - {} in S3 source location {} for table {}", period, sourceBucket, tableKey);
-        return Failsafe.with(retryPolicy).get(() -> s3Client.getObjectsNewerThan(
+        return Failsafe.with(fileListRetryPolicy).get(() -> s3Client.getObjectsNewerThan(
                 sourceBucket,
                 tableKey,
                 fileNameMatchRegex,
