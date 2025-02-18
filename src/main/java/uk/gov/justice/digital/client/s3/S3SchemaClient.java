@@ -86,18 +86,18 @@ public class S3SchemaClient {
     private List<String> listObjects() throws SdkClientException {
         List<String> objectPaths = new LinkedList<>();
 
-        ListObjectsRequest request = new ListObjectsRequest().withBucketName(contractRegistryName).withMaxKeys(maxObjectsPerPage);
+        ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(contractRegistryName).withMaxKeys(maxObjectsPerPage);
 
-        ObjectListing objectList;
+        ListObjectsV2Result objectList;
         do {
-            objectList = s3.listObjects(request);
+            objectList = s3.listObjectsV2(request);
             for (S3ObjectSummary summary : objectList.getObjectSummaries()) {
                 String summaryKey = summary.getKey();
                 if (summaryKey.endsWith(SCHEMA_FILE_EXTENSION)) {
                     objectPaths.add(summaryKey);
                 }
             }
-            request.setMarker(objectList.getNextMarker());
+            request.setContinuationToken(objectList.getNextContinuationToken());
         } while (objectList.isTruncated());
 
         return objectPaths;

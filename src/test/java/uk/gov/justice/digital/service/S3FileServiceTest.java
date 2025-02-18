@@ -3,7 +3,9 @@ package uk.gov.justice.digital.service;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.google.common.collect.ImmutableSet;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.http.entity.ContentType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,7 @@ import uk.gov.justice.digital.client.s3.S3ObjectClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -37,6 +40,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doNothing;
 import static uk.gov.justice.digital.client.s3.S3ObjectClient.DELIMITER;
@@ -51,6 +55,7 @@ class S3FileServiceTest {
     private static final String SOURCE_PREFIX = "source-prefix";
     private static final String DESTINATION_BUCKET = "destination-bucket";
     private static final String DESTINATION_PREFIX = "destination-prefix";
+    private static final String TEST_CONFIG_KEY = "some-config-key";
     private static final long RETENTION_AMOUNT = 2L;
     private static final Duration period = Duration.of(RETENTION_AMOUNT, ChronoUnit.DAYS);
 
@@ -60,11 +65,13 @@ class S3FileServiceTest {
     private JobArguments mockJobArguments;
     @Captor
     ArgumentCaptor<List<String>> deleteObjectsArgCaptor;
+    @Captor
+    ArgumentCaptor<byte[]> saveObjectDataCaptor;
 
     private S3FileService undertest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockS3Client, mockJobArguments);
         givenConfiguredRetriesJobArgs(1, mockJobArguments);
         undertest = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
@@ -202,99 +209,6 @@ class S3FileServiceTest {
         assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period));
 
         verify(mockS3Client, times(numRetries)).getObjectsOlderThan(any(), any(), any(), any(), any());
-    }
-
-    @Test
-    void listFilesAfterPeriodShouldReturnEmptyListWhenThereAreNoParquetFilesForConfiguredTables() {
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
-                ImmutablePair.of("schema_1", "table_1"),
-                ImmutablePair.of("schema_2", "table_2")
-        );
-
-        when(mockS3Client.getObjectsNewerThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
-
-        List<FileLastModifiedDate> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
-
-        assertThat(result, is(empty()));
-    }
-
-    @Test
-    void listFilesAfterPeriodShouldListFilesInFolderPrefix() {
-        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
-
-        undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated());
-
-        String folder = SOURCE_PREFIX + DELIMITER + configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
-        verify(mockS3Client).getObjectsNewerThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(period.negated()), any());
-    }
-
-    @Test
-    void listFilesAfterPeriodShouldListFilesWhenNoFolderPrefixIsGiven() {
-        ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable);
-
-        undertest.listFilesAfterPeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, period.negated());
-
-        String folder = configuredTable.left + DELIMITER + configuredTable.right + DELIMITER;
-        verify(mockS3Client).getObjectsNewerThan(eq(SOURCE_BUCKET), eq(folder), any(), eq(period.negated()), any());
-    }
-
-    @Test
-    void listFilesAfterPeriodShouldReturnListOfParquetFilesRelatedToConfiguredTables() {
-        String configuredTable1 = "schema_1/table_1";
-        String configuredTable2 = "schema_2/table_2";
-
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
-                ImmutablePair.of("schema_1", "table_1"),
-                ImmutablePair.of("schema_2", "table_2")
-        );
-
-        List<String> expectedFilesForTable1 = new ArrayList<>();
-        expectedFilesForTable1.add("file1.parquet");
-        expectedFilesForTable1.add("file2.parquet");
-        expectedFilesForTable1.add("file3.parquet");
-
-        List<String> expectedFilesForTable2 = new ArrayList<>();
-        expectedFilesForTable2.add("file4.parquet");
-        expectedFilesForTable2.add("file5.parquet");
-
-        when(mockS3Client.getObjectsNewerThan(
-                SOURCE_BUCKET,
-                SOURCE_PREFIX + DELIMITER + configuredTable1 + DELIMITER,
-                parquetFileRegex,
-                period.negated(),
-                fixedClock)).thenReturn(createFileSummaries(expectedFilesForTable1));
-
-        when(mockS3Client.getObjectsNewerThan(
-                SOURCE_BUCKET,
-                SOURCE_PREFIX + DELIMITER + configuredTable2 + DELIMITER,
-                parquetFileRegex,
-                period.negated(),
-                fixedClock)).thenReturn(createFileSummaries(expectedFilesForTable2));
-
-        List<String> result = undertest.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated())
-                .stream().map(x -> x.key).collect(Collectors.toList());
-
-        List<String> expectedResult = new ArrayList<>();
-        expectedResult.addAll(expectedFilesForTable1);
-        expectedResult.addAll(expectedFilesForTable2);
-
-        assertThat(result, containsInAnyOrder(expectedResult.toArray()));
-    }
-
-    @Test
-    void listFilesAfterPeriodShouldRetryWhenErrorOccursDuringListingOfFiles() {
-        int numRetries = 2;
-        givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObjectsNewerThan(any(), any(), any(), any(), any());
-
-        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
-
-        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesAfterPeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period.negated()));
-
-        verify(mockS3Client, times(numRetries)).getObjectsNewerThan(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -518,6 +432,80 @@ class S3FileServiceTest {
         s3FileService.deleteObjects(objectKeys, SOURCE_BUCKET);
 
         verify(mockS3Client, times(numRetries)).deleteObjects(any(), any());
+    }
+
+    @Test
+    void getPreviousArchivedKeysShouldReturnEmptySetWhenAnErrorOccursReadingFile() {
+        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObject(SOURCE_BUCKET, "last-archived-files/" + TEST_CONFIG_KEY + "/archived.txt");
+
+        Set<String> previouslyArchivedKeys = undertest.getPreviousArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY);
+
+        assertThat(previouslyArchivedKeys, is(empty()));
+    }
+
+    @Test
+    void getPreviousArchivedKeysShouldReturnSetOfPreviouslyArchivedKeys() {
+        Set<String> expectedKeys = new HashSet<>();
+        expectedKeys.add("file1");
+        expectedKeys.add("file2");
+        expectedKeys.add("file3");
+
+        when(mockS3Client.getObject(SOURCE_BUCKET, "last-archived-files/" + TEST_CONFIG_KEY + "/archived.txt"))
+                .thenReturn("file1 \nfile2\nfile3 ");
+
+        Set<String> previouslyArchivedKeys = undertest.getPreviousArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY);
+
+        assertThat(previouslyArchivedKeys, containsInAnyOrder(expectedKeys.toArray()));
+    }
+
+    @Test
+    void getPreviousArchivedKeysShouldRetryWhenAnErrorOccursWhileReadingArchivedKeys() {
+        int numRetries = 2;
+        givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
+        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObject(any(), any());
+
+        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+        s3FileService.getPreviousArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY);
+
+        verify(mockS3Client, times(numRetries)).getObject(any(), any());
+    }
+
+    @Test
+    void saveArchivedKeysShouldSavePreviouslyArchivedKeys() {
+        List<String> keysToSave = new ArrayList<>();
+        keysToSave.add("file1");
+        keysToSave.add("file2");
+        keysToSave.add("file3");
+
+        String archivedKeysPath = "last-archived-files/" + TEST_CONFIG_KEY + "/archived.txt";
+        doNothing().when(mockS3Client).saveObject(eq(SOURCE_BUCKET), eq(archivedKeysPath), saveObjectDataCaptor.capture(), eq(ContentType.DEFAULT_TEXT));
+
+        undertest.saveArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY, keysToSave);
+
+        assertEquals(
+                "file1\nfile2\nfile3",
+                IOUtils.toString(saveObjectDataCaptor.getValue(), StandardCharsets.UTF_8.name())
+        );
+    }
+
+    @Test
+    void saveArchivedKeysShouldRetryWhenAnErrorOccursWhileSavingArchivedKeys() {
+        int numRetries = 2;
+        givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
+        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).saveObject(any(), any(), any(), any());
+
+        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+        s3FileService.saveArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY, Collections.singletonList("file1"));
+
+        verify(mockS3Client, times(numRetries)).saveObject(any(), any(), any(), any());
+    }
+
+    @Test
+    void saveArchivedKeysShouldNotSaveArchivedKeysWhenGivenAnEmptyListOfKeys() {
+        S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+        s3FileService.saveArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY, Collections.emptyList());
+
+        verify(mockS3Client, never()).saveObject(any(), any(), any(), any());
     }
 
     @NotNull
