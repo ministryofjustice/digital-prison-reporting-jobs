@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.ConfigServiceException;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.MaintenanceService;
@@ -39,6 +40,8 @@ class CompactionJobTest extends BaseSparkTest {
     @Mock
     private JobArguments arguments;
     @Mock
+    private JobProperties properties;
+    @Mock
     private ConfigService configService;
     @Mock
     private MaintenanceService maintenanceService;
@@ -55,8 +58,8 @@ class CompactionJobTest extends BaseSparkTest {
 
     @BeforeEach
     public void setupTest() {
-        reset(arguments, configService, maintenanceService);
-        underTest = new CompactionJob(maintenanceService, configService, sparkSessionProvider, arguments);
+        reset(arguments, configService, maintenanceService, properties);
+        underTest = new CompactionJob(maintenanceService, configService, sparkSessionProvider, arguments, properties);
     }
 
     @Test
@@ -64,6 +67,8 @@ class CompactionJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
         when(configService.getConfiguredTables(TEST_CONFIG_KEY))
                 .thenReturn(ImmutableSet.of(ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_1), ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_2)));
         doNothing().when(maintenanceService).compactDeltaTables(eq(spark), deltaPathCaptor.capture(), eq(0));
@@ -83,6 +88,8 @@ class CompactionJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.empty());
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
         doNothing().when(maintenanceService).compactDeltaTables(eq(spark), any(), eq(RECURSE_MAX_DEPTH));
 
         underTest.run();
@@ -96,6 +103,8 @@ class CompactionJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
         doThrow(new ConfigServiceException("config error")).when(configService).getConfiguredTables(TEST_CONFIG_KEY);
 
         assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
@@ -108,6 +117,8 @@ class CompactionJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
         when(configService.getConfiguredTables(TEST_CONFIG_KEY))
                 .thenReturn(ImmutableSet.of(ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_1), ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_2)));
         doThrow(new RuntimeException("Maintenance service exception"))
@@ -121,6 +132,8 @@ class CompactionJobTest extends BaseSparkTest {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.empty());
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
         doThrow(new RuntimeException("Maintenance service exception"))
                 .when(maintenanceService).compactDeltaTables(eq(spark), any(), eq(RECURSE_MAX_DEPTH));
 

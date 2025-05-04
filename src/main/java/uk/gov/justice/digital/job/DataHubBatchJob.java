@@ -1,12 +1,10 @@
 package uk.gov.justice.digital.job;
 
-import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 
 @Singleton
@@ -72,28 +69,7 @@ public class DataHubBatchJob implements Runnable {
     @Override
     public void run() {
         val startTime = System.currentTimeMillis();
-
-        logger.info("Running DataHubBatchJob");
-        try {
-            boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
-            if(runLocal) {
-                logger.info("Running locally");
-                SparkConf sparkConf = new SparkConf().setAppName("DataHubBatchJob local").setMaster("local[*]");
-                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, arguments);
-                runJob(spark);
-            } else {
-                logger.info("Running in Glue");
-                String jobName = properties.getSparkJobName();
-                val glueContext = sparkSessionProvider.createGlueContext(jobName, arguments);
-                Job.init(jobName, glueContext, arguments.getConfig());
-                SparkSession spark = glueContext.getSparkSession();
-                runJob(spark);
-                Job.commit();
-            }
-        } catch (Exception e) {
-            logger.error("Caught exception during job run", e);
-            System.exit(1);
-        }
+        SparkJobRunner.run("DataHubBatchJob", arguments, properties, sparkSessionProvider, logger, this::runJob);
         logger.info("DataHubBatchJob completed in {}ms", System.currentTimeMillis() - startTime);
     }
 

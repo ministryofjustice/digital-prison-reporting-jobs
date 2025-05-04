@@ -73,6 +73,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     @Mock
     private JobArguments arguments;
     @Mock
+    private JobProperties properties;
+    @Mock
     private SourceReferenceService sourceReferenceService;
     @Mock
     private ConfigService configService;
@@ -189,6 +191,8 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
         when(arguments.streamingJobMaxFilePerTrigger()).thenReturn(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER);
         when(arguments.getOperationalDataStoreGlueConnectionName()).thenReturn("operational-datastore-connection-name");
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
     }
 
     private void whenTheJobRuns() {
@@ -211,7 +215,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
-                new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
+                new OperationalDataStoreRepository(arguments, properties, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccessService operationalDataStoreDataAccessService =
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =

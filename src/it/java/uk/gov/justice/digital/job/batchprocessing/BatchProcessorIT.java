@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -57,6 +58,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
     @Mock
     private JobArguments arguments;
+    @Mock
+    private JobProperties properties;
     @Mock
     private SourceReference sourceReference;
     @Mock
@@ -271,6 +274,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         givenRetrySettingsAreConfigured(arguments);
         when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
         when(arguments.getOperationalDataStoreGlueConnectionName()).thenReturn("operational-datastore-connection");
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
     }
 
     private void givenS3BatchProcessorDependenciesAreInjected() {
@@ -284,7 +289,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
-                new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
+                new OperationalDataStoreRepository(arguments, properties, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccessService operationalDataStoreDataAccessService =
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =

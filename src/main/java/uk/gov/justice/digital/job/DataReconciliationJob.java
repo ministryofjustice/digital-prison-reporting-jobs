@@ -1,9 +1,6 @@
 package uk.gov.justice.digital.job;
 
-import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
-import lombok.val;
-import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +12,6 @@ import uk.gov.justice.digital.service.datareconciliation.DataReconciliationServi
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 
 import javax.inject.Inject;
-
-import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 
 /**
  * Job that runs data reconciliation in the DataHub.
@@ -50,29 +45,7 @@ public class DataReconciliationJob implements Runnable {
 
     @Override
     public void run() {
-        logger.info("Running DataReconciliationJob");
-        try {
-            boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
-            if (runLocal) {
-                logger.info("Running locally");
-                SparkConf sparkConf = new SparkConf().setAppName("DataReconciliationJob local").setMaster("local[*]");
-                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, jobArguments);
-                runJob(spark);
-            } else {
-                logger.info("Running in Glue");
-                String jobName = properties.getSparkJobName();
-                val glueContext = sparkSessionProvider.createGlueContext(jobName, jobArguments);
-                Job.init(jobName, glueContext, jobArguments.getConfig());
-                SparkSession spark = glueContext.getSparkSession();
-                runJob(spark);
-                Job.commit();
-            }
-        } catch (Exception e) {
-            logger.error("Caught exception during job run", e);
-            System.exit(1);
-        }
-
-        logger.info("DataReconciliationJob completed successfully");
+        SparkJobRunner.run("DataReconciliationJob", jobArguments, properties, sparkSessionProvider, logger, this::runJob);
     }
 
     @VisibleForTesting

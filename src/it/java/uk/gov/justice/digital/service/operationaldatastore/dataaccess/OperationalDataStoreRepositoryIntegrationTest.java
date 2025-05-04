@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
@@ -32,6 +33,8 @@ public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest
     @Mock
     private JobArguments jobArguments;
     @Mock
+    private JobProperties properties;
+    @Mock
     private JDBCGlueConnectionDetailsService connectionDetailsService;
 
     private OperationalDataStoreRepository underTest;
@@ -52,7 +55,10 @@ public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest
     void setUp() {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         when(jobArguments.getOperationalDataStoreGlueConnectionName()).thenReturn("operational-datastore-connection-name");
-        underTest = new OperationalDataStoreRepository(jobArguments, connectionDetailsService, sparkSessionProvider);
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
+
+        underTest = new OperationalDataStoreRepository(jobArguments, properties, connectionDetailsService, sparkSessionProvider);
     }
 
     @Test
