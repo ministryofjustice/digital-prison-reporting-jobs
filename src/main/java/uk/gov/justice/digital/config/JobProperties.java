@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.config;
 
+import jakarta.inject.Inject;
+
 import javax.inject.Singleton;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +35,7 @@ public class JobProperties {
         config.forEach(System::setProperty);
     }
 
+    @Inject
     public JobProperties() {}
 
 }
