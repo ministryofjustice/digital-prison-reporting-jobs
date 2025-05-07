@@ -20,6 +20,7 @@ import scala.Option;
 import scala.collection.Seq;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
@@ -86,6 +87,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     @Mock
     private JobArguments arguments;
+    @Mock
+    private JobProperties properties;
     @Mock
     private S3DataProvider dataProvider;
     @Mock
@@ -403,6 +406,8 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         when(arguments.getBroadcastTimeoutSeconds()).thenReturn(DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
         lenient().when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
         when(arguments.getOperationalDataStoreGlueConnectionName()).thenReturn("operational-datastore-connection-name");
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
     }
 
     private void givenAMatchingSchema() {
@@ -504,7 +509,7 @@ public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
-                new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
+                new OperationalDataStoreRepository(arguments, properties, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccessService operationalDataStoreDataAccessService =
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =

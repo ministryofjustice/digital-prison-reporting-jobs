@@ -65,6 +65,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     @Mock
     private JobArguments arguments;
     @Mock
+    private JobProperties properties;
+    @Mock
     private SourceReferenceService sourceReferenceService;
     @Mock
     private ConfigService configService;
@@ -144,6 +146,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenRetrySettingsAreConfigured(arguments);
         when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
         when(arguments.getOperationalDataStoreGlueConnectionName()).thenReturn("operational-datastore-connection-name");
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
     }
 
     private void whenTheJobRuns() {
@@ -152,7 +156,6 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
     private void givenDependenciesAreInjected() {
         // Manually creating dependencies because Micronaut test injection is not working
-        JobProperties properties = new JobProperties();
         SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         DataStorageService storageService = new DataStorageService(arguments);
@@ -164,7 +167,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
-                new OperationalDataStoreRepository(arguments, connectionDetailsService, sparkSessionProvider);
+                new OperationalDataStoreRepository(arguments, properties, connectionDetailsService, sparkSessionProvider);
         OperationalDataStoreDataAccessService operationalDataStoreDataAccessService =
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =

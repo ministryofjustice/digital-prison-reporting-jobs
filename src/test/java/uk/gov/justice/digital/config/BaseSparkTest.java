@@ -47,7 +47,8 @@ public class BaseSparkTest {
 
 	private static SparkSession createSparkSession() {
 		JobArguments arguments = new JobArguments(ImmutableMap.of(LOG_LEVEL, "info"));
-		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration, arguments);
+		JobProperties properties = new JobProperties(ImmutableMap.of("spark.driver.memory", "2g", "spark.executor.memory", "2g"));
+		return spark = sparkSessionProvider.getConfiguredSparkSession(sparkTestConfiguration, arguments, properties);
 	}
 
 	@BeforeAll

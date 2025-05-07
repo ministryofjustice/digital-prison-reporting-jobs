@@ -8,6 +8,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
 import uk.gov.justice.digital.datahub.model.JDBCGlueConnectionDetails;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
@@ -31,11 +32,12 @@ public class OperationalDataStoreRepository {
     @Inject
     public OperationalDataStoreRepository(
             JobArguments jobArguments,
+            JobProperties properties,
             JDBCGlueConnectionDetailsService connectionDetailsService,
             SparkSessionProvider sparkSessionProvider
     ) {
         this.jobArguments = jobArguments;
-        this.sparkSession = sparkSessionProvider.getConfiguredSparkSession(jobArguments);
+        this.sparkSession = sparkSessionProvider.getConfiguredSparkSession(jobArguments, properties);
         String connectionName = jobArguments.getOperationalDataStoreGlueConnectionName();
         JDBCGlueConnectionDetails connectionDetails = connectionDetailsService.getConnectionDetails(connectionName);
         jdbcUrl = connectionDetails.getUrl();

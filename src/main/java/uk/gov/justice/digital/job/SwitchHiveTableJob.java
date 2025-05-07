@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.HiveTableService;
@@ -24,18 +25,21 @@ public class SwitchHiveTableJob implements Runnable {
     private final HiveTableService hiveTableService;
     private final SparkSessionProvider sparkSessionProvider;
     private final JobArguments jobArguments;
+    private final JobProperties jobProperties;
 
     @Inject
     public SwitchHiveTableJob(
             ConfigService configService,
             HiveTableService hiveTableService,
             SparkSessionProvider sparkSessionProvider,
-            JobArguments jobArguments
+            JobArguments jobArguments,
+            JobProperties jobProperties
     ) {
         this.configService = configService;
         this.hiveTableService = hiveTableService;
         this.sparkSessionProvider = sparkSessionProvider;
         this.jobArguments = jobArguments;
+        this.jobProperties = jobProperties;
     }
 
     public static void main(String[] args) {
@@ -46,7 +50,7 @@ public class SwitchHiveTableJob implements Runnable {
     public void run() {
         try {
             logger.info("SwitchHiveTableJob running");
-            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments);
+            SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(jobArguments, jobProperties);
 
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(jobArguments.getConfigKey());

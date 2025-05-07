@@ -175,6 +175,7 @@ public class JobArguments {
     public static final Long DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT = 2L;
     public static final String RAW_FILE_RETENTION_PERIOD_UNIT = "dpr.raw.file.retention.period.unit";
     static final String DEFAULT_RAW_FILE_RETENTION_PERIOD_UNIT = "days";
+    public static final String ADJUST_SPARK_MEMORY = "dpr.adjust.spark.memory";
     private final Map<String, String> config;
 
     @Inject
@@ -571,6 +572,10 @@ public class JobArguments {
 
     public long getReconciliationCurrentStateCountsToleranceAbsolute() {
         return getArgument(RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE_DEFAULT);
+    }
+
+    public boolean adjustSparkMemory() {
+        return getArgument(ADJUST_SPARK_MEMORY, false);
     }
 
     private String getArgument(String argumentName) {

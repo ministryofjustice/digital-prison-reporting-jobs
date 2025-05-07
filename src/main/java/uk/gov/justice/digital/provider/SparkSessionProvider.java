@@ -5,6 +5,7 @@ import jakarta.inject.Singleton;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 
 import java.time.ZoneOffset;
 import java.util.TimeZone;
@@ -12,29 +13,33 @@ import java.util.TimeZone;
 @Singleton
 public class SparkSessionProvider {
 
-    public GlueContext createGlueContext(String jobName, JobArguments arguments) {
+    public GlueContext createGlueContext(String jobName, JobArguments arguments, JobProperties properties) {
         SparkConf sparkConf = new SparkConf().setAppName(jobName);
-        SparkSession sparkSession = getConfiguredSparkSession(sparkConf, arguments);
+        SparkSession sparkSession = getConfiguredSparkSession(sparkConf, arguments, properties);
         return new GlueContext(sparkSession.sparkContext());
     }
 
-    public SparkSession getConfiguredSparkSession(SparkConf sparkConf, JobArguments arguments) {
+    public SparkSession getConfiguredSparkSession(SparkConf sparkConf, JobArguments arguments, JobProperties properties) {
 
-        configureSparkConf(sparkConf, arguments);
+        configureSparkConf(sparkConf, arguments, properties);
 
         return SparkSession.builder()
                                 .config(sparkConf)
                                 .enableHiveSupport()
                                 .getOrCreate();
     }
-    public SparkSession getConfiguredSparkSession(JobArguments arguments) {
-        return getConfiguredSparkSession(new SparkConf(), arguments);
+    public SparkSession getConfiguredSparkSession(JobArguments arguments, JobProperties properties) {
+        return getConfiguredSparkSession(new SparkConf(), arguments, properties);
     }
 
-    public static void configureSparkConf(SparkConf sparkConf, JobArguments arguments) {
+    public static void configureSparkConf(SparkConf sparkConf, JobArguments arguments, JobProperties properties) {
         // We set the overall default timezone to UTC before then configuring the spark session to also use UTC.
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneOffset.UTC));
+        String driverMemory = getSparkMemory(arguments, properties.getSparkDriverMemory());
+        String executorMemory = getSparkMemory(arguments, properties.getSparkExecutorMemory());
         sparkConf
+                .set("spark.driver.memory", driverMemory)
+                .set("spark.executor.memory", executorMemory)
                 .set("spark.databricks.delta.autoCompact.enabled", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
@@ -58,6 +63,25 @@ public class SparkSessionProvider {
             sparkConf
                     .set("spark.sql.autoBroadcastJoinThreshold", "-1")
                     .set("spark.sql.adaptive.autoBroadcastJoinThreshold", "-1");
+        }
+    }
+
+    private static String getSparkMemory(JobArguments arguments, String memory) {
+        return arguments.adjustSparkMemory() ? getAdjustedWorkerMemory(memory) : memory;
+    }
+
+    private static String getAdjustedWorkerMemory(String memory) {
+        switch (memory) {
+            case "10g":
+                return "12g";
+            case "20g":
+                return "24g";
+            case "40g":
+                return "48g";
+            case "80g":
+                return "96g";
+            default:
+                return memory;
         }
     }
 

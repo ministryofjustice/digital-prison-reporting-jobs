@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
@@ -73,6 +74,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
     private SourceReference sourceReference;
     @Mock
     private JobArguments jobArguments;
+    @Mock
+    private JobProperties properties;
 
     private OperationalDataStoreService underTest;
 
@@ -114,6 +117,8 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
         destinationTableName = operationalDataStoreTableName(inputSchemaName, inputTableName);
         destinationTableNameWithSchema = operationalDataStoreTableNameWithSchema(namespace, inputSchemaName, inputTableName);
         when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn(loadingSchemaName);
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
 
         givenSchemaExists(configurationSchema, testQueryConnection);
         givenSchemaExists(loadingSchemaName, testQueryConnection);
@@ -125,7 +130,7 @@ public class OperationalDataStoreServiceIntegrationTest extends BaseSparkTest {
 
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
-                new OperationalDataStoreRepository(jobArguments, mockConnectionDetailsService, sparkSessionProvider);
+                new OperationalDataStoreRepository(jobArguments, properties, mockConnectionDetailsService, sparkSessionProvider);
         underTest = new OperationalDataStoreServiceImpl(
                 jobArguments,
                 new OperationalDataStoreTransformation(),

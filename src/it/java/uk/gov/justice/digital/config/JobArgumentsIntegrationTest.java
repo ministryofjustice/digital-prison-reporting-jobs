@@ -101,6 +101,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, "12" },
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.01" },
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, "5" },
+            { JobArguments.ADJUST_SPARK_MEMORY, "true" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -168,6 +169,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationCurrentStateCountsToleranceAbsolute()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationChangeDataCountsToleranceAbsolute()) },
+                { JobArguments.ADJUST_SPARK_MEMORY, validArguments.adjustSparkMemory() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -753,6 +755,14 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(0L, jobArguments.getReconciliationCurrentStateCountsToleranceAbsolute());
+    }
+
+    @Test
+    void adjustSparkMemoryShouldDefaultToFalse() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.ADJUST_SPARK_MEMORY);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.adjustSparkMemory());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

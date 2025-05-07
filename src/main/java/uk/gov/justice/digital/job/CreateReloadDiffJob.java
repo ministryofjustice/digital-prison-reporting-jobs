@@ -1,10 +1,8 @@
 package uk.gov.justice.digital.job;
 
-import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.slf4j.Logger;
@@ -26,7 +24,6 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
-import static uk.gov.justice.digital.config.JobProperties.SPARK_JOB_NAME_PROPERTY;
 
 /**
  * Job that creates a diff between the raw and archived data.
@@ -71,29 +68,7 @@ public class CreateReloadDiffJob implements Runnable {
 
     @Override
     public void run() {
-        logger.info("Running CreateReloadDiffJob");
-        try {
-            boolean runLocal = System.getProperty(SPARK_JOB_NAME_PROPERTY) == null;
-            if (runLocal) {
-                logger.info("Running locally");
-                SparkConf sparkConf = new SparkConf().setAppName("CreateReloadDiffJob local").setMaster("local[*]");
-                SparkSession spark = sparkSessionProvider.getConfiguredSparkSession(sparkConf, jobArguments);
-                runJob(spark);
-            } else {
-                logger.info("Running in Glue");
-                String jobName = properties.getSparkJobName();
-                val glueContext = sparkSessionProvider.createGlueContext(jobName, jobArguments);
-                Job.init(jobName, glueContext, jobArguments.getConfig());
-                SparkSession spark = glueContext.getSparkSession();
-                runJob(spark);
-                Job.commit();
-            }
-        } catch (Exception e) {
-            logger.error("Caught exception during job run", e);
-            System.exit(1);
-        }
-
-        logger.info("CreateReloadDiffJob completed");
+        SparkJobRunner.run("CreateReloadDiffJob", jobArguments, properties, sparkSessionProvider, logger, this::runJob);
     }
 
     @VisibleForTesting

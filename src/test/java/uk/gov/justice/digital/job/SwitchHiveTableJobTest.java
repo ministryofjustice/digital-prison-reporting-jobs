@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
@@ -41,6 +42,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     private HiveTableService mockHiveTableService;
     @Mock
     private JobArguments mockJobArguments;
+    @Mock
+    private JobProperties mockJobProperties;
     @Captor
     private ArgumentCaptor<ImmutableSet<ImmutablePair<String, String>>> argumentCaptor;
 
@@ -50,9 +53,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
 
     @BeforeEach
     public void setup() {
-        reset(mockConfigService, mockHiveTableService, mockJobArguments);
-
-        underTest = new SwitchHiveTableJob(mockConfigService, mockHiveTableService, sparkSessionProvider, mockJobArguments);
+        reset(mockConfigService, mockHiveTableService, mockJobArguments, mockJobProperties);
+        underTest = new SwitchHiveTableJob(mockConfigService, mockHiveTableService, sparkSessionProvider, mockJobArguments, mockJobProperties);
     }
 
     @Test
@@ -63,6 +65,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
         expectedTables.add(new ImmutablePair<>("schema_2", "table_3"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
+        when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(expectedTables));
         when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), argumentCaptor.capture())).thenReturn(Collections.emptySet());
 
@@ -76,6 +80,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
         ImmutableSet<ImmutablePair<String, String>> failedTables = ImmutableSet.of(ImmutablePair.of("schema", "failed-table-1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
+        when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(failedTables));
         when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), any())).thenReturn(failedTables);
 
@@ -87,6 +93,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
         ImmutableSet<ImmutablePair<String, String>> table = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
+        when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(table));
         when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), any())).thenThrow(new HiveSchemaServiceException("Schema service exception"));
 
@@ -96,6 +104,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     @Test
     public void shouldFailWhenConfigServiceThrowsAnException() throws Exception {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
+        when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
+        when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new RuntimeException("Config service error"));
 
         SystemLambda.catchSystemExit(() -> underTest.run());
