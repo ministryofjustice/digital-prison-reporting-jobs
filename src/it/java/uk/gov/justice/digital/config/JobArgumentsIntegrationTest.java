@@ -32,6 +32,7 @@ import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_SQL_MAX_RECORDS_PER_FILE;
 import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_CHECKS_TO_RUN_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT;
@@ -102,6 +103,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.01" },
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, "5" },
             { JobArguments.ADJUST_SPARK_MEMORY, "true" },
+            { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, "50000" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -170,6 +172,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationChangeDataCountsToleranceAbsolute()) },
                 { JobArguments.ADJUST_SPARK_MEMORY, validArguments.adjustSparkMemory() },
+                { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, Integer.toString(validArguments.getSparkSqlMaxRecordsPerFile()) },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -560,7 +563,15 @@ class JobArgumentsIntegrationTest {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(jobArguments.getBroadcastTimeoutSeconds(), DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
+        assertEquals(DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS, jobArguments.getBroadcastTimeoutSeconds());
+    }
+
+    @Test
+    public void defaultSparkSqlMaxRecordsPerFileWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(DEFAULT_SPARK_SQL_MAX_RECORDS_PER_FILE, jobArguments.getSparkSqlMaxRecordsPerFile());
     }
 
     @Test

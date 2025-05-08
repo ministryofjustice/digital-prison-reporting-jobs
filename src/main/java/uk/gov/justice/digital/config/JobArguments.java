@@ -143,6 +143,8 @@ public class JobArguments {
     static final long DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS = 60;
     static final String SPARK_BROADCAST_TIMEOUT_SECONDS = "dpr.spark.broadcast.timeout.seconds";
     public static final Integer DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS = 300;
+    static final String SPARK_SQL_MAX_RECORDS_PER_FILE = "dpr.spark.sql.maxrecordsperfile";
+    public static final int DEFAULT_SPARK_SQL_MAX_RECORDS_PER_FILE = 100000;
     static final String DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD = "dpr.disable.auto.broadcast.join.threshold";
     static final String GLUE_TRIGGER_NAME = "dpr.glue.trigger.name";
     static final String ACTIVATE_GLUE_TRIGGER = "dpr.glue.trigger.activate";
@@ -493,6 +495,10 @@ public class JobArguments {
 
     public Integer getBroadcastTimeoutSeconds() {
         return getArgument(SPARK_BROADCAST_TIMEOUT_SECONDS, DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS);
+    }
+
+    public Integer getSparkSqlMaxRecordsPerFile() {
+        return getArgument(SPARK_SQL_MAX_RECORDS_PER_FILE, DEFAULT_SPARK_SQL_MAX_RECORDS_PER_FILE);
     }
 
     public boolean disableAutoBroadcastJoinThreshold() {
