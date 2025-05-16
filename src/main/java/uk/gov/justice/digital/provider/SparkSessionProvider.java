@@ -74,13 +74,13 @@ public class SparkSessionProvider {
     private static String getAdjustedWorkerMemory(String memory) {
         switch (memory) {
             case "10g":
-                return "12g";
+                return "11g";
             case "20g":
-                return "24g";
+                return "22g";
             case "40g":
-                return "48g";
+                return "44g";
             case "80g":
-                return "96g";
+                return "88g";
             default:
                 return memory;
         }
