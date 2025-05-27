@@ -1,10 +1,13 @@
 package uk.gov.justice.digital.client.dms;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.databasemigrationservice.AWSDatabaseMigrationService;
 import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksRequest;
 import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksResult;
 import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsRequest;
 import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsResult;
+import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskRequest;
+import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskResult;
 import com.amazonaws.services.databasemigrationservice.model.Filter;
 import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
@@ -35,6 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class DmsClientTest {
@@ -55,8 +59,11 @@ class DmsClientTest {
     private ArgumentCaptor<StopReplicationTaskRequest> stopReplicationTaskRequestCaptor;
     @Captor
     private ArgumentCaptor<DescribeTableStatisticsRequest> describeTableStatisticsRequestCaptor;
+    @Captor
+    private ArgumentCaptor<ModifyReplicationTaskRequest> modifyReplicationTaskRequestCaptor;
 
     private static final String TEST_TASK_ID = "test_task_id";
+    private static final String TASK_TASK_ARN = "test_replication_task_arn";
     private static final int WAIT_INTERVAL_SECONDS = 1;
     private static final int MAX_ATTEMPTS = 1;
 
@@ -64,7 +71,7 @@ class DmsClientTest {
 
     @BeforeEach
     public void setup() {
-        reset(mockClientProvider, mockDmsClient, mockDescribeReplicationTasksResult, mockStopReplicationTaskResult);
+        reset(mockClientProvider, mockDmsClient, mockDescribeReplicationTasksResult, mockStopReplicationTaskResult, mockDescribeTableStatisticsResult);
 
         when(mockClientProvider.getClient()).thenReturn(mockDmsClient);
         underTest = new DmsClient(mockClientProvider);
@@ -201,6 +208,64 @@ class DmsClientTest {
         when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
 
         assertThrows(DmsClientException.class, () -> underTest.getReplicationTaskTableStatistics(TEST_TASK_ID));
+    }
+
+    @Test
+    void updateCdcTaskStartTimeShouldSetTheStartTimeOfCdcTask() {
+        Date cdcStartTime = new Date();
+
+        ReplicationTask cdcReplicationTask = new ReplicationTask().withReplicationTaskArn(TASK_TASK_ARN);
+        DescribeReplicationTasksResult describeReplicationTasksResult = new DescribeReplicationTasksResult()
+                .withReplicationTasks(Collections.singletonList(cdcReplicationTask));
+
+        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(describeReplicationTasksResult);
+        when(mockDmsClient.modifyReplicationTask(modifyReplicationTaskRequestCaptor.capture()))
+                .thenReturn(new ModifyReplicationTaskResult());
+
+        underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID);
+
+        ModifyReplicationTaskRequest modifyReplicationTaskRequest = modifyReplicationTaskRequestCaptor.getValue();
+        assertThat(modifyReplicationTaskRequest.getReplicationTaskArn(), equalTo(TASK_TASK_ARN));
+        assertThat(modifyReplicationTaskRequest.getReplicationTaskIdentifier(), equalTo(TEST_TASK_ID));
+        assertThat(modifyReplicationTaskRequest.getCdcStartTime(), equalTo(cdcStartTime));
+    }
+
+    @Test
+    void updateCdcTaskStartTimeShouldThrowExceptionWhenNoReplicationTaskIsFound() {
+        Date cdcStartTime = new Date();
+        List<ReplicationTask> tasks = Collections.emptyList();
+
+        DescribeReplicationTasksResult describeReplicationTasksResult = new DescribeReplicationTasksResult()
+                .withReplicationTasks(tasks);
+
+        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(describeReplicationTasksResult);
+
+        assertThrows(DmsClientException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
+        verifyNoMoreInteractions(mockDmsClient);
+    }
+
+    @Test
+    void updateCdcTaskStartTimeShouldThrowExceptionWhenDescribingReplicationTasksFails() {
+        Date cdcStartTime = new Date();
+
+        doThrow(new AmazonServiceException("Client exception")).when(mockDmsClient).describeReplicationTasks(any());
+
+        assertThrows(AmazonServiceException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
+        verifyNoMoreInteractions(mockDmsClient);
+    }
+
+    @Test
+    void updateCdcTaskStartTimeShouldThrowExceptionWhenModifyingReplicationTaskFails() {
+        Date cdcStartTime = new Date();
+
+        ReplicationTask cdcReplicationTask = new ReplicationTask().withReplicationTaskArn(TASK_TASK_ARN);
+        DescribeReplicationTasksResult describeReplicationTasksResult = new DescribeReplicationTasksResult()
+                .withReplicationTasks(Collections.singletonList(cdcReplicationTask));
+
+        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(describeReplicationTasksResult);
+        doThrow(new AmazonServiceException("Client exception")).when(mockDmsClient).modifyReplicationTask(any());
+
+        assertThrows(AmazonServiceException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
     }
 
     private static void verifyDescribeReplicationTasksRequestParams(DescribeReplicationTasksRequest describeReplicationTasksRequest) {
