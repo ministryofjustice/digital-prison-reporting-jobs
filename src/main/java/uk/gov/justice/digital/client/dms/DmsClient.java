@@ -8,10 +8,10 @@ import com.amazonaws.services.databasemigrationservice.model.Filter;
 import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
 import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
+import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskRequest;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DmsClientException;
@@ -56,6 +56,25 @@ public class DmsClient {
         );
     }
 
+    public void updateCdcTaskStartTime(Date cdcStartTime, String cdcTaskId) {
+        Optional<ReplicationTask> optionalTask = getTask(cdcTaskId);
+
+        if (optionalTask.isPresent()) {
+            ReplicationTask cdcTask = optionalTask.get();
+
+            logger.info("Modifying replication task");
+            val modifyReplicationTaskRequest = new ModifyReplicationTaskRequest()
+                    .withReplicationTaskIdentifier(cdcTaskId)
+                    .withReplicationTaskArn(cdcTask.getReplicationTaskArn())
+                    .withCdcStartTime(cdcStartTime);
+
+            awsDms.modifyReplicationTask(modifyReplicationTaskRequest);
+            logger.info("Modified replication task");
+        } else {
+            throw new DmsClientException("Failed to get DMS task with Id: " + cdcTaskId);
+        }
+    }
+
     public Date getTaskStartTime(String taskId) {
         Optional<ReplicationTask> optionalTask = getTask(taskId);
         if (optionalTask.isPresent()) {
@@ -92,8 +111,7 @@ public class DmsClient {
         throw new DmsClientException(errorMessage);
     }
 
-    @NotNull
-    private Optional<ReplicationTask> getTask(String taskId) {
+    public Optional<ReplicationTask> getTask(String taskId) {
         logger.info("Retrieving replication task {}", taskId);
         val describeReplicationTasksRequest = new DescribeReplicationTasksRequest()
                 .withFilters(new Filter().withName("replication-task-id").withValues(taskId))
