@@ -183,6 +183,17 @@ public class JobArguments {
     public static final Long DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT = 2L;
     public static final String RAW_FILE_RETENTION_PERIOD_UNIT = "dpr.raw.file.retention.period.unit";
     static final String DEFAULT_RAW_FILE_RETENTION_PERIOD_UNIT = "days";
+    static final String SECRET_ID = "dpr.test.database.secret.id";
+    static final String TEST_DATA_BATCH_SIZE = "dpr.test.data.batch.size";
+    static final int DEFAULT_TEST_DATA_BATCH_SIZE = 5;
+    static final String TEST_DATA_PARALLELISM = "dpr.test.data.parallelism";
+    static final int DEFAULT_TEST_DATA_PARALLELISM = 1;
+    static final String TEST_DATA_INTER_BATCH_DELAY = "dpr.test.data.inter.batch.delay.millis";
+    static final long DEFAULT_TEST_DATA_INTER_BATCH_DELAY_MILLIS = 1000;
+    static final String TEST_DATA_TABLE_NAME = "dpr.test.data.table.name";
+    static final String DEFAULT_TEST_DATA_TABLE_NAME = "test_table";
+    static final String TEST_DATA_RUN_DURATION_MILLIS = "dpr.test.data.run.duration.millis";
+    static final long DEFAULT_TEST_DATA_RUN_DURATION_MILLIS = 3600000; // 1 hour
     public static final String ADJUST_SPARK_MEMORY = "dpr.adjust.spark.memory";
     private final Map<String, String> config;
 
@@ -590,6 +601,30 @@ public class JobArguments {
         return getArgument(RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE_DEFAULT);
     }
 
+    public String getSecretId() {
+        return config.get(SECRET_ID);
+    }
+
+    public String getTestDataTableName() {
+        return getArgument(TEST_DATA_TABLE_NAME, DEFAULT_TEST_DATA_TABLE_NAME);
+    }
+
+    public int getTestDataBatchSize() {
+        return getArgument(TEST_DATA_BATCH_SIZE, DEFAULT_TEST_DATA_BATCH_SIZE);
+    }
+
+    public int getTestDataParallelism() {
+        return getArgument(TEST_DATA_PARALLELISM, DEFAULT_TEST_DATA_PARALLELISM);
+    }
+
+    public long getTestDataInterBatchDelayMillis() {
+        return getArgument(TEST_DATA_INTER_BATCH_DELAY, DEFAULT_TEST_DATA_INTER_BATCH_DELAY_MILLIS);
+    }
+
+    public long getRunDurationMillis() {
+        return getArgument(TEST_DATA_RUN_DURATION_MILLIS, DEFAULT_TEST_DATA_RUN_DURATION_MILLIS);
+    }
+
     public boolean adjustSparkMemory() {
         return getArgument(ADJUST_SPARK_MEMORY, false);
     }
@@ -632,6 +667,14 @@ public class JobArguments {
         return Optional
                 .ofNullable(config.get(argumentName))
                 .map(Boolean::parseBoolean)
+                .orElse(defaultValue);
+    }
+
+    @SuppressWarnings("unused")
+    private short getArgument(String argumentName, short defaultValue) {
+        return Optional
+                .ofNullable(config.get(argumentName))
+                .map(Short::parseShort)
                 .orElse(defaultValue);
     }
 
