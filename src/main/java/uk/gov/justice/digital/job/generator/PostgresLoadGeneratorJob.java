@@ -6,11 +6,13 @@ import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.generator.DataGenerationConfig;
 import uk.gov.justice.digital.datahub.model.generator.PostgresSecrets;
-import uk.gov.justice.digital.job.HiveTableCreationJob;
 import uk.gov.justice.digital.job.PicocliMicronautExecutor;
 
 import javax.inject.Inject;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +40,7 @@ public class PostgresLoadGeneratorJob implements Runnable {
     }
 
     @Override
+    @SuppressWarnings("java:S2142")
     public void run() {
         try {
             logger.info("PostgresLoadGeneratorJob running");
@@ -45,7 +48,7 @@ public class PostgresLoadGeneratorJob implements Runnable {
             int batchSize = arguments.getTestDataBatchSize();
             int parallelism = arguments.getTestDataParallelism();
             long interBatchDelay = arguments.getTestDataInterBatchDelayMillis();
-            long runDuration = arguments.getRunDuration();
+            long runDuration = arguments.getRunDurationMillis();
 
             Class.forName("org.postgresql.Driver");
             PostgresSecrets credentials = secretsManagerClient.getSecret(secretId, PostgresSecrets.class);
@@ -59,7 +62,7 @@ public class PostgresLoadGeneratorJob implements Runnable {
         }
     }
 
-    public void generateTestData(PostgresSecrets credentials, DataGenerationConfig runConfig) throws SQLException, InterruptedException {
+    private void generateTestData(PostgresSecrets credentials, DataGenerationConfig runConfig) throws SQLException, InterruptedException {
         Connection connection = null;
         PreparedStatement statement = null;
         long startTime = System.currentTimeMillis();
@@ -71,12 +74,11 @@ public class PostgresLoadGeneratorJob implements Runnable {
 
             while (System.currentTimeMillis() - startTime < runConfig.getRunDuration()) {
                 for (int i = 1; i <= runConfig.getParallelism(); i++) {
-                    String insertSql = "INSERT INTO test_table(data) VALUES (?) ON CONFLICT (id) DO UPDATE SET data = ?";
+                    String insertSql = String.format("INSERT INTO %s(data) VALUES (?)", arguments.getTestDataTableName());
                     statement = connection.prepareStatement(insertSql);
                     for (int j = 1; j <= runConfig.getBatchSize(); j++) {
                         String data = UUID.randomUUID().toString();
                         statement.setString(1, data);
-                        statement.setString(2, data);
 
                         statement.addBatch();
                         logger.debug("Added record {} to batch batch: {}", j, i);
@@ -88,10 +90,9 @@ public class PostgresLoadGeneratorJob implements Runnable {
                     TimeUnit.MILLISECONDS.sleep(runConfig.getInterBatchDelay());
                 }
             }
-        } catch (SQLException | InterruptedException e) {
+        } finally {
             if (statement != null) statement.close();
             if (connection != null) connection.close();
-            throw e;
         }
     }
 }

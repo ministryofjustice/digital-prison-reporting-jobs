@@ -103,6 +103,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, "12" },
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.01" },
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, "5" },
+            { JobArguments.SECRET_ID, "test_secret_id" },
             { JobArguments.ADJUST_SPARK_MEMORY, "true" },
             { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, "50000" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
@@ -173,6 +174,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationCurrentStateCountsToleranceAbsolute()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationChangeDataCountsToleranceAbsolute()) },
+                { JobArguments.SECRET_ID, validArguments.getSecretId() },
                 { JobArguments.ADJUST_SPARK_MEMORY, validArguments.adjustSparkMemory() },
                 { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, Integer.toString(validArguments.getSparkSqlMaxRecordsPerFile()) },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
@@ -776,6 +778,46 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.ADJUST_SPARK_MEMORY);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.adjustSparkMemory());
+    }
+
+    @Test
+    void getTestDataTableNameShouldUseDefaultWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.TEST_DATA_TABLE_NAME);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("test_table", jobArguments.getTestDataTableName());
+    }
+
+    @Test
+    void getTestDataBatchSizeShouldUseDefaultWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.TEST_DATA_BATCH_SIZE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(5, jobArguments.getTestDataBatchSize());
+    }
+
+    @Test
+    void getTestDataParallelismShouldUseDefaultWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.TEST_DATA_PARALLELISM);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(1, jobArguments.getTestDataParallelism());
+    }
+
+    @Test
+    void getTestDataInterBatchDelayMillisShouldUseDefaultWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.TEST_DATA_INTER_BATCH_DELAY);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(1000, jobArguments.getTestDataInterBatchDelayMillis());
+    }
+
+    @Test
+    void getRunDurationMillisShouldUseDefaultWhenNotProvided() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.TEST_DATA_RUN_DURATION_MILLIS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(3600000, jobArguments.getRunDurationMillis());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

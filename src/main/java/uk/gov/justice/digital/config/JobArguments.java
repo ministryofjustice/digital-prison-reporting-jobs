@@ -190,6 +190,8 @@ public class JobArguments {
     static final int DEFAULT_TEST_DATA_PARALLELISM = 1;
     static final String TEST_DATA_INTER_BATCH_DELAY = "dpr.test.data.inter.batch.delay.millis";
     static final long DEFAULT_TEST_DATA_INTER_BATCH_DELAY_MILLIS = 1000;
+    static final String TEST_DATA_TABLE_NAME = "dpr.test.data.table.name";
+    static final String DEFAULT_TEST_DATA_TABLE_NAME = "test_table";
     static final String TEST_DATA_RUN_DURATION_MILLIS = "dpr.test.data.run.duration.millis";
     static final long DEFAULT_TEST_DATA_RUN_DURATION_MILLIS = 3600000; // 1 hour
     public static final String ADJUST_SPARK_MEMORY = "dpr.adjust.spark.memory";
@@ -603,6 +605,10 @@ public class JobArguments {
         return config.get(SECRET_ID);
     }
 
+    public String getTestDataTableName() {
+        return getArgument(TEST_DATA_TABLE_NAME, DEFAULT_TEST_DATA_TABLE_NAME);
+    }
+
     public int getTestDataBatchSize() {
         return getArgument(TEST_DATA_BATCH_SIZE, DEFAULT_TEST_DATA_BATCH_SIZE);
     }
@@ -615,7 +621,7 @@ public class JobArguments {
         return getArgument(TEST_DATA_INTER_BATCH_DELAY, DEFAULT_TEST_DATA_INTER_BATCH_DELAY_MILLIS);
     }
 
-    public long getRunDuration() {
+    public long getRunDurationMillis() {
         return getArgument(TEST_DATA_RUN_DURATION_MILLIS, DEFAULT_TEST_DATA_RUN_DURATION_MILLIS);
     }
 
