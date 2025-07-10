@@ -20,7 +20,9 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
 import javax.inject.Inject;
+import java.time.Clock;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Optional;
 
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
@@ -40,6 +42,7 @@ public class CreateReloadDiffJob implements Runnable {
     private final DmsOrchestrationService dmsOrchestrationService;
     private final ReloadDiffProcessor reloadDiffProcessor;
     private final SourceReferenceService sourceReferenceService;
+    private final Clock clock;
 
     @Inject
     public CreateReloadDiffJob(
@@ -50,7 +53,8 @@ public class CreateReloadDiffJob implements Runnable {
             TableDiscoveryService tableDiscoveryService,
             DmsOrchestrationService dmsOrchestrationService,
             ReloadDiffProcessor reloadDiffProcessor,
-            SourceReferenceService sourceReferenceService
+            SourceReferenceService sourceReferenceService,
+            Clock clock
     ) {
         this.jobArguments = jobArguments;
         this.dataProvider = dataProvider;
@@ -60,6 +64,7 @@ public class CreateReloadDiffJob implements Runnable {
         this.dmsOrchestrationService = dmsOrchestrationService;
         this.reloadDiffProcessor = reloadDiffProcessor;
         this.sourceReferenceService = sourceReferenceService;
+        this.clock = clock;
     }
 
     public static void main(String[] args) {
@@ -73,7 +78,13 @@ public class CreateReloadDiffJob implements Runnable {
 
     @VisibleForTesting
     void runJob(SparkSession sparkSession) throws RuntimeException {
-        val dmsStartTime = dmsOrchestrationService.getTaskStartTime(jobArguments.getDmsTaskId());
+        val useNow = jobArguments.shouldUseNowAsCheckpointForReloadJob();
+        Date dmsStartTime;
+        if (useNow) {
+            dmsStartTime = Date.from(clock.instant());
+        } else {
+            dmsStartTime = dmsOrchestrationService.getTaskStartTime(jobArguments.getDmsTaskId());
+        }
         val rawFilesPathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(jobArguments.getRawS3Path(), sparkSession);
         val rawArchiveFilesPathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(jobArguments.getRawArchiveS3Path(), sparkSession);
 

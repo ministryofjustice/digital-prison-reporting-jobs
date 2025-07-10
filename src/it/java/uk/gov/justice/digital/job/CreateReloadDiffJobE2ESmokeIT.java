@@ -59,6 +59,7 @@ public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenRetrySettingsAreConfigured(arguments);
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getTempReloadOutputFolder()).thenReturn("diffs");
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("*.parquet");

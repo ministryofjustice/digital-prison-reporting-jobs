@@ -31,11 +31,11 @@ import static uk.gov.justice.digital.common.RegexPatterns.jsonOrParquetFileRegex
 import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS;
+import static uk.gov.justice.digital.config.JobArguments.DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_SQL_MAX_RECORDS_PER_FILE;
 import static uk.gov.justice.digital.config.JobArguments.RECONCILIATION_CHECKS_TO_RUN_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
-import static uk.gov.justice.digital.config.JobArguments.DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CHANGE_DATA_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.CURRENT_STATE_COUNTS;
 import static uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck.PRIMARY_KEY_RECONCILIATION;
@@ -83,6 +83,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.STOP_GLUE_INSTANCE_JOB_NAME, "dpr-glue-job-name" },
             { JobArguments.DMS_REPLICATION_TASK_ID, "dpr-dms-task-id" },
             { JobArguments.CDC_DMS_REPLICATION_TASK_ID, "cdc-dpr-dms-task-id" },
+            { JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, "true" },
             { JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
             { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, "10" },
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
@@ -154,6 +155,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.STOP_GLUE_INSTANCE_JOB_NAME, validArguments.getStopGlueInstanceJobName() },
                 { JobArguments.DMS_REPLICATION_TASK_ID, validArguments.getDmsTaskId() },
                 { JobArguments.CDC_DMS_REPLICATION_TASK_ID, validArguments.getCdcDmsTaskId() },
+                { JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, validArguments.shouldUseNowAsCheckpointForReloadJob() },
                 { JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.orchestrationWaitIntervalSeconds() },
                 { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, validArguments.orchestrationMaxAttempts() },
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
@@ -535,6 +537,23 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.STREAMING_JOB_MAX_FILES_PER_TRIGGER);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER, jobArguments.streamingJobMaxFilePerTrigger());
+    }
+
+    @Test
+    public void shouldUseNowAsCheckpointForReloadJobShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.shouldUseNowAsCheckpointForReloadJob());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    public void shouldUseNowAsCheckpointForReloadJobShouldUseProvidedBooleanValue(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.shouldUseNowAsCheckpointForReloadJob());
     }
 
     @Test
