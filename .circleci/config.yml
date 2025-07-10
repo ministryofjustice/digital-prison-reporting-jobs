@@ -12,7 +12,7 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache"
+          cache_key: "owasp-build-cache-1"
       - reporting/gradle_build_publish:
           tag: "8.0"
           app: digital-prison-reporting-jobs
