@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
@@ -160,7 +161,8 @@ public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
                 tableDiscoveryService,
                 dmsOrchestrationService,
                 reloadDiffProcessor,
-                sourceReferenceService
+                sourceReferenceService,
+                fixedClock
         );
     }
 
