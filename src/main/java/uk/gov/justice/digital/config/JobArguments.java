@@ -137,6 +137,7 @@ public class JobArguments {
     static final String STOP_GLUE_INSTANCE_JOB_NAME = "dpr.stop.glue.instance.job.name";
     static final String DMS_REPLICATION_TASK_ID = "dpr.dms.replication.task.id";
     static final String CDC_DMS_REPLICATION_TASK_ID = "dpr.cdc.dms.replication.task.id";
+    static final String RELOAD_JOB_USE_NOW_AS_CHECKPOINT = "dpr.reload.checkpoint.use.now";
     static final String MAX_S3_PAGE_SIZE = "dpr.s3.max.page.size";
     static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
     static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
@@ -475,6 +476,10 @@ public class JobArguments {
 
     public String getCdcDmsTaskId() {
         return getArgument(CDC_DMS_REPLICATION_TASK_ID);
+    }
+
+    public boolean shouldUseNowAsCheckpointForReloadJob() {
+        return getArgument(RELOAD_JOB_USE_NOW_AS_CHECKPOINT, false);
     }
 
     public boolean isOperationalDataStoreWriteEnabled() {

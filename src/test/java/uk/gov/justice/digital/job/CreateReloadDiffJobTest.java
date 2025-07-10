@@ -46,12 +46,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
-import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
-import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
+import static uk.gov.justice.digital.test.Fixtures.fixedClock;
+import static uk.gov.justice.digital.test.Fixtures.fixedDateTime;
+import static uk.gov.justice.digital.test.Fixtures.utcZoneId;
 import static uk.gov.justice.digital.test.MinimalTestData.CHECKPOINT_COL_VALUE;
+import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
@@ -131,7 +134,8 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
                 tableDiscoveryService,
                 dmsOrchestrationService,
                 reloadDiffProcessor,
-                sourceReferenceService
+                sourceReferenceService,
+                fixedClock
         );
     }
 
@@ -139,6 +143,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     void shouldCreateReloadDiffForDiscoveredTables() {
         Date dmsTaskStartTime = Date.from(Instant.now());
 
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(arguments.getRawArchiveS3Path()).thenReturn(ARCHIVE_PATH);
@@ -219,6 +224,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     void shouldCreateDiffUsingAnEmptyDatasetWhenNoArchiveFileExists() {
         Date dmsTaskStartTime = new Date();
 
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(arguments.getRawArchiveS3Path()).thenReturn(ARCHIVE_PATH);
@@ -258,9 +264,45 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     }
 
     @Test
+    void shouldCreateReloadDiffUsingNowWhenConfigured() {
+        // The now used by the fixed clock
+        Date expectedNow = Date.from(fixedDateTime.atZone(utcZoneId).toInstant());
+
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(true);
+        when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
+        when(arguments.getRawArchiveS3Path()).thenReturn(ARCHIVE_PATH);
+        when(arguments.getTempReloadS3Path()).thenReturn(TEMP_RELOAD_PATH);
+        when(arguments.getTempReloadOutputFolder()).thenReturn(OUTPUT_FOLDER);
+        when(tableDiscoveryService.discoverBatchFilesToLoad(RAW_PATH, spark))
+                .thenReturn(Collections.singletonMap(s1T1, Collections.singletonList("raw-t1-file1")));
+        when(tableDiscoveryService.discoverBatchFilesToLoad(ARCHIVE_PATH, spark)).thenReturn(Collections.emptyMap());
+        mockSourceReference(s1T1);
+
+        Dataset<Row> dataset = spark.createDataFrame(Collections.singletonList(
+                        createRow(1, "2023-11-13 10:50:00.123456", Insert, "1")),
+                TEST_DATA_SCHEMA
+        );
+
+        when(dataProvider.getBatchSourceData(spark, Collections.singletonList("raw-t1-file1"))).thenReturn(dataset);
+
+        underTest.runJob(spark);
+
+        verify(reloadDiffProcessor, times(1)).createDiff(
+                any(),
+                any(),
+                any(),
+                any(),
+                eq(expectedNow)
+        );
+
+        verify(dmsOrchestrationService, times(0)).getTaskStartTime(any());
+    }
+
+    @Test
     void shouldNotFailWhenThereAreNoRawFiles() {
         Date dmsTaskStartTime = new Date();
 
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(arguments.getRawArchiveS3Path()).thenReturn(ARCHIVE_PATH);
@@ -276,6 +318,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     void shouldFailWhenUnableToRetrieveSourceReference() {
         Date dmsTaskStartTime = new Date();
 
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(arguments.getRawArchiveS3Path()).thenReturn(ARCHIVE_PATH);
@@ -291,6 +334,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     void shouldFailWhenAnErrorOccursWhenDiscoveringRawFiles() {
         Date dmsTaskStartTime = new Date();
 
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(dmsOrchestrationService.getTaskStartTime(DMS_TASK_ID)).thenReturn(dmsTaskStartTime);
@@ -303,6 +347,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     void shouldFailWhenAnErrorOccursWhenDiscoveringArchivedFiles() {
         Date dmsTaskStartTime = new Date();
 
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(arguments.getRawArchiveS3Path()).thenReturn(ARCHIVE_PATH);

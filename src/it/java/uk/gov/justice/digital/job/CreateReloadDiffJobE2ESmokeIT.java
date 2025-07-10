@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
@@ -59,6 +60,7 @@ public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenRetrySettingsAreConfigured(arguments);
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getTempReloadOutputFolder()).thenReturn("diffs");
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("*.parquet");
@@ -159,7 +161,8 @@ public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
                 tableDiscoveryService,
                 dmsOrchestrationService,
                 reloadDiffProcessor,
-                sourceReferenceService
+                sourceReferenceService,
+                fixedClock
         );
     }
 
