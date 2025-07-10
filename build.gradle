@@ -4,7 +4,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '7.1.1' // originally 7.1.2 but downgraded since circle CI build was failing
     id 'io.freefair.lombok' version '6.5.1'
     id 'org.sonarqube'  version '3.5.0.2730'
-    id 'org.owasp.dependencycheck'  version '10.0.4'
+    id 'org.owasp.dependencycheck'  version '8.2.1'
     id 'org.gradle.java-test-fixtures'
     id 'io.micronaut.minimal.library'  version '3.7.10'
     id 'org.barfuin.gradle.jacocolog' version '3.1.0'
