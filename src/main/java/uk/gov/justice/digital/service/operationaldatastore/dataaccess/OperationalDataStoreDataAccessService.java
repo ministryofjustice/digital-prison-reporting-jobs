@@ -152,14 +152,14 @@ public class OperationalDataStoreDataAccessService {
         // Build the various fragments of the SQL we need
         String[] lowerCaseFieldNames = fieldNamesToLowerCase(sourceReference);
         String joinCondition = buildJoinCondition(sourceReference);
-        String updateAssignments = buildUpdateAssignments(sourceReference, lowerCaseFieldNames);
+        String matchedUpdateClause = buildMatchedUpdateClause(sourceReference, lowerCaseFieldNames);
         String insertColumnNames = buildInsertColumnNames(lowerCaseFieldNames);
         String insertValues = buildInsertValues(lowerCaseFieldNames);
 
         return "MERGE INTO " + destinationTableName + " destination\n" +
                 "USING " + temporaryTableName + " source ON " + joinCondition + "\n" +
                 "    WHEN MATCHED AND source.op = 'D' THEN DELETE\n" +
-                "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + updateAssignments + "\n" +
+                matchedUpdateClause +
                 "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U')" +
                 " THEN INSERT (" + insertColumnNames + ") VALUES (" + insertValues + ")";
     }
@@ -170,6 +170,16 @@ public class OperationalDataStoreDataAccessService {
 
     private String buildJoinCondition(SourceReference sourceReference) {
         return sourceReference.getPrimaryKey().getSparkCondition("source", "destination").toLowerCase();
+    }
+
+    private String buildMatchedUpdateClause(SourceReference sourceReference, String[] lowerCaseFieldNames) {
+        String updateAssignments = buildUpdateAssignments(sourceReference, lowerCaseFieldNames);
+
+        if(updateAssignments.isEmpty()) {
+            return "";
+        } else {
+            return "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + updateAssignments + "\n";
+        }
     }
 
     private String buildUpdateAssignments(SourceReference sourceReference, String[] lowerCaseFieldNames) {
