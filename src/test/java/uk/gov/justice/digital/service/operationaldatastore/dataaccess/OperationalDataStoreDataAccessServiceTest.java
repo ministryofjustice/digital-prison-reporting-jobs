@@ -246,6 +246,24 @@ class OperationalDataStoreDataAccessServiceTest {
     }
 
     @Test
+    void shouldOmitUpdateClauseForTablesWithAllPrimaryKeyColumns() {
+        String temporaryTableName = "loading.table";
+        String destinationTableName = "some.table";
+
+        when(sourceReference.getSchema()).thenReturn(schema);
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(Arrays.asList("pk_col1", "pk_col2")));
+        when(schema.fieldNames()).thenReturn(new String[]{"pk_col1", "pk_col2"});
+
+        String resultSql = underTest.buildMergeSql(temporaryTableName, destinationTableName, sourceReference);
+        System.out.println(resultSql);
+        String expectedSql = "MERGE INTO some.table destination\n" +
+                "USING loading.table source ON source.pk_col1 = destination.pk_col1 and source.pk_col2 = destination.pk_col2\n" +
+                "    WHEN MATCHED AND source.op = 'D' THEN DELETE\n" +
+                "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U') THEN INSERT (pk_col1, pk_col2) VALUES (source.pk_col1, source.pk_col2)";
+        assertEquals(expectedSql, resultSql);
+    }
+
+    @Test
     void isOperationalDataStoreManagedTableShouldReturnTrueForManagedTables() {
         when(sourceReference.getSource()).thenReturn("nomis");
         when(sourceReference.getTable()).thenReturn("activities");
