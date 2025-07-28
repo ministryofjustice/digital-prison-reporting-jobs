@@ -23,7 +23,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -153,14 +152,14 @@ public class OperationalDataStoreDataAccessService {
         // Build the various fragments of the SQL we need
         String[] lowerCaseFieldNames = fieldNamesToLowerCase(sourceReference);
         String joinCondition = buildJoinCondition(sourceReference);
-        Optional<String> maybeUpdate = maybeMatchedUpdate(sourceReference, lowerCaseFieldNames);
+        String matchedUpdateClause = buildMatchedUpdateClause(sourceReference, lowerCaseFieldNames);
         String insertColumnNames = buildInsertColumnNames(lowerCaseFieldNames);
         String insertValues = buildInsertValues(lowerCaseFieldNames);
 
         return "MERGE INTO " + destinationTableName + " destination\n" +
                 "USING " + temporaryTableName + " source ON " + joinCondition + "\n" +
                 "    WHEN MATCHED AND source.op = 'D' THEN DELETE\n" +
-                maybeUpdate.orElse("") +
+                matchedUpdateClause +
                 "    WHEN NOT MATCHED AND (source.op = 'I' OR source.op = 'U')" +
                 " THEN INSERT (" + insertColumnNames + ") VALUES (" + insertValues + ")";
     }
@@ -173,13 +172,14 @@ public class OperationalDataStoreDataAccessService {
         return sourceReference.getPrimaryKey().getSparkCondition("source", "destination").toLowerCase();
     }
 
-    private Optional<String> maybeMatchedUpdate(SourceReference sourceReference, String[] lowerCaseFieldNames) {
+    private String buildMatchedUpdateClause(SourceReference sourceReference, String[] lowerCaseFieldNames) {
         String updateAssignments = buildUpdateAssignments(sourceReference, lowerCaseFieldNames);
 
-        return Optional
-                .of(updateAssignments)
-                .filter(s -> !s.isEmpty())
-                .map(s -> "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + s + "\n");
+        if(updateAssignments.isEmpty()) {
+            return "";
+        } else {
+            return "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + updateAssignments + "\n";
+        }
     }
 
     private String buildUpdateAssignments(SourceReference sourceReference, String[] lowerCaseFieldNames) {
