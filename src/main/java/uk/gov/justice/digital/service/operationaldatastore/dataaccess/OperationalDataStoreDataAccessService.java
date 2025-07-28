@@ -175,11 +175,11 @@ public class OperationalDataStoreDataAccessService {
 
     private Optional<String> maybeMatchedUpdate(SourceReference sourceReference, String[] lowerCaseFieldNames) {
         String updateAssignments = buildUpdateAssignments(sourceReference, lowerCaseFieldNames);
-        if (updateAssignments.isEmpty()) {
-            return Optional.empty();
-        } else {
-            return Optional.of("    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + updateAssignments + "\n");
-        }
+
+        return Optional
+                .of(updateAssignments)
+                .filter(s -> !s.isEmpty())
+                .map(s -> "    WHEN MATCHED AND source.op = 'U' THEN UPDATE SET " + s + "\n");
     }
 
     private String buildUpdateAssignments(SourceReference sourceReference, String[] lowerCaseFieldNames) {
