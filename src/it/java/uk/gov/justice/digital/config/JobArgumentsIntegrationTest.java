@@ -470,7 +470,7 @@ class JobArgumentsIntegrationTest {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(10, jobArguments.orchestrationWaitIntervalSeconds());
+        assertEquals(40, jobArguments.orchestrationWaitIntervalSeconds());
     }
 
     @Test

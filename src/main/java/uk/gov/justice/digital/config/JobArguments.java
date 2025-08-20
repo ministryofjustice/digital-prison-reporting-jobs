@@ -131,7 +131,7 @@ public class JobArguments {
     static final String ALLOWED_S3_FILE_NAME_REGEX = "dpr.allowed.s3.file.regex";
     public static final String DEFAULT_FILE_NAME_REGEX = ".+";
     static final String ORCHESTRATION_WAIT_INTERVAL_SECONDS = "dpr.orchestration.wait.interval.seconds";
-    static final int DEFAULT_ORCHESTRATION_WAIT_INTERVAL_SECONDS = 10;
+    static final int DEFAULT_ORCHESTRATION_WAIT_INTERVAL_SECONDS = 40;
     static final String ORCHESTRATION_MAX_ATTEMPTS = "dpr.orchestration.max.attempts";
     static final int DEFAULT_ORCHESTRATION_MAX_ATTEMPTS = 20;
     static final String STOP_GLUE_INSTANCE_JOB_NAME = "dpr.stop.glue.instance.job.name";
