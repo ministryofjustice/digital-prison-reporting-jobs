@@ -3,6 +3,9 @@ package uk.gov.justice.digital.job.batchprocessing;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.StructField;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.BaseSparkTest;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.ReloadProcessorException;
 import uk.gov.justice.digital.service.DataStorageService;
 
 import java.text.SimpleDateFormat;
@@ -28,6 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -62,6 +67,9 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
     private static final String FORMATTED_RELOAD_TIME = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault())
             .format(reloadTime);
 
+    private static final StructField nullableField = new StructField("new_column", DataTypes.StringType, true, Metadata.empty());
+    private static final StructField nonNullableField = new StructField("new_column", DataTypes.StringType, false, Metadata.empty());
+
     private ReloadDiffProcessor underTest;
 
     @BeforeEach
@@ -87,6 +95,62 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
 
         List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
         assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
+    }
+
+    @Test
+    void createReloadDiffShouldHandleAdditionOfNullableColumns() {
+        Dataset<Row> rawDataset = spark.createDataFrame(Arrays.asList(
+                RowFactory.create(1, "2023-11-14 10:50:00.123456", Insert.getName(), "1", LOAD_CHECKPOINT_VALUE, "new-col-value"),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "2", LOAD_CHECKPOINT_VALUE, null)
+        ), TEST_DATA_SCHEMA.add(nullableField));
+
+        Dataset<Row> archiveDataset = spark.createDataFrame(Arrays.asList(
+                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "1", "20240709"),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "2", "20240709")
+        ), TEST_DATA_SCHEMA);
+
+        Dataset<Row> expectedDatasetToUpdate = spark.createDataFrame(Collections.singletonList(
+                RowFactory.create(1, "2023-11-14 10:50:00.123456", Update.getName(), "1", LOAD_CHECKPOINT_VALUE, "new-col-value")
+        ), TEST_DATA_SCHEMA.add(nullableField)).withColumn(CHECKPOINT_COL, lit(FORMATTED_RELOAD_TIME));
+
+        mockSourceReferenceCallWithNewNullableField();
+
+        underTest.createDiff(sourceReference, OUTPUT_BASE_PATH, rawDataset, archiveDataset, reloadTime);
+
+        verify(dataStorageService, times(3)).overwriteParquet(outputPathCaptor.capture(), datasetCaptor.capture());
+
+        List<Dataset<Row>> capturedRecords = datasetCaptor.getAllValues();
+        Dataset<Row> recordsToDelete = capturedRecords.get(0);
+        Dataset<Row> recordsToInsert = capturedRecords.get(1);
+        Dataset<Row> recordsToUpdate = capturedRecords.get(2);
+
+        assertThat(recordsToDelete.collectAsList(), is(empty()));
+        assertThat(recordsToInsert.collectAsList(), is(empty()));
+        assertThat(recordsToUpdate.collectAsList(), containsInAnyOrder(expectedDatasetToUpdate.collectAsList().toArray()));
+
+        List<String> expectedOutputPaths = Arrays.asList(createPath("toDelete"), createPath("toInsert"), createPath("toUpdate"));
+        assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
+    }
+
+    @Test
+    void createReloadDiffShouldFailWhenNonNullableColumnsAreAdded() {
+        Dataset<Row> rawDataset = spark.createDataFrame(Arrays.asList(
+                RowFactory.create(1, "2023-11-14 10:50:00.123456", Insert.getName(), "1", LOAD_CHECKPOINT_VALUE, "new-col-value-1"),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "2", LOAD_CHECKPOINT_VALUE, "new-col-value-2")
+        ), TEST_DATA_SCHEMA.add(nonNullableField));
+
+        Dataset<Row> archiveDataset = spark.createDataFrame(Arrays.asList(
+                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "1", "20240709"),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "2", "20240709")
+        ), TEST_DATA_SCHEMA);
+
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN));
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS.add(nonNullableField));
+
+        assertThrows(
+                ReloadProcessorException.class, () ->
+                underTest.createDiff(sourceReference, OUTPUT_BASE_PATH, rawDataset, archiveDataset, reloadTime)
+        );
     }
 
     @Test
@@ -236,6 +300,13 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
     private void mockSourceReferenceCall() {
         when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN));
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+        when(sourceReference.getSource()).thenReturn(SOURCE);
+        when(sourceReference.getTable()).thenReturn(TABLE);
+    }
+
+    private void mockSourceReferenceCallWithNewNullableField() {
+        when(sourceReference.getPrimaryKey()).thenReturn(new SourceReference.PrimaryKey(PRIMARY_KEY_COLUMN));
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS.add(nullableField));
         when(sourceReference.getSource()).thenReturn(SOURCE);
         when(sourceReference.getTable()).thenReturn(TABLE);
     }

@@ -7,24 +7,26 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.StructField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.ReloadProcessorException;
 import uk.gov.justice.digital.service.DataStorageService;
 
 import javax.inject.Singleton;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.stream.Collectors;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.row_number;
-import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
-import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.*;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.*;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
@@ -53,18 +55,42 @@ public class ReloadDiffProcessor {
                 .drop(RANK_COL)
                 .persist();
 
+        val nonNullableColumns = Arrays.stream(sourceReference.getSchema().fields())
+                .filter(field -> !field.nullable())
+                .map(StructField::name)
+                .collect(Collectors.toSet());
+
+        val nullableColumns = Arrays.stream(sourceReference.getSchema().fields())
+                .filter(StructField::nullable)
+                .map(StructField::name)
+                .collect(Collectors.toSet());
+
+        val archiveDatasetColumns = Arrays.stream(activeArchiveRecords.schema().fields())
+                .map(StructField::name)
+                .collect(Collectors.toSet());
+
+        val violatesNunNullableColumnRule = nonNullableColumns.stream().anyMatch(columnName -> !archiveDatasetColumns.contains(columnName));
+        if (violatesNunNullableColumnRule) {
+            throw new ReloadProcessorException("Mandatory column(s) in schema does not exist in archived data");
+        }
+
+        nullableColumns.removeAll(archiveDatasetColumns);
+
+        val archiveRecordsWithNewNullableColumns = activeArchiveRecords
+                .withColumns(nullableColumns.stream().collect(Collectors.toMap(columnName -> columnName, fieldName -> lit(null))));
+
         logger.info("Processing reload diffs to delete");
-        Dataset<Row> recordsToDelete = getRecordsToDelete(sourceReference, raw, activeArchiveRecords)
+        Dataset<Row> recordsToDelete = getRecordsToDelete(sourceReference, raw, archiveRecordsWithNewNullableColumns)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
         storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toDelete"), recordsToDelete);
 
         logger.info("Processing reload diffs to insert");
-        Dataset<Row> recordsToInsert = getRecordsToInsert(sourceReference, raw, activeArchiveRecords)
+        Dataset<Row> recordsToInsert = getRecordsToInsert(sourceReference, raw, archiveRecordsWithNewNullableColumns)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
         storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toInsert"), recordsToInsert);
 
         logger.info("Processing reload diffs to update");
-        Dataset<Row> recordsToUpdate = getRecordsToUpdate(sourceReference, raw, activeArchiveRecords, recordsToInsert)
+        Dataset<Row> recordsToUpdate = getRecordsToUpdate(sourceReference, raw, archiveRecordsWithNewNullableColumns, recordsToInsert)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
         storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toUpdate"), recordsToUpdate);
 
