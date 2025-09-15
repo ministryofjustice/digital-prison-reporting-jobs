@@ -478,7 +478,7 @@ class JobArgumentsIntegrationTest {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.ORCHESTRATION_MAX_ATTEMPTS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(20, jobArguments.orchestrationMaxAttempts());
+        assertEquals(40, jobArguments.orchestrationMaxAttempts());
     }
 
     @ParameterizedTest
