@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.s3.S3ConfigReaderClient;
+import uk.gov.justice.digital.client.dms.DmsClient;
 import uk.gov.justice.digital.exception.ConfigServiceException;
 
 import java.util.Collections;
@@ -25,25 +26,25 @@ class ConfigServiceTest {
     private static final String TEST_CONFIG_KEY = "some-config-key";
 
     @Mock
-    private S3ConfigReaderClient mockConfigClient;
+    private DmsClient mockDmsClient;
 
     private ConfigService underTest;
 
     @BeforeEach
     public void setup() {
-        reset(mockConfigClient);
+        reset(mockDmsClient);
 
-        underTest = new ConfigService(mockConfigClient);
+        underTest = new ConfigService(mockDmsClient);
     }
 
     @Test
-    public void shouldReturnConfiguredTables() {
+    void shouldReturnConfiguredTables() throws JsonProcessingException {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
         );
 
-        when(mockConfigClient.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(configuredTables));
+        when(mockDmsClient.getReplicationTaskTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(configuredTables));
 
         Set<ImmutablePair<String, String>> result = underTest.getConfiguredTables(TEST_CONFIG_KEY);
 
@@ -51,10 +52,10 @@ class ConfigServiceTest {
     }
 
     @Test
-    public void shouldFailWhenThereAreNoConfiguredTables() {
+    void shouldFailWhenThereAreNoConfiguredTables() throws JsonProcessingException {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.copyOf(Collections.emptySet());
 
-        when(mockConfigClient.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
+        when(mockDmsClient.getReplicationTaskTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         assertThrows(ConfigServiceException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
     }

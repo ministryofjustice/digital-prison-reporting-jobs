@@ -9,17 +9,26 @@ import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
 import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.exception.DmsClientException;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Singleton
 public class DmsClient {
@@ -96,6 +105,42 @@ public class DmsClient {
         return response.getTableStatistics();
     }
 
+    public ImmutableSet<ImmutablePair<String, String>> getReplicationTaskTables(String domainKey) throws JsonProcessingException {
+        Optional<ReplicationTask> optionalTask = getTaskByDomain(domainKey);
+        ReplicationTask replicationTask = optionalTask.orElseThrow(() ->
+                new DmsClientException("Replication task for domain " + domainKey + " not found")
+        );
+
+        final Set<String> sources = new HashSet<>();
+        final Set<String> tableNames = new HashSet<>();
+
+        String tableMappingsAsString = replicationTask.getTableMappings();
+        JsonNode tableMappings = new ObjectMapper().readTree(tableMappingsAsString);
+        Iterator<JsonNode> ruleElements = tableMappings.get("rules").elements();
+
+        ruleElements.forEachRemaining(valueNode -> {
+                    boolean hasRuleActionAndValueFields = valueNode.has("rule-action") && valueNode.has("value");
+                    if (hasRuleActionAndValueFields && valueNode.get("rule-action").asText().equalsIgnoreCase("rename")) {
+                        sources.add(valueNode.get("value").asText().toLowerCase());
+                    }
+
+                    boolean hasRuleTypeAndObjectLocatorFields = valueNode.has("rule-type") && valueNode.has("object-locator");
+                    if (hasRuleTypeAndObjectLocatorFields && valueNode.get("rule-type").asText().equalsIgnoreCase("selection")) {
+                        tableNames.add(valueNode.get("object-locator").get("table-name").asText().toLowerCase());
+                    }
+                }
+        );
+
+        if (tableNames.isEmpty()) {
+            throw new DmsClientException("Exception when retrieving table names for DMS task in domain " + domainKey);
+        }
+
+        String source = sources.stream().findFirst()
+                .orElseThrow(() -> new DmsClientException("Exception when retrieving schema source for DMS task in domain " + domainKey));
+
+        return ImmutableSet.copyOf(tableNames.stream().map(tableName -> ImmutablePair.of(source, tableName)).collect(Collectors.toSet()));
+    }
+
     private void ensureState(String taskId, String state, int waitIntervalSeconds, int maxAttempts) throws InterruptedException {
         for (int attempts = 0; attempts < maxAttempts; attempts++) {
             logger.info("Ensuring replication task {} is in {} state. Attempt {}", taskId, state, attempts);
@@ -120,6 +165,17 @@ public class DmsClient {
         return awsDms.describeReplicationTasks(describeReplicationTasksRequest)
                 .getReplicationTasks()
                 .stream()
+                .findFirst();
+    }
+
+    public Optional<ReplicationTask> getTaskByDomain(String domain) {
+        logger.info("Retrieving replication task for domain {}", domain);
+        val describeReplicationTasksRequest = new DescribeReplicationTasksRequest().withWithoutSettings(false);
+
+        return awsDms.describeReplicationTasks(describeReplicationTasksRequest)
+                .getReplicationTasks()
+                .stream()
+                .filter(task -> task.getReplicationTaskIdentifier().matches("(^.+s3-)(" + domain + ")(-cdc-task|-task)(.+)"))
                 .findFirst();
     }
 }
