@@ -46,7 +46,7 @@ public class JobArguments {
     public static final String LOG_LEVEL = "dpr.log.level";
     public static final String CONTRACT_REGISTRY_NAME = "dpr.contract.registryName";
     public static final String SCHEMA_CACHE_MAX_SIZE = "dpr.schema.cache.max.size";
-    public static final String SCHEMA_CACHE_EXPIRY_IN_MINUTES = "dpr.schema.cache.expiry.days";
+    public static final String SCHEMA_CACHE_EXPIRY_IN_MINUTES = "dpr.schema.cache.expiry.minutes";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
     public static final String PRISONS_DATA_SWITCH_TARGET_S3_PATH = "dpr.prisons.data.switch.target.s3.path";
     // Raw files that have been processed by the streaming job are moved to this location before being archived.
