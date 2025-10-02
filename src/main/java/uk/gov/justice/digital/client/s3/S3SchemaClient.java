@@ -3,13 +3,19 @@ package uk.gov.justice.digital.client.s3;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.util.IOUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import jakarta.inject.Inject;
 import lombok.Data;
 import lombok.val;
@@ -17,14 +23,21 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
 
 import javax.inject.Singleton;
 import java.io.IOException;
-import java.util.*;
+import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static uk.gov.justice.digital.common.retry.RetryPolicyBuilder.buildRetryPolicy;
 
 @Singleton
 public class S3SchemaClient {
@@ -32,6 +45,7 @@ public class S3SchemaClient {
     private static final Logger logger = LoggerFactory.getLogger(S3SchemaClient.class);
 
     private final AmazonS3 s3;
+    private final RetryPolicy<S3SchemaResponse> retryPolicy;
     private final LoadingCache<String, S3SchemaResponse> cache;
     private final String contractRegistryName;
     private final Integer maxObjectsPerPage;
@@ -44,10 +58,12 @@ public class S3SchemaClient {
             JobArguments jobArguments
     ) {
         this.s3 = schemaClientProvider.getClient();
+        RetryConfig retryConfig = new RetryConfig(jobArguments);
+        this.retryPolicy = buildRetryPolicy(retryConfig, AmazonClientException.class);
         this.cache = CacheBuilder.newBuilder()
                 .maximumSize(jobArguments.getSchemaCacheMaxSize())
                 .expireAfterWrite(jobArguments.getSchemaCacheExpiryInMinutes(), TimeUnit.MINUTES)
-                .build(getCacheLoader());
+                .build(createCacheLoader());
         this.contractRegistryName = jobArguments.getContractRegistryName();
         this.maxObjectsPerPage = jobArguments.getMaxObjectsPerPage();
     }
@@ -118,11 +134,11 @@ public class S3SchemaClient {
     }
 
     @NotNull
-    private CacheLoader<String, S3SchemaResponse> getCacheLoader() {
+    private CacheLoader<String, S3SchemaResponse> createCacheLoader() {
         return new CacheLoader<String, S3SchemaResponse>() {
             @Override
-            public S3SchemaResponse load(@NotNull String key) throws IOException {
-                return getSchemaResponse(key);
+            public S3SchemaResponse load(@NotNull String key) {
+                return Failsafe.with(retryPolicy).get(() -> getSchemaResponse(key));
             }
         };
     }

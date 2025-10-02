@@ -3,11 +3,11 @@ package uk.gov.justice.digital.client.s3;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.S3Object;
 import com.google.common.collect.ImmutableSet;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -37,12 +37,20 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.any;
 import static uk.gov.justice.digital.client.s3.S3SchemaClient.S3SchemaResponse;
 import static uk.gov.justice.digital.client.s3.S3SchemaClient.SCHEMA_FILE_EXTENSION;
-import static uk.gov.justice.digital.config.JobArguments.*;
+import static uk.gov.justice.digital.config.JobArguments.SCHEMA_CACHE_MAX_SIZE_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.SCHEMA_CACHE_EXPIRY_IN_MINUTES_DEFAULT;
+import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
 public class S3SchemaClientTest {
@@ -75,11 +83,12 @@ public class S3SchemaClientTest {
         reset(mockClientProvider, mockClient, mockArguments, mockListObjectsV2Result);
         givenSuccessfulJobArgumentCalls();
         givenClientProviderReturnsAClient();
+        givenConfiguredRetriesJobArgs(1, mockArguments);
         underTest = new S3SchemaClient(mockClientProvider, mockArguments);
     }
 
     @Test
-    public void shouldReturnSchemaForValidRequest() {
+    void shouldReturnSchemaForValidRequest() {
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, SCHEMA_NAME + SCHEMA_FILE_EXTENSION);
 
         val result = underTest.getSchema(SCHEMA_NAME);
@@ -88,7 +97,7 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldUseCachedSchemaWhenOneExists() {
+    void shouldUseCachedSchemaWhenOneExists() {
         givenSchemaRetrievalSucceeds(FAKE_SCHEMA_DEFINITION, SCHEMA_NAME + SCHEMA_FILE_EXTENSION);
 
         val firstResult = underTest.getSchema(SCHEMA_NAME);
@@ -103,7 +112,7 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldEvictOldItemsWhenCacheIsFull() {
+    void shouldEvictOldItemsWhenCacheIsFull() {
         when(mockArguments.getSchemaCacheMaxSize()).thenReturn(1L);
         String secondSchemaName = SCHEMA_NAME + "-new";
         String secondSchemaDefinition = FAKE_SCHEMA_DEFINITION + "-new";
@@ -126,7 +135,7 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldReturnAnEmptyOptionalForASchemaThatDoesNotExist() {
+    void shouldReturnAnEmptyOptionalForASchemaThatDoesNotExist() {
         when(mockClient.getObject(anyString(), anyString())).thenThrow(new AmazonClientException("Schema not found"));
 
         val result = underTest.getSchema(SCHEMA_NAME);
@@ -135,7 +144,20 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldRetrieveAllSchemas() {
+    void shouldRetryWhenAnAmazonClientExceptionOccursWhenRetrievingSchema() {
+        int numRetries = 2;
+        givenConfiguredRetriesJobArgs(numRetries, mockArguments);
+        when(mockClient.getObject(SCHEMA_REGISTRY, SCHEMA_NAME + SCHEMA_FILE_EXTENSION))
+                .thenThrow(new AmazonClientException("Client error"));
+
+        S3SchemaClient s3SchemaClient = new S3SchemaClient(mockClientProvider, mockArguments);
+
+        assertThat(s3SchemaClient.getSchema(SCHEMA_NAME), is(Optional.empty()));
+        verify(mockClient, times(numRetries)).getObject(SCHEMA_REGISTRY, SCHEMA_NAME + SCHEMA_FILE_EXTENSION);
+    }
+
+    @Test
+    void shouldRetrieveAllSchemas() {
         List<ImmutablePair<String, String>> schemaNamesList = new ArrayList<>();
         schemaNamesList.add(ImmutablePair.of("schema1", "some_table"));
         schemaNamesList.add(ImmutablePair.of("schema2", "some_table"));
@@ -154,7 +176,7 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldRetrieveAllSchemasWhenObjectsListExceedsOnePage() {
+    void shouldRetrieveAllSchemasWhenObjectsListExceedsOnePage() {
         List<ImmutablePair<String, String>> firstPageSchemaNamesList = new ArrayList<>();
         firstPageSchemaNamesList.add(ImmutablePair.of("schema1", "some_table"));
         firstPageSchemaNamesList.add(ImmutablePair.of("schema2", "some_table"));
@@ -188,7 +210,7 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldReturnAnEmptyListWhenThereAreNoSchemas() {
+    void shouldReturnAnEmptyListWhenThereAreNoSchemas() {
         val schemaGroup = ImmutableSet.copyOf(Collections.singleton(ImmutablePair.of("test_schema", "test_table")));
 
         givenObjectListIsEmpty();
@@ -197,7 +219,7 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldFailWhenThereIsAMissingSchema() {
+    void shouldFailWhenThereIsAMissingSchema() {
         ImmutableSet<ImmutablePair<String, String>> schemaNames = ImmutableSet.of(
                 ImmutablePair.of("schema1", "some_table"),
                 ImmutablePair.of("schema2", "some_table")
@@ -212,7 +234,7 @@ public class S3SchemaClientTest {
     }
 
     @Test
-    public void shouldThrowAnExceptionIfAnErrorOccursWhenListingSchemas() {
+    void shouldThrowAnExceptionIfAnErrorOccursWhenListingSchemas() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet
                 .of(ImmutablePair.of("test_schema", "test_table"));
 
