@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.68
+  reporting: ministryofjustice/hmpps-reporting@dev:e6c8666d1584dd7d95ef11165b45ae7809d16f6e
   slack: circleci/slack@4.12.5  
 
 workflows:
