@@ -12,7 +12,7 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache"
+          cache_key: "owasp-build-cache-v6"
       - reporting/gradle_build_publish:
           tag: "8.0"
           app: digital-prison-reporting-jobs
@@ -24,7 +24,7 @@ workflows:
           notify_jira: true
           notify_slack: true
           channel: dpr_cicd_alerts
-          command: jar shadowJar # Skip tests when building jar, they've already run
+          command: clean --refresh-dependencies jar shadowJar # force redownload of deps
           filters:
             branches:
               only: /.*/
@@ -34,7 +34,7 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "dpr-jobs-build-cache"
+          cache_key: "dpr-jobs-build-cache-v6"
       - slack/on-hold:
           channel: dpr_cicd_approvals
           filters:
@@ -86,4 +86,4 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache"
+          cache_key: "owasp-build-cache-v6"
