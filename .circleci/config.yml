@@ -12,7 +12,25 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v6"
+          cache_key: "owasp-build-cache-v7"
+       pre-steps:
+            - run:
+                name: Fix Gradle cache & clean corrupted entries
+                command: |
+                  mkdir -p ~/.gradle
+                  sudo chown -R "$USER":"$USER" ~/.gradle || true
+                  chmod -R u+rwX ~/.gradle
+                  rm -rf ~/.gradle/caches/jars-* \
+                         ~/.gradle/caches/modules-2/files-2.1/com.h2database || true
+                  df -h ; du -sh ~/.gradle || true
+            - run:
+                name: Set Gradle JVM args for CI
+                command: |
+                  mkdir -p ~/.gradle
+                  cat > ~/.gradle/gradle.properties <<'EOF'
+                  org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+                  org.gradle.daemon=false
+                  EOF
       - reporting/gradle_build_publish:
           tag: "8.0"
           app: digital-prison-reporting-jobs
@@ -34,7 +52,25 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "dpr-jobs-build-cache-v6"
+          cache_key: "dpr-jobs-build-cache-v7"
+          pre-steps:
+            - run:
+                name: Fix Gradle cache & clean corrupted entries
+                command: |
+                  mkdir -p ~/.gradle
+                  sudo chown -R "$USER":"$USER" ~/.gradle || true
+                  chmod -R u+rwX ~/.gradle
+                  rm -rf ~/.gradle/caches/jars-* \
+                         ~/.gradle/caches/modules-2/files-2.1/com.h2database || true
+                  df -h ; du -sh ~/.gradle || true
+            - run:
+                name: Set Gradle JVM args for CI
+                command: |
+                  mkdir -p ~/.gradle
+                  cat > ~/.gradle/gradle.properties <<'EOF'
+                  org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+                  org.gradle.daemon=false
+                  EOF
       - slack/on-hold:
           channel: dpr_cicd_approvals
           filters:
@@ -86,4 +122,19 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v6"
+          cache_key: "owasp-build-cache-v7"
+          pre-steps:
+            - run:
+                name: Fix Gradle cache & clean corrupted entries
+                command: |
+                  mkdir -p ~/.gradle
+                  sudo chown -R "$USER":"$USER" ~/.gradle || true
+                  chmod -R u+rwX ~/.gradle
+                  rm -rf ~/.gradle/caches/jars-* \
+                         ~/.gradle/caches/modules-2/files-2.1/com.h2database || true
+            - run:
+                name: Set Gradle JVM args for CI
+                command: |
+                  mkdir -p ~/.gradle
+                  echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+                  echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
