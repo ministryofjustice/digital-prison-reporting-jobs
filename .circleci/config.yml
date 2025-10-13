@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   reporting: ministryofjustice/hmpps-reporting@dev:e6c8666d1584dd7d95ef11165b45ae7809d16f6e
-  slack: circleci/slack@4.12.5  
+  slack: circleci/slack@4.12.5
 
 workflows:
   checkout-build-publish:
@@ -13,7 +13,7 @@ workflows:
             - hmpps-reporting-common
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache-v7"
-       pre-steps:
+          pre-steps:
             - run:
                 name: Fix Gradle cache & clean corrupted entries
                 command: |
@@ -31,6 +31,7 @@ workflows:
                   org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   EOF
+
       - reporting/gradle_build_publish:
           tag: "8.0"
           app: digital-prison-reporting-jobs
@@ -38,11 +39,11 @@ workflows:
           bucket_prefix: dpr-artifact-store
           sync_args: "--exclude '*' --include '*-all*jar'"
           deploy_script: true
-          deploy_to_test: true # Deploy to Test Environment
+          deploy_to_test: true
           notify_jira: true
           notify_slack: true
           channel: dpr_cicd_alerts
-          command: clean --refresh-dependencies jar shadowJar # force redownload of deps
+          command: clean --refresh-dependencies jar shadowJar
           filters:
             branches:
               only: /.*/
@@ -71,16 +72,18 @@ workflows:
                   org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   EOF
+
       - slack/on-hold:
           channel: dpr_cicd_approvals
           filters:
             branches:
               only: main
             tags:
-              ignore: /.*/          
+              ignore: /.*/
           context:
             - hmpps-reporting-common
           requires: [reporting/gradle_build_publish]
+
       - pause_workflow:
           channel: dpr_cicd_approvals
           type: approval
@@ -88,10 +91,11 @@ workflows:
             branches:
               only: main
             tags:
-              ignore: /.*/          
+              ignore: /.*/
           context:
             - hmpps-reporting-common
           requires: [slack/on-hold]
+
       - reporting/gradle_promote_live:
           app: digital-prison-reporting-jobs
           sync_args: "--exclude '*' --include '*-all*jar'"
@@ -105,12 +109,12 @@ workflows:
               ignore: /.*/
           requires: [pause_workflow]
           context:
-            - hmpps-reporting-common          
+            - hmpps-reporting-common
 
   owasp-security:
     triggers:
       - schedule:
-          cron: "30 6 * * *" ## Runs everyday at 7.30 AM UK TIME 
+          cron: "30 6 * * *" # 7:30 AM UK
           filters:
             branches:
               only:
