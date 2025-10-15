@@ -27,10 +27,9 @@ workflows:
                 name: Set Gradle JVM args for CI
                 command: |
                   mkdir -p ~/.gradle
-                  cat > ~/.gradle/gradle.properties <<'EOF'
-                  org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-                  org.gradle.daemon=false
-                  EOF
+                  printf '%s\n' \
+                    'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
+                    'org.gradle.daemon=false' > ~/.gradle/gradle.properties
 
       - reporting/gradle_build_publish:
           tag: "8.0"
@@ -68,10 +67,9 @@ workflows:
                 name: Set Gradle JVM args for CI
                 command: |
                   mkdir -p ~/.gradle
-                  cat > ~/.gradle/gradle.properties <<'EOF'
-                  org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-                  org.gradle.daemon=false
-                  EOF
+                  printf '%s\n' \
+                    'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
+                    'org.gradle.daemon=false' > ~/.gradle/gradle.properties
 
       - slack/on-hold:
           channel: dpr_cicd_approvals
