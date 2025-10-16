@@ -12,7 +12,7 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v8"
+          cache_key: "owasp-build-cache-v9"
           pre-steps:
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
@@ -43,7 +43,7 @@ workflows:
                   }
                   EOF
             - run:
-                name: Gradle properties (use $GRADLE_USER_HOME)
+                name: Gradle properties (use $GRADLE_USER_HOME) + nuke corrupted caches
                 command: |
                   mkdir -p "$GRADLE_USER_HOME"
                   printf '%s\n' \
@@ -51,14 +51,23 @@ workflows:
                     'org.gradle.daemon=false' \
                     'org.gradle.parallel=false' \
                     'org.gradle.workers.max=1' \
-                    'org.gradle.vfs.watch=false' > "$GRADLE_USER_HOME/gradle.properties"
+                    'org.gradle.vfs.watch=false' \
+                    'systemProp.org.gradle.internal.http.connectionTimeout=120000' \
+                    'systemProp.org.gradle.internal.http.socketTimeout=120000' \
+                    > "$GRADLE_USER_HOME/gradle.properties"
+                  # Hard-bust caches so we don’t reuse any truncated downloads
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
-                         "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
+                         "$GRADLE_USER_HOME/caches/modules-2" \
+                         "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
             - run:
                 name: Disk space (debug)
                 command: |
                   df -h
                   du -sh "$GRADLE_USER_HOME" || true
+            - run:
+                name: Sanity check for truncated jars (optional)
+                command: |
+                  find "$GRADLE_USER_HOME/caches/modules-2/files-2.1" -type f -name '*.jar' -size -5k -print || true
 
       - reporting/gradle_build_publish:
           tag: "8.0"
@@ -81,7 +90,7 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "dpr-jobs-build-cache-v8"
+          cache_key: "dpr-jobs-build-cache-v9"
           pre-steps:
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
@@ -112,7 +121,7 @@ workflows:
                   }
                   EOF
             - run:
-                name: Gradle properties (use $GRADLE_USER_HOME)
+                name: Gradle properties (use $GRADLE_USER_HOME) + nuke corrupted caches
                 command: |
                   mkdir -p "$GRADLE_USER_HOME"
                   printf '%s\n' \
@@ -120,14 +129,22 @@ workflows:
                     'org.gradle.daemon=false' \
                     'org.gradle.parallel=false' \
                     'org.gradle.workers.max=1' \
-                    'org.gradle.vfs.watch=false' > "$GRADLE_USER_HOME/gradle.properties"
+                    'org.gradle.vfs.watch=false' \
+                    'systemProp.org.gradle.internal.http.connectionTimeout=120000' \
+                    'systemProp.org.gradle.internal.http.socketTimeout=120000' \
+                    > "$GRADLE_USER_HOME/gradle.properties"
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
-                         "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
+                         "$GRADLE_USER_HOME/caches/modules-2" \
+                         "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
             - run:
                 name: Disk space (debug)
                 command: |
                   df -h
                   du -sh "$GRADLE_USER_HOME" || true
+            - run:
+                name: Sanity check for truncated jars (optional)
+                command: |
+                  find "$GRADLE_USER_HOME/caches/modules-2/files-2.1" -type f -name '*.jar' -size -5k -print || true
 
       - slack/on-hold:
           channel: dpr_cicd_approvals
@@ -182,7 +199,7 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v8"
+          cache_key: "owasp-build-cache-v9"
           pre-steps:
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
@@ -213,7 +230,7 @@ workflows:
                   }
                   EOF
             - run:
-                name: Gradle properties (use $GRADLE_USER_HOME)
+                name: Gradle properties (use $GRADLE_USER_HOME) + nuke corrupted caches
                 command: |
                   mkdir -p "$GRADLE_USER_HOME"
                   printf '%s\n' \
@@ -221,6 +238,19 @@ workflows:
                     'org.gradle.daemon=false' \
                     'org.gradle.parallel=false' \
                     'org.gradle.workers.max=1' \
-                    'org.gradle.vfs.watch=false' > "$GRADLE_USER_HOME/gradle.properties"
+                    'org.gradle.vfs.watch=false' \
+                    'systemProp.org.gradle.internal.http.connectionTimeout=120000' \
+                    'systemProp.org.gradle.internal.http.socketTimeout=120000' \
+                    > "$GRADLE_USER_HOME/gradle.properties"
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
-                         "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
+                         "$GRADLE_USER_HOME/caches/modules-2" \
+                         "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
+            - run:
+                name: Disk space (debug)
+                command: |
+                  df -h
+                  du -sh "$GRADLE_USER_HOME" || true
+            - run:
+                name: Sanity check for truncated jars (optional)
+                command: |
+                  find "$GRADLE_USER_HOME/caches/modules-2/files-2.1" -type f -name '*.jar' -size -5k -print || true
