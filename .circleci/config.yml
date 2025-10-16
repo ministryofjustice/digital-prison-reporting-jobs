@@ -14,22 +14,45 @@ workflows:
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache-v7"
           pre-steps:
+            # Use an isolated Gradle home so the orb's restored ~/.gradle cache is ignored
             - run:
-                name: Fix Gradle cache & clean corrupted entries
+                name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
-                  mkdir -p ~/.gradle
-                  sudo chown -R "$USER":"$USER" ~/.gradle || true
-                  chmod -R u+rwX ~/.gradle
-                  rm -rf ~/.gradle/caches/jars-* \
-                         ~/.gradle/caches/modules-2/files-2.1/com.h2database || true
-                  df -h ; du -sh ~/.gradle || true
+                  echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
+                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
+                  mkdir -p /tmp/gradle-home/init.d
+                  cat > /tmp/gradle-home/init.d/pin-h2.gradle <<'EOF'
+                  allprojects {
+                    configurations.configureEach {
+                      resolutionStrategy.eachDependency { d ->
+                        if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
+                          d.useVersion '2.2.224'
+                          d.because 'Work around CI jar-cache write failure for h2-2.3.232'
+                        }
+                      }
+                    }
+                    buildscript {
+                      configurations.configureEach {
+                        resolutionStrategy.eachDependency { d ->
+                          if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
+                            d.useVersion '2.2.224'
+                          }
+                        }
+                      }
+                    }
+                  }
+                  EOF
             - run:
-                name: Set Gradle JVM args for CI
+                name: Gradle properties
                 command: |
                   mkdir -p ~/.gradle
                   printf '%s\n' \
                     'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
-                    'org.gradle.daemon=false' > ~/.gradle/gradle.properties
+                    'org.gradle.daemon=false' \
+                    'org.gradle.workers.max=1' > ~/.gradle/gradle.properties
+            - run:
+                name: Disk space (debug)
+                command: df -h
 
       - reporting/gradle_build_publish:
           tag: "8.0"
@@ -55,21 +78,43 @@ workflows:
           cache_key: "dpr-jobs-build-cache-v7"
           pre-steps:
             - run:
-                name: Fix Gradle cache & clean corrupted entries
+                name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
-                  mkdir -p ~/.gradle
-                  sudo chown -R "$USER":"$USER" ~/.gradle || true
-                  chmod -R u+rwX ~/.gradle
-                  rm -rf ~/.gradle/caches/jars-* \
-                         ~/.gradle/caches/modules-2/files-2.1/com.h2database || true
-                  df -h ; du -sh ~/.gradle || true
+                  echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
+                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
+                  mkdir -p /tmp/gradle-home/init.d
+                  cat > /tmp/gradle-home/init.d/pin-h2.gradle <<'EOF'
+                  allprojects {
+                    configurations.configureEach {
+                      resolutionStrategy.eachDependency { d ->
+                        if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
+                          d.useVersion '2.2.224'
+                          d.because 'Work around CI jar-cache write failure for h2-2.3.232'
+                        }
+                      }
+                    }
+                    buildscript {
+                      configurations.configureEach {
+                        resolutionStrategy.eachDependency { d ->
+                          if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
+                            d.useVersion '2.2.224'
+                          }
+                        }
+                      }
+                    }
+                  }
+                  EOF
             - run:
-                name: Set Gradle JVM args for CI
+                name: Gradle properties
                 command: |
                   mkdir -p ~/.gradle
                   printf '%s\n' \
                     'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
-                    'org.gradle.daemon=false' > ~/.gradle/gradle.properties
+                    'org.gradle.daemon=false' \
+                    'org.gradle.workers.max=1' > ~/.gradle/gradle.properties
+            - run:
+                name: Disk space (debug)
+                command: df -h
 
       - slack/on-hold:
           channel: dpr_cicd_approvals
@@ -127,16 +172,37 @@ workflows:
           cache_key: "owasp-build-cache-v7"
           pre-steps:
             - run:
-                name: Fix Gradle cache & clean corrupted entries
+                name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
-                  mkdir -p ~/.gradle
-                  sudo chown -R "$USER":"$USER" ~/.gradle || true
-                  chmod -R u+rwX ~/.gradle
-                  rm -rf ~/.gradle/caches/jars-* \
-                         ~/.gradle/caches/modules-2/files-2.1/com.h2database || true
+                  echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
+                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
+                  mkdir -p /tmp/gradle-home/init.d
+                  cat > /tmp/gradle-home/init.d/pin-h2.gradle <<'EOF'
+                  allprojects {
+                    configurations.configureEach {
+                      resolutionStrategy.eachDependency { d ->
+                        if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
+                          d.useVersion '2.2.224'
+                          d.because 'Work around CI jar-cache write failure for h2-2.3.232'
+                        }
+                      }
+                    }
+                    buildscript {
+                      configurations.configureEach {
+                        resolutionStrategy.eachDependency { d ->
+                          if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
+                            d.useVersion '2.2.224'
+                          }
+                        }
+                      }
+                    }
+                  }
+                  EOF
             - run:
-                name: Set Gradle JVM args for CI
+                name: Gradle properties
                 command: |
                   mkdir -p ~/.gradle
-                  echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
-                  echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
+                  printf '%s\n' \
+                    'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
+                    'org.gradle.daemon=false' \
+                    'org.gradle.workers.max=1' > ~/.gradle/gradle.properties
