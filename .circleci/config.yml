@@ -17,7 +17,6 @@ workflows:
             - run:
                 name: Isolate Gradle in /tmp + pin H2 + sane defaults
                 command: |
-                  # Fresh, per-job Gradle home & tmp
                   export GRADLE_USER_HOME="/tmp/gradle-${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
                   echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME" >> "$BASH_ENV"
                   mkdir -p "$GRADLE_USER_HOME/init.d" "$GRADLE_USER_HOME/tmp"
@@ -25,7 +24,7 @@ workflows:
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
 
                   # Gradle properties
-                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
+                  cat > "$GRADLE_USER_HOME/gradle.properties" \<<'PROPS'
                   org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   org.gradle.parallel=false
@@ -58,10 +57,7 @@ workflows:
                   }
                   EOF
 
-                  # Ensure no old caches exist (defensive)
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* "$GRADLE_USER_HOME/caches/modules-2" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
-
-                  # Debug: disk + inode usage
                   df -h
                   df -i || true
                   java -version
@@ -101,7 +97,7 @@ workflows:
                   echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
 
-                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
+                  cat > "$GRADLE_USER_HOME/gradle.properties" \<<'PROPS'
                   org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   org.gradle.parallel=false
@@ -205,7 +201,7 @@ workflows:
                   echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
 
-                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
+                  cat > "$GRADLE_USER_HOME/gradle.properties" \<<'PROPS'
                   org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   org.gradle.parallel=false
