@@ -21,7 +21,7 @@ workflows:
                   echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
                   mkdir -p /tmp/gradle-home/init.d
-                  cat > /tmp/gradle-home/init.d/pin-h2.gradle <<'EOF'
+                  cat > /tmp/gradle-home/init.d/pin-h2.gradle \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -83,7 +83,7 @@ workflows:
                   echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
                   mkdir -p /tmp/gradle-home/init.d
-                  cat > /tmp/gradle-home/init.d/pin-h2.gradle <<'EOF'
+                  cat > /tmp/gradle-home/init.d/pin-h2.gradle \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -177,7 +177,7 @@ workflows:
                   echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
                   mkdir -p /tmp/gradle-home/init.d
-                  cat > /tmp/gradle-home/init.d/pin-h2.gradle <<'EOF'
+                  cat > /tmp/gradle-home/init.d/pin-h2.gradle \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
