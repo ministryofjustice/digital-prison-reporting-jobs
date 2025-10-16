@@ -17,13 +17,10 @@ workflows:
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
-                  # Use $HOME instead of /tmp to avoid overlayfs quirks
                   echo 'export GRADLE_USER_HOME=$HOME/.gradle' >> "$BASH_ENV"
-                  # Be conservative with Gradle IO features on CI FS
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
                   echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/.gradle/tmp"' >> "$BASH_ENV"
                   mkdir -p "$HOME/.gradle/init.d" "$HOME/.gradle/tmp"
-                  # CircleCI config v2.1 requires escaping '<<'
                   cat > "$HOME/.gradle/init.d/pin-h2.gradle" \<<'EOF'
                   allprojects {
                     configurations.configureEach {
@@ -55,7 +52,6 @@ workflows:
                     'org.gradle.parallel=false' \
                     'org.gradle.workers.max=1' \
                     'org.gradle.vfs.watch=false' > "$GRADLE_USER_HOME/gradle.properties"
-                  # Clean ONLY the jar caches & any H2 artifacts
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
                          "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
             - run:
