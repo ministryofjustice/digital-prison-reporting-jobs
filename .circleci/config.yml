@@ -14,7 +14,6 @@ workflows:
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache-v7"
           pre-steps:
-            # Use an isolated Gradle home so the orb's restored ~/.gradle cache is ignored
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
@@ -27,7 +26,7 @@ workflows:
                       resolutionStrategy.eachDependency { d ->
                         if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
                           d.useVersion '2.2.224'
-                          d.because 'Work around CI jar-cache write failure for h2-2.3.232'
+                          d.because 'Work around CI jar-cache write failure'
                         }
                       }
                     }
@@ -43,16 +42,23 @@ workflows:
                   }
                   EOF
             - run:
-                name: Gradle properties
+                name: Gradle properties (use $GRADLE_USER_HOME)
                 command: |
-                  mkdir -p ~/.gradle
+                  # $BASH_ENV is sourced at step start, so GRADLE_USER_HOME is available here
+                  mkdir -p "$GRADLE_USER_HOME"
                   printf '%s\n' \
-                    'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
+                    'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
                     'org.gradle.daemon=false' \
-                    'org.gradle.workers.max=1' > ~/.gradle/gradle.properties
+                    'org.gradle.parallel=false' \
+                    'org.gradle.workers.max=1' > "$GRADLE_USER_HOME/gradle.properties"
+                  # Nuke any stale/corrupted caches in the *same* user home
+                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
+                         "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
             - run:
                 name: Disk space (debug)
-                command: df -h
+                command: |
+                  df -h
+                  du -sh "$GRADLE_USER_HOME" || true
 
       - reporting/gradle_build_publish:
           tag: "8.0"
@@ -89,7 +95,7 @@ workflows:
                       resolutionStrategy.eachDependency { d ->
                         if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
                           d.useVersion '2.2.224'
-                          d.because 'Work around CI jar-cache write failure for h2-2.3.232'
+                          d.because 'Work around CI jar-cache write failure'
                         }
                       }
                     }
@@ -105,16 +111,21 @@ workflows:
                   }
                   EOF
             - run:
-                name: Gradle properties
+                name: Gradle properties (use $GRADLE_USER_HOME)
                 command: |
-                  mkdir -p ~/.gradle
+                  mkdir -p "$GRADLE_USER_HOME"
                   printf '%s\n' \
-                    'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
+                    'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
                     'org.gradle.daemon=false' \
-                    'org.gradle.workers.max=1' > ~/.gradle/gradle.properties
+                    'org.gradle.parallel=false' \
+                    'org.gradle.workers.max=1' > "$GRADLE_USER_HOME/gradle.properties"
+                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
+                         "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
             - run:
                 name: Disk space (debug)
-                command: df -h
+                command: |
+                  df -h
+                  du -sh "$GRADLE_USER_HOME" || true
 
       - slack/on-hold:
           channel: dpr_cicd_approvals
@@ -183,7 +194,7 @@ workflows:
                       resolutionStrategy.eachDependency { d ->
                         if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
                           d.useVersion '2.2.224'
-                          d.because 'Work around CI jar-cache write failure for h2-2.3.232'
+                          d.because 'Work around CI jar-cache write failure'
                         }
                       }
                     }
@@ -199,10 +210,13 @@ workflows:
                   }
                   EOF
             - run:
-                name: Gradle properties
+                name: Gradle properties (use $GRADLE_USER_HOME)
                 command: |
-                  mkdir -p ~/.gradle
+                  mkdir -p "$GRADLE_USER_HOME"
                   printf '%s\n' \
-                    'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' \
+                    'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
                     'org.gradle.daemon=false' \
-                    'org.gradle.workers.max=1' > ~/.gradle/gradle.properties
+                    'org.gradle.parallel=false' \
+                    'org.gradle.workers.max=1' > "$GRADLE_USER_HOME/gradle.properties"
+                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
+                         "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
