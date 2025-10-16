@@ -12,16 +12,31 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v9"
+          cache_key: "owasp-build-cache-v10"
           pre-steps:
             - run:
-                name: Isolate Gradle cache + pin H2 + sane defaults
+                name: Isolate Gradle in /tmp + pin H2 + sane defaults
                 command: |
-                  echo 'export GRADLE_USER_HOME=$HOME/.gradle' >> "$BASH_ENV"
+                  # Fresh, per-job Gradle home & tmp
+                  export GRADLE_USER_HOME="/tmp/gradle-${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
+                  echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME" >> "$BASH_ENV"
+                  mkdir -p "$GRADLE_USER_HOME/init.d" "$GRADLE_USER_HOME/tmp"
+                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
-                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/.gradle/tmp"' >> "$BASH_ENV"
-                  mkdir -p "$HOME/.gradle/init.d" "$HOME/.gradle/tmp"
-                  cat > "$HOME/.gradle/init.d/pin-h2.gradle" \<<'EOF'
+
+                  # Gradle properties
+                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
+                  org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
+                  org.gradle.daemon=false
+                  org.gradle.parallel=false
+                  org.gradle.workers.max=1
+                  org.gradle.vfs.watch=false
+                  systemProp.org.gradle.internal.http.connectionTimeout=120000
+                  systemProp.org.gradle.internal.http.socketTimeout=120000
+                  PROPS
+
+                  # Pin H2 via init script
+                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -42,32 +57,17 @@ workflows:
                     }
                   }
                   EOF
-            - run:
-                name: Gradle properties (use $GRADLE_USER_HOME) + nuke corrupted caches
-                command: |
-                  mkdir -p "$GRADLE_USER_HOME"
-                  printf '%s\n' \
-                    'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
-                    'org.gradle.daemon=false' \
-                    'org.gradle.parallel=false' \
-                    'org.gradle.workers.max=1' \
-                    'org.gradle.vfs.watch=false' \
-                    'systemProp.org.gradle.internal.http.connectionTimeout=120000' \
-                    'systemProp.org.gradle.internal.http.socketTimeout=120000' \
-                    > "$GRADLE_USER_HOME/gradle.properties"
-                  # Hard-bust caches so we don’t reuse any truncated downloads
-                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
-                         "$GRADLE_USER_HOME/caches/modules-2" \
-                         "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
-            - run:
-                name: Disk space (debug)
-                command: |
+
+                  # Ensure no old caches exist (defensive)
+                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* "$GRADLE_USER_HOME/caches/modules-2" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
+
+                  # Debug: disk + inode usage
                   df -h
-                  du -sh "$GRADLE_USER_HOME" || true
+                  df -i || true
+                  java -version
             - run:
-                name: Sanity check for truncated jars (optional)
-                command: |
-                  find "$GRADLE_USER_HOME/caches/modules-2/files-2.1" -type f -name '*.jar' -size -5k -print || true
+                name: Show GRADLE_USER_HOME
+                command: echo "$GRADLE_USER_HOME"
 
       - reporting/gradle_build_publish:
           tag: "8.0"
@@ -90,16 +90,28 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "dpr-jobs-build-cache-v9"
+          cache_key: "dpr-jobs-build-cache-v10"
           pre-steps:
             - run:
-                name: Isolate Gradle cache + pin H2 + sane defaults
+                name: Isolate Gradle in /tmp + pin H2 + sane defaults
                 command: |
-                  echo 'export GRADLE_USER_HOME=$HOME/.gradle' >> "$BASH_ENV"
+                  export GRADLE_USER_HOME="/tmp/gradle-${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
+                  echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME" >> "$BASH_ENV"
+                  mkdir -p "$GRADLE_USER_HOME/init.d" "$GRADLE_USER_HOME/tmp"
+                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
-                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/.gradle/tmp"' >> "$BASH_ENV"
-                  mkdir -p "$HOME/.gradle/init.d" "$HOME/.gradle/tmp"
-                  cat > "$HOME/.gradle/init.d/pin-h2.gradle" \<<'EOF'
+
+                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
+                  org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
+                  org.gradle.daemon=false
+                  org.gradle.parallel=false
+                  org.gradle.workers.max=1
+                  org.gradle.vfs.watch=false
+                  systemProp.org.gradle.internal.http.connectionTimeout=120000
+                  systemProp.org.gradle.internal.http.socketTimeout=120000
+                  PROPS
+
+                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -120,31 +132,14 @@ workflows:
                     }
                   }
                   EOF
-            - run:
-                name: Gradle properties (use $GRADLE_USER_HOME) + nuke corrupted caches
-                command: |
-                  mkdir -p "$GRADLE_USER_HOME"
-                  printf '%s\n' \
-                    'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
-                    'org.gradle.daemon=false' \
-                    'org.gradle.parallel=false' \
-                    'org.gradle.workers.max=1' \
-                    'org.gradle.vfs.watch=false' \
-                    'systemProp.org.gradle.internal.http.connectionTimeout=120000' \
-                    'systemProp.org.gradle.internal.http.socketTimeout=120000' \
-                    > "$GRADLE_USER_HOME/gradle.properties"
-                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
-                         "$GRADLE_USER_HOME/caches/modules-2" \
-                         "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
-            - run:
-                name: Disk space (debug)
-                command: |
+
+                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* "$GRADLE_USER_HOME/caches/modules-2" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
                   df -h
-                  du -sh "$GRADLE_USER_HOME" || true
+                  df -i || true
+                  java -version
             - run:
-                name: Sanity check for truncated jars (optional)
-                command: |
-                  find "$GRADLE_USER_HOME/caches/modules-2/files-2.1" -type f -name '*.jar' -size -5k -print || true
+                name: Show GRADLE_USER_HOME
+                command: echo "$GRADLE_USER_HOME"
 
       - slack/on-hold:
           channel: dpr_cicd_approvals
@@ -199,16 +194,28 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v9"
+          cache_key: "owasp-build-cache-v10"
           pre-steps:
             - run:
-                name: Isolate Gradle cache + pin H2 + sane defaults
+                name: Isolate Gradle in /tmp + pin H2 + sane defaults
                 command: |
-                  echo 'export GRADLE_USER_HOME=$HOME/.gradle' >> "$BASH_ENV"
+                  export GRADLE_USER_HOME="/tmp/gradle-${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
+                  echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME" >> "$BASH_ENV"
+                  mkdir -p "$GRADLE_USER_HOME/init.d" "$GRADLE_USER_HOME/tmp"
+                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
                   echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
-                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/.gradle/tmp"' >> "$BASH_ENV"
-                  mkdir -p "$HOME/.gradle/init.d" "$HOME/.gradle/tmp"
-                  cat > "$HOME/.gradle/init.d/pin-h2.gradle" \<<'EOF'
+
+                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
+                  org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
+                  org.gradle.daemon=false
+                  org.gradle.parallel=false
+                  org.gradle.workers.max=1
+                  org.gradle.vfs.watch=false
+                  systemProp.org.gradle.internal.http.connectionTimeout=120000
+                  systemProp.org.gradle.internal.http.socketTimeout=120000
+                  PROPS
+
+                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -229,28 +236,11 @@ workflows:
                     }
                   }
                   EOF
-            - run:
-                name: Gradle properties (use $GRADLE_USER_HOME) + nuke corrupted caches
-                command: |
-                  mkdir -p "$GRADLE_USER_HOME"
-                  printf '%s\n' \
-                    'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
-                    'org.gradle.daemon=false' \
-                    'org.gradle.parallel=false' \
-                    'org.gradle.workers.max=1' \
-                    'org.gradle.vfs.watch=false' \
-                    'systemProp.org.gradle.internal.http.connectionTimeout=120000' \
-                    'systemProp.org.gradle.internal.http.socketTimeout=120000' \
-                    > "$GRADLE_USER_HOME/gradle.properties"
-                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
-                         "$GRADLE_USER_HOME/caches/modules-2" \
-                         "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
-            - run:
-                name: Disk space (debug)
-                command: |
+
+                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* "$GRADLE_USER_HOME/caches/modules-2" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
                   df -h
-                  du -sh "$GRADLE_USER_HOME" || true
+                  df -i || true
+                  java -version
             - run:
-                name: Sanity check for truncated jars (optional)
-                command: |
-                  find "$GRADLE_USER_HOME/caches/modules-2/files-2.1" -type f -name '*.jar' -size -5k -print || true
+                name: Show GRADLE_USER_HOME
+                command: echo "$GRADLE_USER_HOME"
