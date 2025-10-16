@@ -12,21 +12,25 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v7"
+          cache_key: "owasp-build-cache-v8"
           pre-steps:
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
-                  echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
-                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
-                  mkdir -p /tmp/gradle-home/init.d
-                  cat > /tmp/gradle-home/init.d/pin-h2.gradle \<<'EOF'
+                  # Use $HOME instead of /tmp to avoid overlayfs quirks
+                  echo 'export GRADLE_USER_HOME=$HOME/.gradle' >> "$BASH_ENV"
+                  # Be conservative with Gradle IO features on CI FS
+                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
+                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/.gradle/tmp"' >> "$BASH_ENV"
+                  mkdir -p "$HOME/.gradle/init.d" "$HOME/.gradle/tmp"
+                  # CircleCI config v2.1 requires escaping '<<'
+                  cat > "$HOME/.gradle/init.d/pin-h2.gradle" \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
                         if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
-                          d.useVersion '2.2.224'
-                          d.because 'Work around CI jar-cache write failure'
+                          d.useVersion '2.1.214'
+                          d.because 'Avoid CI jar-cache write failure'
                         }
                       }
                     }
@@ -34,7 +38,7 @@ workflows:
                       configurations.configureEach {
                         resolutionStrategy.eachDependency { d ->
                           if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
-                            d.useVersion '2.2.224'
+                            d.useVersion '2.1.214'
                           }
                         }
                       }
@@ -44,14 +48,14 @@ workflows:
             - run:
                 name: Gradle properties (use $GRADLE_USER_HOME)
                 command: |
-                  # $BASH_ENV is sourced at step start, so GRADLE_USER_HOME is available here
                   mkdir -p "$GRADLE_USER_HOME"
                   printf '%s\n' \
                     'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
                     'org.gradle.daemon=false' \
                     'org.gradle.parallel=false' \
-                    'org.gradle.workers.max=1' > "$GRADLE_USER_HOME/gradle.properties"
-                  # Nuke any stale/corrupted caches in the *same* user home
+                    'org.gradle.workers.max=1' \
+                    'org.gradle.vfs.watch=false' > "$GRADLE_USER_HOME/gradle.properties"
+                  # Clean ONLY the jar caches & any H2 artifacts
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
                          "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
             - run:
@@ -81,21 +85,22 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "dpr-jobs-build-cache-v7"
+          cache_key: "dpr-jobs-build-cache-v8"
           pre-steps:
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
-                  echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
-                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
-                  mkdir -p /tmp/gradle-home/init.d
-                  cat > /tmp/gradle-home/init.d/pin-h2.gradle \<<'EOF'
+                  echo 'export GRADLE_USER_HOME=$HOME/.gradle' >> "$BASH_ENV"
+                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
+                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/.gradle/tmp"' >> "$BASH_ENV"
+                  mkdir -p "$HOME/.gradle/init.d" "$HOME/.gradle/tmp"
+                  cat > "$HOME/.gradle/init.d/pin-h2.gradle" \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
                         if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
-                          d.useVersion '2.2.224'
-                          d.because 'Work around CI jar-cache write failure'
+                          d.useVersion '2.1.214'
+                          d.because 'Avoid CI jar-cache write failure'
                         }
                       }
                     }
@@ -103,7 +108,7 @@ workflows:
                       configurations.configureEach {
                         resolutionStrategy.eachDependency { d ->
                           if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
-                            d.useVersion '2.2.224'
+                            d.useVersion '2.1.214'
                           }
                         }
                       }
@@ -118,7 +123,8 @@ workflows:
                     'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
                     'org.gradle.daemon=false' \
                     'org.gradle.parallel=false' \
-                    'org.gradle.workers.max=1' > "$GRADLE_USER_HOME/gradle.properties"
+                    'org.gradle.workers.max=1' \
+                    'org.gradle.vfs.watch=false' > "$GRADLE_USER_HOME/gradle.properties"
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
                          "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
             - run:
@@ -180,21 +186,22 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "owasp-build-cache-v7"
+          cache_key: "owasp-build-cache-v8"
           pre-steps:
             - run:
                 name: Isolate Gradle cache + pin H2 + sane defaults
                 command: |
-                  echo 'export GRADLE_USER_HOME=/tmp/gradle-home' >> "$BASH_ENV"
-                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"' >> "$BASH_ENV"
-                  mkdir -p /tmp/gradle-home/init.d
-                  cat > /tmp/gradle-home/init.d/pin-h2.gradle \<<'EOF'
+                  echo 'export GRADLE_USER_HOME=$HOME/.gradle' >> "$BASH_ENV"
+                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
+                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/.gradle/tmp"' >> "$BASH_ENV"
+                  mkdir -p "$HOME/.gradle/init.d" "$HOME/.gradle/tmp"
+                  cat > "$HOME/.gradle/init.d/pin-h2.gradle" \<<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
                         if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
-                          d.useVersion '2.2.224'
-                          d.because 'Work around CI jar-cache write failure'
+                          d.useVersion '2.1.214'
+                          d.because 'Avoid CI jar-cache write failure'
                         }
                       }
                     }
@@ -202,7 +209,7 @@ workflows:
                       configurations.configureEach {
                         resolutionStrategy.eachDependency { d ->
                           if (d.requested.group == 'com.h2database' && d.requested.name == 'h2') {
-                            d.useVersion '2.2.224'
+                            d.useVersion '2.1.214'
                           }
                         }
                       }
@@ -217,6 +224,7 @@ workflows:
                     'org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8' \
                     'org.gradle.daemon=false' \
                     'org.gradle.parallel=false' \
-                    'org.gradle.workers.max=1' > "$GRADLE_USER_HOME/gradle.properties"
+                    'org.gradle.workers.max=1' \
+                    'org.gradle.vfs.watch=false' > "$GRADLE_USER_HOME/gradle.properties"
                   rm -rf "$GRADLE_USER_HOME/caches/jars-"* \
                          "$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.h2database" || true
