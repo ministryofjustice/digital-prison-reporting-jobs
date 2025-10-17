@@ -32,6 +32,7 @@ workflows:
                   org.gradle.vfs.watch=false
                   systemProp.org.gradle.internal.http.connectionTimeout=120000
                   systemProp.org.gradle.internal.http.socketTimeout=120000
+                  org.gradle.caching=false
                   PROPS
 
                   # Pin H2 via init script
@@ -64,6 +65,13 @@ workflows:
             - run:
                 name: Show GRADLE_USER_HOME
                 command: echo "$GRADLE_USER_HOME"
+          post-steps:
+            - store_artifacts:
+                path: build/reports/dependency-check-report.html
+                destination: owasp
+            - store_artifacts:
+                path: build/reports/dependency-check-report.json
+                destination: owasp
 
       - reporting/gradle_build_publish:
           tag: "8.0"
@@ -76,7 +84,7 @@ workflows:
           notify_jira: true
           notify_slack: true
           channel: dpr_cicd_alerts
-          command: clean --refresh-dependencies jar shadowJar
+          command: clean --refresh-dependencies check shadowJar
           filters:
             branches:
               only: /.*/
@@ -105,6 +113,7 @@ workflows:
                   org.gradle.vfs.watch=false
                   systemProp.org.gradle.internal.http.connectionTimeout=120000
                   systemProp.org.gradle.internal.http.socketTimeout=120000
+                  org.gradle.caching=false
                   PROPS
 
                   cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
@@ -136,6 +145,18 @@ workflows:
             - run:
                 name: Show GRADLE_USER_HOME
                 command: echo "$GRADLE_USER_HOME"
+          post-steps:
+            - store_artifacts:
+                path: build/libs
+                destination: libs
+            - store_artifacts:
+                path: build/reports/tests/test
+                destination: tests-html
+            - store_artifacts:
+                path: build/reports/jacoco/test/html
+                destination: jacoco
+            - store_test_results:
+                path: build/test-results/test
 
       - slack/on-hold:
           channel: dpr_cicd_approvals
@@ -209,6 +230,7 @@ workflows:
                   org.gradle.vfs.watch=false
                   systemProp.org.gradle.internal.http.connectionTimeout=120000
                   systemProp.org.gradle.internal.http.socketTimeout=120000
+                  org.gradle.caching=false
                   PROPS
 
                   cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
@@ -240,3 +262,10 @@ workflows:
             - run:
                 name: Show GRADLE_USER_HOME
                 command: echo "$GRADLE_USER_HOME"
+          post-steps:
+            - store_artifacts:
+                path: build/reports/dependency-check-report.html
+                destination: owasp
+            - store_artifacts:
+                path: build/reports/dependency-check-report.json
+                destination: owasp
