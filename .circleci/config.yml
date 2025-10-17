@@ -15,16 +15,24 @@ workflows:
           cache_key: "owasp-build-cache-v10"
           pre-steps:
             - run:
-                name: Isolate Gradle in /tmp + pin H2 + sane defaults
+                name: Isolate Gradle in WORKSPACE (not /tmp) + pin H2 + sane defaults
                 command: |
-                  export GRADLE_USER_HOME="/tmp/gradle-${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
-                  echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME" >> "$BASH_ENV"
+                  # Put Gradle + temp inside the project workspace to avoid /tmp inode exhaustion
+                  export GRADLE_USER_HOME="$PWD/.gradle-ci/${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
                   mkdir -p "$GRADLE_USER_HOME/init.d" "$GRADLE_USER_HOME/tmp"
-                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
-                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
 
-                  # Gradle properties
-                  cat > "$GRADLE_USER_HOME/gradle.properties" \<<'PROPS'
+                  # Persist env + limits across steps
+                  {
+                    echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME"
+                    echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"'
+                    echo 'export TMPDIR="$GRADLE_USER_HOME/tmp"'
+                    echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"'
+                    # Raise open files limit (helps when resolving many artifacts)
+                    echo 'ulimit -n 8192 || true'
+                  } >> "$BASH_ENV"
+
+                  # Gradle properties (disable build cache in CI)
+                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
                   org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   org.gradle.parallel=false
@@ -35,8 +43,8 @@ workflows:
                   org.gradle.caching=false
                   PROPS
 
-                  # Pin H2 via init script
-                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
+                  # Pin H2 (avoids a known CI jar-cache write quirk)
+                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" <<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -58,13 +66,15 @@ workflows:
                   }
                   EOF
 
-                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* "$GRADLE_USER_HOME/caches/modules-2" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
+                  # Start each job with a clean cache in the new location
+                  rm -rf "$GRADLE_USER_HOME/caches" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
                   df -h
                   df -i || true
-                  java -version
+                  ulimit -a || true
             - run:
                 name: Show GRADLE_USER_HOME
-                command: echo "$GRADLE_USER_HOME"
+                command: |
+                  echo "GRADLE_USER_HOME=$GRADLE_USER_HOME"
           post-steps:
             - store_artifacts:
                 path: build/reports/dependency-check-report.html
@@ -97,15 +107,19 @@ workflows:
           cache_key: "dpr-jobs-build-cache-v10"
           pre-steps:
             - run:
-                name: Isolate Gradle in /tmp + pin H2 + sane defaults
+                name: Isolate Gradle in WORKSPACE (not /tmp) + pin H2 + sane defaults
                 command: |
-                  export GRADLE_USER_HOME="/tmp/gradle-${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
-                  echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME" >> "$BASH_ENV"
+                  export GRADLE_USER_HOME="$PWD/.gradle-ci/${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
                   mkdir -p "$GRADLE_USER_HOME/init.d" "$GRADLE_USER_HOME/tmp"
-                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
-                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
+                  {
+                    echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME"
+                    echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"'
+                    echo 'export TMPDIR="$GRADLE_USER_HOME/tmp"'
+                    echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"'
+                    echo 'ulimit -n 8192 || true'
+                  } >> "$BASH_ENV"
 
-                  cat > "$GRADLE_USER_HOME/gradle.properties" \<<'PROPS'
+                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
                   org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   org.gradle.parallel=false
@@ -116,7 +130,7 @@ workflows:
                   org.gradle.caching=false
                   PROPS
 
-                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
+                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" <<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -138,13 +152,14 @@ workflows:
                   }
                   EOF
 
-                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* "$GRADLE_USER_HOME/caches/modules-2" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
+                  rm -rf "$GRADLE_USER_HOME/caches" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
                   df -h
                   df -i || true
-                  java -version
+                  ulimit -a || true
             - run:
                 name: Show GRADLE_USER_HOME
-                command: echo "$GRADLE_USER_HOME"
+                command: |
+                  echo "GRADLE_USER_HOME=$GRADLE_USER_HOME"
           post-steps:
             - store_artifacts:
                 path: build/libs
@@ -214,15 +229,19 @@ workflows:
           cache_key: "owasp-build-cache-v10"
           pre-steps:
             - run:
-                name: Isolate Gradle in /tmp + pin H2 + sane defaults
+                name: Isolate Gradle in WORKSPACE (not /tmp) + pin H2 + sane defaults
                 command: |
-                  export GRADLE_USER_HOME="/tmp/gradle-${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
-                  echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME" >> "$BASH_ENV"
+                  export GRADLE_USER_HOME="$PWD/.gradle-ci/${CIRCLE_WORKFLOW_ID}-${CIRCLE_JOB}"
                   mkdir -p "$GRADLE_USER_HOME/init.d" "$GRADLE_USER_HOME/tmp"
-                  echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"' >> "$BASH_ENV"
-                  echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"' >> "$BASH_ENV"
+                  {
+                    echo "export GRADLE_USER_HOME=$GRADLE_USER_HOME"
+                    echo 'export _JAVA_OPTIONS="-Djava.io.tmpdir=$GRADLE_USER_HOME/tmp"'
+                    echo 'export TMPDIR="$GRADLE_USER_HOME/tmp"'
+                    echo 'export GRADLE_OPTS="-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1 -Dorg.gradle.vfs.watch=false -Dorg.gradle.io.native=false"'
+                    echo 'ulimit -n 8192 || true'
+                  } >> "$BASH_ENV"
 
-                  cat > "$GRADLE_USER_HOME/gradle.properties" \<<'PROPS'
+                  cat > "$GRADLE_USER_HOME/gradle.properties" <<'PROPS'
                   org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8
                   org.gradle.daemon=false
                   org.gradle.parallel=false
@@ -233,7 +252,7 @@ workflows:
                   org.gradle.caching=false
                   PROPS
 
-                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" \<<'EOF'
+                  cat > "$GRADLE_USER_HOME/init.d/pin-h2.gradle" <<'EOF'
                   allprojects {
                     configurations.configureEach {
                       resolutionStrategy.eachDependency { d ->
@@ -255,13 +274,14 @@ workflows:
                   }
                   EOF
 
-                  rm -rf "$GRADLE_USER_HOME/caches/jars-"* "$GRADLE_USER_HOME/caches/modules-2" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
+                  rm -rf "$GRADLE_USER_HOME/caches" "$GRADLE_USER_HOME/.tmp/gradle_download"* || true
                   df -h
                   df -i || true
-                  java -version
+                  ulimit -a || true
             - run:
                 name: Show GRADLE_USER_HOME
-                command: echo "$GRADLE_USER_HOME"
+                command: |
+                  echo "GRADLE_USER_HOME=$GRADLE_USER_HOME"
           post-steps:
             - store_artifacts:
                 path: build/reports/dependency-check-report.html
