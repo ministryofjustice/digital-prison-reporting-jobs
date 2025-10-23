@@ -22,9 +22,10 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.RegexPatterns.jsonOrParquetFileRegex;
@@ -107,6 +108,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.SECRET_ID, "test_secret_id" },
             { JobArguments.ADJUST_SPARK_MEMORY, "true" },
             { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, "50000" },
+            { JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, "false" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -179,6 +181,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.SECRET_ID, validArguments.getSecretId() },
                 { JobArguments.ADJUST_SPARK_MEMORY, validArguments.adjustSparkMemory() },
                 { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, Integer.toString(validArguments.getSparkSqlMaxRecordsPerFile()) },
+                { JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, validArguments.fileTransferUseDefaultParallelism() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -359,6 +362,52 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT, unsupportedUnit);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertThrows(IllegalArgumentException.class, jobArguments::getFileTransferRetentionPeriod);
+    }
+
+    @Test
+    public void fileTransferUseDefaultParallelismShouldDefaultToTrue() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertTrue(jobArguments.fileTransferUseDefaultParallelism());
+    }
+
+    @Test
+    public void getFileTransferParallelismShouldThrowExceptionWhenUseDefaultIsTrue() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, "true");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::getFileTransferParallelism);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "1, 1", "12345, 12345", "0123, 123" })
+    public void getFileTransferParallelismShouldReturnParallelismCountGreaterThanOrEqualToOne(String input, int expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, "false");
+        args.put(JobArguments.FILE_TRANSFER_PARALLELISM, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.getFileTransferParallelism());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "-1", "0", "-1", "-100" })
+    public void getFileTransferParallelismShouldThrowExceptionWhenLessThanOne(String input) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, "false");
+        args.put(JobArguments.FILE_TRANSFER_PARALLELISM, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::getFileTransferParallelism);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "a", "A", "_", "1.0" })
+    public void getFileTransferParallelismShouldThrowExceptionWhenGivenNonInteger(String input) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, "false");
+        args.put(JobArguments.FILE_TRANSFER_PARALLELISM, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::getFileTransferParallelism);
     }
 
     @ParameterizedTest
