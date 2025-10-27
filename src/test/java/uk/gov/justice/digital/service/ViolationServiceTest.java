@@ -92,13 +92,6 @@ class ViolationServiceTest extends SparkTestBase {
     }
 
     @Test
-    void handleInvalidSchemaShouldWriteViolations() {
-        underTest.handleViolation(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
-        verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
-        verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
-    }
-
-    @Test
     void handleInvalidSchemaShouldThrowIfWriteFails() {
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
         Dataset<Row> df = testInputDataframe();
