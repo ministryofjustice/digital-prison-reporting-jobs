@@ -14,7 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.BackfillException;
 import uk.gov.justice.digital.service.DataStorageService;
@@ -36,7 +36,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 
 @ExtendWith(MockitoExtension.class)
-class ArchiveBackfillProcessorTest extends BaseSparkTest {
+class ArchiveBackfillProcessorTest extends SparkTestBase {
 
     @Mock
     private DataStorageService dataStorageService;

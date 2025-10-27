@@ -12,7 +12,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.glue.GlueClient;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -46,7 +46,7 @@ import static uk.gov.justice.digital.test.Fixtures.TABLE_NAME;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-public class HiveTableServiceTest extends BaseSparkTest {
+class HiveTableServiceTest extends SparkTestBase {
 
     @Mock
     private JobArguments mockJobArguments;
@@ -87,13 +87,13 @@ public class HiveTableServiceTest extends BaseSparkTest {
     private static final String TABLE = "test_table";
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockJobArguments, mockSourceReferenceService, mockStorageService, mockGlueClient);
         underTest = new HiveTableService(mockJobArguments, mockSourceReferenceService, mockStorageService, mockGlueClient);
     }
 
     @Test
-    public void replaceTablesShouldFailWhenThereAreNoSchemas() {
+    void replaceTablesShouldFailWhenThereAreNoSchemas() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
@@ -102,7 +102,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void replaceTablesShouldFailWhenSourceReferenceServiceThrowsAndException() {
+    void replaceTablesShouldFailWhenSourceReferenceServiceThrowsAndException() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
@@ -111,7 +111,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void replaceTablesShouldReplaceHiveTablesForSchemas() {
+    void replaceTablesShouldReplaceHiveTablesForSchemas() {
         Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
                 .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
                 .collect(Collectors.toSet());
@@ -225,7 +225,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void switchPrisonsTableDataSourceShouldFailWhenThereAreNoSchemas() {
+    void switchPrisonsTableDataSourceShouldFailWhenThereAreNoSchemas() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
@@ -234,7 +234,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void switchPrisonsTableDataSourceShouldFailWhenSourceReferenceServiceThrowsAndException() {
+    void switchPrisonsTableDataSourceShouldFailWhenSourceReferenceServiceThrowsAndException() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
@@ -243,7 +243,7 @@ public class HiveTableServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void switchPrisonsTableDataSourceShouldLinkPrisonsTableToSpecifiedSource() {
+    void switchPrisonsTableDataSourceShouldLinkPrisonsTableToSpecifiedSource() {
         Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
                 .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
                 .collect(Collectors.toSet());

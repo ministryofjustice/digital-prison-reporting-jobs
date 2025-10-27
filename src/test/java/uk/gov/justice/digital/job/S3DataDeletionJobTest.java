@@ -10,7 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.exception.ConfigServiceException;
@@ -35,7 +35,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class S3DataDeletionJobTest extends BaseSparkTest {
+class S3DataDeletionJobTest extends SparkTestBase {
 
     private static final String TEST_CONFIG_KEY = "some-config-key";
     private static final String SOURCE_PREFIX = "source-prefix";
@@ -57,7 +57,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
     private S3DataDeletionJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockConfigService, mockS3FileService, mockJobArguments);
 
         underTest = new S3DataDeletionJob(
@@ -68,7 +68,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDeleteFilesBelongingToGivenConfiguration() {
+    void shouldDeleteFilesBelongingToGivenConfiguration() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -103,14 +103,15 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenNoConfigurationIsGiven() throws Exception {
+    @SuppressWarnings("java:S2699")
+    void shouldFailWhenNoConfigurationIsGiven() throws Exception {
         when(mockJobArguments.getConfigKey()).thenThrow(new IllegalStateException("error"));
 
         SystemLambda.catchSystemExit(() -> underTest.run());
     }
 
     @Test
-    public void shouldExitWithFailureStatusWhenThereIsFailureDeletingSomeFiles() throws Exception {
+    void shouldExitWithFailureStatusWhenThereIsFailureDeletingSomeFiles() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -147,7 +148,7 @@ public class S3DataDeletionJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
+    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new ConfigServiceException("config error"));
 

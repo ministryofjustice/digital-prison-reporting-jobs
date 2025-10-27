@@ -113,7 +113,7 @@ class JobArgumentsIntegrationTest {
     private static final JobArguments emptyArguments = new JobArguments(givenAContextWithNoArguments());
 
     @Test
-    public void shouldReturnCorrectValueForEachSupportedArgument() {
+    void shouldReturnCorrectValueForEachSupportedArgument() {
         Map<String, String> actualArguments = Stream.of(new Object[][] {
                 { JobArguments.CONFIG_S3_BUCKET, validArguments.getConfigS3Bucket() },
                 { JobArguments.CONFIG_KEY, validArguments.getConfigKey() },
@@ -185,7 +185,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldSetBatchDuration() {
+    void shouldSetBatchDuration() {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.BATCH_DURATION_SECONDS, "30");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -193,7 +193,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldThrowForNonIntegerBatchDuration() {
+    void shouldThrowForNonIntegerBatchDuration() {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.BATCH_DURATION_SECONDS, "30 seconds");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -201,7 +201,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldSetBatchMaxRetries() {
+    void shouldSetBatchMaxRetries() {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.BATCH_MAX_RETRIES, "20");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -209,7 +209,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldThrowForNonIntegerBatchMaxRetries() {
+    void shouldThrowForNonIntegerBatchMaxRetries() {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.BATCH_MAX_RETRIES, "10 retries");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -218,7 +218,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "debug", "info", "warn", "error", "DEBUG", "INFO", "WARN", "ERROR" })
-    public void shouldSetAllowedLogLevels(String level) {
+    void shouldSetAllowedLogLevels(String level) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.LOG_LEVEL, level);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -226,7 +226,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultToWarnForNonAllowedLogLevel() {
+    void shouldDefaultToWarnForNonAllowedLogLevel() {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.LOG_LEVEL, "some level");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -235,7 +235,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "not a boolean", "1", "0", "" })
-    public void shouldDefaultToFalseForNonBooleanValueForAddIdleTimeBetweenReads(String input) {
+    void shouldDefaultToFalseForNonBooleanValueForAddIdleTimeBetweenReads(String input) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.ADD_IDLE_TIME_BETWEEN_READS, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -243,7 +243,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultOperationalDataStoreJdbcBatchSizeTo1000() {
+    void shouldDefaultOperationalDataStoreJdbcBatchSizeTo1000() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -252,7 +252,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldConvertValidValueForAddIdleTimeBetweenReadsToBoolean(String input, Boolean expected) {
+    void shouldConvertValidValueForAddIdleTimeBetweenReadsToBoolean(String input, Boolean expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.ADD_IDLE_TIME_BETWEEN_READS, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -260,7 +260,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldThrowErrorWhenGivenInvalidIdleTimeBetweenReadsInMillis() {
+    void shouldThrowErrorWhenGivenInvalidIdleTimeBetweenReadsInMillis() {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.IDLE_TIME_BETWEEN_READS_IN_MILLIS, "not a number");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -269,7 +269,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "1, 1", "0, 0", "12345, 12345", "0123, 123" })
-    public void shouldSetIdleTimeBetweenReadsInMillis(String input, Integer expected) {
+    void shouldSetIdleTimeBetweenReadsInMillis(String input, Integer expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.IDLE_TIME_BETWEEN_READS_IN_MILLIS, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -277,7 +277,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldSetCdcFileGlobPattern() {
+    void shouldSetCdcFileGlobPattern() {
         HashMap<String, String> args = cloneTestArguments();
         String expected = "*some-pattern";
         args.put(JobArguments.CDC_FILE_GLOB_PATTERN, expected);
@@ -286,14 +286,14 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultCdcFileGlobPattern() {
+    void shouldDefaultCdcFileGlobPattern() {
         HashMap<String, String> args = cloneTestArguments();
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT, jobArguments.getCdcFileGlobPattern());
     }
 
     @Test
-    public void shouldSetBatchLoadFileGlobPattern() {
+    void shouldSetBatchLoadFileGlobPattern() {
         HashMap<String, String> args = cloneTestArguments();
         String expected = "some-pattern";
         args.put(JobArguments.BATCH_LOAD_FILE_GLOB_PATTERN, expected);
@@ -302,7 +302,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultBatchLoadFileGlobPattern() {
+    void shouldDefaultBatchLoadFileGlobPattern() {
         HashMap<String, String> args = cloneTestArguments();
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(JobArguments.BATCH_LOAD_FILE_GLOB_PATTERN_DEFAULT, jobArguments.getBatchLoadFileGlobPattern());
@@ -310,7 +310,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "1, 1", "0, 0", "12345, 12345", "0123, 123" })
-    public void shouldGetFileTransferRetentionPeriodInDaysWhenNoUnitIsProvided(String input, long expected) {
+    void shouldGetFileTransferRetentionPeriodInDaysWhenNoUnitIsProvided(String input, long expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT, input);
         args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT);
@@ -319,7 +319,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultFileTransferRetentionPeriodToZeroDay() {
+    void shouldDefaultFileTransferRetentionPeriodToZeroDay() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
         args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT);
@@ -329,7 +329,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "minutes", "hours", "days" })
-    public void shouldGetFileTransferRetentionPeriodInTheProvidedUnit(String durationUnit) {
+    void shouldGetFileTransferRetentionPeriodInTheProvidedUnit(String durationUnit) {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
         args.put(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT, durationUnit);
@@ -353,7 +353,7 @@ class JobArgumentsIntegrationTest {
             "Eras",
             "Forever"
     })
-    public void shouldFailToGetFileTransferRetentionPeriodWhenGivenUnsupportedUnit(String unsupportedUnit) {
+    void shouldFailToGetFileTransferRetentionPeriodWhenGivenUnsupportedUnit(String unsupportedUnit) {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_AMOUNT);
         args.put(JobArguments.FILE_TRANSFER_RETENTION_PERIOD_UNIT, unsupportedUnit);
@@ -363,7 +363,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "1, 1", "0, 0", "12345, 12345", "0123, 123" })
-    public void shouldGetRawFileRetentionPeriodInDaysWhenNoUnitIsProvided(String input, long expected) {
+    void shouldGetRawFileRetentionPeriodInDaysWhenNoUnitIsProvided(String input, long expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.RAW_FILE_RETENTION_PERIOD_AMOUNT, input);
         args.remove(JobArguments.RAW_FILE_RETENTION_PERIOD_UNIT);
@@ -372,7 +372,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultRawFileRetentionPeriodToTwoDays() {
+    void shouldDefaultRawFileRetentionPeriodToTwoDays() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.RAW_FILE_RETENTION_PERIOD_AMOUNT);
         args.remove(JobArguments.RAW_FILE_RETENTION_PERIOD_UNIT);
@@ -382,7 +382,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "minutes", "hours", "days" })
-    public void shouldGetRawFileRetentionPeriodInTheProvidedUnit(String durationUnit) {
+    void shouldGetRawFileRetentionPeriodInTheProvidedUnit(String durationUnit) {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.RAW_FILE_RETENTION_PERIOD_AMOUNT);
         args.put(JobArguments.RAW_FILE_RETENTION_PERIOD_UNIT, durationUnit);
@@ -406,7 +406,7 @@ class JobArgumentsIntegrationTest {
             "Eras",
             "Forever"
     })
-    public void shouldFailToGetRawFileRetentionPeriodWhenGivenUnsupportedUnit(String unsupportedUnit) {
+    void shouldFailToGetRawFileRetentionPeriodWhenGivenUnsupportedUnit(String unsupportedUnit) {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.RAW_FILE_RETENTION_PERIOD_AMOUNT);
         args.put(JobArguments.RAW_FILE_RETENTION_PERIOD_UNIT, unsupportedUnit);
@@ -424,7 +424,7 @@ class JobArgumentsIntegrationTest {
             "dpr-delete-bucket-1, ,dpr-delete-bucket-2,",
             ",dpr-delete-bucket-1, ,dpr-delete-bucket-2,"
     })
-    public void shouldGetSetOfBucketsToDeleteFilesFrom(String input) {
+    void shouldGetSetOfBucketsToDeleteFilesFrom(String input) {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.FILE_DELETION_BUCKETS, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -435,7 +435,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldThrowAnExceptionWhenSetOfBucketsToDeleteFilesFromIsEmpty() {
+    void shouldThrowAnExceptionWhenSetOfBucketsToDeleteFilesFromIsEmpty() {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.FILE_DELETION_BUCKETS, "");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -443,7 +443,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldReturnCompiledPatternOfAllowedS3FileNameRegexForParquetFiles() {
+    void shouldReturnCompiledPatternOfAllowedS3FileNameRegexForParquetFiles() {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.ALLOWED_S3_FILE_NAME_REGEX, parquetFileRegex.pattern());
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -451,7 +451,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldReturnCompiledPatternOfAllowedS3FileNameRegexForJsonOrParquetFiles() {
+    void shouldReturnCompiledPatternOfAllowedS3FileNameRegexForJsonOrParquetFiles() {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.ALLOWED_S3_FILE_NAME_REGEX, jsonOrParquetFileRegex.pattern());
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -459,14 +459,14 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldMatchAllFilesWhenAllowedS3FileNameRegexNotProvided() {
+    void shouldMatchAllFilesWhenAllowedS3FileNameRegexNotProvided() {
         HashMap<String, String> args = new HashMap<>();
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(matchAllFiles.pattern(), jobArguments.getAllowedS3FileNameRegex().pattern());
     }
 
     @Test
-    public void shouldDefaultOrchestrationWaitIntervalSecondsWhenMissing() {
+    void shouldDefaultOrchestrationWaitIntervalSecondsWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -474,7 +474,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultOrchestrationMaxAttemptsWhenMissing() {
+    void shouldDefaultOrchestrationMaxAttemptsWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.ORCHESTRATION_MAX_ATTEMPTS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -483,7 +483,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "1001"})
-    public void shouldReturnErrorWhenMaxObjectsPerPageIsInvalid(String value) {
+    void shouldReturnErrorWhenMaxObjectsPerPageIsInvalid(String value) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.MAX_S3_PAGE_SIZE, value);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -491,7 +491,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldDefaultMaxObjectsPerPageWhenMissing() {
+    void shouldDefaultMaxObjectsPerPageWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.MAX_S3_PAGE_SIZE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -499,7 +499,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void getCdcTriggerIntervalSecondsShouldUseDefaultWhenNotProvided() {
+    void getCdcTriggerIntervalSecondsShouldUseDefaultWhenNotProvided() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.CDC_TRIGGER_INTERVAL_SECONDS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -507,7 +507,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void cleanCdcCheckpointShouldDefaultToFalseWhenNotProvided() {
+    void cleanCdcCheckpointShouldDefaultToFalseWhenNotProvided() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.CLEAN_CDC_CHECKPOINT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -516,7 +516,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldConvertValidValueForActivateGlueTriggerToBoolean(String input, Boolean expected) {
+    void shouldConvertValidValueForActivateGlueTriggerToBoolean(String input, Boolean expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.ACTIVATE_GLUE_TRIGGER, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -524,7 +524,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void activateGlueTriggerShouldDefaultToFalseWhenNotProvided() {
+    void activateGlueTriggerShouldDefaultToFalseWhenNotProvided() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.ACTIVATE_GLUE_TRIGGER);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -532,7 +532,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void streamingJobMaxFilePerTriggerShouldUseDefaultWhenNotProvided() {
+    void streamingJobMaxFilePerTriggerShouldUseDefaultWhenNotProvided() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.STREAMING_JOB_MAX_FILES_PER_TRIGGER);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -540,7 +540,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldUseNowAsCheckpointForReloadJobShouldDefaultToFalseWhenMissing() {
+    void shouldUseNowAsCheckpointForReloadJobShouldDefaultToFalseWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -549,7 +549,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldUseNowAsCheckpointForReloadJobShouldUseProvidedBooleanValue(String input, Boolean expected) {
+    void shouldUseNowAsCheckpointForReloadJobShouldUseProvidedBooleanValue(String input, Boolean expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -557,7 +557,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void operationalDataStoreWriteEnabledShouldDefaultToFalseWhenMissing() {
+    void operationalDataStoreWriteEnabledShouldDefaultToFalseWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -566,7 +566,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void operationalDataStoreWriteEnabledShouldUseProvidedBooleanValue(String input, Boolean expected) {
+    void operationalDataStoreWriteEnabledShouldUseProvidedBooleanValue(String input, Boolean expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -574,7 +574,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void operationalDataStoreLoadingSchemaNameShouldDefaultWhenMissing() {
+    void operationalDataStoreLoadingSchemaNameShouldDefaultWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -582,7 +582,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void defaultBroadcastTimeoutSecondsWhenMissing() {
+    void defaultBroadcastTimeoutSecondsWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.SPARK_BROADCAST_TIMEOUT_SECONDS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -590,7 +590,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void defaultSparkSqlMaxRecordsPerFileWhenMissing() {
+    void defaultSparkSqlMaxRecordsPerFileWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -598,7 +598,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void disableAutoBroadcastJoinThresholdShouldDefaultToFalseWhenMissing() {
+    void disableAutoBroadcastJoinThresholdShouldDefaultToFalseWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -607,7 +607,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void disableAutoBroadcastJoinThresholdShouldUseProvidedBooleanValue(String input, Boolean expected) {
+    void disableAutoBroadcastJoinThresholdShouldUseProvidedBooleanValue(String input, Boolean expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.DISABLE_AUTO_BROADCAST_JOIN_THRESHOLD, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -615,7 +615,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void enableStreamingSourceArchivingShouldDefaultToFalseWhenMissing() {
+    void enableStreamingSourceArchivingShouldDefaultToFalseWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -624,7 +624,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void enableStreamingSourceArchivingShouldUseProvidedBooleanValue(String input, Boolean expected) {
+    void enableStreamingSourceArchivingShouldUseProvidedBooleanValue(String input, Boolean expected) {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -632,7 +632,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void getOptionalConfigKeyShouldDefaultToEmptyOptionWhenNoConfigKeyIsProvided() {
+    void getOptionalConfigKeyShouldDefaultToEmptyOptionWhenNoConfigKeyIsProvided() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.CONFIG_KEY);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -640,31 +640,31 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void getOptionalConfigKeyShouldReturnOptionalWithConfigKeyPresentWhenConfigKeyIsProvided() {
+    void getOptionalConfigKeyShouldReturnOptionalWithConfigKeyPresentWhenConfigKeyIsProvided() {
         HashMap<String, String> args = cloneTestArguments();
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(Optional.of("test-config"), jobArguments.getOptionalConfigKey());
     }
 
     @Test
-    public void shouldReturnCorrectValuesInGetConfig() {
+    void shouldReturnCorrectValuesInGetConfig() {
         Map<String, String> actualArguments = validArguments.getConfig();
         assertEquals(testArguments, actualArguments);
     }
 
     @Test
-    public void shouldNotAllowGetConfigMapToBeModified() {
+    void shouldNotAllowGetConfigMapToBeModified() {
         Map<String, String> arguments = validArguments.getConfig();
         assertThrows(UnsupportedOperationException.class, () -> arguments.put(JobArguments.BATCH_MAX_RETRIES, "6"));
     }
 
     @Test
-    public void shouldThrowAnExceptionWhenAMissingArgumentIsRequested() {
+    void shouldThrowAnExceptionWhenAMissingArgumentIsRequested() {
         assertThrows(IllegalStateException.class, emptyArguments::getAwsRegion);
     }
 
     @Test
-    public void shouldGetCurrentStateCountsReconciliationCheckToRun() {
+    void shouldGetCurrentStateCountsReconciliationCheckToRun() {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, "current_state_counts");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -672,7 +672,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldGetChangeDataCountsReconciliationCheckToRun() {
+    void shouldGetChangeDataCountsReconciliationCheckToRun() {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, "change_data_counts");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -680,7 +680,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldGetPrimaryKeyReconciliationCheckToRun() {
+    void shouldGetPrimaryKeyReconciliationCheckToRun() {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, "primary_key_reconciliation");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -698,7 +698,7 @@ class JobArgumentsIntegrationTest {
             ",current_state_counts, ,change_data_counts,",
             "current_state_counts,current_state_counts,change_data_counts,change_data_counts"
     })
-    public void shouldGetMultipleReconciliationChecksToRun(String input) {
+    void shouldGetMultipleReconciliationChecksToRun(String input) {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_CHECKS_TO_RUN, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -709,7 +709,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void getReconciliationChecksToRunShouldDefaultWhenMissing() {
+    void getReconciliationChecksToRunShouldDefaultWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.RECONCILIATION_CHECKS_TO_RUN);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -718,7 +718,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldReconciliationDataSourceTableNamesBeUpperCaseShouldParseInput(String input, boolean expected) {
+    void shouldReconciliationDataSourceTableNamesBeUpperCaseShouldParseInput(String input, boolean expected) {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_DATASOURCE_SHOULD_UPPERCASE_TABLENAMES, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -727,7 +727,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldReconciliationFailJobIfChecksFailShouldParseInput(String input, boolean expected) {
+    void shouldReconciliationFailJobIfChecksFailShouldParseInput(String input, boolean expected) {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -735,7 +735,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldReconciliationFailJobIfChecksFailShouldDefaultToFalseWhenMissing() {
+    void shouldReconciliationFailJobIfChecksFailShouldDefaultToFalseWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -744,7 +744,7 @@ class JobArgumentsIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    public void shouldReportReconciliationResultsToCloudwatchShouldParseInput(String input, boolean expected) {
+    void shouldReportReconciliationResultsToCloudwatchShouldParseInput(String input, boolean expected) {
         HashMap<String, String> args = new HashMap<>();
         args.put(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
@@ -752,7 +752,7 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    public void shouldReportReconciliationResultsToCloudwatchShouldDefaultToFalseWhenMissing() {
+    void shouldReportReconciliationResultsToCloudwatchShouldDefaultToFalseWhenMissing() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));

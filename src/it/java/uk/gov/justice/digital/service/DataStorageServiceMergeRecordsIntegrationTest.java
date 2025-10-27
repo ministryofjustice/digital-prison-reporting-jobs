@@ -23,7 +23,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
-public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDataIntegrationTest {
+class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDataIntegrationTest {
 
     private DataStorageService underTest;
 
@@ -33,14 +33,14 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
     private String tablePath;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         givenRetrySettingsAreConfigured(arguments);
         givenPathIsConfigured();
         underTest = new DataStorageService(arguments);
     }
 
     @Test
-    public void shouldInsertDataWhenNoTableExists() {
+    void shouldInsertDataWhenNoTableExists() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2")
@@ -53,7 +53,7 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
     }
 
     @Test
-    public void shouldInsertDataWhenTableExists() {
+    void shouldInsertDataWhenTableExists() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1a"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2a")
@@ -68,7 +68,7 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
     }
 
     @Test
-    public void shouldInsertUpdateAndDeleteData() {
+    void shouldInsertUpdateAndDeleteData() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1a"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2a")
@@ -91,7 +91,7 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
     }
 
     @Test
-    public void shouldOverwriteDataWhenGettingNewInsertsForExistingKey() {
+    void shouldOverwriteDataWhenGettingNewInsertsForExistingKey() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1a"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2a")
@@ -114,7 +114,7 @@ public class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDa
     }
 
     @Test
-    public void shouldInsertAnUpdateThatDoesntExistButNotADelete() {
+    void shouldInsertAnUpdateThatDoesntExistButNotADelete() {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Update, "data1"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Delete, "data2")

@@ -3,7 +3,7 @@ package uk.gov.justice.digital.job.batchprocessing;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
 import java.util.List;
@@ -16,12 +16,12 @@ import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimes
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimestampToMicroSecondAccuracyLatest;
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
 
-class CdcBatchProcessorLatestRecordsTest extends BaseSparkTest {
+class CdcBatchProcessorLatestRecordsTest extends SparkTestBase {
 
     private static final SourceReference.PrimaryKey primaryKey = new SourceReference.PrimaryKey("pk");
 
     @Test
-    public void shouldNotModifyRecordsForDifferentPKs() {
+    void shouldNotModifyRecordsForDifferentPKs() {
         Dataset<Row> inputDf = rowPerPkDfSameTimestamp(spark);
         List<Row> expected = inputDf.collectAsList();
 
@@ -33,7 +33,7 @@ class CdcBatchProcessorLatestRecordsTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldTakeTheLatestRecordByPK() {
+    void shouldTakeTheLatestRecordByPK() {
         Dataset<Row> inputDf = manyRowsPerPkDfSameTimestamp(spark);
         List<Row> expected = manyRowsPerPkSameTimestampLatest();
 
@@ -44,7 +44,7 @@ class CdcBatchProcessorLatestRecordsTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldTakeTheLatestRecordByPKToMicrosecondAccuracy() {
+    void shouldTakeTheLatestRecordByPKToMicrosecondAccuracy() {
         Dataset<Row> inputDf = manyRowsPerPkDfSameTimestampToMicroSecondAccuracy(spark);
         List<Row> expected = manyRowsPerPkSameTimestampToMicroSecondAccuracyLatest();
 

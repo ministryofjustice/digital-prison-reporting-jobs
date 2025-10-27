@@ -41,7 +41,7 @@ class CuratedZoneLoadTest {
     private CuratedZoneLoad underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(arguments.getCuratedS3Path()).thenReturn("s3://curated/path");
         when(sourceReference.getSource()).thenReturn("source");
         when(sourceReference.getTable()).thenReturn("table");
@@ -51,21 +51,21 @@ class CuratedZoneLoadTest {
     }
 
     @Test
-    public void shouldAppendDistinctRecordsToTable() {
+    void shouldAppendDistinctRecordsToTable() {
         underTest.process(spark, df, sourceReference);
 
         verify(storage, times(1)).appendDistinct("s3://curated/path/source/table", df, PRIMARY_KEY);
     }
 
     @Test
-    public void shouldUpdateDeltaManifest() {
+    void shouldUpdateDeltaManifest() {
         underTest.process(spark, df, sourceReference);
 
         verify(storage, times(1)).updateDeltaManifestForTable(any(), eq("s3://curated/path/source/table"));
     }
 
     @Test
-    public void shouldHandleRetriesExhausted() {
+    void shouldHandleRetriesExhausted() {
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception());
         doThrow(thrown)
                 .when(storage)

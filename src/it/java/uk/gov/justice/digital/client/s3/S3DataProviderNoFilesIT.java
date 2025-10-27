@@ -24,7 +24,7 @@ import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_M
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 
 @ExtendWith(MockitoExtension.class)
-public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
+class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
     private static final String sourceName = "source";
     private static final String tableName = "table";
 
@@ -39,12 +39,12 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
     private S3DataProvider underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new S3DataProvider(arguments);
     }
 
     @Test
-    public void getStreamingSourceDataShouldNotFailWhenTablePathExistsWithNoData() throws Exception {
+    void getStreamingSourceDataShouldNotFailWhenTablePathExistsWithNoData() throws Exception {
         Path tablePath = testRootPath.resolve(sourceName).resolve(tableName).toAbsolutePath();
         tablePath.toFile().mkdirs();
 
@@ -73,7 +73,7 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void getStreamingSourceDataShouldNotFailWhenRootPathExistsButTablePathDoesNot() throws Exception {
+    void getStreamingSourceDataShouldNotFailWhenRootPathExistsButTablePathDoesNot() throws Exception {
         testRootPath.toFile().mkdirs();
 
         when(arguments.getRawS3Path()).thenReturn(testRootPath.toString());
@@ -101,7 +101,7 @@ public class S3DataProviderNoFilesIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void getStreamingSourceDataWithSchemaInferenceShouldThrowWhenTablePathExistsWithNoData() {
+    void getStreamingSourceDataWithSchemaInferenceShouldThrowWhenTablePathExistsWithNoData() {
         Path tablePath = testRootPath.resolve(sourceName).resolve(tableName).toAbsolutePath();
         tablePath.toFile().mkdirs();
 

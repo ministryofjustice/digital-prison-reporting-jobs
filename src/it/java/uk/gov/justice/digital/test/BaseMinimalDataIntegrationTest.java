@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.test;
 
 import org.junit.jupiter.api.io.TempDir;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -13,7 +13,7 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalD
 import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableName;
 import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableNameWithSchema;
 
-public class BaseMinimalDataIntegrationTest extends BaseSparkTest {
+public class BaseMinimalDataIntegrationTest extends SparkTestBase {
     protected static final int pk1 = 1;
     protected static final int pk2 = 2;
     protected static final int pk3 = 3;

@@ -14,7 +14,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 
-public class DomainContractValidationIntegrationTest {
+class DomainContractValidationIntegrationTest {
 
     private static final String RESOURCE_PATH = "/contracts";
 
@@ -31,7 +31,7 @@ public class DomainContractValidationIntegrationTest {
             .getSchema(getResource(RESOURCE_PATH + "/" + DOMAIN_CONTRACT_SCHEMA));
 
     @Test
-    public void allContractsShouldValidateAgainstOurContractSchema() {
+    void allContractsShouldValidateAgainstOurContractSchema() {
         contracts.forEach(contract ->
             assertEquals(
                     Collections.emptySet(),

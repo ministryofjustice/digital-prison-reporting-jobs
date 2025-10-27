@@ -62,7 +62,7 @@ class OperationalDataStoreServiceTest {
     private OperationalDataStoreService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setUp() {
         when(jobArguments.getOperationalDataStoreLoadingSchemaName()).thenReturn("loading");
         underTest = new OperationalDataStoreServiceImpl(jobArguments, mockDataTransformation, mockDataAccess);
     }

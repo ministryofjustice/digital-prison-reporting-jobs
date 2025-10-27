@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.DataHubOperationalDataStoreManagedTable;
@@ -26,7 +26,7 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
 
 @ExtendWith(MockitoExtension.class)
-public class OperationalDataStoreRepositoryIntegrationTest extends BaseSparkTest {
+class OperationalDataStoreRepositoryIntegrationTest extends SparkTestBase {
     private static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
     private static Connection testQueryConnection;
 

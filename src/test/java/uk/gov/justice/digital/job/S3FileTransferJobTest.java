@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.exception.ConfigServiceException;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class S3FileTransferJobTest extends BaseSparkTest {
+class S3FileTransferJobTest extends SparkTestBase {
 
     @Mock
     private ConfigService mockConfigService;
@@ -53,7 +53,7 @@ public class S3FileTransferJobTest extends BaseSparkTest {
     private S3FileTransferJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockConfigService, mockS3FileService, mockJobArguments);
 
         underTest = new S3FileTransferJob(
@@ -64,7 +64,7 @@ public class S3FileTransferJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldMoveFilesBelongingToGivenConfiguration() {
+    void shouldMoveFilesBelongingToGivenConfiguration() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -96,7 +96,7 @@ public class S3FileTransferJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldMoveAllFilesWhenNoConfigurationIsGiven() {
+    void shouldMoveAllFilesWhenNoConfigurationIsGiven() {
         List<String> objectsToMove = new ArrayList<>();
         objectsToMove.add("schema_1/table_1/file_1.parquet");
         objectsToMove.add("schema_1/table_1/file_2.parquet");
@@ -121,7 +121,8 @@ public class S3FileTransferJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldExitWithFailureStatusWhenThereIsFailureMovingSomeFiles() throws Exception {
+    @SuppressWarnings("java:S2699")
+    void shouldExitWithFailureStatusWhenThereIsFailureMovingSomeFiles() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -156,7 +157,7 @@ public class S3FileTransferJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
+    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
         when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new ConfigServiceException("config error"));
 

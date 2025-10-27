@@ -63,7 +63,7 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWrite
  * * Using a test SparkSession.
  */
 @ExtendWith(MockitoExtension.class)
-public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
+class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
     private static Connection testQueryConnection;
 
@@ -96,7 +96,7 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     }
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSchemaExists(loadingSchemaName, testQueryConnection);
         givenSchemaExists(namespace, testQueryConnection);
@@ -118,12 +118,12 @@ public class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         streamingQueries.forEach(TableStreamingQuery::stopQuery);
     }
 
     @Test
-    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws Throwable {
+    void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws Throwable {
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);

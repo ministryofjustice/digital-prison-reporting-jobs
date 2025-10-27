@@ -82,7 +82,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSettingsAreConfigured();
         givenSchemaExists(namespace, testQueryConnection);
@@ -94,7 +94,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteInsertsToStructuredCuratedAndOperationalDataStore() throws Exception {
+    void shouldWriteInsertsToStructuredCuratedAndOperationalDataStore() throws Exception {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2"),
@@ -114,7 +114,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
+    void shouldWriteNullsToViolationsForNonNullableColumns() throws Exception {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, null, Insert, "data2"),
@@ -133,7 +133,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteToViolationsForDfWithExtraColumn() throws Exception {
+    void shouldWriteToViolationsForDfWithExtraColumn() throws Exception {
         Dataset<Row> dfWithMisMatchingSchema = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, null, Insert, "data2"),
@@ -153,7 +153,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteToViolationsForDfWithMissingColumn() throws Exception {
+    void shouldWriteToViolationsForDfWithMissingColumn() throws Exception {
         Dataset<Row> dfWithMisMatchingSchema = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, null, Insert, "data2"),
@@ -173,7 +173,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteToViolationsForDfWhenTypeGoesFromStringToInt() throws Exception {
+    void shouldWriteToViolationsForDfWhenTypeGoesFromStringToInt() throws Exception {
         Dataset<Row> dfWithMisMatchingSchema = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, null, Insert, "data2"),
@@ -193,7 +193,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteToViolationsForDfWhenTypeGoesFromIntToString() throws Exception {
+    void shouldWriteToViolationsForDfWhenTypeGoesFromIntToString() throws Exception {
         Dataset<Row> dfWithMisMatchingSchema = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, null, Insert, "data2"),
@@ -213,7 +213,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteToViolationsForDfWhenTypeGoesFromIntToLong() throws Exception {
+    void shouldWriteToViolationsForDfWhenTypeGoesFromIntToLong() throws Exception {
         Dataset<Row> dfWithMisMatchingSchema = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, null, Insert, "data2"),
@@ -233,7 +233,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    public void shouldWriteToViolationsWhenSchemaChangesFromWhatIsAlreadyInViolations() throws Exception {
+    void shouldWriteToViolationsWhenSchemaChangesFromWhatIsAlreadyInViolations() throws Exception {
         // The 1st bad dataframe will be written to violations with one schema
         Dataset<Row> dfNullNonNullableCols = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),

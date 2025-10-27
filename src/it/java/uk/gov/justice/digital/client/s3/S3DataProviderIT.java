@@ -45,7 +45,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
-public class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
+class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
 
     private static final String sourceName = "source";
     private static final String tableName = "table";

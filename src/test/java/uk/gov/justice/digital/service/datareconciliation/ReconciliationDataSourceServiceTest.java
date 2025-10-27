@@ -76,7 +76,7 @@ class ReconciliationDataSourceServiceTest {
     private ReconciliationDataSourceService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setUp() {
         JDBCCredentials credentials = new JDBCCredentials("username", "password");
         JDBCGlueConnectionDetails connectionDetails = new JDBCGlueConnectionDetails(
                 "jdbc-url", "some-driver-class", credentials

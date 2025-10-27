@@ -81,7 +81,7 @@ import static uk.gov.justice.digital.test.TestHelpers.convertListToSeq;
  * can be received in a single batch or across multiple batches.
  */
 @ExtendWith(MockitoExtension.class)
-public class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
+class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     protected static final InMemoryOperationalDataStore operationalDataStore = new InMemoryOperationalDataStore();
     private static Connection testQueryConnection;
 

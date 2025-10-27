@@ -11,7 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-public class SwitchHiveTableJobTest extends BaseSparkTest {
+class SwitchHiveTableJobTest extends SparkTestBase {
 
     private static final String TEST_CONFIG_KEY = "some-config-key";
 
@@ -52,13 +52,13 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     private SwitchHiveTableJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockConfigService, mockHiveTableService, mockJobArguments, mockJobProperties);
         underTest = new SwitchHiveTableJob(mockConfigService, mockHiveTableService, sparkSessionProvider, mockJobArguments, mockJobProperties);
     }
 
     @Test
-    public void shouldCompleteSuccessfullyWhenThereAreNoFailedTables() {
+    void shouldCompleteSuccessfullyWhenThereAreNoFailedTables() {
         Set<ImmutablePair<String, String>> expectedTables = new HashSet<>();
         expectedTables.add(new ImmutablePair<>("schema_1", "table_1"));
         expectedTables.add(new ImmutablePair<>("schema_1", "table_2"));
@@ -76,7 +76,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenThereAreFailedTables() throws Exception {
+    @SuppressWarnings("java:S2699")
+    void shouldFailWhenThereAreFailedTables() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> failedTables = ImmutableSet.of(ImmutablePair.of("schema", "failed-table-1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
@@ -89,7 +90,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenSchemaServiceThrowsAnException() throws Exception {
+    @SuppressWarnings("java:S2699")
+    void shouldFailWhenSchemaServiceThrowsAnException() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> table = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
@@ -102,7 +104,8 @@ public class SwitchHiveTableJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenConfigServiceThrowsAnException() throws Exception {
+    @SuppressWarnings("java:S2699")
+    void shouldFailWhenConfigServiceThrowsAnException() throws Exception {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
         when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");

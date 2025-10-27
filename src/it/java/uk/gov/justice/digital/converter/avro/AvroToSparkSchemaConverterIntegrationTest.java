@@ -20,7 +20,7 @@ class AvroToSparkSchemaConverterIntegrationTest {
     private static final AvroToSparkSchemaConverter underTest = new AvroToSparkSchemaConverter();
 
     @Test
-    public void shouldConvertAllSimpleFieldTypesToCorrectSparkType() {
+    void shouldConvertAllSimpleFieldTypesToCorrectSparkType() {
         val typeMappings = Stream.of(
                 new SimpleEntry<>("boolean", DataTypes.BooleanType),
                 new SimpleEntry<>("bytes",   DataTypes.BinaryType),
@@ -41,7 +41,7 @@ class AvroToSparkSchemaConverterIntegrationTest {
     }
 
     @Test
-    public void shouldConvertAllLogicalFieldTypesToCorrectSparkType() {
+    void shouldConvertAllLogicalFieldTypesToCorrectSparkType() {
         val typeMappings = Stream.of(
                 new SimpleEntry<>("date",             DataTypes.DateType),
                 new SimpleEntry<>("timestamp-millis", DataTypes.TimestampType),
@@ -60,7 +60,7 @@ class AvroToSparkSchemaConverterIntegrationTest {
     }
 
     @Test
-    public void shouldConvertAvroEnumToSparkEnum() {
+    void shouldConvertAvroEnumToSparkEnum() {
         val avroEnumSchema = SchemaBuilder.record("test")
                 .fields()
                     .name("aField")
@@ -78,7 +78,7 @@ class AvroToSparkSchemaConverterIntegrationTest {
     }
 
     @Test
-    public void shouldPreserveFieldNullabilityAttributes() {
+    void shouldPreserveFieldNullabilityAttributes() {
         val avro = SchemaBuilder.record("test")
                 .fields()
                     .name("anOptionalField")
@@ -100,7 +100,7 @@ class AvroToSparkSchemaConverterIntegrationTest {
     }
 
     @Test
-    public void shouldPreserveFieldNullabilityAttributesForLogicalTypes() {
+    void shouldPreserveFieldNullabilityAttributesForLogicalTypes() {
         val nullable = true;
         val avroSchema = avroSchemaWithLogicalType("date", nullable);
         val sparkSchema = new StructType()
@@ -110,7 +110,7 @@ class AvroToSparkSchemaConverterIntegrationTest {
     }
 
     @Test
-    public void shouldIncludeMetadataAfterConversion() {
+    void shouldIncludeMetadataAfterConversion() {
         val avroSchemaString = "{" +
                 "  \"type\": \"record\"," +
                 "  \"name\": \"test\"," +

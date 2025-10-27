@@ -14,7 +14,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 class CommonDataFieldsTest {
 
     @Test
-    public void shouldAddMetaDataFields() {
+    void shouldAddMetaDataFields() {
         StructType originalSchema = new StructType(new StructField[]{
                 new StructField("mycolumn", DataTypes.IntegerType, false, Metadata.empty())
         });

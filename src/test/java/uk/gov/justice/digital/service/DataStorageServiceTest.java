@@ -21,7 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.datahub.model.TableIdentifier;
@@ -49,12 +49,13 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
-class DataStorageServiceTest extends BaseSparkTest {
+class DataStorageServiceTest extends SparkTestBase {
 
     private static final int DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES = 1;
 
     private static final DataStorageService underTest = new DataStorageService(new JobArguments(Collections.emptyMap()));
 
+    private static final SourceReference.PrimaryKey arbitraryPrimaryKey = new SourceReference.PrimaryKey("arbitrary");
 
     private MockedStatic<DeltaTable> mockDeltaTableStatic;
 
@@ -104,19 +105,19 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReturnTrueWhenStorageExists() {
+    void shouldReturnTrueWhenStorageExists() {
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         assertTrue(underTest.exists(spark, tableId));
     }
 
     @Test
-    public void shouldReturnFalseWhenStorageDoesNotExist() {
+    void shouldReturnFalseWhenStorageDoesNotExist() {
         when(DeltaTable.isDeltaTable(spark, tableId.toPath())).thenReturn(false);
         assertFalse(underTest.exists(spark, tableId));
     }
 
     @Test
-    public void shouldReturnTrueForHasRecordsWhenStorageExistsAndRecordsArePresent() {
+    void shouldReturnTrueForHasRecordsWhenStorageExistsAndRecordsArePresent() {
         givenDeltaTableExists();
 
         val df = spark.sql("select cast(10 as LONG) as numFiles");
@@ -128,7 +129,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReturnFalseForHasRecordsWhenStorageExistsAndRecordsAreNotPresent() {
+    void shouldReturnFalseForHasRecordsWhenStorageExistsAndRecordsAreNotPresent() {
         givenDeltaTableExists();
 
         val df = spark.emptyDataFrame();
@@ -140,13 +141,13 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReturnFalseForHasRecordsWhenStorageDoesNotExist() {
+    void shouldReturnFalseForHasRecordsWhenStorageDoesNotExist() {
         assertFalse(underTest.exists(spark, tableId));
         assertFalse(underTest.hasRecords(spark, tableId));
     }
 
     @Test
-    public void shouldAppendCompleteForDeltaTable() {
+    void shouldAppendCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -160,7 +161,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldCreateCompleteForDeltaTable() {
+    void shouldCreateCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -172,7 +173,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReplaceCompleteForDeltaTable() {
+    void shouldReplaceCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -188,7 +189,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReloadCompleteForDeltaTable() {
+    void shouldReloadCompleteForDeltaTable() {
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
 
         when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
@@ -202,21 +203,21 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDeleteCompleteForDeltaTable() {
+    void shouldDeleteCompleteForDeltaTable() {
         givenDeltaTableExists();
         underTest.delete(spark, tableId);
         verify(mockDeltaTable).delete();
     }
 
     @Test
-    public void shouldVacuumCompleteForDeltaTable() {
+    void shouldVacuumCompleteForDeltaTable() {
         givenDeltaTableExists();
         underTest.vacuum(spark, tableId);
         verify(mockDeltaTable).vacuum();
     }
 
     @Test
-    public void shouldVacuumForDeltaTablePath() {
+    void shouldVacuumForDeltaTablePath() {
         givenDeltaTableExists();
         underTest.vacuum(spark, tableId.toPath());
         verify(mockDeltaTable).vacuum();
@@ -228,7 +229,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldCompactDeltaTable() {
+    void shouldCompactDeltaTable() {
         givenDeltaTableExists();
         when(mockDeltaTable.optimize()).thenReturn(mockDeltaOptimize);
 
@@ -243,42 +244,42 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldThrowForBadlyFormattedDeltaTablePath() {
+    void shouldThrowForBadlyFormattedDeltaTablePath() {
         assertThrows(DataStorageException.class, () ->
                 underTest.listDeltaTablePaths(spark, "://some-path", DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)
         );
     }
 
     @Test
-    public void shouldThrowWhenDeltaTablePathDoesNotExist() {
+    void shouldThrowWhenDeltaTablePathDoesNotExist() {
         assertThrows(DataStorageException.class, () ->
             underTest.listDeltaTablePaths(spark, "/doesnotexist", DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)
         );
     }
 
     @Test
-    public void shouldGetDeltaTableWhenExists() {
+    void shouldGetDeltaTableWhenExists() {
         givenDeltaTableExists();
         underTest.get(spark, tableId);
         verify(mockDeltaTable).toDF();
     }
 
     @Test
-    public void shouldGenerateManifestWhenEndTableUpdatesCalled() {
+    void shouldGenerateManifestWhenEndTableUpdatesCalled() {
         givenDeltaTableExists();
         underTest.endTableUpdates(spark, tableId);
         verifyManifestGeneratedWithExpectedModeString();
     }
 
     @Test
-    public void shouldUpdateDeltaManifestForTable() {
+    void shouldUpdateDeltaManifestForTable() {
         givenDeltaTableExists();
         underTest.updateDeltaManifestForTable(spark, tablePath);
         verifyManifestGeneratedWithExpectedModeString();
     }
 
     @Test
-    public void shouldRetryAppendAndSucceedEventually() {
+    void shouldRetryAppendAndSucceedEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
@@ -290,7 +291,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryAppendDistinctAndSucceedEventually() {
+    void shouldRetryAppendDistinctAndSucceedEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         stubAppendDistinct();
@@ -305,7 +306,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryUpdateRecordsAndSucceedEventually() {
+    void shouldRetryUpdateRecordsAndSucceedEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         stubUpdateRecords();
@@ -320,7 +321,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryMergeRecordsAndSucceedEventually() {
+    void shouldRetryMergeRecordsAndSucceedEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         when(mockDataSet.columns()).thenReturn(new String[0]);
 
@@ -337,7 +338,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryCompactAndSucceedEventually() {
+    void shouldRetryCompactAndSucceedEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         givenDeltaTableExists();
@@ -350,7 +351,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryVacuumAndSucceedEventually() {
+    void shouldRetryVacuumAndSucceedEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
 
         givenDeltaTableExists();
@@ -363,7 +364,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryAppendAndFailEventually() {
+    void shouldRetryAppendAndFailEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
@@ -375,7 +376,7 @@ class DataStorageServiceTest extends BaseSparkTest {
         verify(mockDataFrameWriter, times(retryAttempts)).save();
     }
     @Test
-    public void shouldRetryAppendDistinctAndFailEventually() {
+    void shouldRetryAppendDistinctAndFailEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
@@ -387,13 +388,13 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
-            dataStorageService.appendDistinct(tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+            dataStorageService.appendDistinct(tablePath, mockDataSet, arbitraryPrimaryKey);
         });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
     }
 
     @Test
-    public void shouldRetryMergeRecordsAndFailEventually() {
+    void shouldRetryMergeRecordsAndFailEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
         when(mockDataSet.columns()).thenReturn(new String[0]);
@@ -407,13 +408,13 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
-            dataStorageService.mergeRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+            dataStorageService.mergeRecords(spark, tablePath, mockDataSet, arbitraryPrimaryKey);
         });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
     }
 
     @Test
-    public void shouldRetryUpdateRecordsAndFailEventually() {
+    void shouldRetryUpdateRecordsAndFailEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
@@ -425,13 +426,13 @@ class DataStorageServiceTest extends BaseSparkTest {
 
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
-            dataStorageService.updateRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
+            dataStorageService.updateRecords(spark, tablePath, mockDataSet, arbitraryPrimaryKey);
         });
         verify(mockDeltaMergeBuilder, times(retryAttempts)).execute();
     }
 
     @Test
-    public void shouldRetryCompactAndFailEventually() {
+    void shouldRetryCompactAndFailEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
@@ -447,7 +448,7 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldRetryVacuumAndFailEventually() {
+    void shouldRetryVacuumAndFailEventually() {
         JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 

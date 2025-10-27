@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import scala.Option;
 import scala.collection.Seq;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -31,7 +31,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestam
 import static uk.gov.justice.digital.test.TestHelpers.convertListToSeq;
 
 @ExtendWith(MockitoExtension.class)
-class TableStreamingQueryTest extends BaseSparkTest {
+class TableStreamingQueryTest extends SparkTestBase {
     private static final String source = "some-source";
     private static final String table = "some-table";
     private static final long TEST_CDC_TRIGGER_INTERVAL_SECONDS = 5;
@@ -49,13 +49,13 @@ class TableStreamingQueryTest extends BaseSparkTest {
     private MemoryStream<Row> inputStream;
 
     @BeforeAll
-    public static void setUpAll() {
+    static void setUpAll() {
         testData = rowPerPkDfSameTimestamp(spark).collectAsList();
         testDataSeq = convertListToSeq(testData);
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         String checkpointPath = testRoot.toAbsolutePath().toString();
         inputStream = new MemoryStream<Row>(1, spark.sqlContext(), Option.apply(10), encoder);
         Dataset<Row> streamingDataframe = inputStream.toDF();
@@ -70,7 +70,7 @@ class TableStreamingQueryTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldDelegateToBatchProcessingFunc() throws Exception {
+    void shouldDelegateToBatchProcessingFunc() throws Exception {
         inputStream.addData(testDataSeq);
         StreamingQuery sparkStreamingQuery = underTest.runQuery();
         sparkStreamingQuery.processAllAvailable();

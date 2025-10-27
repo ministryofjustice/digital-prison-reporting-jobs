@@ -41,12 +41,12 @@ class S3DataProviderTest {
     private S3DataProvider underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new S3DataProvider(arguments);
     }
 
     @Test
-    public void getBatchSourceDataShouldCatchAndThrowForFailedMergingSchemaException() {
+    void getBatchSourceDataShouldCatchAndThrowForFailedMergingSchemaException() {
         // This also tests the case where the outer Exception's cause is null
         SparkException mergeFailedException = new SparkException("Failed merging schema");
         List<String> input = Collections.singletonList("s3://somepath");
@@ -65,7 +65,7 @@ class S3DataProviderTest {
     }
 
     @Test
-    public void getBatchSourceDataShouldCatchAndThrowForFailedMergingSchemaWrappedException() {
+    void getBatchSourceDataShouldCatchAndThrowForFailedMergingSchemaWrappedException() {
         SparkException wrappedMergeFailedException = new SparkException("a message", new SparkException("Failed merging schema"));
         List<String> input = Collections.singletonList("s3://somepath");
         Seq<String> scalaExpectedInput = JavaConverters.asScalaIteratorConverter(input.iterator()).asScala().toSeq();

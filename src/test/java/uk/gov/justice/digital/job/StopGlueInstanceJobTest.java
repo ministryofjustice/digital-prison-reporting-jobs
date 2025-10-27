@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.GlueClientException;
 import uk.gov.justice.digital.service.GlueOrchestrationService;
@@ -14,7 +14,7 @@ import uk.gov.justice.digital.service.GlueOrchestrationService;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class StopGlueInstanceJobTest extends BaseSparkTest {
+class StopGlueInstanceJobTest extends SparkTestBase {
 
     @Mock
     GlueOrchestrationService mockGlueOrchestrationService;
@@ -26,14 +26,14 @@ public class StopGlueInstanceJobTest extends BaseSparkTest {
     private StopGlueInstanceJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockGlueOrchestrationService, mockJobArguments);
 
         underTest = new StopGlueInstanceJob(mockGlueOrchestrationService, mockJobArguments);
     }
 
     @Test
-    public void shouldStopGlueJobWithGivenName() {
+    void shouldStopGlueJobWithGivenName() {
         when(mockJobArguments.getStopGlueInstanceJobName()).thenReturn(TEST_JOB_NAME);
 
         underTest.run();
@@ -42,7 +42,8 @@ public class StopGlueInstanceJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenAnExceptionOccursInService() throws Exception {
+    @SuppressWarnings("java:S2699")
+    void shouldFailWhenAnExceptionOccursInService() throws Exception {
         when(mockJobArguments.getStopGlueInstanceJobName()).thenReturn(TEST_JOB_NAME);
         doThrow(new GlueClientException("error")).when(mockGlueOrchestrationService).stopJob(any());
 

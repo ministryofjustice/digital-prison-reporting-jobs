@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,12 +54,12 @@ class DataHubCdcJobTest {
     private DataHubCdcJob underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new DataHubCdcJob(arguments, properties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }
 
     @Test
-    public void shouldRunAQueryPerTable() {
+    void shouldRunAQueryPerTable() {
 
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
@@ -74,7 +75,7 @@ class DataHubCdcJobTest {
     }
 
     @Test
-    public void shouldSkipQueryWhenThereIsNoSchemaAndNoData() {
+    void shouldSkipQueryWhenThereIsNoSchemaAndNoData() {
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(tablesToProcess);
 
         when(tableStreamingQueryProvider.provide(spark, "source1", "table1")).thenReturn(table1StreamingQuery);
@@ -90,10 +91,10 @@ class DataHubCdcJobTest {
     }
 
     @Test
-    public void shouldNotThrowForNoTables() {
+    void shouldNotThrowForNoTables() {
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(Collections.emptyList());
 
-        underTest.runJob(spark);
+        assertDoesNotThrow(() -> underTest.runJob(spark));
     }
 
 }

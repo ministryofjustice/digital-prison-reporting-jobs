@@ -10,7 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.ConfigServiceException;
@@ -35,7 +35,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
-class CompactionJobTest extends BaseSparkTest {
+class CompactionJobTest extends SparkTestBase {
 
     @Mock
     private JobArguments arguments;
@@ -57,7 +57,7 @@ class CompactionJobTest extends BaseSparkTest {
     private CompactionJob underTest;
 
     @BeforeEach
-    public void setupTest() {
+    void setupTest() {
         reset(arguments, configService, maintenanceService, properties);
         underTest = new CompactionJob(maintenanceService, configService, sparkSessionProvider, arguments, properties);
     }

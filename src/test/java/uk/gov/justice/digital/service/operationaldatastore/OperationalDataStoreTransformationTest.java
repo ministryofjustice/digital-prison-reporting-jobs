@@ -8,7 +8,7 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 
 import java.util.Arrays;
 
@@ -22,7 +22,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 
-class OperationalDataStoreTransformationTest extends BaseSparkTest {
+class OperationalDataStoreTransformationTest extends SparkTestBase {
 
     private static final StructType schema = new StructType(new StructField[]{
             new StructField("PK", DataTypes.StringType, true, Metadata.empty()),
@@ -35,7 +35,7 @@ class OperationalDataStoreTransformationTest extends BaseSparkTest {
     private final OperationalDataStoreTransformation underTest = new OperationalDataStoreTransformation();
 
     @Test
-    public void shouldNormaliseColumnNamesToLowercase() {
+    void shouldNormaliseColumnNamesToLowercase() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "some other data")
@@ -55,7 +55,7 @@ class OperationalDataStoreTransformationTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldStripNullStringCharacters() {
+    void shouldStripNullStringCharacters() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1\u0000", "2023-11-13 10:49:28.123458", "I", "", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "\u0000some\u0000 other\u0000 data\u0000")

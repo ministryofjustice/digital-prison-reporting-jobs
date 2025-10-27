@@ -10,7 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
@@ -37,7 +37,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
-class BatchProcessorTest extends BaseSparkTest {
+class BatchProcessorTest extends SparkTestBase {
 
     private static final String table = "table";
     private static final String source = "source";
@@ -72,13 +72,13 @@ class BatchProcessorTest extends BaseSparkTest {
     private BatchProcessor underTest;
 
     @BeforeAll
-    public static void setupClass() {
+    static void setupClass() {
         inputDf = spark.createDataFrame(inputRows, TEST_DATA_SCHEMA);
         validatedDf = spark.createDataFrame(validatedRows, TEST_DATA_SCHEMA);
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
     }
 

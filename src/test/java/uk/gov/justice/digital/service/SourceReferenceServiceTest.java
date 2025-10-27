@@ -27,7 +27,7 @@ import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-public class SourceReferenceServiceTest {
+class SourceReferenceServiceTest {
 
     private static final String RESOURCE_PATH = "/contracts";
     private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACT = "agency-internal-locations-dummy.avsc";
@@ -44,12 +44,12 @@ public class SourceReferenceServiceTest {
     private SourceReferenceService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         underTest = new SourceReferenceService(client, converter);
     }
 
     @Test
-    public void shouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
+    void shouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
         val schemaId = UUID.randomUUID().toString();
         val schemaResponse = new S3SchemaResponse(
                 schemaId,
@@ -65,12 +65,12 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
-    public void shouldReturnAnEmptyOptionalIfNoReferenceIsFound() {
+    void shouldReturnAnEmptyOptionalIfNoReferenceIsFound() {
         assertEquals(Optional.empty(), underTest.getSourceReference("DOES_NOT", "EXIST"));
     }
 
     @Test
-    public void shouldReturnReferenceFromClientWhereItExists() {
+    void shouldReturnReferenceFromClientWhereItExists() {
         val schemaId = UUID.randomUUID().toString();
         val schemaResponse = new S3SchemaResponse(
                 schemaId,
@@ -101,7 +101,7 @@ public class SourceReferenceServiceTest {
     // This is so that any update triggers a new version publication. (By default only avro changes trigger a new
     // version so without this changes to our custom fields would not trigger an update).
     @Test
-    public void shouldStripVersionSuffixFromNameAttribute() {
+    void shouldStripVersionSuffixFromNameAttribute() {
         val schemaId = UUID.randomUUID().toString();
         val tableName = "AGENCY_INTERNAL_LOCATIONS";
         val schemaResponse = new S3SchemaResponse(
@@ -122,7 +122,7 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
-    public void shouldThrowExceptionIfSchemaCannotBeParsed() {
+    void shouldThrowExceptionIfSchemaCannotBeParsed() {
         when(client.getSchema("some/schema"))
                 .thenReturn(Optional.of(new S3SchemaResponse(UUID.randomUUID().toString(), "This is not valid JSON", VERSION_ID)));
 
@@ -130,7 +130,7 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
-    public void shouldGetASourceReferenceWithACompositeSchema() {
+    void shouldGetASourceReferenceWithACompositeSchema() {
         val schemaId = UUID.randomUUID().toString();
         val schemaResponse = new S3SchemaResponse(
                 schemaId,
@@ -144,7 +144,7 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
-    public void shouldConcatenatePrimaryKeysIntoASqlCondition() {
+    void shouldConcatenatePrimaryKeysIntoASqlCondition() {
         SourceReference.PrimaryKey pk = new SourceReference.PrimaryKey(Arrays.asList("key1"));
         assertEquals("source.key1 = target.key1", pk.getSparkCondition("source", "target"));
 
@@ -154,7 +154,7 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
-    public void shouldReturnAListOfAllSourceReferences() {
+    void shouldReturnAListOfAllSourceReferences() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet
                 .of(ImmutablePair.of("test_schema", "test_table"));
         List<S3SchemaResponse> expectedSchemas = new ArrayList<>();
@@ -182,7 +182,7 @@ public class SourceReferenceServiceTest {
     }
 
     @Test
-    public void shouldReturnAnEmptyListWhenNoSchemaIsFound() {
+    void shouldReturnAnEmptyListWhenNoSchemaIsFound() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet
                 .of(ImmutablePair.of("test_schema", "test_table"));
 

@@ -41,7 +41,7 @@ class S3CheckpointReaderClientTest {
     private S3CheckpointReaderClient underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockS3ClientProvider, mockS3Client);
 
         when(mockS3ClientProvider.getClient()).thenReturn(mockS3Client);

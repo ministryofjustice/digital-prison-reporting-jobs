@@ -39,7 +39,7 @@ import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
-public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
+class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
 
     private static final String DMS_TASK_ID = "some-dms-task-id";
     private final Date dmsTaskStartTime = Date.from(Instant.now());
@@ -56,7 +56,7 @@ public class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
     private CreateReloadDiffJob underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenRetrySettingsAreConfigured(arguments);

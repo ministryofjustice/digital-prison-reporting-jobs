@@ -10,7 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCount;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCounts;
@@ -29,7 +29,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
-class PrimaryKeyReconciliationServiceTest extends BaseSparkTest {
+class PrimaryKeyReconciliationServiceTest extends SparkTestBase {
     private static final PrimaryKeyReconciliationCount ALL_MATCHING_COUNTS = new PrimaryKeyReconciliationCount(0L, 0L);
     private static final PrimaryKeyReconciliationCount MORE_IN_CURATED_COUNTS = new PrimaryKeyReconciliationCount(1L, 0L);
     private static final PrimaryKeyReconciliationCount MORE_IN_DATASOURCE_COUNTS = new PrimaryKeyReconciliationCount(0L, 1L);

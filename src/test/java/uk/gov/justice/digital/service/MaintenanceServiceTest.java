@@ -37,7 +37,7 @@ class MaintenanceServiceTest {
     private SparkSession mockSparkSession;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         underTest = new MaintenanceService(mockDataStorageService);
     }
 
@@ -59,7 +59,7 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    public void compactShouldListTablePaths() {
+    void compactShouldListTablePaths() {
         underTest.compactDeltaTables(mockSparkSession, rootPath, 1);
         verify(mockDataStorageService).listDeltaTablePaths(mockSparkSession, rootPath, 1);
         underTest.compactDeltaTables(mockSparkSession, "s3://anotherpath", 2);
@@ -67,7 +67,7 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    public void shouldTryToCompactAllTablesWhenCompactionFailsWithConcurrentDeleteReadException() {
+    void shouldTryToCompactAllTablesWhenCompactionFailsWithConcurrentDeleteReadException() {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)).thenReturn(deltaTablePaths);
 
         // This is a specific Exception we have seen and want to handle
@@ -81,16 +81,16 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    public void shouldTryToCompactAllTablesWhenCompactionFailsWithException() {
+    void shouldTryToCompactAllTablesWhenCompactionFailsWithException() {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)).thenReturn(deltaTablePaths);
 
         // make sure we handle checked and unchecked exceptions in general
         doThrow(new DataStorageException("Failed compaction"))
-                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), eq(table1));
+                .when(mockDataStorageService).compactDeltaTable(mockSparkSession, table1);
 
         doThrow(new RuntimeException(
                 "Failed compaction"))
-                .when(mockDataStorageService).compactDeltaTable(eq(mockSparkSession), eq(table2));
+                .when(mockDataStorageService).compactDeltaTable(mockSparkSession, table2);
 
         assertThrows(MaintenanceOperationFailedException.class, () -> underTest.compactDeltaTables(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES));
         verify(mockDataStorageService).compactDeltaTable(mockSparkSession, table1);
@@ -116,7 +116,7 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    public void vacuumShouldListTablePaths() {
+    void vacuumShouldListTablePaths() {
         underTest.vacuumDeltaTables(mockSparkSession, rootPath, 1);
         verify(mockDataStorageService).listDeltaTablePaths(mockSparkSession, rootPath, 1);
         underTest.vacuumDeltaTables(mockSparkSession, "s3://anotherpath", 2);
@@ -124,15 +124,15 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    public void shouldTryToVacuumAllTablesWhenVacuumFailsWithException() {
+    void shouldTryToVacuumAllTablesWhenVacuumFailsWithException() {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)).thenReturn(deltaTablePaths);
 
         doThrow(new DataStorageException("Failed vacuum"))
-                .when(mockDataStorageService).vacuum(eq(mockSparkSession), eq(table1));
+                .when(mockDataStorageService).vacuum(mockSparkSession, table1);
 
         doThrow(new RuntimeException(
                 "Failed vacuum"))
-                .when(mockDataStorageService).vacuum(eq(mockSparkSession), eq(table2));
+                .when(mockDataStorageService).vacuum(mockSparkSession, table2);
 
         assertThrows(MaintenanceOperationFailedException.class, () -> underTest.vacuumDeltaTables(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES));
         verify(mockDataStorageService).vacuum(mockSparkSession, table1);

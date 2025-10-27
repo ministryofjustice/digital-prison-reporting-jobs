@@ -20,7 +20,6 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -81,7 +80,7 @@ class DataHubBatchJobTest {
 
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new DataHubBatchJob(
                 arguments,
                 properties,
@@ -95,7 +94,7 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    public void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() {
+    void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() {
         stubRawPath();
         stubReadData();
         stubDiscoveredTablePaths();
@@ -113,14 +112,14 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    public void shouldThrowForNoTables() throws IOException {
+    void shouldThrowForNoTables() {
         stubRawPath();
         stubEmptyDiscoveredTablePaths();
         assertThrows(RuntimeException.class, () -> underTest.runJob(spark));
     }
 
     @Test
-    public void shouldRunAQueryPerTableButWriteMissingSchemasToViolations() throws Exception {
+    void shouldRunAQueryPerTableButWriteMissingSchemasToViolations() throws Exception {
         stubRawPath();
         stubReadData();
         stubDiscoveredTablePaths();
@@ -138,7 +137,7 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    public void shouldWriteViolationsWhenDataProviderCannotMergeInputData() {
+    void shouldWriteViolationsWhenDataProviderCannotMergeInputData() {
         DataProviderFailedMergingSchemasException thrown = new DataProviderFailedMergingSchemasException("Failed merging schema", new Exception());
         when(dataProvider.getBatchSourceData(any(), anyList())).thenThrow(thrown);
         stubRawPath();

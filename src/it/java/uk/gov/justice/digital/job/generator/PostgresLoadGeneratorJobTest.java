@@ -8,7 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.generator.PostgresSecrets;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class PostgresLoadGeneratorJobTest extends BaseSparkTest {
+class PostgresLoadGeneratorJobTest extends SparkTestBase {
 
     private static final InMemoryOperationalDataStore dataStore = new InMemoryOperationalDataStore();
 
@@ -58,7 +58,7 @@ public class PostgresLoadGeneratorJobTest extends BaseSparkTest {
     }
 
     @BeforeEach
-    public void setup() throws SQLException {
+    void setup() throws SQLException {
         truncateTable();
         reset(mockSecretsManagerClient);
 

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.service.CheckpointReaderService;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 
 @ExtendWith(MockitoExtension.class)
-class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
+class UnprocessedRawFilesCheckJobTest extends SparkTestBase {
 
     @Mock
     ConfigService mockConfigService;
@@ -50,7 +50,7 @@ class UnprocessedRawFilesCheckJobTest extends BaseSparkTest {
     private UnprocessedRawFilesCheckJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments);
 
         underTest = new UnprocessedRawFilesCheckJob(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments);
