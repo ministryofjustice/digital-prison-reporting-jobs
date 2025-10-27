@@ -17,7 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
 
@@ -55,7 +55,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 
 @ExtendWith(MockitoExtension.class)
-class ValidationServiceTest extends BaseSparkTest {
+class ValidationServiceTest extends SparkTestBase {
 
     private static final String SOURCE = "source";
     private static final String TABLE = "table";

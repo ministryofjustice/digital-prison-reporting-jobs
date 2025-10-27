@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DmsClientException;
 import uk.gov.justice.digital.service.DmsOrchestrationService;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class StopDmsTaskJobTest extends BaseSparkTest {
+class StopDmsTaskJobTest extends SparkTestBase {
 
     @Mock
     DmsOrchestrationService mockDmsOrchestrationService;
@@ -32,7 +32,7 @@ class StopDmsTaskJobTest extends BaseSparkTest {
     private StopDmsTaskJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockDmsOrchestrationService, mockJobArguments);
 
         underTest = new StopDmsTaskJob(mockDmsOrchestrationService, mockJobArguments);

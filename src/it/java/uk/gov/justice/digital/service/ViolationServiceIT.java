@@ -12,7 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 
 import java.io.File;
@@ -35,7 +35,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
-public class ViolationServiceIT extends BaseSparkTest {
+class ViolationServiceIT extends SparkTestBase {
 
     private static final String source = "some";
     private static final String table = "table";
@@ -86,7 +86,7 @@ public class ViolationServiceIT extends BaseSparkTest {
     private ViolationService underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         givenRetrySettingsAreConfigured(arguments);
         underTest = new ViolationService(
                 arguments,
@@ -97,7 +97,7 @@ public class ViolationServiceIT extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteDataWithIncompatibleSchemasSoThatItCanBeReadBackAgainUsingSpark() {
+    void shouldWriteDataWithIncompatibleSchemasSoThatItCanBeReadBackAgainUsingSpark() {
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
 
         underTest.handleViolation(spark, original, source, table, STRUCTURED_LOAD);
@@ -133,7 +133,7 @@ public class ViolationServiceIT extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteCdcFilesWithIncompatibleSchemasToViolations() throws Exception {
+    void shouldWriteCdcFilesWithIncompatibleSchemasToViolations() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(rawRoot.toString());
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
         when(arguments.getCdcFileGlobPattern()).thenReturn(JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT);
@@ -164,7 +164,7 @@ public class ViolationServiceIT extends BaseSparkTest {
     }
 
     @Test
-    public void shouldWriteBatchFilesWithIncompatibleSchemasToViolations() throws Exception {
+    void shouldWriteBatchFilesWithIncompatibleSchemasToViolations() throws Exception {
         when(arguments.getRawS3Path()).thenReturn(rawRoot.toString());
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("*-*.parquet");

@@ -3,7 +3,7 @@ package uk.gov.justice.digital.test;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.io.TempDir;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.*;
 /**
  * Helper to set up a test environment with some semi-realistic delta tables and extraneous files/dirs on disk
  */
-public class DeltaTablesTestBase extends BaseSparkTest {
+public class DeltaTablesTestBase extends SparkTestBase {
     @TempDir
     protected Path rootPath;
     protected Path offendersTablePath;

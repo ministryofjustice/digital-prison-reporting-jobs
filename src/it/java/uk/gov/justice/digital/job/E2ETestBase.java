@@ -5,7 +5,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.junit.jupiter.api.io.TempDir;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ConfigService;
@@ -37,7 +37,7 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.assertOperationalD
 import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableName;
 import static uk.gov.justice.digital.test.SharedTestFunctions.operationalDataStoreTableNameWithSchema;
 
-public class E2ETestBase extends BaseSparkTest {
+public class E2ETestBase extends SparkTestBase {
     protected static final String configurationSchemaName = "configuration";
     protected static final String loadingSchemaName = "loading";
     protected static final String namespace = "prisons";

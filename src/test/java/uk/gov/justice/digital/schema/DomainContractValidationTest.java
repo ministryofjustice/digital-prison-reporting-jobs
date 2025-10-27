@@ -7,7 +7,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 
-public class DomainContractValidationTest {
+class DomainContractValidationTest {
 
     private static final String RESOURCE_PATH = "/contracts";
 
@@ -18,7 +18,7 @@ public class DomainContractValidationTest {
     private static final Schema.Parser avroSchemaParser = new Schema.Parser();
 
     @Test
-    public void allContractsShouldBeValidAvro() {
+    void allContractsShouldBeValidAvro() {
         contracts.forEach(contract ->
             assertDoesNotThrow(
                     () -> avroSchemaParser.parse(getResource(RESOURCE_PATH + "/" + contract)),

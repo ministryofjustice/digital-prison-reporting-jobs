@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 
 @ExtendWith(MockitoExtension.class)
-class CuratedZoneCDCTest extends BaseSparkTest {
+class CuratedZoneCDCTest extends SparkTestBase {
 
     private static final String curatedRootPath = "/curated/path";
     private static final String curatedTablePath = "/curated/path/source/table";
@@ -42,7 +42,7 @@ class CuratedZoneCDCTest extends BaseSparkTest {
     private CuratedZoneCDC underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSource()).thenReturn("source");
         when(sourceReference.getTable()).thenReturn("table");
@@ -52,13 +52,13 @@ class CuratedZoneCDCTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldMergeDataIntoTable() {
+    void shouldMergeDataIntoTable() {
         underTest.process(spark, df, sourceReference);
         verify(storage, times(1)).mergeRecords(any(), eq(curatedTablePath), any(), eq(PRIMARY_KEY));
     }
 
     @Test
-    public void shouldUpdateDeltaManifest() {
+    void shouldUpdateDeltaManifest() {
         underTest.process(spark, df, sourceReference);
         verify(storage, times(1)).updateDeltaManifestForTable(any(), eq(curatedTablePath));
     }

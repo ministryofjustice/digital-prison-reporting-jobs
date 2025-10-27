@@ -10,7 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.ConfigServiceException;
@@ -35,7 +35,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
-class VacuumJobTest extends BaseSparkTest {
+class VacuumJobTest extends SparkTestBase {
 
     @Mock
     private JobArguments arguments;
@@ -57,7 +57,7 @@ class VacuumJobTest extends BaseSparkTest {
     private VacuumJob underTest;
 
     @BeforeEach
-    public void setupTest() {
+    void setupTest() {
         reset(arguments, properties, configService, maintenanceService);
         underTest = new VacuumJob(maintenanceService, configService, sparkSessionProvider, arguments, properties);
     }

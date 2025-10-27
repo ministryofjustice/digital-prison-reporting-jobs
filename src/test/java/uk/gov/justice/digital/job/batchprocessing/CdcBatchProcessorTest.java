@@ -11,7 +11,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
@@ -36,7 +36,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimes
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
 
 @ExtendWith(MockitoExtension.class)
-class CdcBatchProcessorTest extends BaseSparkTest {
+class CdcBatchProcessorTest extends SparkTestBase {
 
     private static final long batchId = 1;
     private static Dataset<Row> rowPerPk;
@@ -66,13 +66,13 @@ class CdcBatchProcessorTest extends BaseSparkTest {
 
 
     @BeforeAll
-    public static void setupClass() {
+    static void setupClass() {
         rowPerPk = rowPerPkDfSameTimestamp(spark);
         manyRowsPerPk = manyRowsPerPkDfSameTimestamp(spark);
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new CdcBatchProcessor(
                 mockValidationService,
                 mockStructuredZone,

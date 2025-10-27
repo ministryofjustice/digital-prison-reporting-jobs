@@ -53,7 +53,7 @@ import static uk.gov.justice.digital.config.JobArguments.SCHEMA_CACHE_EXPIRY_IN_
 import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
-public class S3SchemaClientTest {
+class S3SchemaClientTest {
 
     private static final String SCHEMA_NAME = "some_source/some_table";
     private static final String FAKE_SCHEMA_DEFINITION = "This is a fake schema definition";

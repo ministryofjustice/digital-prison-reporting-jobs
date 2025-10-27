@@ -84,7 +84,7 @@ class DmsClientTest {
     private DmsClient underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockClientProvider, mockDmsClient, mockDescribeReplicationTasksResult, mockStopReplicationTaskResult, mockDescribeTableStatisticsResult);
 
         when(mockClientProvider.getClient()).thenReturn(mockDmsClient);

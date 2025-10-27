@@ -10,7 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
 import uk.gov.justice.digital.service.ConfigService;
@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-public class HiveTableCreationJobTest extends BaseSparkTest {
+class HiveTableCreationJobTest extends SparkTestBase {
 
     private static final String TEST_CONFIG_KEY = "some-config-key";
 
@@ -45,13 +45,13 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
     private HiveTableCreationJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockConfigService, mockHiveTableService, mockJobArguments);
         underTest = new HiveTableCreationJob(mockConfigService, mockHiveTableService, mockJobArguments);
     }
 
     @Test
-    public void shouldCompleteSuccessfullyWhenThereAreNoFailedTables() {
+    void shouldCompleteSuccessfullyWhenThereAreNoFailedTables() {
         Set<ImmutablePair<String, String>> expectedTables = new HashSet<>();
         expectedTables.add(new ImmutablePair<>("schema_1", "table_1"));
         expectedTables.add(new ImmutablePair<>("schema_1", "table_2"));
@@ -67,7 +67,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenThereAreFailedTables() throws Exception {
+    void shouldFailWhenThereAreFailedTables() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> failedTables = ImmutableSet.of(ImmutablePair.of("schema", "failed-table-1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
@@ -78,7 +78,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenSchemaServiceThrowsAnException() throws Exception {
+    void shouldFailWhenSchemaServiceThrowsAnException() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> table = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
@@ -89,7 +89,7 @@ public class HiveTableCreationJobTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldFailWhenConfigServiceThrowsAnException() throws Exception {
+    void shouldFailWhenConfigServiceThrowsAnException() throws Exception {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new RuntimeException("Config service error"));
 

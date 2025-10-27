@@ -12,47 +12,47 @@ class ResourcePathTest {
     private static final String expectedS3Path = "s3://foo/bar/baz";
 
     @Test
-    public void shouldReturnAUriStringGivenValidRelativePathElements() {
+    void shouldReturnAUriStringGivenValidRelativePathElements() {
         String[] elements = { "foo", "bar", "baz" };
         val result = ResourcePath.createValidatedPath(elements);
         assertEquals(expectedRelativePath, result);
     }
 
     @Test
-    public void shouldReturnAUriStringGivenValidS3PathElements() {
+    void shouldReturnAUriStringGivenValidS3PathElements() {
         String[] elements = { "s3://foo", "bar", "baz" };
         val result = ResourcePath.createValidatedPath(elements);
         assertEquals(expectedS3Path, result);
     }
 
     @Test
-    public void shouldReturnAUriStringGivenValidRelativePathElementsWithRedundantSeparators() {
+    void shouldReturnAUriStringGivenValidRelativePathElementsWithRedundantSeparators() {
         String[] elements = { "foo", "bar/", "///baz" };
         val result = ResourcePath.createValidatedPath(elements);
         assertEquals(expectedRelativePath, result);
     }
 
     @Test
-    public void shouldReturnAUriStringGivenValidS3PathElementsWithRedundantSeparators() {
+    void shouldReturnAUriStringGivenValidS3PathElementsWithRedundantSeparators() {
         String[] elements = { "s3://foo////", "bar/", "///baz" };
         val result = ResourcePath.createValidatedPath(elements);
         assertEquals(expectedS3Path, result);
     }
 
     @Test
-    public void shouldThrowIllegalArgumentExceptionIfPathCannotBeValidated() {
+    void shouldThrowIllegalArgumentExceptionIfPathCannotBeValidated() {
         String[] elements = { "\foo", "\nbar" };
         assertThrows(IllegalArgumentException.class, () -> ResourcePath.createValidatedPath(elements));
     }
 
     @Test
-    public void tablePathShouldAddSlashWhenHasNoSlash() {
+    void tablePathShouldAddSlashWhenHasNoSlash() {
         String result = tablePath("s3://root", "source", "table");
         assertEquals("s3://root/source/table", result);
     }
 
     @Test
-    public void tablePathRootShouldNotAddSlashWhenHasSlash() {
+    void tablePathRootShouldNotAddSlashWhenHasSlash() {
         String result = tablePath("s3://root/", "source", "table");
         assertEquals("s3://root/source/table", result);
     }

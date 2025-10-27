@@ -27,7 +27,7 @@ import static uk.gov.justice.digital.test.ResourceLoader.getResource;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-public class SourceReferenceServiceTest {
+class SourceReferenceServiceTest {
 
     private static final String RESOURCE_PATH = "/contracts";
     private static final String AGENCY_INTERNAL_LOCATIONS_CONTRACT = "agency-internal-locations-dummy.avsc";
@@ -44,12 +44,12 @@ public class SourceReferenceServiceTest {
     private SourceReferenceService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         underTest = new SourceReferenceService(client, converter);
     }
 
     @Test
-    public void shouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
+    void shouldReturnCorrectReferenceIrrespectiveOfCapitalizationOfParameters() {
         val schemaId = UUID.randomUUID().toString();
         val schemaResponse = new S3SchemaResponse(
                 schemaId,

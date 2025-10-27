@@ -24,7 +24,7 @@ import static uk.gov.justice.digital.config.JobArguments.*;
 import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
-public class BaseSparkTest {
+public class SparkTestBase {
 
 	protected static final SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
 
@@ -52,12 +52,12 @@ public class BaseSparkTest {
 	}
 
 	@BeforeAll
-	public static void createSession() {
+	static void createSession() {
 		spark = createSparkSession();
     }
 
 	@AfterAll
-	public static void stopSession() {
+	static void stopSession() {
 		spark.stop();
 	}
 

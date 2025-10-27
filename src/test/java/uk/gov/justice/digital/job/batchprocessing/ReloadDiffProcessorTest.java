@@ -11,7 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.DataStorageService;
 
@@ -43,7 +43,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADAT
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-class ReloadDiffProcessorTest extends BaseSparkTest {
+class ReloadDiffProcessorTest extends SparkTestBase {
 
     @Mock
     private DataStorageService dataStorageService;
@@ -65,7 +65,7 @@ class ReloadDiffProcessorTest extends BaseSparkTest {
     private ReloadDiffProcessor underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         reset(dataStorageService, sourceReference);
         underTest = new ReloadDiffProcessor(dataStorageService);
     }

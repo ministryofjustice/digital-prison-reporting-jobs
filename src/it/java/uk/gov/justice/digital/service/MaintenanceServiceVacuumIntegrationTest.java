@@ -16,7 +16,7 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     private MaintenanceService underTest;
 
     @BeforeEach
-    public void setupTest() throws Exception {
+    void setupTest() throws Exception {
         setupDeltaTablesFixture();
         setupNonDeltaFilesAndDirs();
         underTest = new MaintenanceService(new DataStorageService(new JobArguments(Collections.emptyMap())));
@@ -33,7 +33,7 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldVacuumDeltaTablesWhenRecursingWithDepth1() throws Exception {
+    void shouldVacuumDeltaTablesWhenRecursingWithDepth1() throws Exception {
         int depthLimit = 1;
         // Compaction followed by vacuum on a table with zero retention should result in a single parquet file
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
@@ -48,7 +48,7 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldVacuumDeltaTablesWhenRecursingWithDepth2() throws Exception {
+    void shouldVacuumDeltaTablesWhenRecursingWithDepth2() throws Exception {
         int depthLimit = 2;
         // Compaction followed by vacuum on a table with zero retention should result in a single parquet file
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
@@ -63,7 +63,7 @@ class MaintenanceServiceVacuumIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    public void shouldVacuumDeltaTablesWhenRecursingWithDepth3() throws Exception {
+    void shouldVacuumDeltaTablesWhenRecursingWithDepth3() throws Exception {
         int depthLimit = 3;
         // Compaction followed by vacuum on a table with zero retention should result in a single parquet file
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);

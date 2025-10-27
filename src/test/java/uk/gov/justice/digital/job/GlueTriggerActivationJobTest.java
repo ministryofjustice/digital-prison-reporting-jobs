@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.GlueClientException;
 import uk.gov.justice.digital.service.GlueOrchestrationService;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.any;
 
 @ExtendWith(MockitoExtension.class)
-public class GlueTriggerActivationJobTest extends BaseSparkTest {
+class GlueTriggerActivationJobTest extends SparkTestBase {
 
     @Mock
     GlueOrchestrationService mockGlueOrchestrationService;
@@ -32,7 +32,7 @@ public class GlueTriggerActivationJobTest extends BaseSparkTest {
     private GlueTriggerActivationJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockGlueOrchestrationService, mockJobArguments);
 
         underTest = new GlueTriggerActivationJob(mockGlueOrchestrationService, mockJobArguments);

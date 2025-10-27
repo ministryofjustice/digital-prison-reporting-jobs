@@ -31,7 +31,7 @@ class ConfigServiceTest {
     private ConfigService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockDmsClient);
 
         underTest = new ConfigService(mockDmsClient);

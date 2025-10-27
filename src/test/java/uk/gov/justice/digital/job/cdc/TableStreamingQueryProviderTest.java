@@ -53,7 +53,7 @@ class TableStreamingQueryProviderTest {
     private TableStreamingQueryProvider underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = spy(new TableStreamingQueryProvider(
                 arguments,
                 dataProvider,
@@ -64,7 +64,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void shouldCreateStandardProcessingQueryUnderNormalCircumstances() {
+    void shouldCreateStandardProcessingQueryUnderNormalCircumstances() {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.of(sourceReference));
         when(dataProvider.getStreamingSourceData(spark, sourceReference)).thenReturn(df);
         underTest.provide(spark, sourceName, tableName);
@@ -73,7 +73,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void shouldCreateNoSchemaFoundQueryWhenNoSourceReference() {
+    void shouldCreateNoSchemaFoundQueryWhenNoSourceReference() {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
         underTest.provide(spark, sourceName, tableName);
 
@@ -81,7 +81,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void shouldDecorateBatchFuncWithIncompatibleSchemaHandling() {
+    void shouldDecorateBatchFuncWithIncompatibleSchemaHandling() {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
         underTest.provide(spark, sourceName, tableName);
 
@@ -89,7 +89,7 @@ class TableStreamingQueryProviderTest {
     }
 
     @Test
-    public void incompatibleSchemaHandlingShouldWriteCdcDataToViolationsWhenSchemaIsIncompatible() throws Exception {
+    void incompatibleSchemaHandlingShouldWriteCdcDataToViolationsWhenSchemaIsIncompatible() throws Exception {
         when(df.sparkSession()).thenReturn(spark);
         SchemaColumnConvertNotSupportedException ultimateCause =
                 new SchemaColumnConvertNotSupportedException("col", "physical type", "logical type");

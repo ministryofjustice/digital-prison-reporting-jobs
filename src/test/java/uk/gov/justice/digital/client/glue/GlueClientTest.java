@@ -125,7 +125,7 @@ class GlueClientTest {
     private GlueClient underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         sensitiveFields.add(SENSITIVE_FIELD_1);
         sensitiveFields.add(SENSITIVE_FIELD_2);
 

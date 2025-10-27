@@ -87,7 +87,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     }
 
     @BeforeEach
-    public void setUp() throws SQLException {
+    void setUp() throws SQLException {
         givenDatastoreCredentials(connectionDetailsService, operationalDataStore);
         givenSettingsAreConfigured();
         givenSchemaExists(namespace, testQueryConnection);
@@ -108,7 +108,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
     }
 
     @Test
-    public void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws SQLException {
+    void shouldRunTheJobEndToEndApplyingSomeCDCMessagesAndWritingViolations() throws SQLException {
         givenASourceReferenceFor(agencyInternalLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(agencyLocationsTable, sourceReferenceService);
         givenASourceReferenceFor(movementReasonsTable, sourceReferenceService);

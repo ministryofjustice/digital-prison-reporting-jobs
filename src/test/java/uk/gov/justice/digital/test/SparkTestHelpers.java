@@ -37,7 +37,7 @@ public class SparkTestHelpers {
         return spark.read().parquet(path);
     }
 
-    public void overwriteDeltaTable(String tablePath, Dataset<Row> df) {
+    void overwriteDeltaTable(String tablePath, Dataset<Row> df) {
         df.write()
                 .format("delta")
                 .mode(SaveMode.Overwrite)

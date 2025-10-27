@@ -21,7 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.datahub.model.TableIdentifier;
@@ -49,7 +49,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
-class DataStorageServiceTest extends BaseSparkTest {
+class DataStorageServiceTest extends SparkTestBase {
 
     private static final int DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES = 1;
 
@@ -104,19 +104,19 @@ class DataStorageServiceTest extends BaseSparkTest {
     }
 
     @Test
-    public void shouldReturnTrueWhenStorageExists() {
+    void shouldReturnTrueWhenStorageExists() {
         when(DeltaTable.isDeltaTable(spark, tablePath)).thenReturn(true);
         assertTrue(underTest.exists(spark, tableId));
     }
 
     @Test
-    public void shouldReturnFalseWhenStorageDoesNotExist() {
+    void shouldReturnFalseWhenStorageDoesNotExist() {
         when(DeltaTable.isDeltaTable(spark, tableId.toPath())).thenReturn(false);
         assertFalse(underTest.exists(spark, tableId));
     }
 
     @Test
-    public void shouldReturnTrueForHasRecordsWhenStorageExistsAndRecordsArePresent() {
+    void shouldReturnTrueForHasRecordsWhenStorageExistsAndRecordsArePresent() {
         givenDeltaTableExists();
 
         val df = spark.sql("select cast(10 as LONG) as numFiles");

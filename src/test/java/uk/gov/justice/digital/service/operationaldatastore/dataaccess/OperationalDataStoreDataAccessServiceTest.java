@@ -82,7 +82,7 @@ class OperationalDataStoreDataAccessServiceTest {
     private OperationalDataStoreDataAccessService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         JDBCCredentials credentials = new JDBCCredentials("username", "password");
         JDBCGlueConnectionDetails connectionDetails = new JDBCGlueConnectionDetails(
                 "jdbc-url", "org.postgresql.Driver", credentials

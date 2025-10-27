@@ -34,7 +34,7 @@ class DmsOrchestrationServiceTest {
     private DmsOrchestrationService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockJobArguments, mockDmsClient);
 
         underTest = new DmsOrchestrationService(mockJobArguments, mockDmsClient);

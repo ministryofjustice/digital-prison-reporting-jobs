@@ -17,14 +17,14 @@ class JobPropertiesTest {
     private static final JobProperties underTest = new JobProperties();
 
     @BeforeEach
-    public void setupProperties() {
+    void setupProperties() {
         System.setProperty(SPARK_JOB_NAME_PROPERTY, SPARK_JOB_NAME);
         System.setProperty(SPARK_DRIVER_MEMORY_PROPERTY, DRIVER_MEMORY);
         System.setProperty(SPARK_EXECUTOR_MEMORY_PROPERTY, EXECUTOR_MEMORY);
     }
 
     @AfterEach
-    public void cleanupProperties() {
+    void cleanupProperties() {
         System.clearProperty(SPARK_JOB_NAME_PROPERTY);
         System.clearProperty(SPARK_DRIVER_MEMORY_PROPERTY);
         System.clearProperty(SPARK_EXECUTOR_MEMORY_PROPERTY);

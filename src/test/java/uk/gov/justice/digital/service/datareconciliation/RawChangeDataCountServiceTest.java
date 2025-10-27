@@ -11,7 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
@@ -34,7 +34,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkDfSameTim
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
 
 @ExtendWith(MockitoExtension.class)
-class RawChangeDataCountServiceTest extends BaseSparkTest {
+class RawChangeDataCountServiceTest extends SparkTestBase {
 
     private static final String RAW_PATH = "s3://raw-bucket/";
     private static final String RAW_ARCHIVE_PATH = "s3://raw-archive-bucket/";

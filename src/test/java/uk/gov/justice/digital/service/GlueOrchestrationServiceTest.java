@@ -28,7 +28,7 @@ class GlueOrchestrationServiceTest {
     private GlueOrchestrationService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockJobArguments, mockGlueClient);
 
         underTest = new GlueOrchestrationService(mockJobArguments, mockGlueClient);

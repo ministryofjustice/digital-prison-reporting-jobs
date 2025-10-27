@@ -14,7 +14,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -59,7 +59,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-class CreateReloadDiffJobTest extends BaseSparkTest {
+class CreateReloadDiffJobTest extends SparkTestBase {
     private static final String DMS_TASK_ID = "some-dms-task-id";
     private static final String RAW_PATH = "s3://raw-bucket/";
     private static final String ARCHIVE_PATH = "s3://raw-archive-bucket/";
@@ -115,7 +115,7 @@ class CreateReloadDiffJobTest extends BaseSparkTest {
     private CreateReloadDiffJob underTest;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         Mockito.reset(
                 arguments,
                 properties,

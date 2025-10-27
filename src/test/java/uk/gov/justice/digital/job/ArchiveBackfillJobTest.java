@@ -14,7 +14,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -49,7 +49,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.TestHelpers.containsTheSameElementsInOrderAs;
 
 @ExtendWith(MockitoExtension.class)
-class ArchiveBackfillJobTest extends BaseSparkTest {
+class ArchiveBackfillJobTest extends SparkTestBase {
     private static final String TEST_CONFIG_KEY = "test-domain";
     private static final String ARCHIVE_PATH = "s3://raw-archive-bucket/";
     private static final String TEMP_RELOAD_PATH = "s3://temp-reload-bucket/";

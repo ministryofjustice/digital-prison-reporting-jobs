@@ -10,7 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.config.BaseSparkTest;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.service.CheckpointReaderService;
@@ -40,7 +40,7 @@ import static org.hamcrest.collection.IsEmptyCollection.empty;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 
 @ExtendWith(MockitoExtension.class)
-class RawFileArchiveJobTest extends BaseSparkTest {
+class RawFileArchiveJobTest extends SparkTestBase {
 
     @Mock
     ConfigService mockConfigService;
@@ -76,7 +76,7 @@ class RawFileArchiveJobTest extends BaseSparkTest {
     private RawFileArchiveJob underTest;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         reset(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments);
 
         underTest = new RawFileArchiveJob(mockConfigService, mockS3Service, mockCheckpointReaderService, fixedClock, mockJobArguments);
