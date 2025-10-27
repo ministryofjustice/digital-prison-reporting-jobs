@@ -51,7 +51,7 @@ class CheckpointReaderServiceTest {
     private CheckpointReaderService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setUp() {
         reset(mockJobArguments, mockS3Client);
 
         underTest = new CheckpointReaderService(mockS3Client, mockCheckpointReaderClient, mockJobArguments, fixedClock);

@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,7 +94,7 @@ class DataHubCdcJobTest {
     void shouldNotThrowForNoTables() {
         when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(Collections.emptyList());
 
-        underTest.runJob(spark);
+        assertDoesNotThrow(() -> underTest.runJob(spark));
     }
 
 }

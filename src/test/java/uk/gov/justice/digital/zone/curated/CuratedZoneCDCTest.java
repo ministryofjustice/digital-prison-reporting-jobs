@@ -64,7 +64,7 @@ class CuratedZoneCDCTest extends SparkTestBase {
     }
 
     @Test
-    public void shouldHandleRetriesExhausted() {
+    void shouldHandleRetriesExhausted() {
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception());
         doThrow(thrown).when(storage).mergeRecords(any(), any(), any(), any());
 

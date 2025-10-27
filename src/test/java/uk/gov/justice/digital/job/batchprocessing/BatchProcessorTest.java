@@ -78,7 +78,7 @@ class BatchProcessorTest extends SparkTestBase {
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
     }
 

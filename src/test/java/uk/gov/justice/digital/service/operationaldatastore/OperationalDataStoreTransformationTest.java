@@ -35,7 +35,7 @@ class OperationalDataStoreTransformationTest extends SparkTestBase {
     private final OperationalDataStoreTransformation underTest = new OperationalDataStoreTransformation();
 
     @Test
-    public void shouldNormaliseColumnNamesToLowercase() {
+    void shouldNormaliseColumnNamesToLowercase() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1", "2023-11-13 10:49:28.123458", "I", "", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "some other data")
@@ -55,7 +55,7 @@ class OperationalDataStoreTransformationTest extends SparkTestBase {
     }
 
     @Test
-    public void shouldStripNullStringCharacters() {
+    void shouldStripNullStringCharacters() {
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 RowFactory.create("pk1\u0000", "2023-11-13 10:49:28.123458", "I", "", "some data"),
                 RowFactory.create("pk2", "2023-11-13 10:49:28.123458", "U", "", "\u0000some\u0000 other\u0000 data\u0000")

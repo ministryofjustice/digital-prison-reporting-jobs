@@ -102,7 +102,7 @@ class HiveTableServiceTest extends SparkTestBase {
     }
 
     @Test
-    public void replaceTablesShouldFailWhenSourceReferenceServiceThrowsAndException() {
+    void replaceTablesShouldFailWhenSourceReferenceServiceThrowsAndException() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
@@ -111,7 +111,7 @@ class HiveTableServiceTest extends SparkTestBase {
     }
 
     @Test
-    public void replaceTablesShouldReplaceHiveTablesForSchemas() {
+    void replaceTablesShouldReplaceHiveTablesForSchemas() {
         Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
                 .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
                 .collect(Collectors.toSet());
@@ -225,7 +225,7 @@ class HiveTableServiceTest extends SparkTestBase {
     }
 
     @Test
-    public void switchPrisonsTableDataSourceShouldFailWhenThereAreNoSchemas() {
+    void switchPrisonsTableDataSourceShouldFailWhenThereAreNoSchemas() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
@@ -234,7 +234,7 @@ class HiveTableServiceTest extends SparkTestBase {
     }
 
     @Test
-    public void switchPrisonsTableDataSourceShouldFailWhenSourceReferenceServiceThrowsAndException() {
+    void switchPrisonsTableDataSourceShouldFailWhenSourceReferenceServiceThrowsAndException() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
@@ -243,7 +243,7 @@ class HiveTableServiceTest extends SparkTestBase {
     }
 
     @Test
-    public void switchPrisonsTableDataSourceShouldLinkPrisonsTableToSpecifiedSource() {
+    void switchPrisonsTableDataSourceShouldLinkPrisonsTableToSpecifiedSource() {
         Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
                 .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
                 .collect(Collectors.toSet());

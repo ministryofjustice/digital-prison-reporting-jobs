@@ -103,6 +103,7 @@ class S3DataDeletionJobTest extends SparkTestBase {
     }
 
     @Test
+    @SuppressWarnings("java:S2699")
     void shouldFailWhenNoConfigurationIsGiven() throws Exception {
         when(mockJobArguments.getConfigKey()).thenThrow(new IllegalStateException("error"));
 

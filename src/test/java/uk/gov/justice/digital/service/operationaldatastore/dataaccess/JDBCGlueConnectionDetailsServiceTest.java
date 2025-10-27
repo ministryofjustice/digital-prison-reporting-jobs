@@ -36,7 +36,7 @@ class JDBCGlueConnectionDetailsServiceTest {
     private JDBCGlueConnectionDetailsService underTest;
 
     @BeforeEach
-    public void setup() {
+    void setUp() {
         underTest = new JDBCGlueConnectionDetailsService(mockGlueClient, mockSecretsManagerClient);
     }
 

@@ -113,7 +113,7 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    void shouldThrowForNoTables() throws IOException {
+    void shouldThrowForNoTables() {
         stubRawPath();
         stubEmptyDiscoveredTablePaths();
         assertThrows(RuntimeException.class, () -> underTest.runJob(spark));

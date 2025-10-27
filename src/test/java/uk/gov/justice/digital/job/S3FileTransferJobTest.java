@@ -121,6 +121,7 @@ class S3FileTransferJobTest extends SparkTestBase {
     }
 
     @Test
+    @SuppressWarnings("java:S2699")
     void shouldExitWithFailureStatusWhenThereIsFailureMovingSomeFiles() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),

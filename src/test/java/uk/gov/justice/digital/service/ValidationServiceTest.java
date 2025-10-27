@@ -449,7 +449,7 @@ class ValidationServiceTest extends SparkTestBase {
                 .when(violationService)
                 .handleViolation(any(), any(), any(), any(), any());
         assertThrows(RuntimeException.class, () ->
-                underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList());
+                underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD));
     }
 
 }
