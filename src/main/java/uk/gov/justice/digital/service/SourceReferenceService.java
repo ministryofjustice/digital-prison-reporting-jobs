@@ -47,11 +47,15 @@ public class SourceReferenceService {
         return schemaClient.getSchema(key).map(this::createFromAvroSchema);
     }
 
+    /**
+     * Returns an unmodifiable view of the List of all SourceReferences.
+     * The returned list cannot be modified.
+     */
     public List<SourceReference> getAllSourceReferences(ImmutableSet<ImmutablePair<String, String>> schemaGroup) {
         return schemaClient.getAllSchemas(schemaGroup)
                 .stream()
                 .map(this::createFromAvroSchema)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private String generateKey(String source, String table) {
@@ -65,7 +69,7 @@ public class SourceReferenceService {
         List<String> sensitiveColumnNames = Arrays.stream(schema.fields())
                 .filter(field -> field.metadata().contains(SENSITIVE_COLUMN_LABEL_KEY) && field.metadata().getBoolean(SENSITIVE_COLUMN_LABEL_KEY))
                 .map(StructField::name)
-                .collect(Collectors.toList());
+                .toList();
 
         return new SourceReference(
                 response.getId(),

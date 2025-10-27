@@ -6,9 +6,9 @@ import com.amazonaws.services.databasemigrationservice.model.DescribeReplication
 import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksResult;
 import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsRequest;
 import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsResult;
+import com.amazonaws.services.databasemigrationservice.model.Filter;
 import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskRequest;
 import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskResult;
-import com.amazonaws.services.databasemigrationservice.model.Filter;
 import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
 import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskResult;
@@ -30,13 +30,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.exception.DmsClientException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -44,14 +43,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class DmsClientTest {
@@ -379,7 +378,7 @@ class DmsClientTest {
 
         List<ReplicationTask> replicationTasks = taskIds.stream()
                 .map(taskId -> new ReplicationTask().withReplicationTaskIdentifier(taskId))
-                .collect(Collectors.toList());
+                .toList();
 
         DescribeReplicationTasksResult dmsTasksResult = new DescribeReplicationTasksResult()
                 .withReplicationTasks(replicationTasks);
@@ -395,7 +394,7 @@ class DmsClientTest {
         List<Boolean> booleanStream = describeReplicationTasksRequestCaptor.getAllValues()
                 .stream()
                 .map(DescribeReplicationTasksRequest::getWithoutSettings)
-                .collect(Collectors.toList());
+                .toList();
 
         assertThat(booleanStream, everyItem(is(false)));
     }

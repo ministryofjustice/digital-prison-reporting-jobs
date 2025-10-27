@@ -82,7 +82,7 @@ class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         dataFilePaths = Arrays.stream(fileStatuses)
                 .filter(FileStatus::isFile)
                 .map(f -> f.getPath().toString())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @BeforeEach

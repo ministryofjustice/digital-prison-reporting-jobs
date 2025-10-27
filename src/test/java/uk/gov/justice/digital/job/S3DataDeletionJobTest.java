@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -91,7 +90,7 @@ class S3DataDeletionJobTest extends SparkTestBase {
                 eq(configuredTables),
                 eq(parquetFileRegex),
                 eq(Duration.ZERO)
-        )).thenReturn(objectsToDelete.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
+        )).thenReturn(objectsToDelete.stream().map(FileLastModifiedDate::new).toList());
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture()))
                 .thenReturn(Collections.emptySet());
@@ -137,7 +136,7 @@ class S3DataDeletionJobTest extends SparkTestBase {
                 eq(configuredTables),
                 eq(parquetFileRegex),
                 eq(Duration.ZERO)
-        )).thenReturn(objectsToDelete.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
+        )).thenReturn(objectsToDelete.stream().map(FileLastModifiedDate::new).toList());
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture())).thenReturn(failedFiles);
 

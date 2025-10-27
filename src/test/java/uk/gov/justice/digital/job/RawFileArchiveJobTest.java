@@ -51,9 +51,9 @@ class RawFileArchiveJobTest extends SparkTestBase {
     @Mock
     JobArguments mockJobArguments;
     @Captor
-    ArgumentCaptor<ArrayList<String>> filesToArchiveCaptor;
+    ArgumentCaptor<List<String>> filesToArchiveCaptor;
     @Captor
-    ArgumentCaptor<ArrayList<String>> filesToDeleteCaptor;
+    ArgumentCaptor<List<String>> filesToDeleteCaptor;
     @Captor
     ArgumentCaptor<List<String>> savedArchivedKeysCaptor;
 
@@ -111,7 +111,7 @@ class RawFileArchiveJobTest extends SparkTestBase {
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(committedFilesTable1);
         when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable2)).thenReturn(committedFilesTable2);
         when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
-                .thenReturn(Stream.concat(oldRawFiles.stream(), recentRawFiles.stream()).collect(Collectors.toList()));
+                .thenReturn(Stream.concat(oldRawFiles.stream(), recentRawFiles.stream()).toList());
         when(mockS3Service.deleteObjects(filesToDeleteCaptor.capture(), eq(SOURCE_BUCKET)))
                 .thenReturn(Collections.emptySet());
         when(mockS3Service.copyObjects(any(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))

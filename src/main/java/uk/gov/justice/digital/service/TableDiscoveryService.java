@@ -82,7 +82,7 @@ public class TableDiscoveryService {
                         .filter(FileStatus::isFile)
                         .map(f -> f.getPath().toString())
                         .peek(filePath -> logger.info("Processing file {}", filePath))
-                        .collect(Collectors.toList());
+                       .collect(Collectors.toList());
             } else {
                 return Collections.emptyList();
             }

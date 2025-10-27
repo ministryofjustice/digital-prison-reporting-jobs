@@ -190,7 +190,7 @@ class S3SchemaClientTest {
         val secondPageSchemaNames = ImmutableSet.copyOf(secondPageSchemaNamesList);
 
         val allSchemaList = Stream.concat(firstPageSchemaNamesList.stream(), secondPageSchemaNamesList.stream())
-                .collect(Collectors.toList());
+                .toList();
         val allSchemaNames = ImmutableSet.copyOf(allSchemaList);
 
         givenMultiPageListObjectsV2ResultSucceeds(createObjectSummaries(firstPageSchemaNames), createObjectSummaries(secondPageSchemaNames));
@@ -291,7 +291,7 @@ class S3SchemaClientTest {
                     S3ObjectSummary objectSummary = new S3ObjectSummary();
                     objectSummary.setKey(schemaName.getLeft() + "/" + schemaName.getRight() + SCHEMA_FILE_EXTENSION);
                     return objectSummary;
-                }).collect(Collectors.toList());
+                }).toList();
     }
 
 }

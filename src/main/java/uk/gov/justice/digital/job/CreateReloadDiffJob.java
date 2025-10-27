@@ -3,6 +3,7 @@ package uk.gov.justice.digital.job;
 import com.google.common.annotations.VisibleForTesting;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.slf4j.Logger;
@@ -105,7 +106,7 @@ public class CreateReloadDiffJob implements Runnable {
                     val diffOutputPath = createValidatedPath(jobArguments.getTempReloadS3Path(), jobArguments.getTempReloadOutputFolder());
                     val rawDataFrame = dataProvider.getBatchSourceData(sparkSession, rawFilePaths);
                     val rawArchiveDataFrame = archiveFilePaths.isEmpty() ?
-                            sparkSession.emptyDataset(RowEncoder.apply(rawDataFrame.schema())) :
+                            sparkSession.emptyDataset(Encoders.row(rawDataFrame.schema())) :
                             dataProvider.getBatchSourceData(sparkSession, archiveFilePaths);
 
                     reloadDiffProcessor.createDiff(sourceReference, diffOutputPath, rawDataFrame, rawArchiveDataFrame, dmsStartTime);

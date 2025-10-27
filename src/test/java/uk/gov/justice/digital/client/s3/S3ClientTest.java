@@ -157,7 +157,7 @@ class S3ClientTest {
                 .getKeys()
                 .stream()
                 .map(DeleteObjectsRequest.KeyVersion::getKey)
-                .collect(Collectors.toList());
+                .toList();
 
         assertThat(failedObjects, is(empty()));
         assertThat(keysToDelete, containsInAnyOrder(SOURCE_KEY));
@@ -223,7 +223,7 @@ class S3ClientTest {
         List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, jsonOrParquetFileRegex, zeroDayPeriod, fixedClock)
                 .stream()
                 .map(x -> x.key)
-                .collect(Collectors.toList());
+                .toList();
 
         ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
         assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
@@ -262,7 +262,7 @@ class S3ClientTest {
         List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, parquetFileRegex, zeroDayPeriod, fixedClock)
                 .stream()
                 .map(x -> x.key)
-                .collect(Collectors.toList());
+                .toList();
 
         ListObjectsV2Request listObjectsV2Request = listObjectsV2RequestCaptor.getValue();
         assertThat(listObjectsV2Request.getBucketName(), is(equalTo(SOURCE_BUCKET)));
@@ -297,7 +297,7 @@ class S3ClientTest {
         List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, matchAllFiles, zeroDayPeriod, fixedClock)
                 .stream()
                 .map(x -> x.key)
-                .collect(Collectors.toList());
+                .toList();
 
         assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
@@ -321,21 +321,21 @@ class S3ClientTest {
         expectedObjectKeys.add("file5.parquet");
 
         Date recentLastModifiedDate = new Date();
-        recentLastModifiedDate.setTime(fixedDateTime.plusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
+        recentLastModifiedDate.setTime(fixedDateTime.plus(1, ChronoUnit.MILLIS).toInstant(ZoneOffset.UTC).toEpochMilli());
 
         Date oldLastModifiedDate = new Date();
-        oldLastModifiedDate.setTime(fixedDateTime.minusNanos(1).toInstant(ZoneOffset.UTC).toEpochMilli());
+        oldLastModifiedDate.setTime(fixedDateTime.minus(1, ChronoUnit.MILLIS).toInstant(ZoneOffset.UTC).toEpochMilli());
 
         List<S3ObjectSummary> recentObjectSummaries = createObjectSummaries(recentObjectKeys, recentLastModifiedDate);
         List<S3ObjectSummary> oldObjectSummaries = createObjectSummaries(oldObjectKeys, oldLastModifiedDate);
-        List<S3ObjectSummary> allObjectSummaries = Stream.concat(recentObjectSummaries.stream(), oldObjectSummaries.stream()).collect(Collectors.toList());
+        List<S3ObjectSummary> allObjectSummaries = Stream.concat(recentObjectSummaries.stream(), oldObjectSummaries.stream()).toList();
 
         givenObjectListingSucceeds(allObjectSummaries);
 
         List<String> returnedObjectKeys = underTest.getObjectsOlderThan(SOURCE_BUCKET, TEST_FOLDER, jsonOrParquetFileRegex, zeroDayPeriod, fixedClock)
                 .stream()
                 .map(x -> x.key)
-                .collect(Collectors.toList());
+                .toList();
 
         assertThat(listObjectsV2RequestCaptor.getValue().getBucketName(), is(equalTo(SOURCE_BUCKET)));
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
@@ -353,7 +353,7 @@ class S3ClientTest {
                     objectSummary.setKey(objectKey.getLeft() + extension);
                     objectSummary.setLastModified(lastModifiedDate);
                     return objectSummary;
-                }).collect(Collectors.toList());
+                }).toList();
     }
 
     private void givenObjectListingSucceeds(List<S3ObjectSummary> objectSummaries) {
