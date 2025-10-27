@@ -30,17 +30,34 @@ public class SparkTestHelpers {
     }
 
     public Dataset<Row> readSampleParquet(String resourcePath) {
-        URL resource = System.class.getResource(resourcePath);
+        URL resource = SparkTestHelpers.class.getResource(resourcePath);
         val path = new File(
                 resource.getFile()
         ).getAbsolutePath();
         return spark.read().parquet(path);
     }
 
+    void writeHalfAppendHalfToDeltaTable(String tablePath, Dataset<Row> df) {
+        Dataset<Row>[] splits = df.randomSplit(new double[]{0.5, 0.5});
+        Dataset<Row> halfToInsert = splits[0];
+        Dataset<Row> halfToAppend = splits[1];
+        overwriteDeltaTable(tablePath, halfToInsert);
+        appendToDeltaTable(tablePath, halfToAppend);
+    }
+
     void overwriteDeltaTable(String tablePath, Dataset<Row> df) {
         df.write()
                 .format("delta")
                 .mode(SaveMode.Overwrite)
+                .option("overwriteSchema", true)
+                .option("path", tablePath)
+                .save();
+    }
+
+    void appendToDeltaTable(String tablePath, Dataset<Row> df) {
+        df.write()
+                .format("delta")
+                .mode(SaveMode.Append)
                 .option("overwriteSchema", true)
                 .option("path", tablePath)
                 .save();

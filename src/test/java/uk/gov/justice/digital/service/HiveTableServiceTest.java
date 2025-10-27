@@ -356,12 +356,12 @@ class HiveTableServiceTest extends SparkTestBase {
 
     @NotNull
     private static List<SourceReference.PrimaryKey> createPrimaryKeys(Stream<Integer> indices) {
-        return indices.map(index -> new SourceReference.PrimaryKey(String.valueOf(index))).collect(Collectors.toList());
+        return indices.map(index -> new SourceReference.PrimaryKey(String.valueOf(index))).toList();
     }
 
     @NotNull
     private static List<SourceReference.SensitiveColumns> createSensitiveColumns(Stream<Integer> indices) {
-        return indices.map(HiveTableServiceTest::createSensitiveColumn).collect(Collectors.toList());
+        return indices.map(HiveTableServiceTest::createSensitiveColumn).toList();
     }
 
     private static String createPath(String bucket, int schemaIndex) {
@@ -427,14 +427,14 @@ class HiveTableServiceTest extends SparkTestBase {
 
     @NotNull
     private static List<String> getPrimaryKeyColumnNames(List<SourceReference.PrimaryKey> values) {
-        return values.stream().flatMap(primaryKey -> primaryKey.getKeyColumnNames().stream()).collect(Collectors.toList());
+        return values.stream().flatMap(primaryKey -> primaryKey.getKeyColumnNames().stream()).toList();
     }
 
     @NotNull
     private static List<String> getSensitiveColumnNames(List<SourceReference.SensitiveColumns> values) {
         return values.stream()
                 .flatMap(sensitiveColumns -> sensitiveColumns.getSensitiveColumnNames().stream())
-                .collect(Collectors.toList());
+                .toList();
     }
 
 }

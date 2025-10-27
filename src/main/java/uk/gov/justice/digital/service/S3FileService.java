@@ -67,6 +67,10 @@ public class S3FileService {
         return Failsafe.with(fileListRetryPolicy).get(() -> s3Client.getObjectsOlderThan(bucket, sourcePrefix, fileNameMatchRegex, retentionPeriod, clock));
     }
 
+    /**
+     * Returns an unmodifiable view of the List of files.
+     * The returned list cannot be modified.
+     */
     public List<FileLastModifiedDate> listFilesBeforePeriod(
             String sourceBucket,
             String sourcePrefix,
@@ -76,7 +80,7 @@ public class S3FileService {
     ) {
         return configuredTables.stream()
                 .flatMap(configuredTable -> listFilesBeforePeriod(sourceBucket, sourcePrefix, fileNameMatchRegex, period, configuredTable).stream())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public Set<String> copyObjects(
@@ -108,7 +112,7 @@ public class S3FileService {
             // Remove objects which failed to be copied from the final list to be deleted
             List<String> objectsKeysToDelete = objectKeys.stream()
                     .filter(x -> !failedObjects.contains(x))
-                    .collect(Collectors.toList());
+                    .toList();
             Set<String> failedDeleteObjects = deleteObjects(objectsKeysToDelete, sourceBucket);
             failedDeleteObjects.forEach(object -> failedObjects.putIfAbsent(object, object));
         }

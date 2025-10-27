@@ -13,7 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.justice.digital.test.SparkTestHelpers.*;
 
 /**
- * Helper to set up a test environment with some semi-realistic delta tables and extraneous files/dirs on disk
+ * Helper to set up a test environment with some semi-realistic delta tables and extraneous files/dirs on disk.
+ * It also makes sure that each Delta table in the fixture contains at least two parquet files in it by
+ * initially writing some data to the table and then appending additional data.
  */
 public class DeltaTablesTestBase extends SparkTestBase {
     @TempDir
@@ -30,17 +32,20 @@ public class DeltaTablesTestBase extends SparkTestBase {
         offenderBookingsTablePath = rootPath.resolve("offender-bookings").toAbsolutePath();
         agencyLocationsTablePathDepth2 = rootPath.resolve("another-dir-depth-1").resolve("agency-locations").toAbsolutePath();
         internalLocationsTablePathDepth3 = rootPath.resolve("another-dir-depth-1").resolve("yet-another-dir-depth-2").resolve("internal-locations").toAbsolutePath();
-        // repartition to force the data in the delta table to have multiple small files at the start of tests
-        int largeNumPartitions = 5;
-        Dataset<Row> offenders = helpers.readSampleParquet(OFFENDERS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
-        helpers.overwriteDeltaTable(offendersTablePath.toString(), offenders);
-        Dataset<Row> offenderBookings = helpers.readSampleParquet(OFFENDER_BOOKINGS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
-        helpers.overwriteDeltaTable(offenderBookingsTablePath.toString(), offenderBookings);
 
-        Dataset<Row> agencyLocations = helpers.readSampleParquet(AGENCY_LOCATIONS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
-        helpers.overwriteDeltaTable(agencyLocationsTablePathDepth2.toString(), agencyLocations);
-        Dataset<Row> internalLocations = helpers.readSampleParquet(INTERNAL_LOCATIONS_SAMPLE_PARQUET_PATH).repartition(largeNumPartitions);
-        helpers.overwriteDeltaTable(internalLocationsTablePathDepth3.toString(), internalLocations);
+        // Create the tables, ensuring that there are multiple parquet files in each by creating the table with half
+        // the data and then appending the other half to it. The test data always contains more than 1 row.
+        Dataset<Row> offenders = helpers.readSampleParquet(OFFENDERS_SAMPLE_PARQUET_PATH);
+        helpers.writeHalfAppendHalfToDeltaTable(offendersTablePath.toString(), offenders);
+
+        Dataset<Row> offenderBookings = helpers.readSampleParquet(OFFENDER_BOOKINGS_SAMPLE_PARQUET_PATH);
+        helpers.writeHalfAppendHalfToDeltaTable(offenderBookingsTablePath.toString(), offenderBookings);
+
+        Dataset<Row> agencyLocations = helpers.readSampleParquet(AGENCY_LOCATIONS_SAMPLE_PARQUET_PATH);
+        helpers.writeHalfAppendHalfToDeltaTable(agencyLocationsTablePathDepth2.toString(), agencyLocations);
+
+        Dataset<Row> internalLocations = helpers.readSampleParquet(INTERNAL_LOCATIONS_SAMPLE_PARQUET_PATH);
+        helpers.writeHalfAppendHalfToDeltaTable(internalLocationsTablePathDepth3.toString(), internalLocations);
     }
 
     /**

@@ -217,7 +217,7 @@ class ArchiveBackfillJobTest extends SparkTestBase {
                 "some-schema-version-v1",
                 TEST_DATA_SCHEMA,
                 new SourceReference.SensitiveColumns(Collections.emptyList())
-        )).collect(Collectors.toList());
+        )).toList();
     }
 
     @NotNull
@@ -225,6 +225,6 @@ class ArchiveBackfillJobTest extends SparkTestBase {
         return datasets.stream()
                 .map(Dataset::collectAsList)
                 .flatMap(List::stream)
-                .collect(Collectors.toList());
+                .toList();
     }
 }

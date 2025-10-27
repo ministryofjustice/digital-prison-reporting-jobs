@@ -189,7 +189,7 @@ class S3FileServiceTest {
 
 
         List<String> result = undertest.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period)
-                .stream().map(x -> x.key).collect(Collectors.toList());
+                .stream().map(x -> x.key).toList();
 
         List<String> expectedResult = new ArrayList<>();
         expectedResult.addAll(expectedFilesForTable1);
@@ -529,6 +529,6 @@ class S3FileServiceTest {
 
     @NotNull
     private static List<FileLastModifiedDate> createFileSummaries(List<String> keys) {
-        return keys.stream().map(FileLastModifiedDate::new).collect(Collectors.toList());
+        return keys.stream().map(FileLastModifiedDate::new).toList();
     }
 }

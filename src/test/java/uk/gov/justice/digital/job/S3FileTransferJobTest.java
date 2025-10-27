@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -87,7 +86,7 @@ class S3FileTransferJobTest extends SparkTestBase {
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         when(mockS3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
-                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
+                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).toList());
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(Collections.emptySet());
@@ -112,7 +111,7 @@ class S3FileTransferJobTest extends SparkTestBase {
         when(mockJobArguments.getAllowedS3FileNameRegex()).thenReturn(parquetFileRegex);
 
         when(mockS3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, retentionPeriod))
-                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
+                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).toList());
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(Collections.emptySet());
@@ -148,7 +147,7 @@ class S3FileTransferJobTest extends SparkTestBase {
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         when(mockS3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, retentionPeriod))
-                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).collect(Collectors.toList()));
+                .thenReturn(objectsToMove.stream().map(FileLastModifiedDate::new).toList());
 
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(failedFiles);

@@ -79,7 +79,7 @@ public class DataReconciliationService {
                 default:
                     throw new IllegalStateException("Unexpected reconciliation check type: " + checkToRun);
             }
-        }).collect(Collectors.toList());
+        }).toList();
 
         DataReconciliationResults dataReconciliationResults = new DataReconciliationResults(results);
         metricReportingService.reportMetrics(dataReconciliationResults);

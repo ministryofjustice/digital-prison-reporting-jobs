@@ -2,6 +2,7 @@ package uk.gov.justice.digital.test;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoder;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
@@ -62,7 +63,7 @@ public class MinimalTestData {
             new StructField(DATA_COLUMN, DataTypes.StringType, false, Metadata.empty()),
             new StructField(CHECKPOINT_COL, DataTypes.StringType, false, Metadata.empty())
     });
-    public static Encoder<Row> encoder = RowEncoder.apply(TEST_DATA_SCHEMA);
+    public static Encoder<Row> encoder = Encoders.row(TEST_DATA_SCHEMA);
 
     public static Dataset<Row> inserts(SparkSession spark) {
         return spark.createDataFrame(Arrays.asList(

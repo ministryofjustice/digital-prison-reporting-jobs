@@ -14,7 +14,7 @@ workflows:
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache"
       - reporting/gradle_build_publish:
-          tag: "8.0"
+          tag: "17.0"
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
           bucket_prefix: dpr-artifact-store

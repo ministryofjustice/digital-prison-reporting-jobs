@@ -4,7 +4,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '7.1.1' // originally 7.1.2 but downgraded since circle CI build was failing
     id 'io.freefair.lombok' version '6.5.1'
     id 'org.sonarqube'  version '3.5.0.2730'
-    id 'org.owasp.dependencycheck'  version '8.2.1'
+    id 'org.owasp.dependencycheck'  version '12.1.8'
     id 'org.gradle.java-test-fixtures'
     id 'io.micronaut.minimal.library'  version '3.7.10'
     id 'org.barfuin.gradle.jacocolog' version '3.1.0'
@@ -15,8 +15,50 @@ group 'uk.gov.justice'
 version "${version != 'unspecified' ? version : '0.0.1-SNAPSHOT'}"
 
 java {
-    targetCompatibility = "1.8"
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
 }
+
+// Required because Spark accesses JVM classes that have restricted access in Java 17
+// Fixes errors such as the following:
+// java.lang.IllegalAccessError: class org.apache.spark.storage.StorageUtils$ (in unnamed module @0x76ed5528)
+// cannot access class sun.nio.ch.DirectBuffer (in module java.base) because module java.base does not
+// export sun.nio.ch to unnamed module @0x76ed5528
+def java17exports = [
+        // TODO: Limit to these to just what is actually required
+        '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+        '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED',
+        '--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.invoke=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED',
+        '--add-opens=java.base/java.io=ALL-UNNAMED',
+        '--add-opens=java.base/java.net=ALL-UNNAMED',
+        '--add-opens=java.base/java.nio=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+        '--add-opens=java.base/java.util.concurrent=ALL-UNNAMED',
+        '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
+        '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+        '--add-opens=java.base/sun.nio.cs=ALL-UNNAMED',
+        '--add-opens=java.base/sun.security.action=ALL-UNNAMED',
+        '--add-opens=java.base/sun.util.calendar=ALL-UNNAMED',
+        '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED',
+        '--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED',
+        '--add-exports=java.base/jdk.internal.vm=ALL-UNNAMED',
+        '--add-exports=java.base/java.lang=ALL-UNNAMED',
+        '--add-exports=java.base/java.lang.invoke=ALL-UNNAMED',
+        '--add-exports=java.base/java.lang.reflect=ALL-UNNAMED',
+        '--add-exports=java.base/java.io=ALL-UNNAMED',
+        '--add-exports=java.base/java.net=ALL-UNNAMED',
+        '--add-exports=java.base/java.nio=ALL-UNNAMED',
+        '--add-exports=java.base/java.util=ALL-UNNAMED',
+        '--add-exports=java.base/java.util.concurrent=ALL-UNNAMED',
+        '--add-exports=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
+        '--add-exports=java.base/sun.nio.ch=ALL-UNNAMED',
+        '--add-exports=java.base/sun.nio.cs=ALL-UNNAMED',
+        '--add-exports=java.base/sun.security.action=ALL-UNNAMED',
+        '--add-exports=java.base/sun.util.calendar=ALL-UNNAMED',
+]
 
 jacoco {
     toolVersion = "0.8.8" // Adjust the version if needed
@@ -26,43 +68,65 @@ jacoco {
 repositories {
     mavenCentral()
     maven {
-        // See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-using-etl-library
         url "https://aws-glue-etl-artifacts.s3.amazonaws.com/release/"
+        metadataSources {
+            // AWS have not deployed the Glue 5.0 dependency for local development properly. This is a known issue
+            // with Glue 5.0. See https://github.com/awslabs/aws-glue-libs/issues/229
+            // Previously this link (https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-using-etl-library)
+            // contained details for using this library in a Java project for local development. Since Glue 5 AWS only
+            // publish details for using Docker for local development and don't publish details of developing directly
+            // against the Glue dependencies.
+            // This section ignores the POMs in this AWS provided maven repo because the Glue 5 POM is broken.
+            artifact()
+        }
     }
 }
 
 ext {
-    deltaVersion = '2.2.0'
-    jacksonVersion = '2.14.2'
+    deltaVersion = '3.3.2'
+    jacksonVersion = '2.16.1'
     junitVersion = '5.8.1'
     hamcrestVersion = '2.2'
     log4jVersion = '2.23.1'
     micronautVersion = '3.8.7'
     mockitoVersion = '4.11.0'
-    sparkVersion = '3.3.0'
-    awsKinesisVersion = '1.9.3' // was awsKinesisVersion = '1.14.10' downgraded for Glue 4.0
-    awsSdkVersion = '1.12.128' // Glue 4.0 uses awsSdkVersion = '1.12.128'
-    glueApiVersion = '4.0.0'
+    sparkVersion = '3.5.4'
+    scalaBinary = '2.12'
+    awsSdkVersion = '1.12.569' // Glue 5.0 can use 1.12.569 or 2.28.8
+    glueApiVersion = '5.0.0'
     failSafeVersion = '3.3.2'
     systemLambdaVersion = '1.2.1'
     postgresVersion = '42.7.3'
     h2Version = '2.2.224'
     oracleJdbcVersion = '23.5.0.24.07'
     hikariCPVersion = '4.0.3'
-    junitSystemExitVersion = '1.1.2'
+    junitSystemExitVersion = '2.0.2'
 }
 
 dependencies {
+
+    constraints {
+        // org.owasp.dependencycheck needs at least this version of jackson. Other plugins pull in older versions.
+        add("implementation", "com.fasterxml.jackson:jackson-bom:2.16.1")
+
+        // org.owasp.dependencycheck needs these versions. Other plugins pull in older versions.
+        add("implementation", "org.apache.commons:commons-lang3:3.14.0")
+        add("implementation", "org.apache.commons:commons-text:1.11.0")
+    }
     annotationProcessor 'info.picocli:picocli-codegen'
 
-    compileOnly "org.apache.spark:spark-core_2.12:$sparkVersion"
-    compileOnly "org.apache.spark:spark-sql_2.12:$sparkVersion"
-    compileOnly "com.amazonaws:AWSGlueETL:$glueApiVersion"
+    compileOnly "org.apache.spark:spark-core_$scalaBinary:$sparkVersion"
+    compileOnly "org.apache.spark:spark-sql_$scalaBinary:$sparkVersion"
+    compileOnly("com.amazonaws:AWSGlueETL:$glueApiVersion") {
+        // The AWS Glue team neglected to publish this dependency, but it isn't needed for us to run locally.
+        // See https://github.com/awslabs/aws-glue-libs/issues/229
+        exclude group: "com.amazonaws", module: "AWSGlueDILibs"
+    }
 
     implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion"
     implementation "com.amazonaws:aws-java-sdk-dms:$awsSdkVersion"
     implementation "com.amazonaws:aws-java-sdk-secretsmanager:$awsSdkVersion"
-    implementation "org.apache.spark:spark-avro_2.12:$sparkVersion"
+    implementation "org.apache.spark:spark-avro_$scalaBinary:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion"
@@ -76,8 +140,8 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
-    implementation "io.delta:delta-core_2.12:$deltaVersion"
-    implementation "io.delta:delta-contribs_2.12:$deltaVersion"
+    implementation "io.delta:delta-spark_$scalaBinary:$deltaVersion"
+    implementation "io.delta:delta-contribs_$scalaBinary:$deltaVersion"
     implementation "dev.failsafe:failsafe:$failSafeVersion"
     implementation "org.postgresql:postgresql:$postgresVersion"
     implementation "com.oracle.database.jdbc:ojdbc8:$oracleJdbcVersion"
@@ -86,17 +150,17 @@ dependencies {
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
     // AWS Glue provides this on the classpath so we don't need to include it.
-    implementation("org.apache.spark:spark-streaming-kinesis-asl_2.12:$sparkVersion") {
-      exclude group: "org.apache.spark", module: "spark-core_2.12"
+    implementation("org.apache.spark:spark-streaming-kinesis-asl_$scalaBinary:$sparkVersion") {
+      exclude group: "org.apache.spark", module: "spark-core_$scalaBinary"
     }
-    implementation("org.apache.spark:spark-hive_2.12:$sparkVersion") {
-      exclude group: "org.apache.spark", module: "spark-core_2.12"
+    implementation("org.apache.spark:spark-hive_$scalaBinary:$sparkVersion") {
+      exclude group: "org.apache.spark", module: "spark-core_$scalaBinary"
     }
 
     testImplementation "io.micronaut.test:micronaut-test-junit5"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
-    testImplementation "org.apache.spark:spark-sql_2.12:$sparkVersion"
+    testImplementation "org.apache.spark:spark-sql_$scalaBinary:$sparkVersion"
     // We are targetting Java 8 so must use mockito 4.x since 5.x requires Java 11 or later.
     testImplementation 'org.mockito:mockito-core:4.11.0'
     // https://mvnrepository.com/artifact/org.mockito/mockito-inline
@@ -148,6 +212,8 @@ tasks.register('integrationTest', Test) {
 
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+
+    jvmArgs += java17exports
 
     binaryResultsDirectory = file("$buildDir/integration-test-results/binary/integrationTest")
 
@@ -203,14 +269,24 @@ test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
     jacoco.includeNoLocationClasses = true
+    jacoco.excludes = ['jdk.internal.*']
     testLogging {
         events "passed", "skipped", "failed"
         exceptionFormat = 'full'
     }
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     println("\nUsing $maxParallelForks executors")
+    jvmArgumentProviders.add({["-javaagent:${configurations.testRuntimeClasspath.files.find { it.name.contains('junit5-system-exit') }}"]} as CommandLineArgumentProvider)
 }
 
 assemble {
   dependsOn shadowJar
+}
+
+tasks.withType(JavaExec).configureEach {
+    jvmArgs += java17exports
+}
+
+tasks.withType(Test).configureEach {
+    jvmArgs += java17exports
 }

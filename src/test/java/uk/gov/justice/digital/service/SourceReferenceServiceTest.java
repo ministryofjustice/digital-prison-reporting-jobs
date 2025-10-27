@@ -174,9 +174,9 @@ class SourceReferenceServiceTest {
         List<String> actualIds = result
                 .stream()
                 .map(SourceReference::getKey)
-                .collect(Collectors.toList());
+                .toList();
 
-        List<String> expectedIds = expectedSchemas.stream().map(S3SchemaResponse::getId).collect(Collectors.toList());
+        List<String> expectedIds = expectedSchemas.stream().map(S3SchemaResponse::getId).toList();
 
         assertThat(actualIds, containsTheSameElementsInOrderAs(expectedIds));
     }
