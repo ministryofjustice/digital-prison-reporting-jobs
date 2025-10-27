@@ -186,6 +186,7 @@ sourceSets {
 
 configurations {
     integrationTestImplementation.extendsFrom implementation, testImplementation
+    integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 configurations.all {
@@ -200,6 +201,11 @@ processResources {
 dependencies {
     integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     integrationTestRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+}
+
+// Ensure integrationTest compilation depends on test classes being available
+tasks.named('compileIntegrationTestJava') {
+    dependsOn tasks.named('compileTestJava')
 }
 
 // Configure the integrationTest task
@@ -228,20 +234,11 @@ tasks.register('integrationTest', Test) {
         junitXml.outputLocation = file("$buildDir/integration-test-results")
     }
 
-    mustRunAfter tasks.test
+    shouldRunAfter test
 }
 
 // Configure the check task to depend on integrationTest
 check.dependsOn integrationTest
-
-jacocoTestReport {
-    dependsOn test
-    dependsOn integrationTest
-    reports {
-        xml.required = false
-        html.required = true
-    }
-}
 
 // core-site.xml is excluded as it is only used for convenience when running main methods that need specific hadoop configuration locally
 
@@ -267,7 +264,6 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
-    finalizedBy jacocoTestReport
     jacoco.includeNoLocationClasses = true
     jacoco.excludes = ['jdk.internal.*']
     testLogging {
@@ -277,6 +273,23 @@ test {
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     println("\nUsing $maxParallelForks executors")
     jvmArgumentProviders.add({["-javaagent:${configurations.testRuntimeClasspath.files.find { it.name.contains('junit5-system-exit') }}"]} as CommandLineArgumentProvider)
+}
+
+jacocoTestReport {
+    dependsOn test, integrationTest
+    // Ensure test and integration test coverage are included
+    executionData.from = files(
+            "$buildDir/jacoco/test.exec",
+            "$buildDir/integration-test-results/binary/integrationTest/integrationTest.exec"
+    ).filter { it.exists() }
+
+    sourceSets sourceSets.main
+    sourceSets sourceSets.integrationTest
+
+    reports {
+        xml.required = false
+        html.required = true
+    }
 }
 
 assemble {
