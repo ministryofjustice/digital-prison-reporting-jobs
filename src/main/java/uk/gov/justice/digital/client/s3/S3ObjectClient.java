@@ -73,7 +73,6 @@ public class S3ObjectClient {
     private List<FileLastModifiedDate> listObjects(Pattern fileNameMatchRegex, Duration period, Clock clock, ListObjectsV2Request request) {
         List<FileLastModifiedDate> objectPaths = new LinkedList<>();
         ListObjectsV2Result objectList;
-        LocalDateTime upperTimeBound = LocalDateTime.now(clock).minus(period);
         do {
             objectList = s3.listObjectsV2(request);
             List<S3ObjectSummary> objectSummaries = objectList.getObjectSummaries();
@@ -84,7 +83,7 @@ public class S3ObjectClient {
 
                 boolean fileNameMatches = fileNameMatchRegex.matcher(summaryKey).matches();
                 LocalDateTime lastModifiedDateTime = summary.getLastModified().toInstant().atZone(clock.getZone()).toLocalDateTime();
-                boolean modifiedBeforeCurrentDateTime = lastModifiedDateTime.isBefore(upperTimeBound);
+                boolean modifiedBeforeCurrentDateTime = lastModifiedDateTime.isBefore(LocalDateTime.now(clock).minus(period));
                 if (!summaryKey.endsWith(DELIMITER) && fileNameMatches && modifiedBeforeCurrentDateTime) {
                     logger.debug("Adding {}", summaryKey);
                     objectPaths.add(new FileLastModifiedDate(summaryKey, lastModifiedDateTime));
