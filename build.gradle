@@ -51,10 +51,11 @@ repositories {
             // AWS have not deployed the Glue 5.0 dependency for local development properly. This is a known issue
             // with Glue 5.0. See https://github.com/awslabs/aws-glue-libs/issues/229
             // Previously this link (https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-libraries.html#develop-using-etl-library)
-            // contained details for using this library in a Java project for local development. Since Glue 5 AWS only
+            // contained details for using this library in a Java project for local development. Since Glue 5, AWS only
             // publish details for using Docker for local development and don't publish details of developing directly
             // against the Glue dependencies.
-            // This section ignores the POMs in this AWS provided maven repo because the Glue 5 POM is broken.
+
+            // This tells Gradle to only look at the JAR artifact and completely ignore the POM file because the Glue 5 POM is broken.
             artifact()
         }
     }
