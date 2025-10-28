@@ -10,6 +10,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,6 +21,28 @@ import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
 public class SharedTestFunctions {
+
+    @FunctionalInterface
+    public interface Thunk {
+        void apply() throws Exception;
+    }
+
+    public static void thenEventually(Thunk thunk) throws Throwable {
+        Optional<Throwable> maybeEx = Optional.empty();
+        for (int i = 0; i < 25; i++) {
+            try {
+                thunk.apply();
+                maybeEx = Optional.empty();
+                break;
+            } catch (Exception | AssertionError e) {
+                maybeEx = Optional.of(e);
+                TimeUnit.SECONDS.sleep(2);
+            }
+        }
+        if(maybeEx.isPresent()) {
+            throw maybeEx.get();
+        }
+    }
 
     public static String operationalDataStoreTableName(String inputSchemaName, String tableName) {
         return format("%s_%s", inputSchemaName, tableName);
