@@ -223,6 +223,22 @@ tasks.register('integrationTest', Test) {
 // Configure the check task to depend on integrationTest
 check.dependsOn integrationTest
 
+jacocoTestReport {
+    dependsOn test, integrationTest
+    // Ensure test and integration test coverage are included
+    executionData.from = files(
+            "$buildDir/jacoco/test.exec",
+            "$buildDir/integration-test-results/binary/integrationTest/integrationTest.exec"
+    ).filter { it.exists() }
+
+    sourceSets sourceSets.main
+
+    reports {
+        xml.required = false
+        html.required = true
+    }
+}
+
 // core-site.xml is excluded as it is only used for convenience when running main methods that need specific hadoop configuration locally
 
 jar {
@@ -256,23 +272,6 @@ test {
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     println("\nUsing $maxParallelForks executors")
     jvmArgumentProviders.add({["-javaagent:${configurations.testRuntimeClasspath.files.find { it.name.contains('junit5-system-exit') }}"]} as CommandLineArgumentProvider)
-}
-
-jacocoTestReport {
-    dependsOn test, integrationTest
-    // Ensure test and integration test coverage are included
-    executionData.from = files(
-            "$buildDir/jacoco/test.exec",
-            "$buildDir/integration-test-results/binary/integrationTest/integrationTest.exec"
-    ).filter { it.exists() }
-
-    sourceSets sourceSets.main
-    sourceSets sourceSets.integrationTest
-
-    reports {
-        xml.required = false
-        html.required = true
-    }
 }
 
 assemble {
