@@ -8,8 +8,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
-import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.generator.PostgresSecrets;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 
@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.test.SharedTestFunctions.thenEventually;
 
 @ExtendWith(MockitoExtension.class)
 class PostgresLoadGeneratorJobTest extends SparkTestBase {
@@ -87,7 +88,7 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldInsertMultipleRecordsWhenGivenIncreasedBatchSize() throws SQLException {
+    void shouldInsertMultipleRecordsWhenGivenIncreasedBatchSize() throws Throwable {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(1);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(2);
         when(mockJobArguments.getRunDurationMillis()).thenReturn(20L);
@@ -95,11 +96,11 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
 
         underTest.run();
 
-        assertEquals(2, countRecords());
+        thenEventually(() -> assertEquals(2, countRecords()));
     }
 
     @Test
-    void shouldInsertMultipleRecordsGivenIncreasedParallelism() throws SQLException {
+    void shouldInsertMultipleRecordsGivenIncreasedParallelism() throws Throwable {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(2);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(1);
         when(mockJobArguments.getRunDurationMillis()).thenReturn(20L);
@@ -107,11 +108,11 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
 
         underTest.run();
 
-        assertEquals(2, countRecords());
+        thenEventually(() -> assertEquals(2, countRecords()));
     }
 
     @Test
-    void shouldInsertMultipleRecordsGivenIncreasedParallelismAndBatchSize() throws SQLException {
+    void shouldInsertMultipleRecordsGivenIncreasedParallelismAndBatchSize() throws Throwable {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(2);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(2);
         when(mockJobArguments.getRunDurationMillis()).thenReturn(20L);
@@ -119,11 +120,11 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
 
         underTest.run();
 
-        assertEquals(4, countRecords());
+        thenEventually(() -> assertEquals(4, countRecords()));
     }
 
     @Test
-    void shouldInsertMultipleRecordsGivenIncreasedRunDuration() throws SQLException {
+    void shouldInsertMultipleRecordsGivenIncreasedRunDuration() throws Throwable {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(2);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(2);
         when(mockJobArguments.getRunDurationMillis()).thenReturn(200L);
@@ -131,7 +132,7 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
 
         underTest.run();
 
-        assertThat(countRecords(), greaterThan(4L));
+        thenEventually(() -> assertThat(countRecords(), greaterThan(4L)));
     }
 
     private static void createTable() throws SQLException {
