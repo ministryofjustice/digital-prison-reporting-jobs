@@ -24,6 +24,10 @@ java {
 // java.lang.IllegalAccessError: class org.apache.spark.storage.StorageUtils$ (in unnamed module @0x76ed5528)
 // cannot access class sun.nio.ch.DirectBuffer (in module java.base) because module java.base does not
 // export sun.nio.ch to unnamed module @0x76ed5528
+// If you update the values then please also commit the same updates to the Intellij run configuration templates, e.g.:
+// .idea/runConfigurations/_template__of_Application.xml
+// .idea/runConfigurations/_template__of_JUnit.xml
+// .idea/runConfigurations/_template__of_Micronaut.xml
 def java17exports = [
         '--add-opens=java.base/java.lang=ALL-UNNAMED',
         '--add-opens=java.base/java.lang.invoke=ALL-UNNAMED',
