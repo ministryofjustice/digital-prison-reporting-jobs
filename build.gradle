@@ -278,10 +278,12 @@ assemble {
   dependsOn shadowJar
 }
 
+// Add jvm args to running the app locally via gradle
 tasks.withType(JavaExec).configureEach {
     jvmArgs += java17exports
 }
 
+// Add JVM args to test and integrationTest
 tasks.withType(Test).configureEach {
     jvmArgs += java17exports
 }
