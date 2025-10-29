@@ -52,7 +52,6 @@ import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCred
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStore;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenTablesToWriteToOperationalDataStoreTableNameIsConfigured;
-import static uk.gov.justice.digital.test.SharedTestFunctions.thenEventually;
 
 /**
  * Runs the app as close to end-to-end as possible in an in-memory test as a smoke test and entry point for debugging.
@@ -247,5 +246,27 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
     private void givenLoadingSchemaIsConfigured() {
         when(arguments.getOperationalDataStoreLoadingSchemaName()).thenReturn(loadingSchemaName);
+    }
+
+    @FunctionalInterface
+    interface Thunk {
+        void apply() throws Exception;
+    }
+
+    private static void thenEventually(Thunk thunk) throws Throwable {
+        Optional<Throwable> maybeEx = Optional.empty();
+        for (int i = 0; i < 25; i++) {
+            try {
+                thunk.apply();
+                maybeEx = Optional.empty();
+                break;
+            } catch (Exception | AssertionError e) {
+                maybeEx = Optional.of(e);
+                TimeUnit.SECONDS.sleep(2);
+            }
+        }
+        if(maybeEx.isPresent()) {
+            throw maybeEx.get();
+        }
     }
 }
