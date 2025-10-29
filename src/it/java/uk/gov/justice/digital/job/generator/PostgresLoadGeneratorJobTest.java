@@ -17,6 +17,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Clock;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -41,6 +42,8 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
     private SecretsManagerClient mockSecretsManagerClient;
     @Mock
     private PostgresSecrets mockPostgresSecrets;
+    @Mock
+    private Clock mockClock;
 
     private PostgresLoadGeneratorJob underTest;
 
@@ -71,14 +74,20 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
 
         when(mockSecretsManagerClient.getSecret(TEST_SECRET_ID, PostgresSecrets.class)).thenReturn(mockPostgresSecrets);
 
-        underTest = new PostgresLoadGeneratorJob(mockJobArguments, mockSecretsManagerClient);
+        when(mockClock.millis())
+                .thenReturn(0L)
+                .thenReturn(20L)
+                .thenReturn(40L)
+                .thenReturn(60L);
+
+        underTest = new PostgresLoadGeneratorJob(mockJobArguments, mockSecretsManagerClient, mockClock);
     }
 
     @Test
     void shouldInsertSingleRecord() throws SQLException {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(1);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(1);
-        when(mockJobArguments.getRunDurationMillis()).thenReturn(20L);
+        when(mockJobArguments.getRunDurationMillis()).thenReturn(21L);
         when(mockJobArguments.getTestDataInterBatchDelayMillis()).thenReturn(20L);
 
         underTest.run();
@@ -90,7 +99,7 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
     void shouldInsertMultipleRecordsWhenGivenIncreasedBatchSize() throws SQLException {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(1);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(2);
-        when(mockJobArguments.getRunDurationMillis()).thenReturn(20L);
+        when(mockJobArguments.getRunDurationMillis()).thenReturn(21L);
         when(mockJobArguments.getTestDataInterBatchDelayMillis()).thenReturn(20L);
 
         underTest.run();
@@ -102,7 +111,7 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
     void shouldInsertMultipleRecordsGivenIncreasedParallelism() throws SQLException {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(2);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(1);
-        when(mockJobArguments.getRunDurationMillis()).thenReturn(20L);
+        when(mockJobArguments.getRunDurationMillis()).thenReturn(21L);
         when(mockJobArguments.getTestDataInterBatchDelayMillis()).thenReturn(20L);
 
         underTest.run();
@@ -114,7 +123,7 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
     void shouldInsertMultipleRecordsGivenIncreasedParallelismAndBatchSize() throws SQLException {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(2);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(2);
-        when(mockJobArguments.getRunDurationMillis()).thenReturn(20L);
+        when(mockJobArguments.getRunDurationMillis()).thenReturn(21L);
         when(mockJobArguments.getTestDataInterBatchDelayMillis()).thenReturn(20L);
 
         underTest.run();
@@ -126,12 +135,12 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
     void shouldInsertMultipleRecordsGivenIncreasedRunDuration() throws SQLException {
         when(mockJobArguments.getTestDataParallelism()).thenReturn(2);
         when(mockJobArguments.getTestDataBatchSize()).thenReturn(2);
-        when(mockJobArguments.getRunDurationMillis()).thenReturn(200L);
+        when(mockJobArguments.getRunDurationMillis()).thenReturn(41L);
         when(mockJobArguments.getTestDataInterBatchDelayMillis()).thenReturn(20L);
 
         underTest.run();
 
-        assertThat(countRecords(), greaterThan(4L));
+        assertEquals(8, countRecords());
     }
 
     private static void createTable() throws SQLException {
