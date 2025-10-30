@@ -124,6 +124,8 @@ public class JobArguments {
     static final String DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_UNIT = "days";
 
     public static final String FILE_TRANSFER_DELETE_COPIED_FILES_FLAG = "dpr.file.transfer.delete.copied.files";
+    public static final String FILE_TRANSFER_USE_DEFAULT_PARALLELISM = "dpr.file.transfer.use.default.parallelism";
+    public static final String FILE_TRANSFER_PARALLELISM = "dpr.file.transfer.parallelism";
 
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
@@ -440,6 +442,23 @@ public class JobArguments {
         String retentionUnit = getArgument(FILE_TRANSFER_RETENTION_PERIOD_UNIT, DEFAULT_FILE_TRANSFER_RETENTION_PERIOD_UNIT);
 
         return convertToPeriod(retentionUnit, retentionAmount, FILE_TRANSFER_RETENTION_PERIOD_UNIT);
+    }
+
+    public boolean fileTransferUseDefaultParallelism() {
+        return getArgument(FILE_TRANSFER_USE_DEFAULT_PARALLELISM, true);
+    }
+
+    public Integer getFileTransferParallelism() {
+        if (fileTransferUseDefaultParallelism()) {
+            throw new IllegalArgumentException(FILE_TRANSFER_PARALLELISM + " can only be set when " + FILE_TRANSFER_USE_DEFAULT_PARALLELISM + " is false");
+        } else {
+            int fileTransferParallelism = Integer.parseInt(getArgument(FILE_TRANSFER_PARALLELISM));
+            if (fileTransferParallelism < 1) {
+                throw new IllegalArgumentException(FILE_TRANSFER_PARALLELISM + " must must be >= 1");
+            } else {
+                return fileTransferParallelism;
+            }
+        }
     }
 
     public Duration getRawFileRetentionPeriod() {

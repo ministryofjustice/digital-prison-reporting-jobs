@@ -20,11 +20,15 @@ import javax.inject.Singleton;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.Collections;
 import java.util.HashSet;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -37,6 +41,7 @@ public class S3FileService {
     private static final Logger logger = LoggerFactory.getLogger(S3FileService.class);
     private final S3ObjectClient s3Client;
     private final Clock clock;
+    private final Integer fileTransferParallelism;
     private final RetryPolicy<Void> voidRetryPolicy;
     private final RetryPolicy<List<FileLastModifiedDate>> fileListRetryPolicy;
     private final RetryPolicy<Set<String>> stringSetRetryPolicy;
@@ -49,6 +54,9 @@ public class S3FileService {
     ) {
         this.s3Client = s3Client;
         this.clock = clock;
+        this.fileTransferParallelism = jobArguments.fileTransferUseDefaultParallelism() ?
+                Math.max(1, Runtime.getRuntime().availableProcessors() - 1) :
+                jobArguments.getFileTransferParallelism();
         RetryConfig retryConfig = new RetryConfig(jobArguments);
         this.voidRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
         this.fileListRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
@@ -79,27 +87,22 @@ public class S3FileService {
             String destinationPrefix,
             boolean deleteCopiedFiles
     ) {
-        Set<String> failedObjects = new HashSet<>();
+        ConcurrentHashMap<String, String> failedObjects = new ConcurrentHashMap<>();
 
-        for (String objectKey : objectKeys) {
-            String destinationKey;
-            try {
-                if (!sourcePrefix.isEmpty()) {
-                    destinationKey = destinationPrefix.isEmpty() ?
-                            objectKey.replaceFirst(sourcePrefix + DELIMITER, destinationPrefix) :
-                            objectKey.replaceFirst(sourcePrefix, destinationPrefix);
-                } else {
-                    destinationKey = destinationPrefix.isEmpty() ?
-                            objectKey.replaceFirst(sourcePrefix, destinationPrefix) :
-                            destinationPrefix + DELIMITER + objectKey;
-                }
+        ExecutorService executor = Executors.newFixedThreadPool(fileTransferParallelism);
+        CompletableFuture[] futures = objectKeys.stream()
+                .map(objectKey -> CompletableFuture.runAsync(
+                        () -> copyFunction(
+                                sourceBucket,
+                                sourcePrefix,
+                                destinationBucket,
+                                destinationPrefix,
+                                failedObjects,
+                                objectKey
+                        ), executor)).toArray(CompletableFuture[]::new
+                );
 
-                Failsafe.with(voidRetryPolicy).run(() -> s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket));
-            } catch (AmazonServiceException e) {
-                logger.warn("Failed to move S3 object {}", objectKey, e);
-                failedObjects.add(objectKey);
-            }
-        }
+        CompletableFuture.allOf(futures).join();
 
         if (deleteCopiedFiles && objectKeys.size() != failedObjects.size()) {
             // Remove objects which failed to be copied from the final list to be deleted
@@ -107,11 +110,10 @@ public class S3FileService {
                     .filter(x -> !failedObjects.contains(x))
                     .collect(Collectors.toList());
             Set<String> failedDeleteObjects = deleteObjects(objectsKeysToDelete, sourceBucket);
-            failedObjects.addAll(failedDeleteObjects);
-            return new HashSet<>(failedObjects);
-        } else {
-            return failedObjects;
+            failedDeleteObjects.forEach(object -> failedObjects.putIfAbsent(object, object));
         }
+
+        return failedObjects.keySet();
     }
 
     public Set<String> deleteObjects(List<String> objectKeys, String sourceBucket) {
@@ -175,6 +177,33 @@ public class S3FileService {
                 period,
                 clock
         ));
+    }
+
+    private void copyFunction(
+            String sourceBucket,
+            String sourcePrefix,
+            String destinationBucket,
+            String destinationPrefix,
+            ConcurrentHashMap<String, String> failedObjects,
+            String objectKey
+    ) {
+        String destinationKey;
+        try {
+            if (!sourcePrefix.isEmpty()) {
+                destinationKey = destinationPrefix.isEmpty() ?
+                        objectKey.replaceFirst(sourcePrefix + DELIMITER, destinationPrefix) :
+                        objectKey.replaceFirst(sourcePrefix, destinationPrefix);
+            } else {
+                destinationKey = destinationPrefix.isEmpty() ?
+                        objectKey.replaceFirst(sourcePrefix, destinationPrefix) :
+                        destinationPrefix + DELIMITER + objectKey;
+            }
+
+            Failsafe.with(voidRetryPolicy).run(() -> s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket));
+        } catch (AmazonServiceException e) {
+            logger.warn("Failed to move S3 object {}", objectKey, e);
+            failedObjects.putIfAbsent(objectKey, objectKey);
+        }
     }
 
     @NotNull

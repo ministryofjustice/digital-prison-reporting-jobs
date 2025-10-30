@@ -73,6 +73,7 @@ class S3FileServiceTest {
     @BeforeEach
     void setup() {
         reset(mockS3Client, mockJobArguments);
+        when(mockJobArguments.fileTransferUseDefaultParallelism()).thenReturn(true);
         givenConfiguredRetriesJobArgs(1, mockJobArguments);
         undertest = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
     }
@@ -224,6 +225,24 @@ class S3FileServiceTest {
         verify(mockS3Client, times(objectKeys.size())).copyObject(any(), any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET));
 
         assertThat(failedObjects, is(empty()));
+    }
+
+    @Test
+    void shouldUseGivenFileTransferParallelismWhenTheArgumentToUseDefaultParallelismIsFalse() {
+        when(mockJobArguments.fileTransferUseDefaultParallelism()).thenReturn(false);
+
+        new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+
+        verify(mockJobArguments, times(1)).getFileTransferParallelism();
+    }
+
+    @Test
+    void shouldNotUseGivenFileTransferParallelismWhenTheArgumentToUseDefaultParallelismIsTrue() {
+        when(mockJobArguments.fileTransferUseDefaultParallelism()).thenReturn(true);
+
+        new S3FileService(mockS3Client, fixedClock, mockJobArguments);
+
+        verify(mockJobArguments, never()).getFileTransferParallelism();
     }
 
     @Test
