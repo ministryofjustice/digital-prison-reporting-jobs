@@ -19,7 +19,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'corretto'
 
       - name: Setup Gradle
@@ -30,6 +30,13 @@ jobs:
         run: |
           ./gradlew jacocoTestReport > logs.txt
           grep 'Test Coverage:' logs.txt -A6 > message.txt
+
+      - name: Archive code coverage results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: build/reports
 
       - name: PR comment
         uses: thollander/actions-comment-pull-request@v2

@@ -7,7 +7,7 @@ import java.util.Scanner;
 public class ResourceLoader {
 
 	public static String getResource(String resource) {
-		return Optional.ofNullable(System.class.getResourceAsStream(resource))
+		return Optional.ofNullable(ResourceLoader.class.getResourceAsStream(resource))
 			.map(ResourceLoader::readInputStream)
 			.orElseThrow(() -> new IllegalStateException("Failed to read resource: " + resource));
 	}
