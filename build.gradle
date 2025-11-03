@@ -106,9 +106,11 @@ dependencies {
         exclude group: "com.amazonaws", module: "AWSGlueDILibs"
     }
 
-    implementation "com.amazonaws:aws-java-sdk-glue:$awsSdkVersion"
-    implementation "com.amazonaws:aws-java-sdk-dms:$awsSdkVersion"
-    implementation "com.amazonaws:aws-java-sdk-secretsmanager:$awsSdkVersion"
+    implementation platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion")
+    implementation "com.amazonaws:aws-java-sdk-glue"
+    implementation "com.amazonaws:aws-java-sdk-dms"
+    implementation "com.amazonaws:aws-java-sdk-secretsmanager"
+
     implementation "org.apache.spark:spark-avro_$scalaBinary:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
