@@ -110,6 +110,8 @@ dependencies {
     implementation "com.amazonaws:aws-java-sdk-glue"
     implementation "com.amazonaws:aws-java-sdk-dms"
     implementation "com.amazonaws:aws-java-sdk-secretsmanager"
+    implementation "com.amazonaws:aws-java-sdk-s3"
+    implementation "com.amazonaws:aws-java-sdk-cloudwatch"
 
     implementation "org.apache.spark:spark-avro_$scalaBinary:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
@@ -135,9 +137,6 @@ dependencies {
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
     // AWS Glue provides this on the classpath so we don't need to include it.
-    implementation("org.apache.spark:spark-streaming-kinesis-asl_$scalaBinary:$sparkVersion") {
-      exclude group: "org.apache.spark", module: "spark-core_$scalaBinary"
-    }
     implementation("org.apache.spark:spark-hive_$scalaBinary:$sparkVersion") {
       exclude group: "org.apache.spark", module: "spark-core_$scalaBinary"
     }
