@@ -707,8 +707,8 @@ public class JobArguments {
 
     // We need to cast up to CommandLinePropertySource in order to get access to the `asMap` method.
     private static Optional<CommandLinePropertySource> castToCommandLinePropertySource(PropertySource p) {
-        return (p instanceof CommandLinePropertySource)
-                ? Optional.of((CommandLinePropertySource) p)
+        return (p instanceof CommandLinePropertySource commandLinePropertySource)
+                ? Optional.of(commandLinePropertySource)
                 : Optional.empty();
     }
 
