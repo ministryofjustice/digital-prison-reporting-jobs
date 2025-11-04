@@ -106,13 +106,17 @@ dependencies {
         exclude group: "com.amazonaws", module: "AWSGlueDILibs"
     }
 
-    implementation platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion")
-    implementation "com.amazonaws:aws-java-sdk-core"
-    implementation "com.amazonaws:aws-java-sdk-glue"
-    implementation "com.amazonaws:aws-java-sdk-dms"
-    implementation "com.amazonaws:aws-java-sdk-secretsmanager"
-    implementation "com.amazonaws:aws-java-sdk-s3"
-    implementation "com.amazonaws:aws-java-sdk-cloudwatch"
+    compileOnly platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion"){
+        // The AWS Glue team neglected to publish this dependency, but it isn't needed for us to run locally.
+        // See https://github.com/awslabs/aws-glue-libs/issues/229
+        exclude group: "com.amazonaws", module: "AWSGlueDILibs"
+    }
+    compileOnly "com.amazonaws:aws-java-sdk-core"
+    compileOnly "com.amazonaws:aws-java-sdk-glue"
+    compileOnly "com.amazonaws:aws-java-sdk-dms"
+    compileOnly "com.amazonaws:aws-java-sdk-secretsmanager"
+    compileOnly "com.amazonaws:aws-java-sdk-s3"
+    compileOnly "com.amazonaws:aws-java-sdk-cloudwatch"
 
     implementation "org.apache.spark:spark-avro_$scalaBinary:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
