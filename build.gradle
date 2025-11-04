@@ -246,6 +246,8 @@ jar {
 }
 
 shadowJar {
+    // Only include runtime dependencies, exclude compileOnly
+    configurations = [project.configurations.runtimeClasspath]
     zip64 true
     exclude 'core-site.xml'
     // Glue 5.0.0's runtime environment appears to be broken for certain AWS SDK dependencies
