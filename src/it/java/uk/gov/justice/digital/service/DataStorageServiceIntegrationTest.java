@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.justice.digital.test.SharedTestFunctions.thenEventually;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
 class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
@@ -51,7 +52,7 @@ class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    void shouldCompactADeltaTable() throws Exception {
+    void shouldCompactADeltaTable() throws Throwable {
         assertMultipleParquetFilesPrecondition(offendersTablePath);
         // Compaction should add a single new parquet file containing all the data from the original files.
         // It won't remove the old parquet files until a vacuum occurs and the data has passed its retention period.
@@ -60,17 +61,17 @@ class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
 
         underTest.compactDeltaTable(spark, offendersTablePath.toString());
 
-        assertEquals(expectedNumberOfParquetFilesAfterCompaction, countParquetFiles(offendersTablePath));
+        thenEventually(() -> assertEquals(expectedNumberOfParquetFilesAfterCompaction, countParquetFiles(offendersTablePath)));
     }
 
     @Test
-    void shouldVacuumADeltaTable() throws Exception {
+    void shouldVacuumADeltaTable() throws Throwable {
         assertMultipleParquetFilesPrecondition(offenderBookingsTablePath);
         // Compaction followed by vacuum on a table with zero retention should result in a single parquet file
         underTest.compactDeltaTable(spark, offenderBookingsTablePath.toString());
         setDeltaTableRetentionToZero(offenderBookingsTablePath.toString());
         underTest.vacuum(spark, offenderBookingsTablePath.toString());
 
-        assertEquals(1, countParquetFiles(offenderBookingsTablePath));
+        thenEventually(() -> assertEquals(1, countParquetFiles(offenderBookingsTablePath)));
     }
 }
