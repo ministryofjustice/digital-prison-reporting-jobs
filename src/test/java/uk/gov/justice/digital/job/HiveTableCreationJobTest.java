@@ -67,7 +67,7 @@ class HiveTableCreationJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenThereAreFailedTables() throws Exception {
+    void shouldFailWhenThereAreFailedTables() {
         ImmutableSet<ImmutablePair<String, String>> failedTables = ImmutableSet.of(ImmutablePair.of("schema", "failed-table-1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
@@ -78,7 +78,7 @@ class HiveTableCreationJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenSchemaServiceThrowsAnException() throws Exception {
+    void shouldFailWhenSchemaServiceThrowsAnException() {
         ImmutableSet<ImmutablePair<String, String>> table = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
 
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
@@ -89,7 +89,7 @@ class HiveTableCreationJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenConfigServiceThrowsAnException() throws Exception {
+    void shouldFailWhenConfigServiceThrowsAnException() {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new RuntimeException("Config service error"));
 

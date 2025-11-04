@@ -120,7 +120,7 @@ class S3FileTransferJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldExitWithFailureStatusWhenThereIsFailureMovingSomeFiles() throws Exception {
+    void shouldExitWithFailureStatusWhenThereIsFailureMovingSomeFiles() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -155,7 +155,7 @@ class S3FileTransferJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
+    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() {
         when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new ConfigServiceException("config error"));
 

@@ -42,7 +42,7 @@ class StopGlueInstanceJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenAnExceptionOccursInService() throws Exception {
+    void shouldFailWhenAnExceptionOccursInService() {
         when(mockJobArguments.getStopGlueInstanceJobName()).thenReturn(TEST_JOB_NAME);
         doThrow(new GlueClientException("error")).when(mockGlueOrchestrationService).stopJob(any());
 

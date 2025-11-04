@@ -91,7 +91,7 @@ class UnprocessedRawFilesCheckJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailIfThereAreUncommittedFilesAfterMaxAttempts() throws Exception {
+    void shouldFailIfThereAreUncommittedFilesAfterMaxAttempts() {
         ImmutablePair<String, String> configuredTable1 = ImmutablePair.of("source", "table-1");
         ImmutablePair<String, String> configuredTable2 = ImmutablePair.of("source", "table-2");
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable1, configuredTable2);

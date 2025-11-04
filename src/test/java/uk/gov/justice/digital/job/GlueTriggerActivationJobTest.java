@@ -58,7 +58,7 @@ class GlueTriggerActivationJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenAnExceptionOccursInServiceWhileActivatingTrigger() throws Exception {
+    void shouldFailWhenAnExceptionOccursInServiceWhileActivatingTrigger() {
         when(mockJobArguments.getGlueTriggerName()).thenReturn(TRIGGER_NAME);
         when(mockJobArguments.activateGlueTrigger()).thenReturn(true);
         doThrow(new GlueClientException("error")).when(mockGlueOrchestrationService).activateTrigger(any());
@@ -67,7 +67,7 @@ class GlueTriggerActivationJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenAnExceptionOccursInServiceWhileDeactivatingTrigger() throws Exception {
+    void shouldFailWhenAnExceptionOccursInServiceWhileDeactivatingTrigger() {
         when(mockJobArguments.getGlueTriggerName()).thenReturn(TRIGGER_NAME);
         when(mockJobArguments.activateGlueTrigger()).thenReturn(false);
         doThrow(new GlueClientException("error")).when(mockGlueOrchestrationService).deactivateTrigger(any());

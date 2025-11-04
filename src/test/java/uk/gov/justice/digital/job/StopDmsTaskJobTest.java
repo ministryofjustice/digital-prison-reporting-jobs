@@ -47,7 +47,7 @@ class StopDmsTaskJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenAnExceptionOccursInService() throws Exception {
+    void shouldFailWhenAnExceptionOccursInService() {
         when(mockJobArguments.getDmsTaskId()).thenReturn(TEST_TASK_ID);
         doThrow(new DmsClientException("error")).when(mockDmsOrchestrationService).stopTask(any());
 

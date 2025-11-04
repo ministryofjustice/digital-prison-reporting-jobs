@@ -102,14 +102,14 @@ class S3DataDeletionJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenNoConfigurationIsGiven() throws Exception {
+    void shouldFailWhenNoConfigurationIsGiven() {
         when(mockJobArguments.getConfigKey()).thenThrow(new IllegalStateException("error"));
 
         assertThatCallsSystemExit(() -> underTest.run());
     }
 
     @Test
-    void shouldExitWithFailureStatusWhenThereIsFailureDeletingSomeFiles() throws Exception {
+    void shouldExitWithFailureStatusWhenThereIsFailureDeletingSomeFiles() {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
                 ImmutablePair.of("schema_2", "table_2")
@@ -146,7 +146,7 @@ class S3DataDeletionJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
+    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new ConfigServiceException("config error"));
 

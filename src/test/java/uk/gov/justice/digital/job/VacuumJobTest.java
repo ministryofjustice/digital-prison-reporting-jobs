@@ -98,7 +98,7 @@ class VacuumJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() throws Exception {
+    void shouldExitWithFailureStatusWhenConfigServiceThrowsAnException() {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
@@ -112,7 +112,7 @@ class VacuumJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldExitWithFailureStatusWhenConfigIsProvidedAndMaintenanceServiceThrowsAnException() throws Exception {
+    void shouldExitWithFailureStatusWhenConfigIsProvidedAndMaintenanceServiceThrowsAnException() {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
@@ -127,7 +127,7 @@ class VacuumJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldExitWithFailureStatusWhenNoConfigIsProvidedAndMaintenanceServiceThrowsAnException() throws Exception {
+    void shouldExitWithFailureStatusWhenNoConfigIsProvidedAndMaintenanceServiceThrowsAnException() {
         when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
         when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
         when(arguments.getOptionalConfigKey()).thenReturn(Optional.empty());
