@@ -47,6 +47,9 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
         return true;
     }
 
+    /**
+     * Overwrites the data into the destination table.
+     */
     @Override
     public void overwriteData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
@@ -59,7 +62,10 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
                         .transform(dataFrame)
                         // We don't store these metadata columns in the destination table so we remove them
                         .drop(OPERATION.toLowerCase(), TIMESTAMP.toLowerCase(), CHECKPOINT_COL.toLowerCase());
-                operationalDataStoreDataAccessService.overwriteTable(transformedDf, fullDestinationTableName);
+                // We truncate instead of dropping and recreating the table since DDL for the destination
+                // table is managed in the Transfer Component
+                boolean truncate = true;
+                operationalDataStoreDataAccessService.overwriteTable(transformedDf, fullDestinationTableName, truncate);
 
                 logger.info("Finished processing records to write to Operational Data Store table {} in {}ms",
                         fullDestinationTableName, System.currentTimeMillis() - startTime);
@@ -78,6 +84,9 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
         }
     }
 
+    /**
+     * Writes data to a temporary table and then merges it into the final destination table.
+     */
     @Override
     public void mergeData(Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
@@ -96,7 +105,10 @@ public class OperationalDataStoreServiceImpl implements OperationalDataStoreServ
                     .drop(TIMESTAMP.toLowerCase(), CHECKPOINT_COL.toLowerCase());
 
             // Load the data to the temporary loading table
-            operationalDataStoreDataAccessService.overwriteTable(transformedDf, temporaryLoadingTableName);
+            // We drop and recreate the table instead of truncating to ensure that schema changes apply
+            // to the temporary loading table, which is not managed by the migrations in the Transfer Component.
+            boolean truncate = false;
+            operationalDataStoreDataAccessService.overwriteTable(transformedDf, temporaryLoadingTableName, truncate);
             logger.debug("Finished loading to temporary table {}", temporaryLoadingTableName);
             logger.debug("Merging to destination table {}", fullDestinationTableName);
             operationalDataStoreDataAccessService.merge(temporaryLoadingTableName, fullDestinationTableName, sourceReference);

@@ -74,13 +74,22 @@ public class OperationalDataStoreDataAccessService {
         logger.debug("Finished retrieving Operational DataStore managed tables");
     }
 
-    public void overwriteTable(Dataset<Row> dataframe, String destinationTableName) {
+    /**
+     * Overwrites the specified table in the Operational Data Store with the provided dataframe.
+     * This operation writes all data from the dataframe into the destination table,
+     * replacing any existing data. The `truncate` option determines whether the table should
+     * be truncated, instead of dropped and recreated, during the overwrite process.
+     *
+     * @param dataframe the dataset containing the data to be written to the table
+     * @param destinationTableName the name of the destination table in the database
+     * @param truncate a boolean flag indicating whether to truncate the table during the overwrite operation
+     */
+    public void overwriteTable(Dataset<Row> dataframe, String destinationTableName, boolean truncate) {
         val startTime = System.currentTimeMillis();
         logger.debug("Writing data to Operational DataStore");
         dataframe.write()
                 .mode(SaveMode.Overwrite)
-                // We truncate instead of dropping and recreating the table since DDL is managed in the Transfer Component
-                .option("truncate", "true")
+                .option("truncate", truncate)
                 // Batch size is tunable for performance
                 .option("batchSize", jobArguments.getOperationalDataStoreJdbcBatchSize())
                 .jdbc(jdbcUrl, destinationTableName, jdbcProps);
