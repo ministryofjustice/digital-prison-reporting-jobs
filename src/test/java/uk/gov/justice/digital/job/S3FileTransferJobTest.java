@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.reset;
@@ -120,7 +120,6 @@ class S3FileTransferJobTest extends SparkTestBase {
     }
 
     @Test
-    @SuppressWarnings("java:S2699")
     void shouldExitWithFailureStatusWhenThereIsFailureMovingSomeFiles() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema_1", "table_1"),
@@ -152,7 +151,7 @@ class S3FileTransferJobTest extends SparkTestBase {
         when(mockS3FileService.copyObjects(objectsToMove, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true))
                 .thenReturn(failedFiles);
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
     }
 
     @Test
@@ -160,7 +159,7 @@ class S3FileTransferJobTest extends SparkTestBase {
         when(mockJobArguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new ConfigServiceException("config error"));
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
 
         verifyNoInteractions(mockS3FileService);
     }

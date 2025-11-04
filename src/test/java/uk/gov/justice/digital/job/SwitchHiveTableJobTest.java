@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.SparkSession;
@@ -24,6 +23,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
@@ -76,7 +76,6 @@ class SwitchHiveTableJobTest extends SparkTestBase {
     }
 
     @Test
-    @SuppressWarnings("java:S2699")
     void shouldFailWhenThereAreFailedTables() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> failedTables = ImmutableSet.of(ImmutablePair.of("schema", "failed-table-1"));
 
@@ -86,11 +85,10 @@ class SwitchHiveTableJobTest extends SparkTestBase {
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(failedTables));
         when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), any())).thenReturn(failedTables);
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
     }
 
     @Test
-    @SuppressWarnings("java:S2699")
     void shouldFailWhenSchemaServiceThrowsAnException() throws Exception {
         ImmutableSet<ImmutablePair<String, String>> table = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
 
@@ -100,17 +98,16 @@ class SwitchHiveTableJobTest extends SparkTestBase {
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(table));
         when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), any())).thenThrow(new HiveSchemaServiceException("Schema service exception"));
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
     }
 
     @Test
-    @SuppressWarnings("java:S2699")
     void shouldFailWhenConfigServiceThrowsAnException() throws Exception {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
         when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new RuntimeException("Config service error"));
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
     }
 }

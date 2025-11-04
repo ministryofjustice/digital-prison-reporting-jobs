@@ -78,13 +78,21 @@ ext {
     awsSdkVersion = '1.12.569' // Glue 5.0 can use 1.12.569 or 2.28.8
     glueApiVersion = '5.0.0'
     failSafeVersion = '3.3.2'
-    systemLambdaVersion = '1.2.1'
     postgresVersion = '42.7.3'
     h2Version = '2.2.224'
     oracleJdbcVersion = '23.5.0.24.07'
     hikariCPVersion = '4.0.3'
     junitSystemExitVersion = '2.0.2'
 }
+
+def awsSdkModules = [
+        "com.amazonaws:aws-java-sdk-core",
+        "com.amazonaws:aws-java-sdk-glue",
+        "com.amazonaws:aws-java-sdk-dms",
+        "com.amazonaws:aws-java-sdk-secretsmanager",
+        "com.amazonaws:aws-java-sdk-s3",
+        "com.amazonaws:aws-java-sdk-cloudwatch"
+]
 
 dependencies {
 
@@ -106,13 +114,14 @@ dependencies {
         exclude group: "com.amazonaws", module: "AWSGlueDILibs"
     }
 
+    // AWS dependencies should be compileOnly for running in Glue but also on the classpath for tests.
     compileOnly platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion")
-    compileOnly "com.amazonaws:aws-java-sdk-core"
-    compileOnly "com.amazonaws:aws-java-sdk-glue"
-    compileOnly "com.amazonaws:aws-java-sdk-dms"
-    compileOnly "com.amazonaws:aws-java-sdk-secretsmanager"
-    compileOnly "com.amazonaws:aws-java-sdk-s3"
-    compileOnly "com.amazonaws:aws-java-sdk-cloudwatch"
+    testImplementation platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion")
+
+    awsSdkModules.each { awsDep ->
+        compileOnly(awsDep)
+        testImplementation(awsDep)
+    }
 
     implementation "org.apache.spark:spark-avro_$scalaBinary:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
@@ -153,7 +162,6 @@ dependencies {
     testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
     testImplementation "org.hamcrest:hamcrest:$hamcrestVersion"
     testImplementation "com.networknt:json-schema-validator:1.0.81"
-    testImplementation "com.github.stefanbirkner:system-lambda:$systemLambdaVersion"
     testImplementation "com.h2database:h2:$h2Version"
     testImplementation "com.ginsberg:junit5-system-exit:$junitSystemExitVersion"
 

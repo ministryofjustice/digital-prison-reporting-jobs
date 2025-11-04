@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,9 +20,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.any;
@@ -107,7 +106,7 @@ class CompactionJobTest extends SparkTestBase {
         when(properties.getSparkExecutorMemory()).thenReturn("2g");
         doThrow(new ConfigServiceException("config error")).when(configService).getConfiguredTables(TEST_CONFIG_KEY);
 
-        assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
+        assertThatCallsSystemExit(() -> underTest.run()).withExitCode(1);
 
         verifyNoInteractions(maintenanceService);
     }
@@ -124,7 +123,7 @@ class CompactionJobTest extends SparkTestBase {
         doThrow(new RuntimeException("Maintenance service exception"))
                 .when(maintenanceService).compactDeltaTables(eq(spark), any(), eq(RECURSE_MAX_DEPTH));
 
-        assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
+        assertThatCallsSystemExit(() -> underTest.run()).withExitCode(1);
     }
 
     @Test
@@ -137,7 +136,7 @@ class CompactionJobTest extends SparkTestBase {
         doThrow(new RuntimeException("Maintenance service exception"))
                 .when(maintenanceService).compactDeltaTables(eq(spark), any(), eq(RECURSE_MAX_DEPTH));
 
-        assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
+        assertThatCallsSystemExit(() -> underTest.run()).withExitCode(1);
     }
 
 }

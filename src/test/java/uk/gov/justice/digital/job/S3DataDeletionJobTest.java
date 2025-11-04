@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
@@ -102,11 +102,10 @@ class S3DataDeletionJobTest extends SparkTestBase {
     }
 
     @Test
-    @SuppressWarnings("java:S2699")
     void shouldFailWhenNoConfigurationIsGiven() throws Exception {
         when(mockJobArguments.getConfigKey()).thenThrow(new IllegalStateException("error"));
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
     }
 
     @Test
@@ -140,7 +139,7 @@ class S3DataDeletionJobTest extends SparkTestBase {
 
         when(mockS3FileService.deleteObjects(eq(objectsToDelete), deleteObjectsBucketCaptor.capture())).thenReturn(failedFiles);
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
 
         assertThat(listObjectsBucketCaptor.getAllValues(), containsInAnyOrder(bucketsToDeleteFrom.toArray()));
         assertThat(deleteObjectsBucketCaptor.getAllValues(), containsInAnyOrder(bucketsToDeleteFrom.toArray()));
@@ -151,7 +150,7 @@ class S3DataDeletionJobTest extends SparkTestBase {
         when(mockJobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenThrow(new ConfigServiceException("config error"));
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
 
         verifyNoInteractions(mockS3FileService);
     }

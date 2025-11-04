@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +10,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.GlueClientException;
 import uk.gov.justice.digital.service.GlueOrchestrationService;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -64,7 +63,7 @@ class GlueTriggerActivationJobTest extends SparkTestBase {
         when(mockJobArguments.activateGlueTrigger()).thenReturn(true);
         doThrow(new GlueClientException("error")).when(mockGlueOrchestrationService).activateTrigger(any());
 
-        assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
+        assertThatCallsSystemExit(() -> underTest.run()).withExitCode(1);
     }
 
     @Test
@@ -73,6 +72,6 @@ class GlueTriggerActivationJobTest extends SparkTestBase {
         when(mockJobArguments.activateGlueTrigger()).thenReturn(false);
         doThrow(new GlueClientException("error")).when(mockGlueOrchestrationService).deactivateTrigger(any());
 
-        assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
+        assertThatCallsSystemExit(() -> underTest.run()).withExitCode(1);
     }
 }

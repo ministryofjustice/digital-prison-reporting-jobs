@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
@@ -124,6 +123,6 @@ class UnprocessedRawFilesCheckJobTest extends SparkTestBase {
         when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
                 .thenReturn(rawFiles);
 
-        assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
+        assertThatCallsSystemExit(() -> underTest.run()).withExitCode(1);
     }
 }
