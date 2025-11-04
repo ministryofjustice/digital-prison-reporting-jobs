@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -96,7 +97,7 @@ class OperationalDataStoreServiceTest {
         underTest.overwriteData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("op", "_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(eq(colsDroppedDataframe), eq(FULL_TABLE_NAME), any());
+        verify(mockDataAccess, times(1)).overwriteTable(eq(colsDroppedDataframe), eq(FULL_TABLE_NAME), anyBoolean());
     }
 
     @Test
@@ -119,7 +120,7 @@ class OperationalDataStoreServiceTest {
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(0)).overwriteTable(any(), any(), any());
+        verify(mockDataAccess, times(0)).overwriteTable(any(), any(), anyBoolean());
     }
 
     @Test
@@ -132,7 +133,7 @@ class OperationalDataStoreServiceTest {
             underTest.overwriteData(inputDataframe, sourceReference);
         });
 
-        verify(mockDataAccess, times(0)).overwriteTable(any(), any(), any());
+        verify(mockDataAccess, times(0)).overwriteTable(any(), any(), anyBoolean());
     }
 
     @Test
@@ -158,7 +159,7 @@ class OperationalDataStoreServiceTest {
         underTest.mergeData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(eq(colsDroppedDataframe), eq(LOADING_FULL_TABLE_NAME), any());
+        verify(mockDataAccess, times(1)).overwriteTable(eq(colsDroppedDataframe), eq(LOADING_FULL_TABLE_NAME), anyBoolean());
     }
 
     @Test
