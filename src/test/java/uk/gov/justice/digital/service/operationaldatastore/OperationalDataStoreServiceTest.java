@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -95,7 +96,20 @@ class OperationalDataStoreServiceTest {
         underTest.overwriteData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("op", "_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
+        verify(mockDataAccess, times(1)).overwriteTable(eq(colsDroppedDataframe), eq(FULL_TABLE_NAME), any());
+    }
+
+    @Test
+    void overwriteDataShouldTruncateNotDropWhenWritingTransformedDataframeToDestinationTable() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
+        when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
+        when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
+        when(mockDataAccess.tableExists(any())).thenReturn(true);
+
+        underTest.overwriteData(inputDataframe, sourceReference);
+
+        verify(mockDataAccess, times(1)).overwriteTable(any(), eq(FULL_TABLE_NAME), eq(true));
     }
 
     @Test
@@ -105,7 +119,7 @@ class OperationalDataStoreServiceTest {
 
         underTest.overwriteData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
+        verify(mockDataAccess, times(0)).overwriteTable(any(), any(), any());
     }
 
     @Test
@@ -118,7 +132,7 @@ class OperationalDataStoreServiceTest {
             underTest.overwriteData(inputDataframe, sourceReference);
         });
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
+        verify(mockDataAccess, times(0)).overwriteTable(any(), any(), any());
     }
 
     @Test
@@ -144,7 +158,21 @@ class OperationalDataStoreServiceTest {
         underTest.mergeData(inputDataframe, sourceReference);
 
         verify(transformedDataframe, times(1)).drop("_timestamp", "checkpoint_col");
-        verify(mockDataAccess, times(1)).overwriteTable(colsDroppedDataframe, LOADING_FULL_TABLE_NAME);
+        verify(mockDataAccess, times(1)).overwriteTable(eq(colsDroppedDataframe), eq(LOADING_FULL_TABLE_NAME), any());
+    }
+
+    @Test
+    void mergeDataShouldWriteTransformedDataframeToLoadingTableByDroppingAndRecreatingRatherThanTruncating() {
+        when(sourceReference.getFullOperationalDataStoreTableNameWithSchema()).thenReturn(FULL_TABLE_NAME);
+        when(mockDataTransformation.transform(any())).thenReturn(transformedDataframe);
+        when(transformedDataframe.drop((String[]) any())).thenReturn(colsDroppedDataframe);
+        when(mockDataAccess.isOperationalDataStoreManagedTable(any())).thenReturn(true);
+        when(sourceReference.getOperationalDataStoreTableName()).thenReturn(TABLE_NAME);
+
+        underTest.mergeData(inputDataframe, sourceReference);
+
+        verify(transformedDataframe, times(1)).drop("_timestamp", "checkpoint_col");
+        verify(mockDataAccess, times(1)).overwriteTable(any(), eq(LOADING_FULL_TABLE_NAME), eq(false));
     }
 
     @Test
@@ -168,7 +196,7 @@ class OperationalDataStoreServiceTest {
 
         underTest.mergeData(inputDataframe, sourceReference);
 
-        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME);
+        verify(mockDataAccess, times(0)).overwriteTable(colsDroppedDataframe, FULL_TABLE_NAME, false);
     }
 
     @ParameterizedTest

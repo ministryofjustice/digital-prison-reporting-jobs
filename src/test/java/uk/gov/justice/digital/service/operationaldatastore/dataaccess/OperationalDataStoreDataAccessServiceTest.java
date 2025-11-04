@@ -117,6 +117,7 @@ class OperationalDataStoreDataAccessServiceTest {
     @Test
     void shouldOverwriteExistingTable() {
         String destinationTableName = "some.table";
+        boolean truncate = true;
 
         when(dataframe.write()).thenReturn(dataframeWriter);
         when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
@@ -124,7 +125,7 @@ class OperationalDataStoreDataAccessServiceTest {
         when(dataframeWriter.option(any(), anyLong())).thenReturn(dataframeWriter);
         when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
 
-        underTest.overwriteTable(dataframe, destinationTableName);
+        underTest.overwriteTable(dataframe, destinationTableName, truncate);
 
         Properties expectedProperties = new Properties();
         expectedProperties.put("user", "username");
@@ -146,22 +147,39 @@ class OperationalDataStoreDataAccessServiceTest {
         when(dataframeWriter.option(any(), anyLong())).thenReturn(dataframeWriter);
         when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
 
-        underTest.overwriteTable(dataframe, destinationTableName);
+        boolean truncate = true;
+        underTest.overwriteTable(dataframe, destinationTableName, truncate);
 
-        verify(dataframeWriter, times(1)).option("truncate", "true");
+        verify(dataframeWriter, times(1)).option("truncate", true);
     }
 
     @Test
-    void overwriteTableShouldUseJdbcBatchSize() {
+    void overwriteTableShouldDropRatherThanTruncate() {
         String destinationTableName = "some.table";
 
         when(dataframe.write()).thenReturn(dataframeWriter);
         when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
         when(dataframeWriter.option(any(), any())).thenReturn(dataframeWriter);
         when(dataframeWriter.option(any(), anyLong())).thenReturn(dataframeWriter);
+        when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
+
+        boolean truncate = false;
+        underTest.overwriteTable(dataframe, destinationTableName, truncate);
+
+        verify(dataframeWriter, times(1)).option("truncate", false);
+    }
+
+    @Test
+    void overwriteTableShouldUseJdbcBatchSize() {
+        String destinationTableName = "some.table";
+        boolean truncate = true;
+        when(dataframe.write()).thenReturn(dataframeWriter);
+        when(dataframeWriter.mode(any(SaveMode.class))).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), any())).thenReturn(dataframeWriter);
+        when(dataframeWriter.option(any(), anyLong())).thenReturn(dataframeWriter);
         when(jobArguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(5000L);
 
-        underTest.overwriteTable(dataframe, destinationTableName);
+        underTest.overwriteTable(dataframe, destinationTableName, truncate);
 
         verify(dataframeWriter, times(1)).option("batchSize", 5000L);
     }
