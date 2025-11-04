@@ -106,11 +106,7 @@ dependencies {
         exclude group: "com.amazonaws", module: "AWSGlueDILibs"
     }
 
-    compileOnly platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion"){
-        // The AWS Glue team neglected to publish this dependency, but it isn't needed for us to run locally.
-        // See https://github.com/awslabs/aws-glue-libs/issues/229
-        exclude group: "com.amazonaws", module: "AWSGlueDILibs"
-    }
+    compileOnly platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion")
     compileOnly "com.amazonaws:aws-java-sdk-core"
     compileOnly "com.amazonaws:aws-java-sdk-glue"
     compileOnly "com.amazonaws:aws-java-sdk-dms"
