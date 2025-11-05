@@ -253,7 +253,10 @@ shadowJar {
     // Glue 5.0.0's runtime environment appears to be broken for certain AWS SDK dependencies
     // because they include both SDK 1 and 2 jars with conflicting methods. Renaming
     // the AWS dependencies let's us continue using AWS SDK v1 until we choose to migrate to v2.
-    relocate 'com.amazonaws', 'com.amazonaws.moj.shadow'
+    relocate 'com.amazonaws', 'com.amazonaws.moj.shadow', {
+        // Exclude AWSGlueETL from the rename (this also excludes aws-java-sdk-glue classes but this should be okay)
+        exclude 'com.amazonaws.services.glue.**'
+    }
 }
 
 micronaut {
