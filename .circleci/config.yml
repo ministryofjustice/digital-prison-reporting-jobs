@@ -9,11 +9,19 @@ workflows:
     jobs:
       - reporting/gradle_owasp_check:
           notify_slack: false
+          pre-steps:
+            - run:
+                name: Clear corrupt Gradle cache
+                command: rm -rf ~/.gradle/caches/
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
           cache_key: "owasp-build-cache"
       - reporting/gradle_build_publish:
+          pre-steps:
+            - run:
+                name: Clear corrupt Gradle cache
+                command: rm -rf ~/.gradle/caches/
           tag: "8.0"
           app: digital-prison-reporting-jobs
           app_artifacts_directory: build/libs/
@@ -81,6 +89,10 @@ workflows:
                 - main
     jobs:
       - reporting/gradle_owasp_check:
+          pre-steps:
+            - run:
+                name: Clear corrupt Gradle cache
+                command: rm -rf ~/.gradle/caches/
           notify_slack: true
           channel: dpr_cicd_alerts
           context:
