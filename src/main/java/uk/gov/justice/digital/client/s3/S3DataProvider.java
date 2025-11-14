@@ -86,8 +86,8 @@ public class S3DataProvider {
         //  We sometimes only want to catch AnalysisException and check if it is because the path does not exist,
         //  but we can't be more specific than Exception in what we catch because the Java compiler will complain
         //  that AnalysisException isn't declared as thrown due to Scala trickery.
-        return (e instanceof AnalysisException && e.getMessage().startsWith("Path does not exist")) ||
-                (e instanceof DeltaAnalysisException && e.getMessage().contains("doesn't exist"));
+        return (e instanceof AnalysisException && e.getMessage().toLowerCase().contains("path does not exist")) ||
+                (e instanceof DeltaAnalysisException && e.getMessage().toLowerCase().contains("doesn't exist"));
     }
 
 

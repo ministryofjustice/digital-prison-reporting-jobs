@@ -76,7 +76,7 @@ public class S3FileTransferJob implements Runnable {
             List<String> fileKeys = s3FileService.listFilesBeforePeriod(sourceBucket, sourcePrefix, configuredTables, allowedFileNameRegex, retentionPeriod)
                     .stream()
                     .map(x -> x.key)
-                    .collect(Collectors.toList());
+                    .toList();
             objectKeys.addAll(fileKeys);
         } else {
             // When no config is provided, all files in s3 bucket are archived
@@ -84,7 +84,7 @@ public class S3FileTransferJob implements Runnable {
             List<String> fileKeys = s3FileService.listFiles(sourceBucket, sourcePrefix, allowedFileNameRegex, retentionPeriod)
                     .stream()
                     .map(x -> x.key)
-                    .collect(Collectors.toList());
+                    .toList();
             objectKeys.addAll(fileKeys);
         }
 

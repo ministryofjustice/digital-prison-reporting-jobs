@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +10,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.GlueClientException;
 import uk.gov.justice.digital.service.GlueOrchestrationService;
 
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,11 +42,10 @@ class StopGlueInstanceJobTest extends SparkTestBase {
     }
 
     @Test
-    @SuppressWarnings("java:S2699")
-    void shouldFailWhenAnExceptionOccursInService() throws Exception {
+    void shouldFailWhenAnExceptionOccursInService() {
         when(mockJobArguments.getStopGlueInstanceJobName()).thenReturn(TEST_JOB_NAME);
         doThrow(new GlueClientException("error")).when(mockGlueOrchestrationService).stopJob(any());
 
-        SystemLambda.catchSystemExit(() -> underTest.run());
+        assertThatCallsSystemExit(() -> underTest.run());
     }
 }

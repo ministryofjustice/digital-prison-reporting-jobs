@@ -117,7 +117,7 @@ public class SparkTestBase {
 			// so we squash the Exception in that case. We can't be more specific than Exception in what we
 			// catch because the Java compiler will complain that AnalysisException isn't declared as thrown
 			// due to Scala trickery.
-			if(!e.getMessage().startsWith("Path does not exist")) {
+			if(!e.getMessage().toLowerCase().contains("path does not exist")) {
 				throw e;
 			}
 		}

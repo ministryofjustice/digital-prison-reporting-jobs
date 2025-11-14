@@ -105,7 +105,7 @@ public class UnprocessedRawFilesCheckJob implements Runnable {
                 .listFilesBeforePeriod(rawBucket, "", configuredTables, fileNameRegex, Duration.ZERO)
                 .stream()
                 .map(x -> x.key)
-                .collect(Collectors.toList());
+                .toList();
 
         return committedFiles.containsAll(rawFiles);
     }

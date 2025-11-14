@@ -206,7 +206,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
 
         List<SourceReference> expectedSourceRefs = Stream.of(s2T2, s1T1, s3T3)
                 .map(CreateReloadDiffJobTest::createSourceReference)
-                .collect(Collectors.toList());
+                .toList();
 
         assertThat(outputPathCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedOutputPaths));
         assertThat(sourceRefCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedSourceRefs));
@@ -383,6 +383,6 @@ class CreateReloadDiffJobTest extends SparkTestBase {
         return datasets.stream()
                 .map(Dataset::collectAsList)
                 .flatMap(List::stream)
-                .collect(Collectors.toList());
+                .toList();
     }
 }

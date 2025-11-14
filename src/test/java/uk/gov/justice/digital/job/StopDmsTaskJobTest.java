@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +10,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DmsClientException;
 import uk.gov.justice.digital.service.DmsOrchestrationService;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -48,10 +47,10 @@ class StopDmsTaskJobTest extends SparkTestBase {
     }
 
     @Test
-    void shouldFailWhenAnExceptionOccursInService() throws Exception {
+    void shouldFailWhenAnExceptionOccursInService() {
         when(mockJobArguments.getDmsTaskId()).thenReturn(TEST_TASK_ID);
         doThrow(new DmsClientException("error")).when(mockDmsOrchestrationService).stopTask(any());
 
-        assertEquals(1, SystemLambda.catchSystemExit(() -> underTest.run()));
+        assertThatCallsSystemExit(() -> underTest.run()).withExitCode(1);
     }
 }

@@ -110,7 +110,7 @@ public class S3ObjectClient {
             logger.info("Deleting {} of {} objects", deletedObjectsCount, objectKeys.size());
             List<DeleteObjectsRequest.KeyVersion> objectKeyVersions = partition.stream()
                     .map(DeleteObjectsRequest.KeyVersion::new)
-                    .collect(Collectors.toList());
+                    .toList();
 
             DeleteObjectsRequest request = new DeleteObjectsRequest(sourceBucket).withKeys(objectKeyVersions).withQuiet(true);
             Set<String> failedDeletesInCurrentBatch = s3.deleteObjects(request)

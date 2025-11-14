@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -25,14 +26,17 @@ public class PostgresLoadGeneratorJob implements Runnable {
 
     JobArguments arguments;
     private final SecretsManagerClient secretsManagerClient;
+    private final Clock clock;
 
     @Inject
     public PostgresLoadGeneratorJob(
             JobArguments arguments,
-            SecretsManagerClient secretsManagerClient
+            SecretsManagerClient secretsManagerClient,
+            Clock clock
     ) {
         this.arguments = arguments;
         this.secretsManagerClient = secretsManagerClient;
+        this.clock = clock;
     }
 
     public static void main(String[] args) {
@@ -65,14 +69,14 @@ public class PostgresLoadGeneratorJob implements Runnable {
     private void generateTestData(PostgresSecrets credentials, DataGenerationConfig runConfig) throws SQLException, InterruptedException {
         Connection connection = null;
         PreparedStatement statement = null;
-        long startTime = System.currentTimeMillis();
+        long startTime = clock.millis();
 
         try {
             logger.debug("Connecting to {}", credentials.getJdbcUrl());
             connection = DriverManager.getConnection(credentials.getJdbcUrl(), credentials.getUsername(), credentials.getPassword());
             connection.setAutoCommit(false);
 
-            while (System.currentTimeMillis() - startTime < runConfig.getRunDuration()) {
+            while (clock.millis() - startTime < runConfig.getRunDuration()) {
                 for (int i = 1; i <= runConfig.getParallelism(); i++) {
                     String insertSql = String.format("INSERT INTO %s(data) VALUES (?)", arguments.getTestDataTableName());
                     statement = connection.prepareStatement(insertSql);

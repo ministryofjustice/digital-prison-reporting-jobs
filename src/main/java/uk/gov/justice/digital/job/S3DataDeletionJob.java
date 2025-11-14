@@ -72,7 +72,7 @@ public class S3DataDeletionJob implements Runnable {
                     .listFilesBeforePeriod(bucketToDeleteFilesFrom, sourcePrefix, configuredTables, allowedFileNameRegex, Duration.ZERO)
                     .stream()
                     .map(x -> x.key)
-                    .collect(Collectors.toList());
+                    .toList();
 
             logger.info("Deleting S3 objects from {}", bucketToDeleteFilesFrom);
             failedObjects = s3FileService.deleteObjects(listedFiles, bucketToDeleteFilesFrom);

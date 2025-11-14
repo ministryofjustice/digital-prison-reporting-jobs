@@ -8,6 +8,8 @@ import org.apache.spark.sql.delta.DeltaAnalysisException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import scala.collection.JavaConverters;
@@ -82,9 +84,14 @@ class S3DataProviderTest {
         );
     }
 
-    @Test
-    void isPathDoesNotExistExceptionShouldReturnTrueWhenPathDoesNotExist() {
-        when(analysisException.getMessage()).thenReturn("Path does not exist");
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Path does not exist",
+            "path does not exist",
+            "[Some-prefix] Path does not exist"
+    })
+    void isPathDoesNotExistExceptionShouldReturnTrueWhenPathDoesNotExist(String arg) {
+        when(analysisException.getMessage()).thenReturn(arg);
         assertTrue(S3DataProvider.isPathDoesNotExistException(analysisException));
     }
 
