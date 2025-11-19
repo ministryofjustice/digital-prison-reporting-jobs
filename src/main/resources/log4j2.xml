@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %p %c: %msg%n"/>
+        </Console>
+    </Appenders>
+
+    <!-- Configure everything to WARN except our own code and some very verbose libraries -->
+
+    <Loggers>
+        <!-- Our code's log level -->
+        <Logger name="uk.gov.justice.digital" level="INFO" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- Suppress some potentially particularly verbose libraries -->
+        <Logger name="org.spark-project.jetty.util.component.AbstractLifeCycle" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <Logger name="org.apache.parquet" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <Logger name="parquet" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <Logger name="org.apache.hadoop.hive.metastore.RetryingHMSHandler" level="FATAL" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <Logger name="org.apache.hadoop.hive.ql.exec.FunctionRegistry" level="ERROR" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+
+        <!-- Root Logger -->
+        <Root level="WARN">
+            <AppenderRef ref="console"/>
+        </Root>
+    </Loggers>
+</Configuration>
