@@ -6,10 +6,16 @@ import jakarta.inject.Inject;
 import lombok.val;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.ByteType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.IntegerType;
+import org.apache.spark.sql.types.ShortType;
+import org.apache.spark.sql.types.StringType;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -19,9 +25,19 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.Sets.difference;
 import static java.lang.String.format;
-import static org.apache.spark.sql.functions.*;
-import static uk.gov.justice.digital.common.CommonDataFields.*;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.concat_ws;
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.not;
+import static org.apache.spark.sql.functions.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.VALIDATION_TYPE_KEY;
+import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 
 @Singleton
@@ -78,31 +94,7 @@ public class ValidationService {
 
     @VisibleForTesting
     static boolean schemasMatch(StructType inferredSchema, StructType specifiedSchema) {
-        if (inferredSchema.fields().length != specifiedSchema.fields().length) {
-            return false;
-        }
-        for (StructField inferredField : inferredSchema.fields()) {
-            try {
-                StructField specifiedField = specifiedSchema.apply(inferredField.name());
-                DataType inferredDataType = inferredField.dataType();
-                DataType specifiedDataType = specifiedField.dataType();
-                boolean sameType = specifiedDataType.getClass().equals(inferredDataType.getClass());
-
-                if (!sameType && !isAllowedDifference(inferredDataType, specifiedDataType)) {
-                    return false;
-                }
-                // If it is a struct then recurse to check the nested types
-                if (inferredDataType instanceof StructType &&
-                        !schemasMatch((StructType) inferredDataType, (StructType) specifiedDataType)) {
-                    // The struct schemas don't recursively match so the overall schema doesn't match
-                    return false;
-                }
-            } catch (IllegalArgumentException e) {
-                // No corresponding field with that name
-                return false;
-            }
-        }
-        return true;
+        return validateFieldCounts(inferredSchema, specifiedSchema) && validateFieldDataTypes(inferredSchema, specifiedSchema);
     }
 
     private Dataset<Row> validateStringFields(Dataset<Row> df, SourceReference sourceReference) {
@@ -146,6 +138,66 @@ public class ValidationService {
                 .map(Column::isNull)
                 .reduce(Column::or)
                 .orElse(lit(false));
+    }
+
+    private static boolean validateFieldDataTypes(StructType inferredSchema, StructType specifiedSchema) {
+        for (StructField inferredField : inferredSchema.fields()) {
+            try {
+                StructField specifiedField = specifiedSchema.apply(inferredField.name());
+                DataType inferredDataType = inferredField.dataType();
+                DataType specifiedDataType = specifiedField.dataType();
+                boolean sameType = specifiedDataType.getClass().equals(inferredDataType.getClass());
+
+                if (!sameType && !isAllowedDifference(inferredDataType, specifiedDataType)) {
+                    logger.warn("Specified and inferred type mismatch for field {}", inferredField.name());
+                    return false;
+                }
+                // If it is a struct then recurse to check the nested types
+                if (inferredDataType instanceof StructType &&
+                        !schemasMatch((StructType) inferredDataType, (StructType) specifiedDataType)) {
+                    // The struct schemas don't recursively match so the overall schema doesn't match
+                    logger.warn("Recursive mismatch for struct field {}", inferredField.name());
+                    return false;
+                }
+            } catch (IllegalArgumentException e) {
+                // No corresponding field with that name
+                logger.warn("Field {} is not in specified schema", inferredField.name());
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean validateFieldCounts(StructType inferredSchema, StructType specifiedSchema) {
+        val infferedFieldsSet = Arrays.stream(inferredSchema.fields()).collect(Collectors.toSet());
+        val specifiedFieldsSet = Arrays.stream(specifiedSchema.fields()).collect(Collectors.toSet());
+
+        if (infferedFieldsSet.size() != specifiedFieldsSet.size()) {
+            // If the specified schema has more fields than the inferred schema and those fields are nullable
+            // then we pass the validation
+            if (specifiedFieldsSet.size() > infferedFieldsSet.size()) {
+                val nonInferredFields = difference(specifiedFieldsSet, infferedFieldsSet);
+                if (nonInferredFields.stream().allMatch(StructField::nullable)) {
+                    return true;
+                } else {
+                    val nonInferredMandatoryFields = nonInferredFields
+                            .stream()
+                            .filter(field -> !field.nullable())
+                            .map(StructField::name)
+                            .collect(Collectors.toList());
+                    logger.warn("Inferred schema is missing non-nullable fields {}", nonInferredMandatoryFields);
+                    return false;
+                }
+            } else {
+                val extraInferredFields = difference(infferedFieldsSet, specifiedFieldsSet);
+                logger.warn("Inferred schema contains fields not in specified schema. Extra fields {}", extraInferredFields);
+                return false;
+            }
+        } else {
+            // Field count validation succeeded
+            return true;
+        }
     }
 
     private Column validateField(String fieldName, String validationType) {
