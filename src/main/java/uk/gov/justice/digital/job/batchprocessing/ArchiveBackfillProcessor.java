@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.apache.spark.sql.functions.lit;
+import static uk.gov.justice.digital.common.CommonDataFields.DEFAULT_VALUE_KEY;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
@@ -49,8 +50,13 @@ public class ArchiveBackfillProcessor {
     }
 
     private static Dataset<Row> backfillNullableColumns(SourceReference sourceReference, Dataset<Row> archiveDataset) {
-        val nonNullableColumns = Arrays.stream(sourceReference.getSchema().fields())
+        val nonNullableFields = Arrays.stream(sourceReference.getSchema().fields())
                 .filter(field -> !field.nullable())
+                .toList();
+
+        val nonNullableColumns = nonNullableFields
+                .stream()
+                .filter(field -> !field.metadata().contains(DEFAULT_VALUE_KEY))
                 .collect(Collectors.toMap(StructField::name, StructField::dataType));
 
         val nullableColumns = Arrays.stream(sourceReference.getSchema().fields())
@@ -67,6 +73,13 @@ public class ArchiveBackfillProcessor {
             throw new BackfillException("Mandatory column(s) in schema does not exist in archived data for table " + source + "." + table);
         }
 
+        Map<String, Column> defaultColumnsMap = nonNullableFields
+                .stream()
+                .filter(field -> field.metadata().contains(DEFAULT_VALUE_KEY))
+                .collect(Collectors.toMap(StructField::name, column -> lit(column.metadata().getString(DEFAULT_VALUE_KEY)).cast(column.dataType())));
+
+        archiveDatasetColumns.keySet().forEach(defaultColumnsMap::remove);
+
         nullableColumns.keySet().removeAll(archiveDatasetColumns.keySet());
 
         Map<String, Column> nullableColumnMap = nullableColumns
@@ -74,7 +87,9 @@ public class ArchiveBackfillProcessor {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, column -> lit(null).cast(column.getValue())));
 
-        return archiveDataset.withColumns(nullableColumnMap);
+        return archiveDataset
+                .withColumns(nullableColumnMap)
+                .withColumns(defaultColumnsMap);
     }
 }
 
