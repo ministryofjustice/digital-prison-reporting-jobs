@@ -52,6 +52,12 @@ class ArchiveBackfillProcessorTest extends SparkTestBase {
     private static final String OUTPUT_BASE_PATH = "s3://bucket/output-folder";
     private static final StructField nullableField = new StructField("new_column", DataTypes.StringType, true, Metadata.empty());
     private static final StructField nonNullableField = new StructField("new_column", DataTypes.StringType, false, Metadata.empty());
+    private static final StructField nonNullableFieldWithDefault = new StructField(
+            "new_column",
+            DataTypes.StringType,
+            false,
+            Metadata.fromJson("{\"default\": \"some-default-value\"}")
+    );
 
     private ArchiveBackfillProcessor underTest;
 
@@ -101,6 +107,30 @@ class ArchiveBackfillProcessorTest extends SparkTestBase {
     }
 
     @Test
+    void shouldHandleAdditionOfNonNullableColumnsWithDefaults() {
+        Dataset<Row> archiveDataset = spark.createDataFrame(Arrays.asList(
+                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "1", "20240709"),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "2", "20240709")
+        ), TEST_DATA_SCHEMA);
+
+        Dataset<Row> expectedDatasetToUpdate = spark.createDataFrame(Arrays.asList(
+                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "1", "20240709", "some-default-value"),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "2", "20240709", "some-default-value")
+        ), TEST_DATA_SCHEMA.add(nullableField));
+
+        mockSourceReferenceCallWithNewNonNullableFieldWithDefaultValue();
+
+        underTest.createBackfilledArchiveData(sourceReference, OUTPUT_BASE_PATH, archiveDataset);
+
+        verify(dataStorageService).overwriteParquet(outputPathCaptor.capture(), datasetCaptor.capture());
+
+        Dataset<Row> capturedRecords = datasetCaptor.getValue();
+        assertThat(capturedRecords.collectAsList(), containsInAnyOrder(expectedDatasetToUpdate.collectAsList().toArray()));
+
+        assertThat(outputPathCaptor.getValue(), is(equalTo(createPath())));
+    }
+
+    @Test
     void shouldFailWhenArchiveDataIsEmpty() {
         Dataset<Row> emptyArchiveDataset = spark.createDataFrame(new ArrayList<>(), TEST_DATA_SCHEMA);
 
@@ -119,6 +149,12 @@ class ArchiveBackfillProcessorTest extends SparkTestBase {
 
     private void mockSourceReferenceCallWithNewNullableField() {
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS.add(nullableField));
+        when(sourceReference.getSource()).thenReturn(SOURCE);
+        when(sourceReference.getTable()).thenReturn(TABLE);
+    }
+
+    private void mockSourceReferenceCallWithNewNonNullableFieldWithDefaultValue() {
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS.add(nonNullableFieldWithDefault));
         when(sourceReference.getSource()).thenReturn(SOURCE);
         when(sourceReference.getTable()).thenReturn(TABLE);
     }

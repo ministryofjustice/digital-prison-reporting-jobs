@@ -16,6 +16,7 @@ public class CommonDataFields {
     public static final String VALIDATION_TYPE_KEY = "validationType";
     public static final String SENSITIVE_COLUMN_LABEL_KEY = "sensitive";
     public static final String CHECKPOINT_COL = "checkpoint_col";
+    public static final String DEFAULT_VALUE_KEY = "default";
 
     /**
      * The possible entries in the operation column
