@@ -9,6 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.dms.DmsClient;
+import uk.gov.justice.digital.client.s3.S3ConfigReaderClient;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.ConfigServiceException;
 
 import java.util.Collections;
@@ -26,15 +28,21 @@ class ConfigServiceTest {
     private static final String TEST_CONFIG_KEY = "some-config-key";
 
     @Mock
+    private JobArguments mockJobArguments;
+    @Mock
     private DmsClient mockDmsClient;
+    @Mock
+    private S3ConfigReaderClient mockS3ConfigClient;
 
     private ConfigService underTest;
 
     @BeforeEach
     void setup() {
-        reset(mockDmsClient);
+        reset(mockJobArguments, mockDmsClient, mockS3ConfigClient);
 
-        underTest = new ConfigService(mockDmsClient);
+        when(mockJobArguments.readConfigFromS3()).thenReturn(false);
+
+        underTest = new ConfigService(mockJobArguments, mockDmsClient, mockS3ConfigClient);
     }
 
     @Test
@@ -56,6 +64,31 @@ class ConfigServiceTest {
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.copyOf(Collections.emptySet());
 
         when(mockDmsClient.getReplicationTaskTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
+
+        assertThrows(ConfigServiceException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
+    }
+
+    @Test
+    void shouldReturnConfiguredTablesFromS3WhenUseConfigFromS3IsEnabled() {
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema_1", "table_1"),
+                ImmutablePair.of("schema_2", "table_2")
+        );
+
+        when(mockJobArguments.readConfigFromS3()).thenReturn(true);
+        when(mockS3ConfigClient.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(configuredTables));
+
+        Set<ImmutablePair<String, String>> result = underTest.getConfiguredTables(TEST_CONFIG_KEY);
+
+        assertThat(result, containsInAnyOrder(configuredTables.toArray()));
+    }
+
+    @Test
+    void shouldFailWhenThereAreNoConfiguredTablesInS3WhenUseConfigFromS3IsEnabled() {
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.copyOf(Collections.emptySet());
+
+        when(mockJobArguments.readConfigFromS3()).thenReturn(true);
+        when(mockS3ConfigClient.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(configuredTables);
 
         assertThrows(ConfigServiceException.class, () -> underTest.getConfiguredTables(TEST_CONFIG_KEY));
     }
