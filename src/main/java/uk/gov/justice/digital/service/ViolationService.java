@@ -163,7 +163,7 @@ public class ViolationService {
      * Handle violations.
      * All violations must ultimately be written through this method, even if indirectly, so that
      * violation metrics are reported correctly.
-     * The error column already present on the DataFrame.
+     * The error column detailing the violation must already be present on the DataFrame.
      */
     public void handleViolation(
             SparkSession spark,
