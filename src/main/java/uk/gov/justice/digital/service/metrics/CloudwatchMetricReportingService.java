@@ -15,10 +15,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
-import static uk.gov.justice.digital.config.JobArguments.REPORT_RESULTS_TO_CLOUDWATCH;
+import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUDWATCH;
 
 @Singleton
-@Requires(property = REPORT_RESULTS_TO_CLOUDWATCH)
+@Requires(property = REPORT_METRICS_TO_CLOUDWATCH)
 public class CloudwatchMetricReportingService implements MetricReportingService {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudwatchMetricReportingService.class);

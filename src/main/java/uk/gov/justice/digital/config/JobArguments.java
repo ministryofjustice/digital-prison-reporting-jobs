@@ -187,7 +187,7 @@ public class JobArguments {
     static final String TEST_DATA_RUN_DURATION_MILLIS = "dpr.test.data.run.duration.millis";
     static final long DEFAULT_TEST_DATA_RUN_DURATION_MILLIS = 3600000; // 1 hour
     public static final String ADJUST_SPARK_MEMORY = "dpr.adjust.spark.memory";
-    public static final String REPORT_RESULTS_TO_CLOUDWATCH = "dpr.report.results.to.cloudwatch";
+    public static final String REPORT_METRICS_TO_CLOUDWATCH = "dpr.report.metrics.to.cloudwatch";
     static final String CLOUDWATCH_METRICS_NAMESPACE = "dpr.cloudwatch.metrics.namespace";
     private final Map<String, String> config;
 
