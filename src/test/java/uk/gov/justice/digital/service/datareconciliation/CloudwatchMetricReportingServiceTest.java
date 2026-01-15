@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
+import uk.gov.justice.digital.service.metrics.CloudwatchMetricReportingService;
 
 import java.util.Collection;
 import java.util.List;

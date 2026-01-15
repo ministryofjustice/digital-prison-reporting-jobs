@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.datareconciliation;
+package uk.gov.justice.digital.service.metrics;
 
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;

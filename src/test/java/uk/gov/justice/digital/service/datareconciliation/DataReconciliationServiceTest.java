@@ -17,6 +17,7 @@ import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotal
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCounts;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
 import java.util.Arrays;
 import java.util.List;

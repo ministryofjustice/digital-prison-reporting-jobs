@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.datareconciliation;
+package uk.gov.justice.digital.service.metrics;
 
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Singleton;
