@@ -15,9 +15,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
+import static uk.gov.justice.digital.config.JobArguments.REPORT_RESULTS_TO_CLOUDWATCH;
 
 @Singleton
-@Requires(property = "dpr.reconciliation.report.results.to.cloudwatch")
+@Requires(property = REPORT_RESULTS_TO_CLOUDWATCH)
 public class CloudwatchMetricReportingService implements MetricReportingService {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudwatchMetricReportingService.class);
@@ -38,8 +39,8 @@ public class CloudwatchMetricReportingService implements MetricReportingService 
     }
 
     @Override
-    public void reportMetrics(DataReconciliationResults dataReconciliationResults) {
-        String metricNamespace = jobArguments.getReconciliationCloudwatchMetricsNamespace();
+    public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
+        String metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         String inputDomain = jobArguments.getConfigKey();
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
         logger.debug("Reporting {} metric to namespace {} for domain {} with value {}",

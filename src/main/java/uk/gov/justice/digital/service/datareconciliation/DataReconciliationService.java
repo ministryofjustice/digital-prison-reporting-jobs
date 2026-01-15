@@ -82,7 +82,7 @@ public class DataReconciliationService {
         }).toList();
 
         DataReconciliationResults dataReconciliationResults = new DataReconciliationResults(results);
-        metricReportingService.reportMetrics(dataReconciliationResults);
+        metricReportingService.reportDataReconciliationResults(dataReconciliationResults);
         return dataReconciliationResults;
     }
 }

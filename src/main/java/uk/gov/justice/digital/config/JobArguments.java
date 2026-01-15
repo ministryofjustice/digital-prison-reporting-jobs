@@ -163,8 +163,8 @@ public class JobArguments {
     static final String RECONCILIATION_CHECKS_TO_RUN = "dpr.reconciliation.checks.to.run";
     static final Set<ReconciliationCheck> RECONCILIATION_CHECKS_TO_RUN_DEFAULT = new HashSet<>(Arrays.asList(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
     static final String RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS = "dpr.reconciliation.fail.job.if.checks.fail";
-    static final String RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH = "dpr.reconciliation.report.results.to.cloudwatch";
-    static final String RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE = "dpr.reconciliation.cloudwatch.metrics.namespace";
+    public static final String REPORT_RESULTS_TO_CLOUDWATCH = "dpr.report.results.to.cloudwatch";
+    static final String CLOUDWATCH_METRICS_NAMESPACE = "dpr.cloudwatch.metrics.namespace";
     static final String RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE = "dpr.reconciliation.changedatacounts.tolerance.relative.percentage";
     static final double RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE_DEFAULT = 0.0;
     static final String RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_ABSOLUTE = "dpr.reconciliation.changedatacounts.tolerance.absolute";
@@ -584,12 +584,8 @@ public class JobArguments {
         return getArgument(RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS, false);
     }
 
-    public boolean shouldReportReconciliationResultsToCloudwatch() {
-        return getArgument(RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH, false);
-    }
-
-    public String getReconciliationCloudwatchMetricsNamespace() {
-        return getArgument(RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE);
+    public String getCloudwatchMetricsNamespace() {
+        return getArgument(CLOUDWATCH_METRICS_NAMESPACE);
     }
 
     public double getReconciliationChangeDataCountsToleranceRelativePercentage() {

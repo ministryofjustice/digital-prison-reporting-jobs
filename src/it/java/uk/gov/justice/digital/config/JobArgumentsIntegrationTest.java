@@ -98,7 +98,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, "10000" },
             { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, "my-connection" },
             { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
-            { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, "SomeNamespace" },
+            { JobArguments.CLOUDWATCH_METRICS_NAMESPACE, "SomeNamespace" },
             { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.02" },
             { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, "12" },
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.01" },
@@ -169,7 +169,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE, Long.toString(validArguments.getOperationalDataStoreJdbcBatchSize()) },
                 { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, validArguments.getReconciliationDataSourceGlueConnectionName() },
                 { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, validArguments.getReconciliationDataSourceSourceSchemaName() },
-                { JobArguments.RECONCILIATION_CLOUDWATCH_METRICS_NAMESPACE, validArguments.getReconciliationCloudwatchMetricsNamespace() },
+                { JobArguments.CLOUDWATCH_METRICS_NAMESPACE, validArguments.getCloudwatchMetricsNamespace() },
                 { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationCurrentStateCountsToleranceRelativePercentage()) },
                 { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationCurrentStateCountsToleranceAbsolute()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()) },
@@ -785,23 +785,6 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.RECONCILIATION_FAIL_JOB_IF_CHECKS_FAILS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.shouldReconciliationFailJobIfChecksFail());
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
-    void shouldReportReconciliationResultsToCloudwatchShouldParseInput(String input, boolean expected) {
-        HashMap<String, String> args = new HashMap<>();
-        args.put(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH, input);
-        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals(expected, jobArguments.shouldReportReconciliationResultsToCloudwatch());
-    }
-
-    @Test
-    void shouldReportReconciliationResultsToCloudwatchShouldDefaultToFalseWhenMissing() {
-        HashMap<String, String> args = cloneTestArguments();
-        args.remove(JobArguments.RECONCILIATION_REPORT_RESULTS_TO_CLOUDWATCH);
-        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertFalse(jobArguments.shouldReportReconciliationResultsToCloudwatch());
     }
 
     @Test

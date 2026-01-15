@@ -16,9 +16,9 @@ class DisabledMetricReportingServiceTest {
     private DataReconciliationResults dataReconciliationResults;
 
     @Test
-    void reportMetricsShouldDoNothing() {
+    void reportDataReconciliationResultsShouldDoNothing() {
         DisabledMetricReportingService underTest = new DisabledMetricReportingService();
-        underTest.reportMetrics(dataReconciliationResults);
+        underTest.reportDataReconciliationResults(dataReconciliationResults);
 
         verifyNoInteractions(dataReconciliationResults);
     }

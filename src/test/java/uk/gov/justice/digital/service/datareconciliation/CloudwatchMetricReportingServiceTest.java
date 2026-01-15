@@ -46,13 +46,13 @@ class CloudwatchMetricReportingServiceTest {
     }
 
     @Test
-    void reportMetricsShouldPutMetrics() {
+    void reportDataReconciliationResultsShouldPutMetrics() {
 
         when(jobArguments.getConfigKey()).thenReturn(DOMAIN);
-        when(jobArguments.getReconciliationCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
+        when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(dataReconciliationResults.numReconciliationChecksFailing()).thenReturn(2L);
 
-        underTest.reportMetrics(dataReconciliationResults);
+        underTest.reportDataReconciliationResults(dataReconciliationResults);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 

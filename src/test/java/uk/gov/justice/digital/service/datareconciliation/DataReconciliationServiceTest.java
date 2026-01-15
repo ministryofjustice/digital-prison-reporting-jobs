@@ -249,6 +249,6 @@ class DataReconciliationServiceTest {
 
         DataReconciliationResults results = ((DataReconciliationResults) underTest.reconcileData(sparkSession));
 
-        verify(metricReportingService, times(1)).reportMetrics(results);
+        verify(metricReportingService, times(1)).reportDataReconciliationResults(results);
     }
 }
