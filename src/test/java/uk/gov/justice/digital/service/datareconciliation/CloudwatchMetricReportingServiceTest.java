@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
+import uk.gov.justice.digital.service.metrics.CloudwatchMetricReportingService;
 
 import java.util.Collection;
 import java.util.List;
@@ -24,7 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ReconciliationMetricReportingServiceImplTest {
+class CloudwatchMetricReportingServiceTest {
 
     private static final String DOMAIN = "some domain";
     private static final String NAMESPACE = "SomeNamespace";
@@ -37,21 +38,21 @@ class ReconciliationMetricReportingServiceImplTest {
     @Captor
     private ArgumentCaptor<Collection<MetricDatum>> metricDatumCaptor;
 
-    private ReconciliationMetricReportingServiceImpl underTest;
+    private CloudwatchMetricReportingService underTest;
 
     @BeforeEach
     void setUp() {
-        underTest = new ReconciliationMetricReportingServiceImpl(jobArguments, cloudwatchClient);
+        underTest = new CloudwatchMetricReportingService(jobArguments, cloudwatchClient);
     }
 
     @Test
-    void reportMetricsShouldPutMetrics() {
+    void reportDataReconciliationResultsShouldPutMetrics() {
 
         when(jobArguments.getConfigKey()).thenReturn(DOMAIN);
-        when(jobArguments.getReconciliationCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
+        when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(dataReconciliationResults.numReconciliationChecksFailing()).thenReturn(2L);
 
-        underTest.reportMetrics(dataReconciliationResults);
+        underTest.reportDataReconciliationResults(dataReconciliationResults);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 

@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.service.datareconciliation;
+package uk.gov.justice.digital.service.metrics;
 
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
@@ -15,12 +15,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
+import static uk.gov.justice.digital.config.JobArguments.REPORT_RESULTS_TO_CLOUDWATCH;
 
 @Singleton
-@Requires(property = "dpr.reconciliation.report.results.to.cloudwatch")
-public class ReconciliationMetricReportingServiceImpl implements ReconciliationMetricReportingService {
+@Requires(property = REPORT_RESULTS_TO_CLOUDWATCH)
+public class CloudwatchMetricReportingService implements MetricReportingService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ReconciliationMetricReportingServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(CloudwatchMetricReportingService.class);
 
     private static final String FAILED_RECONCILIATION_CHECKS_METRIC_NAME = "FailedReconciliationChecks";
 
@@ -29,7 +30,7 @@ public class ReconciliationMetricReportingServiceImpl implements ReconciliationM
 
 
     @Inject
-    public ReconciliationMetricReportingServiceImpl(
+    public CloudwatchMetricReportingService(
             JobArguments jobArguments,
             CloudwatchClient cloudwatchClient
     ) {
@@ -38,8 +39,8 @@ public class ReconciliationMetricReportingServiceImpl implements ReconciliationM
     }
 
     @Override
-    public void reportMetrics(DataReconciliationResults dataReconciliationResults) {
-        String metricNamespace = jobArguments.getReconciliationCloudwatchMetricsNamespace();
+    public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
+        String metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         String inputDomain = jobArguments.getConfigKey();
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
         logger.debug("Reporting {} metric to namespace {} for domain {} with value {}",
