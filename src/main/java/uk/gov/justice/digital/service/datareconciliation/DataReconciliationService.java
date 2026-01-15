@@ -17,7 +17,6 @@ import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationChe
 
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 
 /**
@@ -33,7 +32,7 @@ public class DataReconciliationService {
     private final SourceReferenceService sourceReferenceService;
     private final CurrentStateCountService currentStateCountService;
     private final ChangeDataCountService changeDataCountService;
-    private final ReconciliationMetricReportingService metricReportingService;
+    private final MetricReportingService metricReportingService;
     private final PrimaryKeyReconciliationService primaryKeyReconciliationService;
 
     @Inject
@@ -43,7 +42,7 @@ public class DataReconciliationService {
             SourceReferenceService sourceReferenceService,
             CurrentStateCountService currentStateCountService,
             ChangeDataCountService changeDataCountService,
-            ReconciliationMetricReportingService metricReportingService,
+            MetricReportingService metricReportingService,
             PrimaryKeyReconciliationService primaryKeyReconciliationService
     ) {
         this.jobArguments = jobArguments;

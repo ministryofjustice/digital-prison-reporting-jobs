@@ -18,9 +18,9 @@ import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 
 @Singleton
 @Requires(property = "dpr.reconciliation.report.results.to.cloudwatch")
-public class ReconciliationMetricReportingServiceImpl implements ReconciliationMetricReportingService {
+public class CloudwatchMetricReportingService implements MetricReportingService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ReconciliationMetricReportingServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(CloudwatchMetricReportingService.class);
 
     private static final String FAILED_RECONCILIATION_CHECKS_METRIC_NAME = "FailedReconciliationChecks";
 
@@ -29,7 +29,7 @@ public class ReconciliationMetricReportingServiceImpl implements ReconciliationM
 
 
     @Inject
-    public ReconciliationMetricReportingServiceImpl(
+    public CloudwatchMetricReportingService(
             JobArguments jobArguments,
             CloudwatchClient cloudwatchClient
     ) {

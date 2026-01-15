@@ -62,7 +62,7 @@ class DataReconciliationServiceTest {
     @Mock
     private PrimaryKeyReconciliationCounts primaryKeyResult;
     @Mock
-    private ReconciliationMetricReportingService metricReportingService;
+    private MetricReportingService metricReportingService;
 
     @InjectMocks
     private DataReconciliationService underTest;

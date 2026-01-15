@@ -24,7 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ReconciliationMetricReportingServiceImplTest {
+class CloudwatchMetricReportingServiceTest {
 
     private static final String DOMAIN = "some domain";
     private static final String NAMESPACE = "SomeNamespace";
@@ -37,11 +37,11 @@ class ReconciliationMetricReportingServiceImplTest {
     @Captor
     private ArgumentCaptor<Collection<MetricDatum>> metricDatumCaptor;
 
-    private ReconciliationMetricReportingServiceImpl underTest;
+    private CloudwatchMetricReportingService underTest;
 
     @BeforeEach
     void setUp() {
-        underTest = new ReconciliationMetricReportingServiceImpl(jobArguments, cloudwatchClient);
+        underTest = new CloudwatchMetricReportingService(jobArguments, cloudwatchClient);
     }
 
     @Test

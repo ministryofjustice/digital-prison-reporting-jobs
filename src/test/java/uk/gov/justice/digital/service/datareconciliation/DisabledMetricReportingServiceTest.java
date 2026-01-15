@@ -9,14 +9,14 @@ import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliatio
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
-class DisabledReconciliationMetricReportingServiceTest {
+class DisabledMetricReportingServiceTest {
 
     @Mock
     private DataReconciliationResults dataReconciliationResults;
 
     @Test
     void reportMetricsShouldDoNothing() {
-        DisabledReconciliationMetricReportingService underTest = new DisabledReconciliationMetricReportingService();
+        DisabledMetricReportingService underTest = new DisabledMetricReportingService();
         underTest.reportMetrics(dataReconciliationResults);
 
         verifyNoInteractions(dataReconciliationResults);

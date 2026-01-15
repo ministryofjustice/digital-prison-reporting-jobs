@@ -6,7 +6,7 @@ import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliatio
 
 @Singleton
 @Requires(missingProperty = "dpr.reconciliation.report.results.to.cloudwatch")
-public class DisabledReconciliationMetricReportingService implements ReconciliationMetricReportingService {
+public class DisabledMetricReportingService implements MetricReportingService {
     @Override
     public void reportMetrics(DataReconciliationResults dataReconciliationResults) {
         // No op
