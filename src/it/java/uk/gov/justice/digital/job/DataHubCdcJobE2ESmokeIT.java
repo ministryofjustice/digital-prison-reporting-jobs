@@ -22,6 +22,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
@@ -209,7 +210,8 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         DataStorageService storageService = new DataStorageService(arguments);
-        ViolationService violationService = new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
+        ViolationService violationService =
+                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
         ValidationService validationService = new ValidationService(violationService);
         CuratedZoneCDC curatedZone = new CuratedZoneCDC(arguments, violationService, storageService);
         StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
