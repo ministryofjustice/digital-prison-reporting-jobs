@@ -45,6 +45,7 @@ class JobArgumentsIntegrationTest {
 
     private static final Map<String, String> testArguments = Stream.of(new String[][] {
             { JobArguments.CONFIG_S3_BUCKET, "test-config-bucket" },
+            { JobArguments.READ_CONFIG_FROM_S3, "false" },
             { JobArguments.CONFIG_KEY, "test-config" },
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
@@ -116,6 +117,7 @@ class JobArgumentsIntegrationTest {
     void shouldReturnCorrectValueForEachSupportedArgument() {
         Map<String, String> actualArguments = Stream.of(new Object[][] {
                 { JobArguments.CONFIG_S3_BUCKET, validArguments.getConfigS3Bucket() },
+                { JobArguments.READ_CONFIG_FROM_S3, validArguments.readConfigFromS3() },
                 { JobArguments.CONFIG_KEY, validArguments.getConfigKey() },
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
@@ -181,6 +183,14 @@ class JobArgumentsIntegrationTest {
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
+    }
+
+    @Test
+    void readConfigFromS3ShouldDefaultToFalseWhenNotConfigured() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.READ_CONFIG_FROM_S3);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.readConfigFromS3());
     }
 
     @Test

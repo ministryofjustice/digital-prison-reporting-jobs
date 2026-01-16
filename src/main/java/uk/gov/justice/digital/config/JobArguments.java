@@ -40,6 +40,7 @@ public class JobArguments {
 
     public static final String JOBS_S3_BUCKET = "dpr.jobs.s3.bucket";
     public static final String CONFIG_S3_BUCKET = "dpr.config.s3.bucket";
+    public static final String READ_CONFIG_FROM_S3 = "dpr.read.config.from.s3";
     public static final String CONFIG_KEY = "dpr.config.key";
     public static final String AWS_DYNAMODB_ENDPOINT_URL = "dpr.aws.dynamodb.endpointUrl";
     public static final String AWS_REGION = "dpr.aws.region";
@@ -350,6 +351,10 @@ public class JobArguments {
 
     public String getConfigS3Bucket() {
         return getArgument(CONFIG_S3_BUCKET);
+    }
+
+    public boolean readConfigFromS3() {
+        return getArgument(READ_CONFIG_FROM_S3, false);
     }
 
     public String getConfigKey() {
