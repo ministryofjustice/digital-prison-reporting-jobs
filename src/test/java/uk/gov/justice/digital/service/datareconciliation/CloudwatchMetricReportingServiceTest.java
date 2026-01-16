@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 import uk.gov.justice.digital.service.metrics.CloudwatchMetricReportingService;
 
@@ -20,6 +21,7 @@ import java.util.List;
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,13 +30,14 @@ import static org.mockito.Mockito.when;
 class CloudwatchMetricReportingServiceTest {
 
     private static final String DOMAIN = "some domain";
+    private static final String JOB = "some job";
     private static final String NAMESPACE = "SomeNamespace";
     @Mock
     private JobArguments jobArguments;
     @Mock
-    private CloudwatchClient cloudwatchClient;
+    private JobProperties jobProperties;
     @Mock
-    private DataReconciliationResults dataReconciliationResults;
+    private CloudwatchClient cloudwatchClient;
     @Captor
     private ArgumentCaptor<Collection<MetricDatum>> metricDatumCaptor;
 
@@ -42,11 +45,38 @@ class CloudwatchMetricReportingServiceTest {
 
     @BeforeEach
     void setUp() {
-        underTest = new CloudwatchMetricReportingService(jobArguments, cloudwatchClient);
+        underTest = new CloudwatchMetricReportingService(jobArguments, jobProperties, cloudwatchClient);
+    }
+
+    @Test
+    void reportViolationCountShouldPutMetrics() {
+
+        when(jobProperties.getSparkJobName()).thenReturn(JOB);
+        when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
+
+        underTest.reportViolationCount(10L);
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+
+        Collection<MetricDatum> sentMetrics = metricDatumCaptor.getValue();
+
+        assertEquals(1, sentMetrics.size());
+        MetricDatum datum = sentMetrics.iterator().next();
+
+        assertEquals("GlueJobViolationCount", datum.getMetricName());
+        assertEquals(10L, datum.getValue());
+        assertEquals(Count.toString(), datum.getUnit());
+        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals(1, dimensions.size());
+        Dimension dimension = dimensions.get(0);
+        assertEquals("JobName", dimension.getName());
+        assertEquals(JOB, dimension.getValue());
     }
 
     @Test
     void reportDataReconciliationResultsShouldPutMetrics() {
+
+        DataReconciliationResults dataReconciliationResults = mock(DataReconciliationResults.class);
 
         when(jobArguments.getConfigKey()).thenReturn(DOMAIN);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);

@@ -13,4 +13,9 @@ public class DisabledMetricReportingService implements MetricReportingService {
     public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         // No op
     }
+
+    @Override
+    public void reportViolationCount(long count) {
+        // No op
+    }
 }

@@ -15,6 +15,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
 import javax.inject.Singleton;
 import java.io.IOException;
@@ -44,6 +45,7 @@ public class ViolationService {
     private final DataStorageService storageService;
     private final S3DataProvider dataProvider;
     private final TableDiscoveryService tableDiscoveryService;
+    private final MetricReportingService metricReportingService;
 
     /**
      * Allows us to record where a violation occurred.
@@ -76,12 +78,14 @@ public class ViolationService {
             JobArguments arguments,
             DataStorageService storageService,
             S3DataProvider dataProvider,
-            TableDiscoveryService tableDiscoveryService
+            TableDiscoveryService tableDiscoveryService,
+            MetricReportingService metricReportingService
     ) {
         this.arguments = arguments;
         this.storageService = storageService;
         this.dataProvider = dataProvider;
         this.tableDiscoveryService = tableDiscoveryService;
+        this.metricReportingService = metricReportingService;
     }
 
     public void handleRetriesExhausted(
@@ -156,7 +160,10 @@ public class ViolationService {
     }
 
     /**
-     * Handle violations with error column already present on the DataFrame.
+     * Handle violations.
+     * All violations must ultimately be written through this method, even if indirectly, so that
+     * violation metrics are reported correctly.
+     * The error column detailing the violation must already be present on the DataFrame.
      */
     public void handleViolation(
             SparkSession spark,
@@ -166,7 +173,7 @@ public class ViolationService {
             ZoneName zoneName
     ) throws DataStorageRetriesExhaustedException {
         val destinationPath = fullTablePath(source, table, zoneName);
-        logger.warn("Violation - for source {}, table {}", source, table);
+        logger.warn("Violation - for source {}, table {}, zone: {}", source, table, zoneName);
         logger.info("Appending records to deltalake table: {}", destinationPath);
         Column[] columns = Arrays
                 .stream(invalidRecords.columns())
@@ -182,6 +189,8 @@ public class ViolationService {
 
         logger.info("Append completed successfully");
         storageService.updateDeltaManifestForTable(spark, destinationPath);
+        long violationsCount = toWrite.count();
+        metricReportingService.reportViolationCount(violationsCount);
     }
 
     private String fullTablePath(String source, String table, ZoneName zone) {
