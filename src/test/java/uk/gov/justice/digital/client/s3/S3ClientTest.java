@@ -32,7 +32,6 @@ import java.util.Date;
 import java.util.Collections;
 import java.util.Set;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -199,6 +198,7 @@ class S3ClientTest {
         assertThrows(RuntimeException.class, () -> underTest.deleteObjects(keysToDelete, SOURCE_BUCKET));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void getObjectsOlderThanShouldReturnListOfObjectsMatchingAllowedExtensionsWithinGivenFolderPrefix() {
         ImmutableSet<ImmutablePair<String, String>> objectKeys = ImmutableSet.of(
@@ -271,6 +271,7 @@ class S3ClientTest {
         assertThat(returnedObjectKeys, containsInAnyOrder(expectedObjectKeys.toArray()));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void getObjectsOlderThanShouldReturnListOfAllObjectsWhenGivenWildCardExtension() {
         ImmutableSet<ImmutablePair<String, String>> objectKeys = ImmutableSet.of(
