@@ -2,6 +2,8 @@ package uk.gov.justice.digital.service.datareconciliation;
 
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,8 @@ class CloudwatchMetricReportingServiceTest {
     private CloudwatchClient cloudwatchClient;
     @Captor
     private ArgumentCaptor<Collection<MetricDatum>> metricDatumCaptor;
+    @Mock
+    private Dataset<Row> mockDf;
 
     private CloudwatchMetricReportingService underTest;
 
@@ -99,5 +103,83 @@ class CloudwatchMetricReportingServiceTest {
         Dimension dimension = dimensions.get(0);
         assertEquals("InputDomain", dimension.getName());
         assertEquals(DOMAIN, dimension.getValue());
+    }
+
+    @Test
+    void reportStreamingThroughputInputShouldPutMetrics() {
+
+        when(jobProperties.getSparkJobName()).thenReturn(JOB);
+        when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
+        when(mockDf.count()).thenReturn(100L);
+
+        underTest.reportStreamingThroughputInput(mockDf);
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+
+        Collection<MetricDatum> sentMetrics = metricDatumCaptor.getValue();
+
+        assertEquals(1, sentMetrics.size());
+        MetricDatum datum = sentMetrics.iterator().next();
+
+        assertEquals("GlueJobStreamingThroughputInputCount", datum.getMetricName());
+        assertEquals(100L, datum.getValue());
+        assertEquals(Count.toString(), datum.getUnit());
+        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals(1, dimensions.size());
+        Dimension dimension = dimensions.get(0);
+        assertEquals("JobName", dimension.getName());
+        assertEquals(JOB, dimension.getValue());
+    }
+
+    @Test
+    void reportStreamingThroughputWrittenToStructuredShouldPutMetrics() {
+
+        when(jobProperties.getSparkJobName()).thenReturn(JOB);
+        when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
+        when(mockDf.count()).thenReturn(100L);
+
+        underTest.reportStreamingThroughputWrittenToStructured(mockDf);
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+
+        Collection<MetricDatum> sentMetrics = metricDatumCaptor.getValue();
+
+        assertEquals(1, sentMetrics.size());
+        MetricDatum datum = sentMetrics.iterator().next();
+
+        assertEquals("GlueJobStreamingThroughputStructuredCount", datum.getMetricName());
+        assertEquals(100L, datum.getValue());
+        assertEquals(Count.toString(), datum.getUnit());
+        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals(1, dimensions.size());
+        Dimension dimension = dimensions.get(0);
+        assertEquals("JobName", dimension.getName());
+        assertEquals(JOB, dimension.getValue());
+    }
+
+    @Test
+    void reportStreamingThroughputWrittenToCuratedShouldPutMetrics() {
+
+        when(jobProperties.getSparkJobName()).thenReturn(JOB);
+        when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
+        when(mockDf.count()).thenReturn(100L);
+
+        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+
+        Collection<MetricDatum> sentMetrics = metricDatumCaptor.getValue();
+
+        assertEquals(1, sentMetrics.size());
+        MetricDatum datum = sentMetrics.iterator().next();
+
+        assertEquals("GlueJobStreamingThroughputCuratedCount", datum.getMetricName());
+        assertEquals(100L, datum.getValue());
+        assertEquals(Count.toString(), datum.getUnit());
+        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals(1, dimensions.size());
+        Dimension dimension = dimensions.get(0);
+        assertEquals("JobName", dimension.getName());
+        assertEquals(JOB, dimension.getValue());
     }
 }

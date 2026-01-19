@@ -210,8 +210,9 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         DataStorageService storageService = new DataStorageService(arguments);
+        DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
         ViolationService violationService =
-                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
+                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, disabledMetricReportingService);
         ValidationService validationService = new ValidationService(violationService);
         CuratedZoneCDC curatedZone = new CuratedZoneCDC(arguments, violationService, storageService);
         StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
@@ -228,7 +229,8 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
                 structuredZone,
                 curatedZone,
                 dataProvider,
-                operationalDataStoreService
+                operationalDataStoreService,
+                disabledMetricReportingService
         );
         TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(
                 arguments, dataProvider, batchProcessor, sourceReferenceService, violationService
