@@ -46,7 +46,6 @@ class StructuredZoneCDCTest extends SparkTestBase {
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSource()).thenReturn("source");
         when(sourceReference.getTable()).thenReturn("table");
-        when(df.count()).thenReturn(1L);
         when(arguments.getStructuredS3Path()).thenReturn(structuredRootPath);
         underTest = new StructuredZoneCDC(arguments, violationService, storage);
     }
