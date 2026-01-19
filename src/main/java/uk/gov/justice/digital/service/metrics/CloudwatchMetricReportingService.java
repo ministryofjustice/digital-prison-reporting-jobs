@@ -107,14 +107,15 @@ public class CloudwatchMetricReportingService implements MetricReportingService 
         GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED("GlueJobStreamingThroughputStructuredCount"),
         GLUE_JOB_STREAMING_THROUGHPUT_CURATED("GlueJobStreamingThroughputCuratedCount");
 
-        private final String metricName;
+        private final String value;
 
-        MetricName(String metricName) {
-            this.metricName = metricName;
+        MetricName(String value) {
+            this.value = value;
         }
 
+        @Override
         public String toString() {
-            return metricName;
+            return value;
         }
     }
 
@@ -125,14 +126,15 @@ public class CloudwatchMetricReportingService implements MetricReportingService 
         INPUT_DOMAIN("InputDomain"),
         JOB_NAME("JobName");
 
-        private final String dimensionName;
+        private final String value;
 
-        DimensionName(String dimensionName) {
-            this.dimensionName = dimensionName;
+        DimensionName(String value) {
+            this.value = value;
         }
 
+        @Override
         public String toString() {
-            return dimensionName;
+            return value;
         }
     }
 }
