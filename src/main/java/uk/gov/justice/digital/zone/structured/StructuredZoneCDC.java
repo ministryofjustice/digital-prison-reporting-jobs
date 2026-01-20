@@ -46,7 +46,7 @@ public class StructuredZoneCDC implements Zone {
         logger.debug("Processing records for structured {}/{} {}", sourceName, tableName, structuredTablePath);
 
         try {
-            logger.debug("Merging {} records to deltalake table: {}", dataFrame.count(), structuredTablePath);
+            logger.debug("Merging records to deltalake table: {}", structuredTablePath);
             storage.mergeRecords(spark, structuredTablePath, dataFrame, sourceReference.getPrimaryKey());
             logger.debug("Merge completed successfully to table: {}", structuredTablePath);
             storage.updateDeltaManifestForTable(spark, structuredTablePath);

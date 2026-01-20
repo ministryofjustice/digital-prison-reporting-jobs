@@ -46,7 +46,7 @@ public class CuratedZoneCDC implements Zone {
         logger.debug("Processing records for curated {}/{} {}", sourceName, tableName, curatedTablePath);
 
         try {
-            logger.debug("Merging {} records to deltalake table: {}", dataFrame.count(), curatedTablePath);
+            logger.debug("Merging records to deltalake table: {}", curatedTablePath);
             storage.mergeRecords(spark, curatedTablePath, dataFrame, sourceReference.getPrimaryKey());
             logger.debug("Merge completed successfully to table: {}", curatedTablePath);
             storage.updateDeltaManifestForTable(spark, curatedTablePath);

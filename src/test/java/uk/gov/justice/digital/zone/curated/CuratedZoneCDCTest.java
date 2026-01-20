@@ -46,7 +46,6 @@ class CuratedZoneCDCTest extends SparkTestBase {
         when(sourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(sourceReference.getSource()).thenReturn("source");
         when(sourceReference.getTable()).thenReturn("table");
-        when(df.count()).thenReturn(1L);
         when(arguments.getCuratedS3Path()).thenReturn(curatedRootPath);
         underTest = new CuratedZoneCDC(arguments, violationService, storage);
     }

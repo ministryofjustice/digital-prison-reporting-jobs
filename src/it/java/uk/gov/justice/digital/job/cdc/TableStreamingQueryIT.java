@@ -501,12 +501,13 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     private void givenTableStreamingQuery() throws NoSchemaNoDataException {
         DataStorageService storageService = new DataStorageService(arguments);
+        DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
         ViolationService violationService = new ViolationService(
                 arguments,
                 storageService,
                 dataProvider,
                 tableDiscoveryService,
-                new DisabledMetricReportingService()
+                disabledMetricReportingService
         );
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
@@ -521,7 +522,8 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 new StructuredZoneCDC(arguments, violationService, storageService),
                 new CuratedZoneCDC(arguments, violationService, storageService),
                 dataProvider,
-                operationalDataStoreService
+                operationalDataStoreService,
+                disabledMetricReportingService
         );
         TableStreamingQueryProvider streamingQueryProvider = new TableStreamingQueryProvider(
                 arguments,

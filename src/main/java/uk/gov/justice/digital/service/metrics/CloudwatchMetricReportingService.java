@@ -5,6 +5,8 @@ import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
@@ -24,13 +26,6 @@ public class CloudwatchMetricReportingService implements MetricReportingService 
 
     private static final Logger logger = LoggerFactory.getLogger(CloudwatchMetricReportingService.class);
 
-    // Metric names
-    private static final String FAILED_RECONCILIATION_CHECKS_METRIC_NAME = "FailedReconciliationChecks";
-    private static final String GLUE_JOB_VIOLATION_COUNT_METRIC_NAME = "GlueJobViolationCount";
-    // Dimension names
-    private static final String INPUT_DOMAIN_DIMENSION = "InputDomain";
-    private static final String JOB_NAME_DIMENSION = "JobName";
-
     private final JobArguments jobArguments;
     private final JobProperties jobProperties;
     private final CloudwatchClient cloudwatchClient;
@@ -49,49 +44,97 @@ public class CloudwatchMetricReportingService implements MetricReportingService 
 
     @Override
     public void reportViolationCount(long count) {
-        String metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         String jobName = jobProperties.getSparkJobName();
-        logger.debug("Reporting {} metric to namespace {} with value {}",
-                GLUE_JOB_VIOLATION_COUNT_METRIC_NAME, metricNamespace, count);
-
-        Set<MetricDatum> metrics = new HashSet<>();
-        metrics.add(
-                new MetricDatum()
-                        .withMetricName(GLUE_JOB_VIOLATION_COUNT_METRIC_NAME)
-                        .withUnit(Count)
-                        .withDimensions(
-                                new Dimension()
-                                        .withName(JOB_NAME_DIMENSION)
-                                        .withValue(jobName)
-                        )
-                        .withValue((double)count)
-        );
-        cloudwatchClient.putMetrics(metricNamespace, metrics);
-        logger.debug("Finished reporting {} metric to namespace {} with value {}",
-                GLUE_JOB_VIOLATION_COUNT_METRIC_NAME, metricNamespace, count);
+        putCountWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, count);
     }
 
     @Override
     public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
-        String metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         String inputDomain = jobArguments.getConfigKey();
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
-        logger.debug("Reporting {} metric to namespace {} for domain {} with value {}",
-                FAILED_RECONCILIATION_CHECKS_METRIC_NAME, metricNamespace, inputDomain, numChecksFailing);
+        putCountWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, numChecksFailing);
+    }
+
+    @Override
+    public void reportStreamingThroughputInput(Dataset<Row> inputDf) {
+        String jobName = jobProperties.getSparkJobName();
+        long count = inputDf.count();
+        putCountWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, count);
+    }
+
+    @Override
+    public void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
+        String jobName = jobProperties.getSparkJobName();
+        long count = structuredDf.count();
+        putCountWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, count);
+    }
+
+    @Override
+    public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
+        String jobName = jobProperties.getSparkJobName();
+        long count = curatedDf.count();
+        putCountWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, count);
+    }
+
+    private void putCountWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, double count) {
+        String metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
+        logger.debug("Reporting {} metric to namespace {} with value {}", metricName, metricNamespace, count);
+
         Set<MetricDatum> metrics = new HashSet<>();
         metrics.add(
                 new MetricDatum()
-                        .withMetricName(FAILED_RECONCILIATION_CHECKS_METRIC_NAME)
+                        .withMetricName(metricName.toString())
                         .withUnit(Count)
                         .withDimensions(
                                 new Dimension()
-                                        .withName(INPUT_DOMAIN_DIMENSION)
-                                        .withValue(inputDomain)
+                                        .withName(metricDimensionName.toString())
+                                        .withValue(dimensionValue)
                         )
-                        .withValue(numChecksFailing)
+                        .withValue(count)
         );
         cloudwatchClient.putMetrics(metricNamespace, metrics);
-        logger.debug("Finished reporting {} metric to namespace {} for domain {} with value {}",
-                FAILED_RECONCILIATION_CHECKS_METRIC_NAME, metricNamespace, inputDomain, numChecksFailing);
+        logger.debug("Finished reporting {} metric to namespace {} with value {}", metricName, metricNamespace, count);
+    }
+
+    /**
+     * Enum representing different types of metrics to be reported to CloudWatch.
+     */
+    private enum MetricName {
+
+        FAILED_RECONCILIATION_CHECKS("FailedReconciliationChecks"),
+        GLUE_JOB_VIOLATION_COUNT("GlueJobViolationCount"),
+        GLUE_JOB_STREAMING_THROUGHPUT_INPUT("GlueJobStreamingThroughputInputCount"),
+        GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED("GlueJobStreamingThroughputStructuredCount"),
+        GLUE_JOB_STREAMING_THROUGHPUT_CURATED("GlueJobStreamingThroughputCuratedCount");
+
+        private final String value;
+
+        MetricName(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
+    /**
+     * Enum representing different dimensions for metrics reported to CloudWatch.
+     */
+    private enum DimensionName {
+        INPUT_DOMAIN("InputDomain"),
+        JOB_NAME("JobName");
+
+        private final String value;
+
+        DimensionName(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
     }
 }
