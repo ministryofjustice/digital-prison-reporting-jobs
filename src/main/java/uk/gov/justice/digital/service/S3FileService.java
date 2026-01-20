@@ -94,7 +94,9 @@ public class S3FileService {
         ConcurrentHashMap<String, String> failedObjects = new ConcurrentHashMap<>();
 
         ExecutorService executor = Executors.newFixedThreadPool(fileTransferParallelism);
-        CompletableFuture[] futures = objectKeys.stream()
+
+        @SuppressWarnings("unchecked")
+        CompletableFuture<Void>[] futures = objectKeys.stream()
                 .map(objectKey -> CompletableFuture.runAsync(
                         () -> copyFunction(
                                 sourceBucket,

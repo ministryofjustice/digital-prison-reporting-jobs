@@ -77,6 +77,7 @@ public class E2ETestBase extends SparkTestBase {
         lenient().when(arguments.getTempReloadS3Path()).thenReturn(tempReloadPath);
     }
 
+    @SuppressWarnings("unchecked")
     protected void givenTableConfigIsConfigured(JobArguments jobArguments, ConfigService configService) {
         when(jobArguments.getConfigKey()).thenReturn(TEST_CONFIG_KEY);
         when(configService.getConfiguredTables(eq(TEST_CONFIG_KEY))).thenReturn(
