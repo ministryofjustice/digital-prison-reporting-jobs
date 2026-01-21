@@ -48,6 +48,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
+import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
@@ -230,7 +231,8 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
                 curatedZone,
                 dataProvider,
                 operationalDataStoreService,
-                disabledMetricReportingService
+                disabledMetricReportingService,
+                fixedClock
         );
         TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(
                 arguments, dataProvider, batchProcessor, sourceReferenceService, violationService

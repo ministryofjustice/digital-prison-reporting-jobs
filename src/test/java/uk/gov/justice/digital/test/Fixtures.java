@@ -32,6 +32,7 @@ public class Fixtures {
 
     public static Clock fixedClock = Clock.fixed(fixedDateTime.toInstant(ZoneOffset.UTC), utcZoneId);
 
+
     // Private constructor to prevent instantiation.
     private Fixtures() { }
 }

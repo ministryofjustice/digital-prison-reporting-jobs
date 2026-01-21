@@ -21,6 +21,8 @@ import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreS
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
+import java.time.Clock;
+
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.row_number;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
@@ -39,6 +41,7 @@ public class CdcBatchProcessor {
     private final S3DataProvider dataProvider;
     private final OperationalDataStoreService operationalDataStoreService;
     private final MetricReportingService metricReportingService;
+    private final Clock clock;
 
     @Inject
     public CdcBatchProcessor(
@@ -47,7 +50,8 @@ public class CdcBatchProcessor {
             CuratedZoneCDC curatedZone,
             S3DataProvider dataProvider,
             OperationalDataStoreService operationalDataStoreService,
-            MetricReportingService metricReportingService
+            MetricReportingService metricReportingService,
+            Clock clock
     ) {
         this.validationService = validationService;
         this.structuredZone = structuredZone;
@@ -55,13 +59,14 @@ public class CdcBatchProcessor {
         this.dataProvider = dataProvider;
         this.operationalDataStoreService = operationalDataStoreService;
         this.metricReportingService = metricReportingService;
+        this.clock = clock;
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
         if(!df.isEmpty()) {
-            metricReportingService.reportStreamingThroughputInput(df);
+            val batchStartTime = clock.millis();
 
-            val batchStartTime = System.currentTimeMillis();
+            metricReportingService.reportStreamingThroughputInput(df);
             String source = sourceReference.getSource();
             String table = sourceReference.getTable();
             logger.info("Processing batch {} for {}.{}", batchId, source, table);
@@ -77,7 +82,9 @@ public class CdcBatchProcessor {
             operationalDataStoreService.mergeData(curatedDf, sourceReference);
 
             metricReportingService.reportStreamingThroughputWrittenToCurated(curatedDf);
-            logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, System.currentTimeMillis() - batchStartTime);
+            long batchTimeTakenMs = clock.millis() - batchStartTime;
+            metricReportingService.reportStreamingMicroBatchTimeTaken(batchTimeTakenMs);
+            logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, batchTimeTakenMs);
         } else {
             logger.info("Skipping empty batch");
         }

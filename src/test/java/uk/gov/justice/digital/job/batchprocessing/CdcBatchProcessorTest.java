@@ -19,6 +19,7 @@ import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreS
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
+import java.time.Clock;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,6 +63,8 @@ class CdcBatchProcessorTest extends SparkTestBase {
     private Dataset<Row> outputOfStructuredDf;
     @Mock
     private Dataset<Row> outputOfCuratedDf;
+    @Mock
+    private Clock clock;
     @Captor
     private ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor;
     @Captor
@@ -82,7 +85,8 @@ class CdcBatchProcessorTest extends SparkTestBase {
                 mockCuratedZone,
                 mockDataProvider,
                 mockOperationalDataStoreService,
-                mockMetricReportingService
+                mockMetricReportingService,
+                clock
         );
     }
 
@@ -217,5 +221,21 @@ class CdcBatchProcessorTest extends SparkTestBase {
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
         verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToCurated(outputOfCuratedDf);
+    }
+
+    @Test
+    void shouldReportMicroBatchTimeTaken() {
+        when(clock.millis()).thenReturn(1000L, 2100L);
+
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
+        when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
+
+        underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
+        verify(mockMetricReportingService, times(1)).reportStreamingMicroBatchTimeTaken(1100L);
     }
 }
