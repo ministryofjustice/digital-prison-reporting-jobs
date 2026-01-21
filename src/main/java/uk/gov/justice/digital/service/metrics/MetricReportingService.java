@@ -13,4 +13,5 @@ public interface MetricReportingService {
     void reportStreamingThroughputInput(Dataset<Row> inputDf);
     void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf);
     void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf);
+    void reportStreamingMicroBatchTimeTaken(long timeTakenMs);
 }

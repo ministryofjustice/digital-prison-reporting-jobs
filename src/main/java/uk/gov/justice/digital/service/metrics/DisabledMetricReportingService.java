@@ -35,4 +35,9 @@ public class DisabledMetricReportingService implements MetricReportingService {
     public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
         // No op
     }
+
+    @Override
+    public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
+        // No op
+    }
 }
