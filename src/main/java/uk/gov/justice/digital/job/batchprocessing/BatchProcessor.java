@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
@@ -51,7 +52,7 @@ public class BatchProcessor {
     }
 
     @SuppressWarnings({"java:S2139", "java:S112"})
-    public void processBatch(SparkSession spark, SourceReference sourceReference, Dataset<Row> dataFrame) {
+    public void processBatch(SparkSession spark, BatchMetrics batchMetrics, SourceReference sourceReference, Dataset<Row> dataFrame) {
         if(!dataFrame.isEmpty()) {
             String sourceName = sourceReference.getSource();
             String tableName = sourceReference.getTable();
@@ -61,9 +62,9 @@ public class BatchProcessor {
             dataFrame.persist();
             val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
             StructType inferredSchema = filteredDf.schema();
-            val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
-            val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-            val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+            val validRows = validationService.handleValidation(spark, batchMetrics, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
+            val structuredLoadDf = structuredZoneLoad.process(spark, batchMetrics, validRows, sourceReference);
+            val curatedLoadDf = curatedZoneLoad.process(spark, batchMetrics, structuredLoadDf, sourceReference);
             operationalDataStoreService.overwriteData(curatedLoadDf, sourceReference);
             dataFrame.unpersist();
 

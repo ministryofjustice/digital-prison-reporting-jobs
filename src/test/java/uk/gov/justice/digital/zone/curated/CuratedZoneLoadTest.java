@@ -13,6 +13,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -37,6 +38,8 @@ class CuratedZoneLoadTest {
     private DataStorageService storage;
     @Mock
     private ViolationService violationService;
+    @Mock
+    private BatchMetrics batchMetrics;
 
     private CuratedZoneLoad underTest;
 
@@ -52,14 +55,14 @@ class CuratedZoneLoadTest {
 
     @Test
     void shouldAppendDistinctRecordsToTable() {
-        underTest.process(spark, df, sourceReference);
+        underTest.process(spark, batchMetrics, df, sourceReference);
 
         verify(storage, times(1)).appendDistinct("s3://curated/path/source/table", df, PRIMARY_KEY);
     }
 
     @Test
     void shouldUpdateDeltaManifest() {
-        underTest.process(spark, df, sourceReference);
+        underTest.process(spark, batchMetrics, df, sourceReference);
 
         verify(storage, times(1)).updateDeltaManifestForTable(any(), eq("s3://curated/path/source/table"));
     }
@@ -71,10 +74,10 @@ class CuratedZoneLoadTest {
                 .when(storage)
                 .appendDistinct(any(), any(), any());
 
-        underTest.process(spark, df, sourceReference);
+        underTest.process(spark, batchMetrics, df, sourceReference);
 
         verify(violationService, times(1))
-                .handleRetriesExhausted(any(), eq(df), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.CURATED_LOAD));
+                .handleRetriesExhausted(any(), any(), eq(df), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.CURATED_LOAD));
     }
 
 }

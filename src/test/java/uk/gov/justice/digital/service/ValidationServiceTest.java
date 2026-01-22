@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageException;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -73,6 +74,8 @@ class ValidationServiceTest extends SparkTestBase {
     private SourceReference sourceReference;
     @Mock
     private SourceReference.PrimaryKey primaryKey;
+    @Mock
+    private BatchMetrics batchMetrics;
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
     private ValidationService underTest;
@@ -358,7 +361,7 @@ class ValidationServiceTest extends SparkTestBase {
         when(sourceReference.getTable()).thenReturn(TABLE);
 
         List<Row> result =
-                underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
+                underTest.handleValidation(spark, batchMetrics, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedValid = Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.000000", Delete, "data"),
@@ -377,7 +380,7 @@ class ValidationServiceTest extends SparkTestBase {
         when(sourceReference.getSource()).thenReturn(SOURCE);
         when(sourceReference.getTable()).thenReturn(TABLE);
 
-        underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
+        underTest.handleValidation(spark, batchMetrics, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
                 RowFactory.create(3, "2023-11-13 10:49:29.000000", null, "data", CHECKPOINT_COL_VALUE, MISSING_OPERATION_COLUMN_MSG),
@@ -394,7 +397,7 @@ class ValidationServiceTest extends SparkTestBase {
                 RowFactory.create(null, null, null, "data", CHECKPOINT_COL_VALUE, NO_PK_MSG)
         );
 
-        verify(violationService, times(1)).handleViolation(any(), argumentCaptor.capture(), eq(SOURCE), eq(TABLE), eq(STRUCTURED_LOAD));
+        verify(violationService, times(1)).handleViolation(any(), any(), argumentCaptor.capture(), eq(SOURCE), eq(TABLE), eq(STRUCTURED_LOAD));
 
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(expectedInvalid.size(), result.size());
@@ -411,7 +414,7 @@ class ValidationServiceTest extends SparkTestBase {
         when(sourceReference.getSource()).thenReturn(SOURCE);
         when(sourceReference.getTable()).thenReturn(TABLE);
 
-        underTest.handleValidation(spark, inputDf, sourceReference, misMatchingSchema, STRUCTURED_LOAD).collectAsList();
+        underTest.handleValidation(spark, batchMetrics, inputDf, sourceReference, misMatchingSchema, STRUCTURED_LOAD).collectAsList();
 
         List<Row> expectedInvalid = Arrays.asList(
                 RowFactory.create(1, "2023-11-13 10:49:28.000000", "D", "data", CHECKPOINT_COL_VALUE, SCHEMA_MIS_MATCH_MSG),
@@ -430,7 +433,7 @@ class ValidationServiceTest extends SparkTestBase {
                 RowFactory.create(null, null, null, "data", CHECKPOINT_COL_VALUE, SCHEMA_MIS_MATCH_MSG)
         );
 
-        verify(violationService, times(1)).handleViolation(any(), argumentCaptor.capture(), eq(SOURCE), eq(TABLE), eq(STRUCTURED_LOAD));
+        verify(violationService, times(1)).handleViolation(any(), any(), argumentCaptor.capture(), eq(SOURCE), eq(TABLE), eq(STRUCTURED_LOAD));
 
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(expectedInvalid.size(), result.size());
@@ -447,9 +450,9 @@ class ValidationServiceTest extends SparkTestBase {
 
         doThrow(new DataStorageException(""))
                 .when(violationService)
-                .handleViolation(any(), any(), any(), any(), any());
+                .handleViolation(any(), any(), any(), any(), any(), any());
         assertThrows(RuntimeException.class, () ->
-                underTest.handleValidation(spark, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD));
+                underTest.handleValidation(spark, batchMetrics, inputDf, sourceReference, TEST_DATA_SCHEMA, STRUCTURED_LOAD));
     }
 
 }

@@ -13,17 +13,17 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
-import uk.gov.justice.digital.provider.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
@@ -67,6 +67,8 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     private ConfigService configService;
     @Mock
     private JDBCGlueConnectionDetailsService connectionDetailsService;
+    @Mock
+    private BatchMetrics batchMetrics;
 
     private BatchProcessor underTest;
 
@@ -105,7 +107,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, input, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, input);
+        underTest.processBatch(spark, batchMetrics, sourceReference, input);
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk2, testQueryConnection);
@@ -124,7 +126,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, input, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, input);
+        underTest.processBatch(spark, batchMetrics, sourceReference, input);
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
@@ -143,7 +145,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
+        underTest.processBatch(spark, batchMetrics, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
         thenStructuredViolationsContainsPK(pk2);
@@ -163,7 +165,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
+        underTest.processBatch(spark, batchMetrics, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
         thenStructuredViolationsContainsPK(pk2);
@@ -183,7 +185,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
+        underTest.processBatch(spark, batchMetrics, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
         thenStructuredViolationsContainsPK(pk2);
@@ -203,7 +205,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
+        underTest.processBatch(spark, batchMetrics, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
         thenStructuredViolationsContainsPK(pk2);
@@ -223,7 +225,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
+        underTest.processBatch(spark, batchMetrics, sourceReference, dfWithMisMatchingSchema);
 
         thenStructuredViolationsContainsPK(pk1);
         thenStructuredViolationsContainsPK(pk2);
@@ -244,7 +246,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfNullNonNullableCols, testQueryConnection, operationalDataStore);
 
-        underTest.processBatch(spark, sourceReference, dfNullNonNullableCols);
+        underTest.processBatch(spark, batchMetrics, sourceReference, dfNullNonNullableCols);
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
@@ -260,7 +262,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 .withColumn("data", lit(1))
                 .withColumn("new-column", lit("new"));
 
-        underTest.processBatch(spark, sourceReference, schemaChanged);
+        underTest.processBatch(spark, batchMetrics, sourceReference, schemaChanged);
 
         thenStructuredViolationsContainsPK(pk4);
         thenStructuredViolationsContainsPK(pk5);
@@ -284,7 +286,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         ViolationService violationService =
-                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
+                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);

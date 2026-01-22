@@ -16,7 +16,7 @@ import scala.collection.JavaConverters;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.metrics.MetricReportingService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
@@ -40,7 +40,6 @@ public class CdcBatchProcessor {
     private final CuratedZoneCDC curatedZone;
     private final S3DataProvider dataProvider;
     private final OperationalDataStoreService operationalDataStoreService;
-    private final MetricReportingService metricReportingService;
     private final Clock clock;
 
     @Inject
@@ -50,7 +49,6 @@ public class CdcBatchProcessor {
             CuratedZoneCDC curatedZone,
             S3DataProvider dataProvider,
             OperationalDataStoreService operationalDataStoreService,
-            MetricReportingService metricReportingService,
             Clock clock
     ) {
         this.validationService = validationService;
@@ -58,32 +56,31 @@ public class CdcBatchProcessor {
         this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
         this.operationalDataStoreService = operationalDataStoreService;
-        this.metricReportingService = metricReportingService;
         this.clock = clock;
     }
 
-    public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
+    public void processBatch(SourceReference sourceReference, SparkSession spark, BatchMetrics batchMetrics, Dataset<Row> df, Long batchId) {
         if(!df.isEmpty()) {
             val batchStartTime = clock.millis();
 
-            metricReportingService.reportStreamingThroughputInput(df);
+            batchMetrics.bufferStreamingThroughputInput(df);
             String source = sourceReference.getSource();
             String table = sourceReference.getTable();
             logger.info("Processing batch {} for {}.{}", batchId, source, table);
             StructType inferredSchema = dataProvider.inferSchema(df.sparkSession(), sourceReference.getSource(), sourceReference.getTable());
-            val validRows = validationService.handleValidation(spark, df, sourceReference, inferredSchema, STRUCTURED_CDC);
+            val validRows = validationService.handleValidation(spark, batchMetrics, df, sourceReference, inferredSchema, STRUCTURED_CDC);
             val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
 
-            val structuredDf = structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
+            val structuredDf = structuredZone.process(spark, batchMetrics, latestCDCRecordsByPK, sourceReference);
 
-            metricReportingService.reportStreamingThroughputWrittenToStructured(structuredDf);
+            batchMetrics.bufferStreamingThroughputWrittenToStructured(structuredDf);
 
-            val curatedDf = curatedZone.process(spark, structuredDf, sourceReference);
+            val curatedDf = curatedZone.process(spark, batchMetrics, structuredDf, sourceReference);
             operationalDataStoreService.mergeData(curatedDf, sourceReference);
 
-            metricReportingService.reportStreamingThroughputWrittenToCurated(curatedDf);
+            batchMetrics.bufferStreamingThroughputWrittenToCurated(curatedDf);
             long batchTimeTakenMs = clock.millis() - batchStartTime;
-            metricReportingService.reportStreamingMicroBatchTimeTaken(batchTimeTakenMs);
+            batchMetrics.bufferStreamingMicroBatchTimeTaken(batchTimeTakenMs);
             logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, batchTimeTakenMs);
         } else {
             logger.info("Skipping empty batch");

@@ -15,7 +15,7 @@ import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
-import uk.gov.justice.digital.service.metrics.CloudwatchMetricReportingService;
+import uk.gov.justice.digital.service.metrics.CloudwatchBatchMetrics;
 
 import java.util.Collection;
 import java.util.List;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class CloudwatchMetricReportingServiceTest {
+class CloudwatchBatchMetricsTest {
 
     private static final String DOMAIN = "some domain";
     private static final String JOB = "some job";
@@ -46,20 +46,20 @@ class CloudwatchMetricReportingServiceTest {
     @Mock
     private Dataset<Row> mockDf;
 
-    private CloudwatchMetricReportingService underTest;
+    private CloudwatchBatchMetrics underTest;
 
     @BeforeEach
     void setUp() {
-        underTest = new CloudwatchMetricReportingService(jobArguments, jobProperties, cloudwatchClient);
+        underTest = new CloudwatchBatchMetrics(jobArguments, jobProperties, cloudwatchClient);
     }
 
     @Test
-    void reportViolationCountShouldPutMetrics() {
+    void bufferViolationCountShouldPutMetrics() {
 
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
 
-        underTest.reportViolationCount(10L);
+        underTest.bufferViolationCount(10L);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -79,7 +79,7 @@ class CloudwatchMetricReportingServiceTest {
     }
 
     @Test
-    void reportDataReconciliationResultsShouldPutMetrics() {
+    void bufferDataReconciliationResultsShouldPutMetrics() {
 
         DataReconciliationResults dataReconciliationResults = mock(DataReconciliationResults.class);
 
@@ -87,7 +87,7 @@ class CloudwatchMetricReportingServiceTest {
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(dataReconciliationResults.numReconciliationChecksFailing()).thenReturn(2L);
 
-        underTest.reportDataReconciliationResults(dataReconciliationResults);
+        underTest.bufferDataReconciliationResults(dataReconciliationResults);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -107,13 +107,13 @@ class CloudwatchMetricReportingServiceTest {
     }
 
     @Test
-    void reportStreamingThroughputInputShouldPutMetrics() {
+    void bufferStreamingThroughputInputShouldPutMetrics() {
 
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputInput(mockDf);
+        underTest.bufferStreamingThroughputInput(mockDf);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -133,13 +133,13 @@ class CloudwatchMetricReportingServiceTest {
     }
 
     @Test
-    void reportStreamingThroughputWrittenToStructuredShouldPutMetrics() {
+    void bufferStreamingThroughputWrittenToStructuredShouldPutMetrics() {
 
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputWrittenToStructured(mockDf);
+        underTest.bufferStreamingThroughputWrittenToStructured(mockDf);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -159,13 +159,13 @@ class CloudwatchMetricReportingServiceTest {
     }
 
     @Test
-    void reportStreamingThroughputWrittenToCuratedShouldPutMetrics() {
+    void bufferStreamingThroughputWrittenToCuratedShouldPutMetrics() {
 
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.bufferStreamingThroughputWrittenToCurated(mockDf);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -185,12 +185,12 @@ class CloudwatchMetricReportingServiceTest {
     }
 
     @Test
-    void reportStreamingMicroBatchTimeTakenShouldPutMetrics() {
+    void bufferStreamingMicroBatchTimeTakenShouldPutMetrics() {
 
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
 
-        underTest.reportStreamingMicroBatchTimeTaken(1000L);
+        underTest.bufferStreamingMicroBatchTimeTaken(1000L);
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 

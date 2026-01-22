@@ -3,9 +3,6 @@ package uk.gov.justice.digital.service.metrics;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import io.micronaut.context.annotation.Requires;
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
@@ -20,21 +17,27 @@ import java.util.Set;
 
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
-import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUDWATCH;
 
-@Singleton
-@Requires(property = REPORT_METRICS_TO_CLOUDWATCH)
-public class CloudwatchMetricReportingService implements MetricReportingService {
+/**
+ * Context for accumulating metrics for reporting to CloudWatch and then flushing in batches.
+ * Note that this class is not thread-safe and should be used from a single thread.
+ *
+ * Note that Each PutMetricData request is limited to 1 MB in size for HTTP POST requests.
+ * You can send a payload compressed by gzip. Each request is also limited to no more than 1000 different
+ * metrics (across both the MetricData and EntityMetricData properties).
+ * See <a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html">the API docs</a>
+ */
+public class CloudwatchBatchMetrics implements BatchMetrics {
 
-    private static final Logger logger = LoggerFactory.getLogger(CloudwatchMetricReportingService.class);
+    private static final Logger logger = LoggerFactory.getLogger(CloudwatchBatchMetrics.class);
 
     private final JobArguments jobArguments;
     private final JobProperties jobProperties;
     private final CloudwatchClient cloudwatchClient;
 
+    private final Set<MetricDatum> bufferedMetrics = new HashSet<>();
 
-    @Inject
-    public CloudwatchMetricReportingService(
+    public CloudwatchBatchMetrics(
             JobArguments jobArguments,
             JobProperties jobProperties,
             CloudwatchClient cloudwatchClient
@@ -45,53 +48,58 @@ public class CloudwatchMetricReportingService implements MetricReportingService 
     }
 
     @Override
-    public void reportViolationCount(long count) {
+    public void bufferViolationCount(long count) {
         String jobName = jobProperties.getSparkJobName();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
+    public void bufferDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         String inputDomain = jobArguments.getConfigKey();
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
-        putMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
+        bufferMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
     }
 
     @Override
-    public void reportStreamingThroughputInput(Dataset<Row> inputDf) {
+    public void bufferStreamingThroughputInput(Dataset<Row> inputDf) {
         String jobName = jobProperties.getSparkJobName();
         long count = inputDf.count();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
+    public void bufferStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
         String jobName = jobProperties.getSparkJobName();
         long count = structuredDf.count();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
+    public void bufferStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
         String jobName = jobProperties.getSparkJobName();
         long count = curatedDf.count();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
+    public void bufferStreamingMicroBatchTimeTaken(long timeTakenMs) {
         String jobName = jobProperties.getSparkJobName();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
     }
 
-    private void putMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
+    @Override
+    public void close() {
         String metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
-        logger.debug("Reporting {} metric to namespace {} with value {}", metricName, metricNamespace, value);
+        cloudwatchClient.putMetrics(metricNamespace, bufferedMetrics);
+        // Clear the buffer just in case someone goes against the javadoc and keeps a reference to the object around in the future
+        bufferedMetrics.clear();
+        logger.debug("Flushed metrics for namespace {}", metricNamespace);
+    }
 
-        // Currently, this class makes a putMetrics call to CloudWatch for every metric.
-        // DHS-594 will batch up calls to save API call costs in jobs that report more than one metric.
-        Set<MetricDatum> metrics = new HashSet<>();
-        metrics.add(
+    private void bufferMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
+
+        logger.debug("Preparing {} metric with value {}", metricName, value);
+        bufferedMetrics.add(
                 new MetricDatum()
                         .withMetricName(metricName.toString())
                         .withUnit(unit)
@@ -102,8 +110,7 @@ public class CloudwatchMetricReportingService implements MetricReportingService 
                         )
                         .withValue(value)
         );
-        cloudwatchClient.putMetrics(metricNamespace, metrics);
-        logger.debug("Finished reporting {} metric to namespace {} with value {}", metricName, metricNamespace, value);
+        logger.debug("Finished preparing {} metric with value {}", metricName, value);
     }
 
     /**

@@ -19,6 +19,7 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchedMetricReportingService;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,6 +69,8 @@ class DataHubBatchJobTest {
     @Mock
     private ViolationService violationService;
     @Mock
+    private BatchedMetricReportingService batchMetricsReportingService;
+    @Mock
     private SourceReference sourceReference1;
     @Mock
     private SourceReference sourceReference2;
@@ -89,7 +92,8 @@ class DataHubBatchJobTest {
                 batchProcessor,
                 dataProvider,
                 sourceReferenceService,
-                violationService
+                violationService,
+                batchMetricsReportingService
         );
     }
 
@@ -105,10 +109,10 @@ class DataHubBatchJobTest {
         underTest.runJob(spark);
 
         // Should process table 1 and table 2...
-        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
-        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
+        verify(batchProcessor, times(1)).processBatch(any(), any(), eq(sourceReference1), any());
+        verify(batchProcessor, times(1)).processBatch(any(), any(), eq(sourceReference2), any());
         // and no other tables...
-        verify(batchProcessor, times(2)).processBatch(any(), any(), any());
+        verify(batchProcessor, times(2)).processBatch(any(), any(), any(), any());
     }
 
     @Test
@@ -130,10 +134,10 @@ class DataHubBatchJobTest {
         underTest.runJob(spark);
 
         // Should write table 1 to violations
-        verify(violationService, times(1)).handleNoSchemaFound(any(), any(), eq("s1"), eq("t1"), eq(STRUCTURED_LOAD));
+        verify(violationService, times(1)).handleNoSchemaFound(any(), any(), any(), eq("s1"), eq("t1"), eq(STRUCTURED_LOAD));
         // Should process table 2 and no other tables
-        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
-        verify(batchProcessor, times(1)).processBatch(any(), any(), any());
+        verify(batchProcessor, times(1)).processBatch(any(), any(), eq(sourceReference2), any());
+        verify(batchProcessor, times(1)).processBatch(any(), any(), any(), any());
     }
 
     @Test
@@ -145,7 +149,7 @@ class DataHubBatchJobTest {
 
         underTest.runJob(spark);
 
-        verify(violationService, times(2)).writeBatchDataToViolations(any(), any(), any(), any());
+        verify(violationService, times(2)).writeBatchDataToViolations(any(), any(), any(), any(), any());
     }
 
     private void stubRawPath() {

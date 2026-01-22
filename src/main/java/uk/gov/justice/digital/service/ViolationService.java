@@ -15,7 +15,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
-import uk.gov.justice.digital.service.metrics.MetricReportingService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 
 import javax.inject.Singleton;
 import java.io.IOException;
@@ -45,7 +45,6 @@ public class ViolationService {
     private final DataStorageService storageService;
     private final S3DataProvider dataProvider;
     private final TableDiscoveryService tableDiscoveryService;
-    private final MetricReportingService metricReportingService;
 
     /**
      * Allows us to record where a violation occurred.
@@ -78,18 +77,17 @@ public class ViolationService {
             JobArguments arguments,
             DataStorageService storageService,
             S3DataProvider dataProvider,
-            TableDiscoveryService tableDiscoveryService,
-            MetricReportingService metricReportingService
+            TableDiscoveryService tableDiscoveryService
     ) {
         this.arguments = arguments;
         this.storageService = storageService;
         this.dataProvider = dataProvider;
         this.tableDiscoveryService = tableDiscoveryService;
-        this.metricReportingService = metricReportingService;
     }
 
     public void handleRetriesExhausted(
             SparkSession spark,
+            BatchMetrics batchMetrics,
             Dataset<Row> dataFrame,
             String source,
             String table,
@@ -99,11 +97,12 @@ public class ViolationService {
         String violationMessage = format("Violation - Data storage service retries exceeded for %s/%s for %s", source, table, zoneName);
         logger.warn(violationMessage, cause);
         val invalidRecords = dataFrame.withColumn(ERROR, lit(violationMessage));
-        handleViolation(spark, invalidRecords, source, table, zoneName);
+        handleViolation(spark, batchMetrics,invalidRecords, source, table, zoneName);
     }
 
     public void handleNoSchemaFound(
             SparkSession spark,
+            BatchMetrics batchMetrics,
             Dataset<Row> dataFrame,
             String source,
             String table,
@@ -113,23 +112,24 @@ public class ViolationService {
         val invalidRecords = dataFrame
                 .withColumn(ERROR, lit(format("Schema does not exist for %s/%s", source, table)));
 
-        handleViolation(spark, invalidRecords, source, table, zoneName);
+        handleViolation(spark, batchMetrics, invalidRecords, source, table, zoneName);
     }
 
     /**
      * Writes all CDC data in the table's input directory to violations.
      */
-    public void writeCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
-        writeDataToViolations(spark, source, table, errorMessage, arguments.getCdcFileGlobPattern(), STRUCTURED_CDC);
+    public void writeCdcDataToViolations(SparkSession spark, BatchMetrics batchMetrics, String source, String table, String errorMessage) throws DataStorageException {
+        writeDataToViolations(spark, batchMetrics, source, table, errorMessage, arguments.getCdcFileGlobPattern(), STRUCTURED_CDC);
     }
     /**
      * Writes all Batch data in the table's input directory to violations.
      */
-    public void writeBatchDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
-        writeDataToViolations(spark, source, table, errorMessage, arguments.getBatchLoadFileGlobPattern(), STRUCTURED_LOAD);
+    public void writeBatchDataToViolations(SparkSession spark, BatchMetrics batchMetrics, String source, String table, String errorMessage) throws DataStorageException {
+        writeDataToViolations(spark, batchMetrics, source, table, errorMessage, arguments.getBatchLoadFileGlobPattern(), STRUCTURED_LOAD);
     }
     private void writeDataToViolations(
             SparkSession spark,
+            BatchMetrics batchMetrics,
             String source,
             String table,
             String errorMessage,
@@ -150,7 +150,7 @@ public class ViolationService {
                 // there are multiple files with incompatible schemas which cannot be read and merged in a single read.
                 Dataset<Row> df = dataProvider.getBatchSourceData(spark, filePath);
                 Dataset<Row> violations = df.withColumn(ERROR, functions.lit(errorMessage));
-                handleViolation(spark, violations, source, table, zone);
+                handleViolation(spark, batchMetrics, violations, source, table, zone);
                 logger.info("Moving {} to violations completed", filePath);
             }
             logger.info("Finished moving all available CDC data to violations to avoid schema mismatch");
@@ -167,6 +167,7 @@ public class ViolationService {
      */
     public void handleViolation(
             SparkSession spark,
+            BatchMetrics batchMetrics,
             Dataset<Row> invalidRecords,
             String source,
             String table,
@@ -190,7 +191,7 @@ public class ViolationService {
         logger.info("Append completed successfully");
         storageService.updateDeltaManifestForTable(spark, destinationPath);
         long violationsCount = toWrite.count();
-        metricReportingService.reportViolationCount(violationsCount);
+        batchMetrics.bufferViolationCount(violationsCount);
     }
 
     private String fullTablePath(String source, String table, ZoneName zone) {

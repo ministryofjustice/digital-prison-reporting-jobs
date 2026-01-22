@@ -12,9 +12,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
-import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
+import uk.gov.justice.digital.config.SparkTestBase;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,6 +77,8 @@ class ViolationServiceIT extends SparkTestBase {
     private JobArguments arguments;
     @Mock
     private ConfigService configService;
+    @Mock
+    private BatchMetrics batchMetrics;
     @TempDir
     private Path scratchTempDirRoot;
     @TempDir
@@ -93,8 +95,7 @@ class ViolationServiceIT extends SparkTestBase {
                 arguments,
                 new DataStorageService(arguments),
                 new S3DataProvider(arguments),
-                new TableDiscoveryService(arguments, configService),
-                new DisabledMetricReportingService()
+                new TableDiscoveryService(arguments, configService)
         );
     }
 
@@ -102,14 +103,14 @@ class ViolationServiceIT extends SparkTestBase {
     void shouldWriteDataWithIncompatibleSchemasSoThatItCanBeReadBackAgainUsingSpark() {
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
 
-        underTest.handleViolation(spark, original, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, anExtraColumn, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, missingAColumn, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, stringColumnChangedToInt, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, intColumnChangedToString, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, intColumnChangedToLong, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, tsAndInt1, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, tsAndInt2, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, original, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, anExtraColumn, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, missingAColumn, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, stringColumnChangedToInt, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, intColumnChangedToString, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, intColumnChangedToLong, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, tsAndInt1, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, batchMetrics, tsAndInt2, source, table, STRUCTURED_LOAD);
 
         Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
         errorRawAsJson.show(30, false);
@@ -148,7 +149,7 @@ class ViolationServiceIT extends SparkTestBase {
         putFilesInRaw(intColumnChangedToLong);
         putFilesInRaw(tsAndInt1);
         putFilesInRaw(tsAndInt2);
-        underTest.writeCdcDataToViolations(spark, source, table, "error msg");
+        underTest.writeCdcDataToViolations(spark, batchMetrics, source, table, "error msg");
 
         Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
 
@@ -179,7 +180,7 @@ class ViolationServiceIT extends SparkTestBase {
         putFilesInRaw(intColumnChangedToLong);
         putFilesInRaw(tsAndInt1);
         putFilesInRaw(tsAndInt2);
-        underTest.writeBatchDataToViolations(spark, source, table, "error msg");
+        underTest.writeBatchDataToViolations(spark, batchMetrics, source, table, "error msg");
 
         Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
 

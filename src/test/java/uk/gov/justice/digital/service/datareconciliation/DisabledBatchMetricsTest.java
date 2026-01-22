@@ -5,20 +5,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
-import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
+import uk.gov.justice.digital.service.metrics.DisabledBatchMetrics;
 
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
-class DisabledMetricReportingServiceTest {
+class DisabledBatchMetricsTest {
 
     @Mock
     private DataReconciliationResults dataReconciliationResults;
 
     @Test
-    void reportDataReconciliationResultsShouldDoNothing() {
-        DisabledMetricReportingService underTest = new DisabledMetricReportingService();
-        underTest.reportDataReconciliationResults(dataReconciliationResults);
+    void bufferDataReconciliationResultsShouldDoNothing() {
+        DisabledBatchMetrics underTest = new DisabledBatchMetrics();
+        underTest.bufferDataReconciliationResults(dataReconciliationResults);
 
         verifyNoInteractions(dataReconciliationResults);
     }

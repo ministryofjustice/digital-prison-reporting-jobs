@@ -14,7 +14,8 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
-import uk.gov.justice.digital.service.metrics.MetricReportingService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
+import uk.gov.justice.digital.service.metrics.BatchedMetricReportingService;
 
 import java.util.List;
 import java.util.Set;
@@ -33,8 +34,8 @@ public class DataReconciliationService {
     private final SourceReferenceService sourceReferenceService;
     private final CurrentStateCountService currentStateCountService;
     private final ChangeDataCountService changeDataCountService;
-    private final MetricReportingService metricReportingService;
     private final PrimaryKeyReconciliationService primaryKeyReconciliationService;
+    private final BatchedMetricReportingService batchedMetricReportingService;
 
     @Inject
     public DataReconciliationService(
@@ -43,47 +44,49 @@ public class DataReconciliationService {
             SourceReferenceService sourceReferenceService,
             CurrentStateCountService currentStateCountService,
             ChangeDataCountService changeDataCountService,
-            MetricReportingService metricReportingService,
-            PrimaryKeyReconciliationService primaryKeyReconciliationService
+            PrimaryKeyReconciliationService primaryKeyReconciliationService,
+            BatchedMetricReportingService batchedMetricReportingService
     ) {
         this.jobArguments = jobArguments;
         this.configService = configService;
         this.sourceReferenceService = sourceReferenceService;
         this.currentStateCountService = currentStateCountService;
         this.changeDataCountService = changeDataCountService;
-        this.metricReportingService = metricReportingService;
         this.primaryKeyReconciliationService = primaryKeyReconciliationService;
+        this.batchedMetricReportingService = batchedMetricReportingService;
     }
 
     public DataReconciliationResult reconcileData(SparkSession sparkSession) {
-        String inputDomain = jobArguments.getConfigKey();
-        logger.info("Reconciling input domain: {}", inputDomain);
+        return batchedMetricReportingService.withBatchedMetrics(batchMetrics -> {
+            String inputDomain = jobArguments.getConfigKey();
+            logger.info("Reconciling input domain: {}", inputDomain);
 
-        ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(inputDomain);
-        List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
+            ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(inputDomain);
+            List<SourceReference> allSourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);
 
-        Set<ReconciliationCheck> reconciliationChecksToRun = jobArguments.getReconciliationChecksToRun();
-        List<DataReconciliationResult> results = reconciliationChecksToRun.stream().map(checkToRun -> {
-            logger.info("Configured to run {}", checkToRun);
-            switch (checkToRun) {
-                case CHANGE_DATA_COUNTS:
-                    String dmsTaskId = jobArguments.getDmsTaskId();
-                    logger.info("Getting change data counts with DMS Task ID: {}", dmsTaskId);
-                    return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
-                case CURRENT_STATE_COUNTS:
-                    logger.info("Getting current state counts");
-                    return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
-                case PRIMARY_KEY_RECONCILIATION:
-                    logger.info("Running primary key reconciliation");
-                    return primaryKeyReconciliationService.primaryKeyReconciliation(sparkSession, allSourceReferences);
-                default:
-                    throw new IllegalStateException("Unexpected reconciliation check type: " + checkToRun);
-            }
-        }).toList();
+            Set<ReconciliationCheck> reconciliationChecksToRun = jobArguments.getReconciliationChecksToRun();
+            List<DataReconciliationResult> results = reconciliationChecksToRun.stream().map(checkToRun -> {
+                logger.info("Configured to run {}", checkToRun);
+                switch (checkToRun) {
+                    case CHANGE_DATA_COUNTS:
+                        String dmsTaskId = jobArguments.getDmsTaskId();
+                        logger.info("Getting change data counts with DMS Task ID: {}", dmsTaskId);
+                        return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+                    case CURRENT_STATE_COUNTS:
+                        logger.info("Getting current state counts");
+                        return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
+                    case PRIMARY_KEY_RECONCILIATION:
+                        logger.info("Running primary key reconciliation");
+                        return primaryKeyReconciliationService.primaryKeyReconciliation(sparkSession, allSourceReferences);
+                    default:
+                        throw new IllegalStateException("Unexpected reconciliation check type: " + checkToRun);
+                }
+            }).toList();
 
-        DataReconciliationResults dataReconciliationResults = new DataReconciliationResults(results);
-        metricReportingService.reportDataReconciliationResults(dataReconciliationResults);
-        return dataReconciliationResults;
+            DataReconciliationResults dataReconciliationResults = new DataReconciliationResults(results);
+            batchMetrics.bufferDataReconciliationResults(dataReconciliationResults);
+            return dataReconciliationResults;
+        });
     }
 }
 

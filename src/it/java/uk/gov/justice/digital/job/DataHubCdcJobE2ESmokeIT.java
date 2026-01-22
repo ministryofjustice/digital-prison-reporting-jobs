@@ -15,19 +15,19 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.job.cdc.TableStreamingQuery;
 import uk.gov.justice.digital.job.cdc.TableStreamingQueryProvider;
+import uk.gov.justice.digital.provider.ConnectionPoolProvider;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
 import uk.gov.justice.digital.service.DataStorageService;
+import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
+import uk.gov.justice.digital.service.metrics.DisabledBatchedMetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
-import uk.gov.justice.digital.provider.ConnectionPoolProvider;
-import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
@@ -40,8 +40,6 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
@@ -211,9 +209,9 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         DataStorageService storageService = new DataStorageService(arguments);
-        DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
+        DisabledBatchedMetricReportingService disabledMetricReportingService = new DisabledBatchedMetricReportingService();
         ViolationService violationService =
-                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, disabledMetricReportingService);
+                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
         CuratedZoneCDC curatedZone = new CuratedZoneCDC(arguments, violationService, storageService);
         StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
@@ -231,11 +229,10 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
                 curatedZone,
                 dataProvider,
                 operationalDataStoreService,
-                disabledMetricReportingService,
                 fixedClock
         );
         TableStreamingQueryProvider tableStreamingQueryProvider = new TableStreamingQueryProvider(
-                arguments, dataProvider, batchProcessor, sourceReferenceService, violationService
+                arguments, dataProvider, batchProcessor, sourceReferenceService, violationService, disabledMetricReportingService
         );
         underTest = new DataHubCdcJob(arguments, jobProperties, sparkSessionProvider, tableStreamingQueryProvider, tableDiscoveryService);
     }

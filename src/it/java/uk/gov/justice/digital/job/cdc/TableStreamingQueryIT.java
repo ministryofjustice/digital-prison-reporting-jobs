@@ -31,7 +31,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
+import uk.gov.justice.digital.service.metrics.DisabledBatchedMetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
@@ -502,13 +502,12 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
 
     private void givenTableStreamingQuery() throws NoSchemaNoDataException {
         DataStorageService storageService = new DataStorageService(arguments);
-        DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
+        DisabledBatchedMetricReportingService disabledMetricReportingService = new DisabledBatchedMetricReportingService();
         ViolationService violationService = new ViolationService(
                 arguments,
                 storageService,
                 dataProvider,
-                tableDiscoveryService,
-                disabledMetricReportingService
+                tableDiscoveryService
         );
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
@@ -524,7 +523,6 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 new CuratedZoneCDC(arguments, violationService, storageService),
                 dataProvider,
                 operationalDataStoreService,
-                disabledMetricReportingService,
                 fixedClock
         );
         TableStreamingQueryProvider streamingQueryProvider = new TableStreamingQueryProvider(
@@ -532,7 +530,8 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
                 dataProvider,
                 batchProcessor,
                 sourceReferenceService,
-                violationService
+                violationService,
+                disabledMetricReportingService
         );
         underTest = streamingQueryProvider.provide(spark, inputSchemaName, inputTableName);
     }

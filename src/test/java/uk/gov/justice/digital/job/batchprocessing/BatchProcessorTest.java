@@ -13,6 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
+import uk.gov.justice.digital.service.metrics.BatchedMetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
@@ -66,6 +68,10 @@ class BatchProcessorTest extends SparkTestBase {
     private ValidationService validationService;
     @Mock
     private OperationalDataStoreService operationalDataStoreService;
+    @Mock
+    private BatchedMetricReportingService metricReportingService;
+    @Mock
+    private BatchMetrics batchMetrics;
     @Captor
     private ArgumentCaptor<Dataset<Row>> argumentCaptor;
 
@@ -79,26 +85,31 @@ class BatchProcessorTest extends SparkTestBase {
 
     @BeforeEach
     void setUp() {
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        underTest = new BatchProcessor(
+                structuredZoneLoad,
+                curatedZoneLoad,
+                validationService,
+                operationalDataStoreService
+        );
     }
 
     @Test
     void shouldSkipProcessingForEmptyDataframe() {
-        underTest.processBatch(spark, sourceReference, spark.emptyDataFrame());
+        underTest.processBatch(spark, batchMetrics, sourceReference, spark.emptyDataFrame());
 
-        verify(structuredZoneLoad, times(0)).process(any(), any(), any());
-        verify(curatedZoneLoad, times(0)).process(any(), any(), any());
+        verify(structuredZoneLoad, times(0)).process(any(), any(), any(), any());
+        verify(curatedZoneLoad, times(0)).process(any(), any(), any(), any());
         verify(operationalDataStoreService, times(0)).overwriteData(any(), any());
     }
 
     @Test
     void shouldProcessStructured() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
+        when(validationService.handleValidation(any(), any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
+        when(structuredZoneLoad.process(any(), any(), any(), any())).thenReturn(validatedDf);
 
-        underTest.processBatch(spark, sourceReference, inputDf);
+        underTest.processBatch(spark, batchMetrics, sourceReference, inputDf);
 
-        verify(structuredZoneLoad, times(1)).process(any(), argumentCaptor.capture(), eq(sourceReference));
+        verify(structuredZoneLoad, times(1)).process(any(), any(), argumentCaptor.capture(), eq(sourceReference));
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(validatedRows.size(), result.size());
         assertTrue(result.containsAll(validatedRows));
@@ -107,13 +118,13 @@ class BatchProcessorTest extends SparkTestBase {
 
     @Test
     void shouldProcessCurated() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+        when(validationService.handleValidation(any(), any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
+        when(structuredZoneLoad.process(any(), any(), any(), any())).thenReturn(validatedDf);
 
-        underTest.processBatch(spark, sourceReference, inputDf);
+        underTest.processBatch(spark, batchMetrics, sourceReference, inputDf);
 
-        verify(curatedZoneLoad, times(1)).process(any(), argumentCaptor.capture(), eq(sourceReference));
+        verify(curatedZoneLoad, times(1)).process(any(), any(), argumentCaptor.capture(), eq(sourceReference));
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(validatedRows.size(), result.size());
         assertTrue(result.containsAll(validatedRows));
@@ -121,12 +132,12 @@ class BatchProcessorTest extends SparkTestBase {
 
     @Test
     void shouldWriteCuratedOutputToOperationalDataStore() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+        when(validationService.handleValidation(any(), any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
-        when(curatedZoneLoad.process(any(), any(), any())).thenReturn(curatedDfMock);
+        when(structuredZoneLoad.process(any(), any(), any(), any())).thenReturn(validatedDf);
+        when(curatedZoneLoad.process(any(), any(), any(), any())).thenReturn(curatedDfMock);
 
-        underTest.processBatch(spark, sourceReference, inputDf);
+        underTest.processBatch(spark, batchMetrics, sourceReference, inputDf);
 
         verify(operationalDataStoreService, times(1)).overwriteData(curatedDfMock, sourceReference);
     }
@@ -137,15 +148,15 @@ class BatchProcessorTest extends SparkTestBase {
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));
 
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+        when(validationService.handleValidation(any(), any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
+        when(structuredZoneLoad.process(any(), any(), any(), any())).thenReturn(validatedDf);
 
 
-        underTest.processBatch(spark, sourceReference, mixedOperations);
+        underTest.processBatch(spark, batchMetrics, sourceReference, mixedOperations);
 
         verify(validationService, times(1))
-                .handleValidation(any(), argumentCaptor.capture(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD));
+                .handleValidation(any(), any(), argumentCaptor.capture(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD));
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(validatedRows.size(), result.size());
         assertTrue(result.containsAll(validatedRows));

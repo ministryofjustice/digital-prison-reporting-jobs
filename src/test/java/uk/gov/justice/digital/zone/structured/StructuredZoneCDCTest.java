@@ -13,6 +13,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -38,6 +39,8 @@ class StructuredZoneCDCTest extends SparkTestBase {
     private SourceReference sourceReference;
     @Mock
     private static Dataset<Row> df;
+    @Mock
+    private BatchMetrics batchMetrics;
 
     private StructuredZoneCDC underTest;
 
@@ -52,7 +55,7 @@ class StructuredZoneCDCTest extends SparkTestBase {
 
     @Test
     void shouldMergeDataIntoTable() {
-        underTest.process(spark, df, sourceReference);
+        underTest.process(spark, batchMetrics, df, sourceReference);
         verify(storage, times(1)).mergeRecords(any(), eq(structuredTablePath), any(), eq(PRIMARY_KEY));
     }
 
@@ -61,10 +64,10 @@ class StructuredZoneCDCTest extends SparkTestBase {
         DataStorageRetriesExhaustedException thrown = new DataStorageRetriesExhaustedException(new Exception());
         doThrow(thrown).when(storage).mergeRecords(any(), any(), any(), any());
 
-        underTest.process(spark, df, sourceReference);
+        underTest.process(spark, batchMetrics, df, sourceReference);
 
         verify(violationService, times(1)).handleRetriesExhausted(
-                any(), any(), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.STRUCTURED_CDC)
+                any(), any(), any(), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.STRUCTURED_CDC)
         );
     }
 

@@ -18,6 +18,8 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.job.batchprocessing.CdcBatchProcessor;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
+import uk.gov.justice.digital.test.TestBatchedMetricReportingService;
 
 import java.util.Optional;
 
@@ -50,16 +52,20 @@ class TableStreamingQueryProviderTest {
     private SparkSession spark;
     @Mock
     private Dataset<Row> df;
+    @Mock
+    private BatchMetrics batchMetrics;
     private TableStreamingQueryProvider underTest;
 
     @BeforeEach
     void setUp() {
+        TestBatchedMetricReportingService stubbedMetricReportingService = new TestBatchedMetricReportingService(batchMetrics);
         underTest = spy(new TableStreamingQueryProvider(
                 arguments,
                 dataProvider,
                 batchProcessor,
                 sourceReferenceService,
-                violationService
+                violationService,
+                stubbedMetricReportingService
         ));
     }
 
@@ -85,7 +91,7 @@ class TableStreamingQueryProviderTest {
         when(sourceReferenceService.getSourceReference(sourceName, tableName)).thenReturn(Optional.empty());
         underTest.provide(spark, sourceName, tableName);
 
-        verify(underTest, times(1)).withIncompatibleSchemaHandling(eq(sourceName), eq(tableName), any());
+        verify(underTest, times(1)).withIncompatibleSchemaHandling(eq(sourceName), eq(tableName), any(), any());
     }
 
     @Test
@@ -95,7 +101,7 @@ class TableStreamingQueryProviderTest {
                 new SchemaColumnConvertNotSupportedException("col", "physical type", "logical type");
         SparkException toThrow = new SparkException("", new QueryExecutionException("", ultimateCause));
 
-        VoidFunction2<Dataset<Row>, Long> decoratedFunc = underTest.withIncompatibleSchemaHandling(sourceName, tableName, (df, batchId) -> {
+        VoidFunction2<Dataset<Row>, Long> decoratedFunc = underTest.withIncompatibleSchemaHandling(sourceName, tableName, batchMetrics, (df, batchId) -> {
             throw toThrow;
         });
 
@@ -103,7 +109,7 @@ class TableStreamingQueryProviderTest {
         decoratedFunc.call(df, arbitraryBatchId);
 
         verify(violationService, times(1))
-                .writeCdcDataToViolations(any(), eq(sourceName), eq(tableName), anyString());
+                .writeCdcDataToViolations(any(), any(), eq(sourceName), eq(tableName), anyString());
 
     }
 }

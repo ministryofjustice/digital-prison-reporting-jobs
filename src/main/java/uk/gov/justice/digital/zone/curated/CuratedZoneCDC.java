@@ -13,6 +13,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 import uk.gov.justice.digital.zone.Zone;
 
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
@@ -38,7 +39,7 @@ public class CuratedZoneCDC implements Zone {
     }
 
 
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
+    public Dataset<Row> process(SparkSession spark, BatchMetrics batchMetrics, Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
@@ -54,7 +55,7 @@ public class CuratedZoneCDC implements Zone {
             return dataFrame;
         } catch (DataStorageRetriesExhaustedException e) {
             logger.warn("Curated zone cdc retries exhausted", e);
-            violationService.handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e, STRUCTURED_CDC);
+            violationService.handleRetriesExhausted(spark, batchMetrics, dataFrame, sourceName, tableName, e, STRUCTURED_CDC);
             return spark.emptyDataFrame();
         }
     }

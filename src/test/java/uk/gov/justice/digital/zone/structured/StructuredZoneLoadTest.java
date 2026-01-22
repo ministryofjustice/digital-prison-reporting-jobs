@@ -14,6 +14,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 
 import java.util.List;
 
@@ -38,6 +39,8 @@ class StructuredZoneLoadTest extends SparkTestBase {
     private DataStorageService storage;
     @Mock
     private ViolationService violationService;
+    @Mock
+    private BatchMetrics batchMetrics;
 
     private StructuredZoneLoad underTest;
 
@@ -60,14 +63,14 @@ class StructuredZoneLoadTest extends SparkTestBase {
 
     @Test
     void shouldAppendDistinctRecordsToTable() {
-        underTest.process(spark, df, sourceReference);
+        underTest.process(spark, batchMetrics, df, sourceReference);
 
         verify(storage, times(1)).appendDistinct("s3://structured/path/source/table", df, PRIMARY_KEY);
     }
 
     @Test
     void shouldReturnDataFrameAfterProcessing() {
-        List<Row> result = underTest.process(spark, df, sourceReference).collectAsList();
+        List<Row> result = underTest.process(spark, batchMetrics, df, sourceReference).collectAsList();
         List<Row> expected = df.collectAsList();
 
         assertEquals(expected.size(), result.size());
@@ -82,11 +85,11 @@ class StructuredZoneLoadTest extends SparkTestBase {
                 .when(storage)
                 .appendDistinct(any(), any(), any());
 
-        Dataset<Row> result = underTest.process(spark, df, sourceReference);
+        Dataset<Row> result = underTest.process(spark, batchMetrics, df, sourceReference);
 
         assertTrue(result.isEmpty());
 
         verify(violationService, times(1))
-                .handleRetriesExhausted(any(), eq(df), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.STRUCTURED_LOAD));
+                .handleRetriesExhausted(any(), any(), eq(df), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.STRUCTURED_LOAD));
     }
 }

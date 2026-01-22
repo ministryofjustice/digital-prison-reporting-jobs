@@ -19,7 +19,8 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
+import uk.gov.justice.digital.service.metrics.DisabledBatchMetrics;
+import uk.gov.justice.digital.service.metrics.DisabledBatchedMetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
@@ -162,7 +163,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         DataStorageService storageService = new DataStorageService(arguments);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         ViolationService violationService =
-                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
+                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService);
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
@@ -174,7 +175,9 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
-        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        DisabledBatchedMetricReportingService disabledBatchedMetricReportingService = new DisabledBatchedMetricReportingService();
+        BatchProcessor batchProcessor =
+                new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
         underTest = new DataHubBatchJob(
                 arguments,
                 properties,
@@ -183,7 +186,8 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
                 batchProcessor,
                 dataProvider,
                 sourceReferenceService,
-                violationService
+                violationService,
+                disabledBatchedMetricReportingService
         );
     }
 

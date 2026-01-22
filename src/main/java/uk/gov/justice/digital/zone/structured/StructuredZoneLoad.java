@@ -11,6 +11,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 import uk.gov.justice.digital.zone.Zone;
 
 import javax.inject.Inject;
@@ -36,7 +37,7 @@ public class StructuredZoneLoad implements Zone {
         this.violationService = violationService;
     }
 
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference) {
+    public Dataset<Row> process(SparkSession spark, BatchMetrics batchMetrics, Dataset<Row> dataFrame, SourceReference sourceReference) {
         val startTime = System.currentTimeMillis();
         String sourceName = sourceReference.getSource();
         String tableName = sourceReference.getTable();
@@ -52,7 +53,7 @@ public class StructuredZoneLoad implements Zone {
             logger.info("Processed batch for structured {}/{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
         } catch (DataStorageRetriesExhaustedException e) {
             logger.warn("Structured zone load retries exhausted", e);
-            violationService.handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e, ViolationService.ZoneName.STRUCTURED_LOAD);
+            violationService.handleRetriesExhausted(spark, batchMetrics, dataFrame, sourceName, tableName, e, ViolationService.ZoneName.STRUCTURED_LOAD);
             result = spark.emptyDataFrame();
         }
         return result;

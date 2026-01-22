@@ -6,9 +6,9 @@ import jakarta.inject.Inject;
 import lombok.val;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.functions;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ByteType;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.IntegerType;
@@ -19,6 +19,7 @@ import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.service.metrics.BatchMetrics;
 
 import javax.inject.Singleton;
 import java.util.Arrays;
@@ -35,10 +36,10 @@ import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.VALIDATION_TYPE_KEY;
 import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
-import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 
 @Singleton
 public class ValidationService {
@@ -59,12 +60,12 @@ public class ValidationService {
         this.violationService = violationService;
     }
 
-    public Dataset<Row> handleValidation(SparkSession spark, Dataset<Row> dataFrame, SourceReference sourceReference, StructType inferredSchema, ViolationService.ZoneName zoneName) {
+    public Dataset<Row> handleValidation(SparkSession spark, BatchMetrics batchMetrics, Dataset<Row> dataFrame, SourceReference sourceReference, StructType inferredSchema, ViolationService.ZoneName zoneName) {
         val maybeValidRows = validateRows(dataFrame, sourceReference, inferredSchema);
         val validRows = maybeValidRows.filter(col(ERROR).isNull()).drop(ERROR);
         val invalidRows = maybeValidRows.filter(col(ERROR).isNotNull());
         if (!invalidRows.isEmpty()) {
-            violationService.handleViolation(spark, invalidRows, sourceReference.getSource(), sourceReference.getTable(), zoneName);
+            violationService.handleViolation(spark, batchMetrics, invalidRows, sourceReference.getSource(), sourceReference.getTable(), zoneName);
         }
         return validRows;
     }

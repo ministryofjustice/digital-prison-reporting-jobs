@@ -20,6 +20,7 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.BatchedMetricReportingService;
 
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ public class DataHubBatchJob implements Runnable {
     private final S3DataProvider dataProvider;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
+    private final BatchedMetricReportingService metricReportingService;
 
     @Inject
     public DataHubBatchJob(
@@ -51,7 +53,8 @@ public class DataHubBatchJob implements Runnable {
             BatchProcessor batchProcessor,
             S3DataProvider dataProvider,
             SourceReferenceService sourceReferenceService,
-            ViolationService violationService) {
+            ViolationService violationService,
+            BatchedMetricReportingService metricReportingService) {
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
@@ -60,6 +63,7 @@ public class DataHubBatchJob implements Runnable {
         this.dataProvider = dataProvider;
         this.sourceReferenceService = sourceReferenceService;
         this.violationService = violationService;
+        this.metricReportingService = metricReportingService;
     }
 
     public static void main(String[] args) {
@@ -103,23 +107,25 @@ public class DataHubBatchJob implements Runnable {
     }
 
     private void processFilePaths(SparkSession sparkSession, String schema, String table, List<String> filePaths, long tableStartTime) throws DataStorageException {
-        Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
-        try {
-            val dataFrame = dataProvider.getBatchSourceData(sparkSession, filePaths);
+        metricReportingService.withBatchedMetrics(batchMetrics -> {
+            Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
+            try {
+                val dataFrame = dataProvider.getBatchSourceData(sparkSession, filePaths);
 
-            logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
-            if(maybeSourceReference.isPresent()) {
-                SourceReference sourceReference = maybeSourceReference.get();
-                batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
-                logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
-            } else {
-                logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
-                violationService.handleNoSchemaFound(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
+                logger.info("Schema for {}.{}: \n{}", schema, table, dataFrame.schema().treeString());
+                if (maybeSourceReference.isPresent()) {
+                    SourceReference sourceReference = maybeSourceReference.get();
+                    batchProcessor.processBatch(sparkSession, batchMetrics, sourceReference, dataFrame);
+                    logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
+                } else {
+                    logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
+                    violationService.handleNoSchemaFound(sparkSession, batchMetrics, dataFrame, schema, table, STRUCTURED_LOAD);
+                }
+            } catch (DataProviderFailedMergingSchemasException e) {
+                String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
+                logger.warn(msg, e);
+                violationService.writeBatchDataToViolations(sparkSession, batchMetrics, schema, table, msg);
             }
-        } catch (DataProviderFailedMergingSchemasException e) {
-            String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);
-            logger.warn(msg, e);
-            violationService.writeBatchDataToViolations(sparkSession, schema, table, msg);
-        }
+        });
     }
 }
