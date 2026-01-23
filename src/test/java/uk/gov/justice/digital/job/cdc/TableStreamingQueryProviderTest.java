@@ -101,7 +101,7 @@ class TableStreamingQueryProviderTest {
                 new SchemaColumnConvertNotSupportedException("col", "physical type", "logical type");
         SparkException toThrow = new SparkException("", new QueryExecutionException("", ultimateCause));
 
-        VoidFunction2<Dataset<Row>, Long> decoratedFunc = underTest.withIncompatibleSchemaHandling(sourceName, tableName, batchMetrics, (df, batchId) -> {
+        VoidFunction2<Dataset<Row>, Long> decoratedFunc = underTest.withIncompatibleSchemaHandling(sourceName, tableName, batchMetrics, (dataFrame, batchId) -> {
             throw toThrow;
         });
 
