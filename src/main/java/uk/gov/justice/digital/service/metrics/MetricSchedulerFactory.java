@@ -9,8 +9,11 @@ import javax.inject.Singleton;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+/**
+ * Provides a scheduler for flushing metrics to Cloudwatch in a background thread.
+ */
 @Factory
-public class MetricSchedulerFactory {
+class MetricSchedulerFactory {
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "metrics-flusher");
@@ -18,6 +21,7 @@ public class MetricSchedulerFactory {
         t.setDaemon(true);
         return t;
     });
+
     @Bean
     @Singleton
     @Named("metricsFlusher")

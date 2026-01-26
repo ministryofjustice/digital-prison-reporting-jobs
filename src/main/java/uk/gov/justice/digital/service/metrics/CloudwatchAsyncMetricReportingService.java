@@ -31,8 +31,8 @@ import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
 import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUDWATCH;
 
 /**
- * Buffers cloudwatch metrics locally before sending them in batches to the Cloudwatch API to save API call costs.
- * When shutdown gracefully, we flush any remaining metrics to Cloudwatch.
+ * Buffers cloudwatch metrics locally before sending them in batches using a background thread to the Cloudwatch API
+ * to save API call costs. When shutdown gracefully, we flush any remaining metrics to Cloudwatch.
  * This class is a singleton, and so it will buffer metrics for all StreamingQueries (source input tables) across a streaming app.
  * This means that metrics for different streaming queries can be sent in one batch and metrics for a given streaming
  * query microbatch can be interleaved across different batches. This means that you should always set the timestamp field
@@ -56,7 +56,6 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     private final ScheduledFuture<?> scheduledMetricFlushTask;
 
-
     @Inject
     public CloudwatchAsyncMetricReportingService(
             JobArguments jobArguments,
@@ -77,7 +76,6 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         TimeUnit timeUnit = TimeUnit.SECONDS;
         logger.info("Starting Cloudwatch metric background flush task, flushing every {} {}", period, timeUnit);
         this.scheduledMetricFlushTask = schedulerService.scheduleAtFixedRate(this::flush, 0, period, timeUnit);
-        System.out.println();
     }
 
     @Override
@@ -126,6 +124,9 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         logger.info("PreDestroy: Finished flushing metrics to cloudwatch");
     }
 
+    /**
+     * Flush any buffered metrics to Cloudwatch.
+     */
     void flush() {
         List<MetricDatum> copiedMetricData;
         synchronized (lock) {

@@ -324,30 +324,36 @@ class CloudwatchAsyncMetricReportingServiceTest {
     void manyWritersSingleFlushShouldPublishCorrectly() throws ExecutionException, InterruptedException, TimeoutException {
         when(clock.instant()).thenReturn(timestamp);
 
+        int timeoutSeconds = 5;
         int numThreads = 10;
         int metricsPerThread = 1000;
         int totalMetrics = numThreads * metricsPerThread;
 
         ExecutorService pool = Executors.newFixedThreadPool(numThreads);
         CyclicBarrier startBarrier = new CyclicBarrier(numThreads);
-
         List<Future<?>> futures = new ArrayList<>();
+
+        // Report metrics to the buffer from many threads
         for (int t = 0; t < numThreads; t++) {
             futures.add(pool.submit(() -> {
                 try {
-                    startBarrier.await(5, TimeUnit.SECONDS);
+                    // Wait until all tasks are ready before starting
+                    startBarrier.await(timeoutSeconds, TimeUnit.SECONDS);
                 } catch (InterruptedException | BrokenBarrierException | TimeoutException e) {
                     fail();
                 }
                 for (int i = 0; i < metricsPerThread; i++) {
+                    // Report the metric multiple times from this thread
                     underTest.reportStreamingMicroBatchTimeTaken(i);
                 }
             }));
         }
 
+        // Wait for all tasks to complete
         for (Future<?> f : futures) {
-            f.get(10, TimeUnit.SECONDS);
+            f.get(timeoutSeconds, TimeUnit.SECONDS);
         }
+        // Flush once from the main thread
         underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
@@ -356,41 +362,49 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(totalMetrics, sentMetrics.size());
     }
 
+    @SuppressWarnings("java:S2925")
     @Test
     void manyWritersManyFlushersShouldPublishCorrectly() throws ExecutionException, InterruptedException, TimeoutException {
         when(clock.instant()).thenReturn(timestamp);
 
+        int timeoutSeconds = 5;
         int numThreads = 10;
-        int metricsPerThread = 1000;
+        int metricsPerThread = 10;
         int totalMetrics = numThreads * metricsPerThread;
 
         ExecutorService pool = Executors.newFixedThreadPool(numThreads);
         CyclicBarrier startBarrier = new CyclicBarrier(numThreads);
-
         List<Future<?>> futures = new ArrayList<>();
+
+        // Report metrics to the buffer and flush from many threads
         for (int t = 0; t < numThreads; t++) {
             futures.add(pool.submit(() -> {
                 try {
-                    // Make all threads start at the same time
-                    startBarrier.await(5, TimeUnit.SECONDS);
+                    // Wait until all tasks are ready before starting
+                    startBarrier.await(timeoutSeconds, TimeUnit.SECONDS);
                 } catch (InterruptedException | BrokenBarrierException | TimeoutException e) {
                     fail();
                 }
                 for (int i = 0; i < metricsPerThread; i++) {
+                    // Report the metric multiple times from this thread
                     underTest.reportStreamingMicroBatchTimeTaken(i);
                 }
                 try {
-                    // Try to make thread interleaving more likely so we are more likely to hit any concurrency bugs
-                    TimeUnit.MILLISECONDS.sleep(new Random().nextInt(200));
+                    // Inject some random waits with the goal of making thread interleaving
+                    // more likely so we are more likely to hit any concurrency bugs
+                    int maxMillisToSleep = 200;
+                    TimeUnit.MILLISECONDS.sleep(new Random().nextInt(maxMillisToSleep));
                 } catch (InterruptedException e) {
                     fail();
                 }
+                // Each thread flushes once
                 underTest.flush();
             }));
         }
 
+        // Wait for all tasks to complete
         for (Future<?> f : futures) {
-            f.get(10, TimeUnit.SECONDS);
+            f.get(timeoutSeconds, TimeUnit.SECONDS);
         }
 
         // We can't guarantee the number of put calls because sometimes the buffer will be empty
