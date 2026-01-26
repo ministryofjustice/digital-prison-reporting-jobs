@@ -16,10 +16,15 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 
+import javax.annotation.PreDestroy;
+import javax.inject.Named;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
@@ -27,6 +32,7 @@ import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUD
 
 /**
  * Buffers cloudwatch metrics locally before sending them in batches to the Cloudwatch API to save API call costs.
+ * When shutdown gracefully, we flush any remaining metrics to Cloudwatch.
  * This class is a singleton, and so it will buffer metrics for all StreamingQueries (source input tables) across a streaming app.
  * This means that metrics for different streaming queries can be sent in one batch and metrics for a given streaming
  * query microbatch can be interleaved across different batches. This means that you should always set the timestamp field
@@ -34,9 +40,9 @@ import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUD
  */
 @Singleton
 @Requires(property = REPORT_METRICS_TO_CLOUDWATCH)
-public class CloudwatchBufferedMetricReportingService implements BufferedMetricReportingService {
+public class CloudwatchAsyncMetricReportingService implements MetricReportingService {
 
-    private static final Logger logger = LoggerFactory.getLogger(CloudwatchBufferedMetricReportingService.class);
+    private static final Logger logger = LoggerFactory.getLogger(CloudwatchAsyncMetricReportingService.class);
 
     private final CloudwatchClient cloudwatchClient;
     private final Clock clock;
@@ -48,57 +54,79 @@ public class CloudwatchBufferedMetricReportingService implements BufferedMetricR
     private final Object lock = new Object();
     private List<MetricDatum> bufferedMetrics = new ArrayList<>();
 
+    private final ScheduledFuture<?> scheduledMetricFlushTask;
+
 
     @Inject
-    public CloudwatchBufferedMetricReportingService(
+    public CloudwatchAsyncMetricReportingService(
             JobArguments jobArguments,
             JobProperties jobProperties,
             CloudwatchClient cloudwatchClient,
-            Clock clock
+            Clock clock,
+            @Named("metricsFlusher")
+            ScheduledExecutorService schedulerService
     ) {
         this.cloudwatchClient = cloudwatchClient;
         this.clock = clock;
         this.metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         this.jobName = jobProperties.getSparkJobName();
         this.inputDomain = jobArguments.getConfigKey();
+        // TODO: configurable schedule
+        // Flush metrics to Cloudwatch on the configured schedule
+        int period = 1;
+        TimeUnit timeUnit = TimeUnit.SECONDS;
+        logger.info("Starting Cloudwatch metric background flush task, flushing every {} {}", period, timeUnit);
+        this.scheduledMetricFlushTask = schedulerService.scheduleAtFixedRate(this::flush, 0, period, timeUnit);
+        System.out.println();
     }
 
     @Override
-    public void bufferViolationCount(long count) {
+    public void reportViolationCount(long count) {
         putMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void bufferDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
+    public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
         putMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
     }
 
     @Override
-    public void bufferStreamingThroughputInput(Dataset<Row> inputDf) {
+    public void reportStreamingThroughputInput(Dataset<Row> inputDf) {
         long count = inputDf.count();
         putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void bufferStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
+    public void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
         long count = structuredDf.count();
         putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void bufferStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
+    public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
         long count = curatedDf.count();
         putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
-    public void bufferStreamingMicroBatchTimeTaken(long timeTakenMs) {
+    public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
         putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
     }
 
-    @Override
-    public void flushAllBufferedMetrics() {
+    /**
+     * Flush any leftover metrics to Cloudwatch before
+     */
+    @PreDestroy
+    public void close() {
+        logger.info("PreDestroy: Cancelling scheduled flush task");
+        scheduledMetricFlushTask.cancel(false);
+        logger.info("PreDestroy: Flushing metrics to cloudwatch");
+        flush();
+        logger.info("PreDestroy: Finished flushing metrics to cloudwatch");
+    }
+
+    void flush() {
         List<MetricDatum> copiedMetricData;
         synchronized (lock) {
             if (bufferedMetrics.isEmpty()) {
@@ -113,9 +141,9 @@ public class CloudwatchBufferedMetricReportingService implements BufferedMetricR
         try {
             cloudwatchClient.putMetrics(metricNamespace, copiedMetricData);
         } catch (AmazonClientException e) {
-            // Metrics are published on a best effort basis. We don't want
-            // to fail a job due to the Cloudwatch API being unavailable.
-            logger.warn("Failed to report metrics to CloudWatch", e);
+            // Metrics are published on a best effort basis based on the underlying client's retry policy.
+            // We don't want to fail a job due to the Cloudwatch API being unavailable.
+            logger.error("Failed to report metrics to CloudWatch", e);
         }
     }
 

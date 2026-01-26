@@ -16,7 +16,7 @@ import scala.collection.JavaConverters;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.metrics.BufferedMetricReportingService;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
@@ -40,7 +40,7 @@ public class CdcBatchProcessor {
     private final CuratedZoneCDC curatedZone;
     private final S3DataProvider dataProvider;
     private final OperationalDataStoreService operationalDataStoreService;
-    private final BufferedMetricReportingService bufferedMetricReportingService;
+    private final MetricReportingService metricReportingService;
     private final Clock clock;
 
     @Inject
@@ -50,7 +50,7 @@ public class CdcBatchProcessor {
             CuratedZoneCDC curatedZone,
             S3DataProvider dataProvider,
             OperationalDataStoreService operationalDataStoreService,
-            BufferedMetricReportingService bufferedMetricReportingService,
+            MetricReportingService metricReportingService,
             Clock clock
     ) {
         this.validationService = validationService;
@@ -58,7 +58,7 @@ public class CdcBatchProcessor {
         this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
         this.operationalDataStoreService = operationalDataStoreService;
-        this.bufferedMetricReportingService = bufferedMetricReportingService;
+        this.metricReportingService = metricReportingService;
         this.clock = clock;
     }
 
@@ -66,7 +66,7 @@ public class CdcBatchProcessor {
         if(!df.isEmpty()) {
             val batchStartTime = clock.millis();
 
-            bufferedMetricReportingService.bufferStreamingThroughputInput(df);
+            metricReportingService.reportStreamingThroughputInput(df);
             String source = sourceReference.getSource();
             String table = sourceReference.getTable();
             logger.info("Processing batch {} for {}.{}", batchId, source, table);
@@ -76,14 +76,14 @@ public class CdcBatchProcessor {
 
             val structuredDf = structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
 
-            bufferedMetricReportingService.bufferStreamingThroughputWrittenToStructured(structuredDf);
+            metricReportingService.reportStreamingThroughputWrittenToStructured(structuredDf);
 
             val curatedDf = curatedZone.process(spark, structuredDf, sourceReference);
             operationalDataStoreService.mergeData(curatedDf, sourceReference);
 
-            bufferedMetricReportingService.bufferStreamingThroughputWrittenToCurated(curatedDf);
+            metricReportingService.reportStreamingThroughputWrittenToCurated(curatedDf);
             long batchTimeTakenMs = clock.millis() - batchStartTime;
-            bufferedMetricReportingService.bufferStreamingMicroBatchTimeTaken(batchTimeTakenMs);
+            metricReportingService.reportStreamingMicroBatchTimeTaken(batchTimeTakenMs);
             logger.info("Processing batch {} {}.{} took {}ms", batchId, source, table, batchTimeTakenMs);
         } else {
             logger.info("Skipping empty batch");

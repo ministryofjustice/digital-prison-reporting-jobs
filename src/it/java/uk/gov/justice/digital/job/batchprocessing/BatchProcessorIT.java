@@ -18,7 +18,7 @@ import uk.gov.justice.digital.service.DataStorageService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.ViolationService;
-import uk.gov.justice.digital.service.metrics.DisabledBufferedMetricReportingService;
+import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreServiceImpl;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreTransformation;
@@ -284,7 +284,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         ViolationService violationService =
-                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledBufferedMetricReportingService());
+                new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);

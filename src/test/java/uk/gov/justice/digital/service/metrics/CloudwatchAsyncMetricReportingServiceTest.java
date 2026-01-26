@@ -29,6 +29,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -37,7 +39,10 @@ import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -49,7 +54,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class CloudwatchBufferedMetricReportingServiceTest {
+class CloudwatchAsyncMetricReportingServiceTest {
 
     private static final String DOMAIN = "some domain";
     private static final String JOB = "some job";
@@ -63,27 +68,33 @@ class CloudwatchBufferedMetricReportingServiceTest {
     private CloudwatchClient cloudwatchClient;
     @Mock
     private Clock clock;
+    @Mock
+    private ScheduledExecutorService schedulerService;
+    @Mock
+    private ScheduledFuture scheduledFlushTask;
     @Captor
     private ArgumentCaptor<Collection<MetricDatum>> metricDatumCaptor;
     @Mock
     private Dataset<Row> mockDf;
 
-    private CloudwatchBufferedMetricReportingService underTest;
+    private CloudwatchAsyncMetricReportingService underTest;
 
     @BeforeEach
     void setUp() {
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(jobArguments.getConfigKey()).thenReturn(DOMAIN);
-        underTest = new CloudwatchBufferedMetricReportingService(jobArguments, jobProperties, cloudwatchClient, clock);
+        when(schedulerService.scheduleAtFixedRate(any(), anyLong(), anyLong(), any())).thenReturn(scheduledFlushTask);
+        underTest = new CloudwatchAsyncMetricReportingService(jobArguments, jobProperties, cloudwatchClient, clock, schedulerService);
+        verify(schedulerService, times(1)).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
     }
 
     @Test
-    void bufferViolationCountShouldPutMetrics() {
+    void reportViolationCountShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
 
-        underTest.bufferViolationCount(10L);
-        underTest.flushAllBufferedMetrics();
+        underTest.reportViolationCount(10L);
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -104,14 +115,14 @@ class CloudwatchBufferedMetricReportingServiceTest {
     }
 
     @Test
-    void bufferDataReconciliationResultsShouldPutMetrics() {
+    void reportDataReconciliationResultsShouldPutMetrics() {
         DataReconciliationResults dataReconciliationResults = mock(DataReconciliationResults.class);
 
         when(clock.instant()).thenReturn(timestamp);
         when(dataReconciliationResults.numReconciliationChecksFailing()).thenReturn(2L);
 
-        underTest.bufferDataReconciliationResults(dataReconciliationResults);
-        underTest.flushAllBufferedMetrics();
+        underTest.reportDataReconciliationResults(dataReconciliationResults);
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -132,12 +143,12 @@ class CloudwatchBufferedMetricReportingServiceTest {
     }
 
     @Test
-    void bufferStreamingThroughputInputShouldPutMetrics() {
+    void reportStreamingThroughputInputShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
         when(mockDf.count()).thenReturn(100L);
 
-        underTest.bufferStreamingThroughputInput(mockDf);
-        underTest.flushAllBufferedMetrics();
+        underTest.reportStreamingThroughputInput(mockDf);
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -158,12 +169,12 @@ class CloudwatchBufferedMetricReportingServiceTest {
     }
 
     @Test
-    void bufferStreamingThroughputWrittenToStructuredShouldPutMetrics() {
+    void reportStreamingThroughputWrittenToStructuredShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
         when(mockDf.count()).thenReturn(100L);
 
-        underTest.bufferStreamingThroughputWrittenToStructured(mockDf);
-        underTest.flushAllBufferedMetrics();
+        underTest.reportStreamingThroughputWrittenToStructured(mockDf);
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -184,12 +195,12 @@ class CloudwatchBufferedMetricReportingServiceTest {
     }
 
     @Test
-    void bufferStreamingThroughputWrittenToCuratedShouldPutMetrics() {
+    void reportStreamingThroughputWrittenToCuratedShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
         when(mockDf.count()).thenReturn(100L);
 
-        underTest.bufferStreamingThroughputWrittenToCurated(mockDf);
-        underTest.flushAllBufferedMetrics();
+        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -210,11 +221,11 @@ class CloudwatchBufferedMetricReportingServiceTest {
     }
 
     @Test
-    void bufferStreamingMicroBatchTimeTakenShouldPutMetrics() {
+    void reportStreamingMicroBatchTimeTakenShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
 
-        underTest.bufferStreamingMicroBatchTimeTaken(1000L);
-        underTest.flushAllBufferedMetrics();
+        underTest.reportStreamingMicroBatchTimeTaken(1000L);
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -235,12 +246,37 @@ class CloudwatchBufferedMetricReportingServiceTest {
     }
 
     @Test
-    void flushAllBufferedMetricsShouldPutMultipleMetricsInOneCall() {
+    void flushShouldSendMetrics() {
+        when(clock.instant()).thenReturn(timestamp);
+        when(mockDf.count()).thenReturn(100L);
+
+        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.flush();
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+    }
+
+    @Test
+    void flushShouldSendMultipleMetrics() {
+        when(clock.instant()).thenReturn(timestamp);
+        when(mockDf.count()).thenReturn(100L);
+
+        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.flush();
+
+        underTest.reportStreamingMicroBatchTimeTaken(1000L);
+        underTest.flush();
+
+        verify(cloudwatchClient, times(2)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+    }
+
+    @Test
+    void flushShouldSendMultipleMetricsInOneCall() {
         when(clock.instant()).thenReturn(timestamp);
 
-        underTest.bufferStreamingThroughputWrittenToCurated(mockDf);
-        underTest.bufferStreamingMicroBatchTimeTaken(1000L);
-        underTest.flushAllBufferedMetrics();
+        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.reportStreamingMicroBatchTimeTaken(1000L);
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -249,31 +285,39 @@ class CloudwatchBufferedMetricReportingServiceTest {
     }
 
     @Test
-    void flushAllBufferedMetricsShouldClearMetricsBetweenCalls() {
-        when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
-
-        underTest.bufferStreamingThroughputWrittenToCurated(mockDf);
-        underTest.flushAllBufferedMetrics();
-
-        underTest.bufferStreamingMicroBatchTimeTaken(1000L);
-        underTest.flushAllBufferedMetrics();
-
-        verify(cloudwatchClient, times(2)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
-    }
-
-    @Test
-    void flushAllBufferedMetricsShouldDoNothingIfThereAreNoMetricsToReport() {
-        underTest.flushAllBufferedMetrics();
+    void flushingEmptyBufferShouldDoNothing() {
+        underTest.flush();
         verifyNoInteractions(cloudwatchClient);
     }
 
     @Test
-    void flushAllBufferedMetricsShouldContinueWhenCloudwatchThrows() {
+    void flushShouldContinueWhenCloudwatchThrows() {
         when(clock.instant()).thenReturn(timestamp);
         doThrow(new AmazonClientException("Test Exception")).when(cloudwatchClient).putMetrics(anyString(), anyList());
-        underTest.bufferStreamingMicroBatchTimeTaken(1000L);
-        assertDoesNotThrow(() -> underTest.flushAllBufferedMetrics());
+        underTest.reportStreamingMicroBatchTimeTaken(1000L);
+        assertDoesNotThrow(() -> underTest.flush());
+    }
+
+    @Test
+    void closeShouldSendMetrics() {
+        when(clock.instant()).thenReturn(timestamp);
+        when(mockDf.count()).thenReturn(100L);
+
+        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.close();
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+    }
+
+    @Test
+    void closeShouldCancelScheduledFlush() {
+        when(clock.instant()).thenReturn(timestamp);
+        when(mockDf.count()).thenReturn(100L);
+
+        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.close();
+
+        verify(scheduledFlushTask, times(1)).cancel(anyBoolean());
     }
 
     @Test
@@ -296,7 +340,7 @@ class CloudwatchBufferedMetricReportingServiceTest {
                     fail();
                 }
                 for (int i = 0; i < metricsPerThread; i++) {
-                    underTest.bufferStreamingMicroBatchTimeTaken(i);
+                    underTest.reportStreamingMicroBatchTimeTaken(i);
                 }
             }));
         }
@@ -304,7 +348,7 @@ class CloudwatchBufferedMetricReportingServiceTest {
         for (Future<?> f : futures) {
             f.get(10, TimeUnit.SECONDS);
         }
-        underTest.flushAllBufferedMetrics();
+        underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
 
@@ -333,7 +377,7 @@ class CloudwatchBufferedMetricReportingServiceTest {
                     fail();
                 }
                 for (int i = 0; i < metricsPerThread; i++) {
-                    underTest.bufferStreamingMicroBatchTimeTaken(i);
+                    underTest.reportStreamingMicroBatchTimeTaken(i);
                 }
                 try {
                     // Try to make thread interleaving more likely so we are more likely to hit any concurrency bugs
@@ -341,7 +385,7 @@ class CloudwatchBufferedMetricReportingServiceTest {
                 } catch (InterruptedException e) {
                     fail();
                 }
-                underTest.flushAllBufferedMetrics();
+                underTest.flush();
             }));
         }
 

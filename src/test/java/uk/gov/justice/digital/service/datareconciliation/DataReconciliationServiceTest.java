@@ -17,7 +17,7 @@ import uk.gov.justice.digital.service.datareconciliation.model.CurrentStateTotal
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 import uk.gov.justice.digital.service.datareconciliation.model.PrimaryKeyReconciliationCounts;
-import uk.gov.justice.digital.service.metrics.BufferedMetricReportingService;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
 import java.util.Arrays;
 import java.util.List;
@@ -63,7 +63,7 @@ class DataReconciliationServiceTest {
     @Mock
     private PrimaryKeyReconciliationCounts primaryKeyResult;
     @Mock
-    private BufferedMetricReportingService bufferedMetricReportingService;
+    private MetricReportingService metricReportingService;
 
     @InjectMocks
     private DataReconciliationService underTest;
@@ -249,6 +249,6 @@ class DataReconciliationServiceTest {
 
         DataReconciliationResults results = ((DataReconciliationResults) underTest.reconcileData(sparkSession));
 
-        verify(bufferedMetricReportingService, times(1)).bufferDataReconciliationResults(results);
+        verify(metricReportingService, times(1)).reportDataReconciliationResults(results);
     }
 }

@@ -16,7 +16,7 @@ import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
-import uk.gov.justice.digital.service.metrics.CloudwatchBufferedMetricReportingService;
+import uk.gov.justice.digital.service.metrics.CloudwatchAsyncMetricReportingService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +51,7 @@ class ViolationServiceTest extends SparkTestBase {
     @Mock
     private TableDiscoveryService tableDiscoveryService;
     @Mock
-    private CloudwatchBufferedMetricReportingService cloudwatchMetricReportingService;
+    private CloudwatchAsyncMetricReportingService cloudwatchMetricReportingService;
     @Mock
     private DataStorageRetriesExhaustedException mockCause;
     @Captor
@@ -85,7 +85,7 @@ class ViolationServiceTest extends SparkTestBase {
         Dataset<Row> inputDf = inserts(spark);
         long violationRowCount = inputDf.count();
         underTest.handleRetriesExhausted(spark, inputDf, "source", "table", mockCause, STRUCTURED_LOAD);
-        verify(cloudwatchMetricReportingService).bufferViolationCount(violationRowCount);
+        verify(cloudwatchMetricReportingService).reportViolationCount(violationRowCount);
     }
 
     @Test
@@ -107,7 +107,7 @@ class ViolationServiceTest extends SparkTestBase {
         Dataset<Row> inputDf = testInputDataframe();
         long violationRowCount = inputDf.count();
         underTest.handleNoSchemaFound(spark, inputDf, "source", "table", STRUCTURED_LOAD);
-        verify(cloudwatchMetricReportingService).bufferViolationCount(violationRowCount);
+        verify(cloudwatchMetricReportingService).reportViolationCount(violationRowCount);
     }
 
     @Test
@@ -145,7 +145,7 @@ class ViolationServiceTest extends SparkTestBase {
         Dataset<Row> inputDf = testInputDataframe();
         long violationRowCount = inputDf.count();
         underTest.handleViolation(spark, inputDf, "source", "table", STRUCTURED_LOAD);
-        verify(cloudwatchMetricReportingService).bufferViolationCount(violationRowCount);
+        verify(cloudwatchMetricReportingService).reportViolationCount(violationRowCount);
     }
 
     private Dataset<Row> testInputDataframe() {

@@ -23,9 +23,11 @@ public class PicocliMicronautExecutor {
      */
     public static void execute(Class<?> cls, String... args) {
         logger.info("Job starting");
-        ApplicationContext applicationContext = MicronautContext.withArgs(args).registerSingleton(Clock.class, Clock.systemUTC());
-        CommandLine commandLine = new CommandLine(cls, new MicronautFactory(applicationContext));
-        int exitCode = commandLine.execute();
+        int exitCode;
+        try(ApplicationContext applicationContext = MicronautContext.withArgs(args).registerSingleton(Clock.class, Clock.systemUTC())) {
+            CommandLine commandLine = new CommandLine(cls, new MicronautFactory(applicationContext));
+            exitCode = commandLine.execute();
+        }
         logger.info("Job finished with exit code {}", exitCode);
         System.exit(exitCode);
     }

@@ -10,39 +10,34 @@ import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUD
 
 @Singleton
 @Requires(missingProperty = REPORT_METRICS_TO_CLOUDWATCH)
-public class DisabledBufferedMetricReportingService implements BufferedMetricReportingService {
+public class DisabledMetricReportingService implements MetricReportingService {
     @Override
-    public void bufferViolationCount(long count) {
+    public void reportViolationCount(long count) {
         // No op
     }
 
     @Override
-    public void bufferDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
+    public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         // No op
     }
 
     @Override
-    public void bufferStreamingThroughputInput(Dataset<Row> inputDf) {
+    public void reportStreamingThroughputInput(Dataset<Row> inputDf) {
         // No op
     }
 
     @Override
-    public void bufferStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
+    public void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
         // No op
     }
 
     @Override
-    public void bufferStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
+    public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
         // No op
     }
 
     @Override
-    public void bufferStreamingMicroBatchTimeTaken(long timeTakenMs) {
-        // No op
-    }
-
-    @Override
-    public void flushAllBufferedMetrics() {
+    public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
         // No op
     }
 }

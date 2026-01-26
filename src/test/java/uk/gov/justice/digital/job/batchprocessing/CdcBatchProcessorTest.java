@@ -14,7 +14,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
-import uk.gov.justice.digital.service.metrics.BufferedMetricReportingService;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
@@ -58,7 +58,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
     @Mock
     private OperationalDataStoreService mockOperationalDataStoreService;
     @Mock
-    private BufferedMetricReportingService mockBufferedMetricReportingService;
+    private MetricReportingService mockMetricReportingService;
     @Mock
     private Dataset<Row> outputOfStructuredDf;
     @Mock
@@ -85,7 +85,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
                 mockCuratedZone,
                 mockDataProvider,
                 mockOperationalDataStoreService,
-                mockBufferedMetricReportingService,
+                mockMetricReportingService,
                 clock
         );
     }
@@ -98,7 +98,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
         verifyNoInteractions(mockStructuredZone);
         verifyNoInteractions(mockCuratedZone);
         verifyNoInteractions(mockOperationalDataStoreService);
-        verifyNoInteractions(mockBufferedMetricReportingService);
+        verifyNoInteractions(mockMetricReportingService);
     }
 
     @Test
@@ -192,7 +192,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockBufferedMetricReportingService, times(1)).bufferStreamingThroughputInput(manyRowsPerPk);
+        verify(mockMetricReportingService, times(1)).reportStreamingThroughputInput(manyRowsPerPk);
     }
 
     @Test
@@ -206,7 +206,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockBufferedMetricReportingService, times(1)).bufferStreamingThroughputWrittenToStructured(outputOfStructuredDf);
+        verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToStructured(outputOfStructuredDf);
     }
 
     @Test
@@ -220,7 +220,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockBufferedMetricReportingService, times(1)).bufferStreamingThroughputWrittenToCurated(outputOfCuratedDf);
+        verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToCurated(outputOfCuratedDf);
     }
 
     @Test
@@ -236,6 +236,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockBufferedMetricReportingService, times(1)).bufferStreamingMicroBatchTimeTaken(1100L);
+        verify(mockMetricReportingService, times(1)).reportStreamingMicroBatchTimeTaken(1100L);
     }
 }

@@ -15,7 +15,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
-import uk.gov.justice.digital.service.metrics.BufferedMetricReportingService;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
 import javax.inject.Singleton;
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class ViolationService {
     private final DataStorageService storageService;
     private final S3DataProvider dataProvider;
     private final TableDiscoveryService tableDiscoveryService;
-    private final BufferedMetricReportingService bufferedMetricReportingService;
+    private final MetricReportingService metricReportingService;
 
     /**
      * Allows us to record where a violation occurred.
@@ -79,13 +79,13 @@ public class ViolationService {
             DataStorageService storageService,
             S3DataProvider dataProvider,
             TableDiscoveryService tableDiscoveryService,
-            BufferedMetricReportingService bufferedMetricReportingService
+            MetricReportingService metricReportingService
     ) {
         this.arguments = arguments;
         this.storageService = storageService;
         this.dataProvider = dataProvider;
         this.tableDiscoveryService = tableDiscoveryService;
-        this.bufferedMetricReportingService = bufferedMetricReportingService;
+        this.metricReportingService = metricReportingService;
     }
 
     public void handleRetriesExhausted(
@@ -190,7 +190,7 @@ public class ViolationService {
         logger.info("Append completed successfully");
         storageService.updateDeltaManifestForTable(spark, destinationPath);
         long violationsCount = toWrite.count();
-        bufferedMetricReportingService.bufferViolationCount(violationsCount);
+        metricReportingService.reportViolationCount(violationsCount);
     }
 
     private String fullTablePath(String source, String table, ZoneName zone) {
