@@ -14,7 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
+import uk.gov.justice.digital.service.metrics.DisabledBufferedMetricReportingService;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,7 +94,7 @@ class ViolationServiceIT extends SparkTestBase {
                 new DataStorageService(arguments),
                 new S3DataProvider(arguments),
                 new TableDiscoveryService(arguments, configService),
-                new DisabledMetricReportingService()
+                new DisabledBufferedMetricReportingService()
         );
     }
 

@@ -14,7 +14,7 @@ import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResult;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
 import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
-import uk.gov.justice.digital.service.metrics.MetricReportingService;
+import uk.gov.justice.digital.service.metrics.BufferedMetricReportingService;
 
 import java.util.List;
 import java.util.Set;
@@ -33,7 +33,7 @@ public class DataReconciliationService {
     private final SourceReferenceService sourceReferenceService;
     private final CurrentStateCountService currentStateCountService;
     private final ChangeDataCountService changeDataCountService;
-    private final MetricReportingService metricReportingService;
+    private final BufferedMetricReportingService bufferedMetricReportingService;
     private final PrimaryKeyReconciliationService primaryKeyReconciliationService;
 
     @Inject
@@ -43,7 +43,7 @@ public class DataReconciliationService {
             SourceReferenceService sourceReferenceService,
             CurrentStateCountService currentStateCountService,
             ChangeDataCountService changeDataCountService,
-            MetricReportingService metricReportingService,
+            BufferedMetricReportingService bufferedMetricReportingService,
             PrimaryKeyReconciliationService primaryKeyReconciliationService
     ) {
         this.jobArguments = jobArguments;
@@ -51,7 +51,7 @@ public class DataReconciliationService {
         this.sourceReferenceService = sourceReferenceService;
         this.currentStateCountService = currentStateCountService;
         this.changeDataCountService = changeDataCountService;
-        this.metricReportingService = metricReportingService;
+        this.bufferedMetricReportingService = bufferedMetricReportingService;
         this.primaryKeyReconciliationService = primaryKeyReconciliationService;
     }
 
@@ -82,7 +82,7 @@ public class DataReconciliationService {
         }).toList();
 
         DataReconciliationResults dataReconciliationResults = new DataReconciliationResults(results);
-        metricReportingService.reportDataReconciliationResults(dataReconciliationResults);
+        bufferedMetricReportingService.bufferDataReconciliationResults(dataReconciliationResults);
         return dataReconciliationResults;
     }
 }
