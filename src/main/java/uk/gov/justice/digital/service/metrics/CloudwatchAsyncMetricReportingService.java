@@ -111,7 +111,7 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     }
 
     /**
-     * Flush any leftover metrics to Cloudwatch before
+     * Flush any leftover metrics to Cloudwatch before Micronaut shuts down
      */
     @PreDestroy
     public void close() {
@@ -148,19 +148,20 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     private void putMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
         logger.debug("Reporting {} metric for namespace {} with value {}", metricName, metricNamespace, value);
+        MetricDatum metricDatum = new MetricDatum()
+                .withMetricName(metricName.toString())
+                .withUnit(unit)
+                .withDimensions(
+                        new Dimension()
+                                .withName(metricDimensionName.toString())
+                                .withValue(dimensionValue)
+                )
+                .withTimestamp(Date.from(clock.instant()))
+                .withValue(value);
 
         synchronized (lock) {
             bufferedMetrics.add(
-                    new MetricDatum()
-                            .withMetricName(metricName.toString())
-                            .withUnit(unit)
-                            .withDimensions(
-                                    new Dimension()
-                                            .withName(metricDimensionName.toString())
-                                            .withValue(dimensionValue)
-                            )
-                            .withTimestamp(Date.from(clock.instant()))
-                            .withValue(value)
+                    metricDatum
             );
         }
 
