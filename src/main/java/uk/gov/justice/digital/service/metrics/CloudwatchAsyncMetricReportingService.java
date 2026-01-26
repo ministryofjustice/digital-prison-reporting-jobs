@@ -70,12 +70,10 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         this.metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         this.jobName = jobProperties.getSparkJobName();
         this.inputDomain = jobArguments.getConfigKey();
-        // TODO: configurable schedule
         // Flush metrics to Cloudwatch on the configured schedule
-        int period = 1;
-        TimeUnit timeUnit = TimeUnit.SECONDS;
-        logger.info("Starting Cloudwatch metric background flush task, flushing every {} {}", period, timeUnit);
-        this.scheduledMetricFlushTask = schedulerService.scheduleAtFixedRate(this::flush, 0, period, timeUnit);
+        long periodSeconds = jobArguments.getCloudwatchMetricsReportingPeriodSeconds();
+        logger.info("Starting Cloudwatch metric background flush task, flushing every {} seconds", periodSeconds);
+        this.scheduledMetricFlushTask = schedulerService.scheduleAtFixedRate(this::flush, 0, periodSeconds, TimeUnit.SECONDS);
     }
 
     @Override
