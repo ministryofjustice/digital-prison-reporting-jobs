@@ -43,6 +43,8 @@ import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUD
 public class CloudwatchAsyncMetricReportingService implements MetricReportingService {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudwatchAsyncMetricReportingService.class);
+    // We expect that the buffer should never grow beyond a certain size
+    private static final int MAX_EXPECTED_METRICS_IN_BUFFER = 1000;
 
     private final CloudwatchClient cloudwatchClient;
     private final Clock clock;
@@ -78,36 +80,36 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     @Override
     public void reportViolationCount(long count) {
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
     public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
-        putMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
+        bufferMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
     }
 
     @Override
     public void reportStreamingThroughputInput(Dataset<Row> inputDf) {
         long count = inputDf.count();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
     public void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
         long count = structuredDf.count();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
     public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
         long count = curatedDf.count();
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
     }
 
     @Override
     public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
-        putMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
+        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
     }
 
     /**
@@ -146,7 +148,7 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         }
     }
 
-    private void putMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
+    private void bufferMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
         logger.debug("Reporting {} metric for namespace {} with value {}", metricName, metricNamespace, value);
         MetricDatum metricDatum = new MetricDatum()
                 .withMetricName(metricName.toString())
@@ -159,13 +161,19 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
                 .withTimestamp(Date.from(clock.instant()))
                 .withValue(value);
 
+        int bufferedCount;
         synchronized (lock) {
             bufferedMetrics.add(
                     metricDatum
             );
+            bufferedCount = bufferedMetrics.size();
         }
 
         logger.debug("Finished batching {} metric for namespace {} with value {}", metricName, metricNamespace, value);
+
+        if (bufferedCount > MAX_EXPECTED_METRICS_IN_BUFFER) {
+            logger.error("There are {} buffered metrics. This could be an indicator that metrics are not being flushed correctly", bufferedCount);
+        }
     }
 
     /**
