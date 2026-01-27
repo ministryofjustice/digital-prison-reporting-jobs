@@ -75,8 +75,8 @@ ext {
     mockitoVersion = '4.11.0'
     sparkVersion = '3.5.4'
     scalaBinary = '2.12'
-    awsSdkVersion = '1.12.569' // Glue 5.0 can use 1.12.569 or 2.28.8
-    glueApiVersion = '5.0.0'
+    awsSdkVersion = '2.41.14'
+    glueApiVersion = '5.1.0'
     failSafeVersion = '3.3.2'
     postgresVersion = '42.7.3'
     h2Version = '2.2.224'
@@ -105,7 +105,7 @@ dependencies {
         exclude group: "com.amazonaws", module: "AWSGlueDILibs"
     }
 
-    implementation platform("com.amazonaws:aws-java-sdk-bom:$awsSdkVersion")
+    implementation platform("software.amazon.awssdk:bom:$awsSdkVersion")
     implementation "com.amazonaws:aws-java-sdk-core"
     implementation "com.amazonaws:aws-java-sdk-glue"
     implementation "com.amazonaws:aws-java-sdk-dms"
@@ -250,13 +250,6 @@ shadowJar {
     configurations = [project.configurations.runtimeClasspath]
     zip64 true
     exclude 'core-site.xml'
-    // Glue 5.0.0's runtime environment appears to be broken for certain AWS SDK dependencies
-    // because they include both SDK 1 and 2 jars with conflicting methods. Renaming
-    // the AWS dependencies let's us continue using AWS SDK v1 until we choose to migrate to v2.
-    relocate 'com.amazonaws', 'com.amazonaws.moj.shadow', {
-        // Exclude AWSGlueETL from the rename (this also excludes aws-java-sdk-glue classes but this should be okay)
-        exclude 'com.amazonaws.services.glue.**'
-    }
 }
 
 micronaut {
