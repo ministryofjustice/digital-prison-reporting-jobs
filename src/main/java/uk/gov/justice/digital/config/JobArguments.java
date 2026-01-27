@@ -190,6 +190,8 @@ public class JobArguments {
     public static final String ADJUST_SPARK_MEMORY = "dpr.adjust.spark.memory";
     public static final String REPORT_METRICS_TO_CLOUDWATCH = "dpr.report.metrics.to.cloudwatch";
     static final String CLOUDWATCH_METRICS_NAMESPACE = "dpr.cloudwatch.metrics.namespace";
+    static final String CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS = "dpr.cloudwatch.metrics.reporting.period.seconds";
+    static final long CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS_DEFAULT = 30L;
     private final Map<String, String> config;
 
     @Inject
@@ -607,6 +609,10 @@ public class JobArguments {
 
     public String getCloudwatchMetricsNamespace() {
         return getArgument(CLOUDWATCH_METRICS_NAMESPACE);
+    }
+
+    public long getCloudwatchMetricsReportingPeriodSeconds() {
+        return getArgument(CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS, CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS_DEFAULT);
     }
 
     public String getSecretId() {

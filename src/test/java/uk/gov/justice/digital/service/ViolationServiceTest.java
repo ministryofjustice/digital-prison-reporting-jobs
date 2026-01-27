@@ -16,7 +16,7 @@ import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
-import uk.gov.justice.digital.service.metrics.CloudwatchMetricReportingService;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +51,7 @@ class ViolationServiceTest extends SparkTestBase {
     @Mock
     private TableDiscoveryService tableDiscoveryService;
     @Mock
-    private CloudwatchMetricReportingService cloudwatchMetricReportingService;
+    private MetricReportingService cloudwatchMetricReportingService;
     @Mock
     private DataStorageRetriesExhaustedException mockCause;
     @Captor

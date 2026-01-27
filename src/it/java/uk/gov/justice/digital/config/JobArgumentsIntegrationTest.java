@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.RegexPatterns.jsonOrParquetFileRegex;
 import static uk.gov.justice.digital.common.RegexPatterns.matchAllFiles;
 import static uk.gov.justice.digital.common.RegexPatterns.parquetFileRegex;
+import static uk.gov.justice.digital.config.JobArguments.CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_CDC_TRIGGER_INTERVAL_SECONDS;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT;
 import static uk.gov.justice.digital.config.JobArguments.DEFAULT_SPARK_BROADCAST_TIMEOUT_SECONDS;
@@ -100,6 +101,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, "my-connection" },
             { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, "OMS_OWNER" },
             { JobArguments.CLOUDWATCH_METRICS_NAMESPACE, "SomeNamespace" },
+            { JobArguments.CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS, "10" },
             { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.02" },
             { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, "12" },
             { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, "0.01" },
@@ -172,6 +174,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.RECONCILIATION_DATASOURCE_GLUE_CONNECTION_NAME, validArguments.getReconciliationDataSourceGlueConnectionName() },
                 { JobArguments.RECONCILIATION_DATASOURCE_SOURCE_SCHEMA_NAME, validArguments.getReconciliationDataSourceSourceSchemaName() },
                 { JobArguments.CLOUDWATCH_METRICS_NAMESPACE, validArguments.getCloudwatchMetricsNamespace() },
+                { JobArguments.CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS, validArguments.getCloudwatchMetricsReportingPeriodSeconds() },
                 { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationCurrentStateCountsToleranceRelativePercentage()) },
                 { JobArguments.RECONCILIATION_CURRENT_STATE_COUNTS_TOLERANCE_ABSOLUTE, Long.toString(validArguments.getReconciliationCurrentStateCountsToleranceAbsolute()) },
                 { JobArguments.RECONCILIATION_CHANGE_DATA_COUNTS_TOLERANCE_RELATIVE_PERCENTAGE, Double.toString(validArguments.getReconciliationChangeDataCountsToleranceRelativePercentage()) },
@@ -875,6 +878,14 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.TEST_DATA_RUN_DURATION_MILLIS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(3600000, jobArguments.getRunDurationMillis());
+    }
+
+    @Test
+    void getCloudwatchMetricsReportingPeriodSecondsShouldDefaultToFalseWhenNotConfigured() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS_DEFAULT, jobArguments.getCloudwatchMetricsReportingPeriodSeconds());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {
