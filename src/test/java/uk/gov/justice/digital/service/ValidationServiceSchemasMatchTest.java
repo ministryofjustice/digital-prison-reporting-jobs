@@ -53,8 +53,9 @@ class ValidationServiceSchemasMatchTest {
     @Test
     void ShouldMatchSchemaWithExtraNullableColumn() {
         StructType inferredSchema = new StructType(new StructField[]{
+                // The nullable field is always true for the inferred schema
                 new StructField("column 1", DataTypes.IntegerType, true, Metadata.empty()),
-                new StructField("column 2", DataTypes.IntegerType, false, Metadata.empty()),
+                new StructField("column 2", DataTypes.IntegerType, true, Metadata.empty()),
         });
 
         StructType specifiedSchema = new StructType(new StructField[]{
