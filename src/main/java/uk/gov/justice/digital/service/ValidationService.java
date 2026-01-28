@@ -22,6 +22,7 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 
 import javax.inject.Singleton;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -170,14 +171,19 @@ public class ValidationService {
     }
 
     private static boolean validateFieldCounts(StructType inferredSchema, StructType specifiedSchema) {
-        val infferedFieldsSet = Arrays.stream(inferredSchema.fields()).collect(Collectors.toSet());
-        val specifiedFieldsSet = Arrays.stream(specifiedSchema.fields()).collect(Collectors.toSet());
+        val inferredFieldNames = Arrays.stream(inferredSchema.fields()).map(StructField::name).collect(Collectors.toSet());
+        val specifiedFieldNames = Arrays.stream(specifiedSchema.fields()).map(StructField::name).collect(Collectors.toSet());
 
-        if (infferedFieldsSet.size() != specifiedFieldsSet.size()) {
+        if (inferredFieldNames.size() != specifiedFieldNames.size()) {
             // If the specified schema has more fields than the inferred schema and those fields are nullable
             // then we pass the validation
-            if (specifiedFieldsSet.size() > infferedFieldsSet.size()) {
-                val nonInferredFields = difference(specifiedFieldsSet, infferedFieldsSet);
+            if (specifiedFieldNames.size() > inferredFieldNames.size()) {
+
+                val nonInferredFieldNames = difference(specifiedFieldNames, inferredFieldNames);
+                List<StructField> nonInferredFields = Arrays.stream(specifiedSchema.fields())
+                        .filter(x -> nonInferredFieldNames.contains(x.name()))
+                        .toList();
+
                 if (nonInferredFields.stream().allMatch(StructField::nullable)) {
                     return true;
                 } else {
@@ -190,7 +196,7 @@ public class ValidationService {
                     return false;
                 }
             } else {
-                val extraInferredFields = difference(infferedFieldsSet, specifiedFieldsSet);
+                val extraInferredFields = difference(inferredFieldNames, specifiedFieldNames);
                 logger.warn("Inferred schema contains fields not in specified schema. Extra fields {}", extraInferredFields);
                 return false;
             }
