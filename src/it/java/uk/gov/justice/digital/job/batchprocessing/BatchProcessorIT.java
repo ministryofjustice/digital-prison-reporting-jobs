@@ -45,6 +45,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
+import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenEmptyTableExists;
@@ -154,13 +155,14 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    void shouldWriteToViolationsForDfWithMissingColumn() throws Exception {
+    void shouldWriteToViolationsForDfWithMissingNonNullableColumn() throws Exception {
         Dataset<Row> dfWithMisMatchingSchema = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, null, Insert, "data2"),
                 createRow(pk3, "2023-11-13 10:50:00.123456", Insert, "data3")
         ), TEST_DATA_SCHEMA).drop("data");
 
+        when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN);
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
