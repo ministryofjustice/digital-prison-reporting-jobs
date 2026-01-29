@@ -278,6 +278,14 @@ class CloudwatchAsyncMetricReportingServiceTest {
     }
 
     @Test
+    void reportStreamingLatencyDmsToCuratedShouldDoNothingForEmptyStatistics() {
+        underTest.reportStreamingLatencyDmsToCurated(LatencyStatistics.EMPTY);
+        underTest.flush();
+
+        verifyNoInteractions(cloudwatchClient);
+    }
+
+    @Test
     void flushShouldSendMetrics() {
         when(clock.instant()).thenReturn(timestamp);
 

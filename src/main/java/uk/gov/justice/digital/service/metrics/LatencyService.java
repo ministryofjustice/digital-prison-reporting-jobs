@@ -26,14 +26,14 @@ public class LatencyService {
      *                        to a timestamp using spark's unix_millis(to_timestamp(col(column))) functions. Rows
      *                        with null values for this column will be discarded.
      * @param nowMillis       - Current epoch timestamp in milliseconds.
-     * @return LatencyStatistics object containing calculated statistics.
-     * @throws IllegalArgumentException if df does not contain any non null timestamps
+     * @return LatencyStatistics object containing calculated statistics, which can be empty if latency data cannot
+     *                        be calculated due to missing or invalid data.
      */
     public LatencyStatistics calculateLatencyStatistics(Dataset<Row> df, String timestampColumn, long nowMillis) {
         Dataset<Row> withNonNullTimestamps = df.filter(col(timestampColumn).isNotNull());
         long notNullTimestampCount = withNonNullTimestamps.count();
         if (notNullTimestampCount <= 0) {
-            throw new IllegalArgumentException("DataFrame cannot be empty");
+            return LatencyStatistics.EMPTY;
         }
 
         String dmsLatencyDiffMsColumn = "dms_latency_diff_ms";

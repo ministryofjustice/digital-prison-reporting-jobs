@@ -8,7 +8,6 @@ import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
@@ -29,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
 import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUDWATCH;
+import static uk.gov.justice.digital.service.metrics.LatencyStatistics.isEmpty;
 
 /**
  * Buffers cloudwatch metrics locally before sending them in batches using a background thread to the Cloudwatch API
@@ -117,9 +117,11 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     @Override
     public void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics) {
-        StatisticSet statisticSet = convertToStatisticSet(latencyStatistics);
-        MetricDatum metricDatum = buildStatisticMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, DimensionName.JOB_NAME, jobName, Milliseconds, statisticSet);
-        bufferMetric(metricDatum);
+        if (!isEmpty(latencyStatistics)) {
+            StatisticSet statisticSet = convertToStatisticSet(latencyStatistics);
+            MetricDatum metricDatum = buildStatisticMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, DimensionName.JOB_NAME, jobName, Milliseconds, statisticSet);
+            bufferMetric(metricDatum);
+        }
     }
 
     /**
