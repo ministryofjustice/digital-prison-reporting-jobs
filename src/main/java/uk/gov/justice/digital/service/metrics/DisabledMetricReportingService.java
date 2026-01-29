@@ -22,22 +22,27 @@ public class DisabledMetricReportingService implements MetricReportingService {
     }
 
     @Override
-    public void reportStreamingThroughputInput(Dataset<Row> inputDf) {
+    public void reportStreamingThroughputInput(long count) {
         // No op
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
+    public void reportStreamingThroughputWrittenToStructured(long count) {
         // No op
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
+    public void reportStreamingThroughputWrittenToCurated(long count) {
         // No op
     }
 
     @Override
     public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
+        // No op
+    }
+
+    @Override
+    public void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics) {
         // No op
     }
 }

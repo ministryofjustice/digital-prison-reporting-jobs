@@ -3,6 +3,7 @@ package uk.gov.justice.digital.service.metrics;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
+import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,9 +146,9 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void reportStreamingThroughputInputShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
+        long expectedCount = 100L;
 
-        underTest.reportStreamingThroughputInput(mockDf);
+        underTest.reportStreamingThroughputInput(expectedCount);
         underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
@@ -158,7 +159,7 @@ class CloudwatchAsyncMetricReportingServiceTest {
         MetricDatum datum = sentMetrics.iterator().next();
 
         assertEquals("GlueJobStreamingThroughputInputCount", datum.getMetricName());
-        assertEquals(100L, datum.getValue());
+        assertEquals(expectedCount, datum.getValue());
         assertEquals(Count.toString(), datum.getUnit());
         assertEquals(timestamp, datum.getTimestamp().toInstant());
         List<Dimension> dimensions = datum.getDimensions();
@@ -171,9 +172,8 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void reportStreamingThroughputWrittenToStructuredShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
-
-        underTest.reportStreamingThroughputWrittenToStructured(mockDf);
+        long expectedCount = 100L;
+        underTest.reportStreamingThroughputWrittenToStructured(expectedCount);
         underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
@@ -184,7 +184,7 @@ class CloudwatchAsyncMetricReportingServiceTest {
         MetricDatum datum = sentMetrics.iterator().next();
 
         assertEquals("GlueJobStreamingThroughputStructuredCount", datum.getMetricName());
-        assertEquals(100L, datum.getValue());
+        assertEquals(expectedCount, datum.getValue());
         assertEquals(Count.toString(), datum.getUnit());
         assertEquals(timestamp, datum.getTimestamp().toInstant());
         List<Dimension> dimensions = datum.getDimensions();
@@ -197,9 +197,10 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void reportStreamingThroughputWrittenToCuratedShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        long expectedCount = 100L;
+
+        underTest.reportStreamingThroughputWrittenToCurated(expectedCount);
         underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
@@ -210,7 +211,7 @@ class CloudwatchAsyncMetricReportingServiceTest {
         MetricDatum datum = sentMetrics.iterator().next();
 
         assertEquals("GlueJobStreamingThroughputCuratedCount", datum.getMetricName());
-        assertEquals(100L, datum.getValue());
+        assertEquals(expectedCount, datum.getValue());
         assertEquals(Count.toString(), datum.getUnit());
         assertEquals(timestamp, datum.getTimestamp().toInstant());
         List<Dimension> dimensions = datum.getDimensions();
@@ -246,11 +247,41 @@ class CloudwatchAsyncMetricReportingServiceTest {
     }
 
     @Test
+    void reportStreamingLatencyDmsToCuratedShouldPutMetrics() {
+        when(clock.instant()).thenReturn(timestamp);
+
+        LatencyStatistics latencyStatistics = new LatencyStatistics(10L, 1000L, 1010L, 2L);
+
+        underTest.reportStreamingLatencyDmsToCurated(latencyStatistics);
+        underTest.flush();
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+
+        Collection<MetricDatum> sentMetrics = metricDatumCaptor.getValue();
+
+        assertEquals(1, sentMetrics.size());
+        MetricDatum datum = sentMetrics.iterator().next();
+
+        assertEquals("GlueJobStreamingLatencyDmsToCurated", datum.getMetricName());
+        StatisticSet actualStatisticSet = datum.getStatisticValues();
+        assertEquals(10L, actualStatisticSet.getMinimum());
+        assertEquals(1000L, actualStatisticSet.getMaximum());
+        assertEquals(1010L, actualStatisticSet.getSum());
+        assertEquals(2L, actualStatisticSet.getSampleCount());
+        assertEquals(Milliseconds.toString(), datum.getUnit());
+        assertEquals(timestamp, datum.getTimestamp().toInstant());
+        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals(1, dimensions.size());
+        Dimension dimension = dimensions.get(0);
+        assertEquals("JobName", dimension.getName());
+        assertEquals(JOB, dimension.getValue());
+    }
+
+    @Test
     void flushShouldSendMetrics() {
         when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.reportStreamingThroughputWrittenToCurated(100L);
         underTest.flush();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
@@ -259,9 +290,8 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void flushShouldSendMultipleMetrics() {
         when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.reportStreamingThroughputWrittenToCurated(100L);
         underTest.flush();
 
         underTest.reportStreamingMicroBatchTimeTaken(1000L);
@@ -274,7 +304,7 @@ class CloudwatchAsyncMetricReportingServiceTest {
     void flushShouldSendMultipleMetricsInOneCall() {
         when(clock.instant()).thenReturn(timestamp);
 
-        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.reportStreamingThroughputWrittenToCurated(100L);
         underTest.reportStreamingMicroBatchTimeTaken(1000L);
         underTest.flush();
 
@@ -301,9 +331,8 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void closeShouldSendMetrics() {
         when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.reportStreamingThroughputWrittenToCurated(100L);
         underTest.close();
 
         verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
@@ -312,9 +341,8 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void closeShouldCancelScheduledFlush() {
         when(clock.instant()).thenReturn(timestamp);
-        when(mockDf.count()).thenReturn(100L);
 
-        underTest.reportStreamingThroughputWrittenToCurated(mockDf);
+        underTest.reportStreamingThroughputWrittenToCurated(100L);
         underTest.close();
 
         verify(scheduledFlushTask, times(1)).cancel(anyBoolean());

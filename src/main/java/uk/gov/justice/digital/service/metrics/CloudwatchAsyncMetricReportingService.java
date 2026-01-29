@@ -4,11 +4,11 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
+import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import io.micronaut.context.annotation.Requires;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
@@ -80,36 +80,46 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     @Override
     public void reportViolationCount(long count) {
-        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetric(metricDatum);
     }
 
     @Override
     public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
-        bufferMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
+        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
+        bufferMetric(metricDatum);
     }
 
     @Override
-    public void reportStreamingThroughputInput(Dataset<Row> inputDf) {
-        long count = inputDf.count();
-        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
+    public void reportStreamingThroughputInput(long count) {
+        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetric(metricDatum);
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf) {
-        long count = structuredDf.count();
-        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
+    public void reportStreamingThroughputWrittenToStructured(long count) {
+        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetric(metricDatum);
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf) {
-        long count = curatedDf.count();
-        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
+    public void reportStreamingThroughputWrittenToCurated(long count) {
+        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
+        bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
-        bufferMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
+        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
+        bufferMetric(metricDatum);
+    }
+
+    @Override
+    public void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics) {
+        StatisticSet statisticSet = convertToStatisticSet(latencyStatistics);
+        MetricDatum metricDatum = buildStatisticMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, DimensionName.JOB_NAME, jobName, Milliseconds, statisticSet);
+        bufferMetric(metricDatum);
     }
 
     /**
@@ -148,9 +158,8 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         }
     }
 
-    private void bufferMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
-        logger.debug("Reporting {} metric for namespace {} with value {}", metricName, metricNamespace, value);
-        MetricDatum metricDatum = new MetricDatum()
+    private MetricDatum buildValueMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
+        return new MetricDatum()
                 .withMetricName(metricName.toString())
                 .withUnit(unit)
                 .withDimensions(
@@ -160,7 +169,23 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
                 )
                 .withTimestamp(Date.from(clock.instant()))
                 .withValue(value);
+    }
 
+    private MetricDatum buildStatisticMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, StatisticSet statistics) {
+        return new MetricDatum()
+                .withMetricName(metricName.toString())
+                .withUnit(unit)
+                .withDimensions(
+                        new Dimension()
+                                .withName(metricDimensionName.toString())
+                                .withValue(dimensionValue)
+                )
+                .withTimestamp(Date.from(clock.instant()))
+                .withStatisticValues(statistics);
+    }
+
+    private void bufferMetric(MetricDatum metricDatum) {
+        logger.debug("Reporting {} metric for namespace {} with value {}", metricDatum.getMetricName(), metricNamespace, metricDatum.getValue());
         int bufferedCount;
         synchronized (lock) {
             bufferedMetrics.add(
@@ -169,11 +194,20 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
             bufferedCount = bufferedMetrics.size();
         }
 
-        logger.debug("Finished batching {} metric for namespace {} with value {}", metricName, metricNamespace, value);
+        logger.debug("Finished batching {} metric for namespace {} with value {}", metricDatum.getMetricName(), metricNamespace, metricDatum.getValue());
 
         if (bufferedCount > MAX_EXPECTED_METRICS_IN_BUFFER) {
             logger.error("There are {} buffered metrics. This could be an indicator that metrics are not being flushed correctly", bufferedCount);
         }
+    }
+
+    private static StatisticSet convertToStatisticSet(LatencyStatistics latencyStatistics) {
+        StatisticSet statisticSet = new StatisticSet();
+        statisticSet.setMaximum(latencyStatistics.getMaximum().doubleValue());
+        statisticSet.setMinimum(latencyStatistics.getMinimum().doubleValue());
+        statisticSet.setSum(latencyStatistics.getSum().doubleValue());
+        statisticSet.setSampleCount(latencyStatistics.getTotalCount().doubleValue());
+        return statisticSet;
     }
 
     /**
@@ -186,7 +220,8 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         GLUE_JOB_STREAMING_THROUGHPUT_INPUT("GlueJobStreamingThroughputInputCount"),
         GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED("GlueJobStreamingThroughputStructuredCount"),
         GLUE_JOB_STREAMING_THROUGHPUT_CURATED("GlueJobStreamingThroughputCuratedCount"),
-        GLUE_JOB_STREAMING_MICROBATCH_TIME("GlueJobStreamingMicroBatchTime");
+        GLUE_JOB_STREAMING_MICROBATCH_TIME("GlueJobStreamingMicroBatchTime"),
+        GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED("GlueJobStreamingLatencyDmsToCurated");
 
         private final String value;
 

@@ -1,0 +1,91 @@
+package uk.gov.justice.digital.service.metrics;
+
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.junit.jupiter.api.Test;
+import uk.gov.justice.digital.config.SparkTestBase;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
+
+class LatencyServiceTest extends SparkTestBase {
+
+    private final LatencyService underTest = new LatencyService();
+
+    @Test
+    void shouldCalculateStats() {
+        long nowMillis = toMillis("2023-11-13 10:52:55.000000");
+
+
+        Dataset<Row> df = spark.createDataFrame(Arrays.asList(
+                createRow(1, "2023-11-13 10:50:00.000000", Insert, "1"),
+                createRow(2, "2023-11-13 10:50:05.000000", Insert, "2"),
+                createRow(3, "2023-11-13 10:52:30.000000", Insert, "3")
+        ), TEST_DATA_SCHEMA);
+
+        LatencyStatistics result = underTest.calculateLatencyStatistics(df, TIMESTAMP, nowMillis);
+        assertEquals(25000L, result.getMinimum());
+        assertEquals(175000L, result.getMaximum());
+        assertEquals(370000L, result.getSum());
+        assertEquals(3L, result.getTotalCount());
+    }
+
+    @Test
+    void shouldThrowForEmptyDataFrame() {
+        long nowMillis = toMillis("2023-11-13 10:52:55.000000");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> underTest.calculateLatencyStatistics(spark.emptyDataFrame(), TIMESTAMP, nowMillis)
+        );
+    }
+
+    @Test
+    void shouldThrowForAllNullTimestamps() {
+        long nowMillis = toMillis("2023-11-13 10:52:55.000000");
+
+
+        Dataset<Row> df = spark.createDataFrame(Arrays.asList(
+                createRow(1, null, Insert, "1"),
+                createRow(2, null, Insert, "2"),
+                createRow(3, null, Insert, "3")
+        ), TEST_DATA_SCHEMA);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> underTest.calculateLatencyStatistics(df, TIMESTAMP, nowMillis)
+        );
+    }
+
+    @Test
+    void shouldFilterOutSomeNullTimestamps() {
+        long nowMillis = toMillis("2023-11-13 10:52:55.000000");
+
+
+        Dataset<Row> df = spark.createDataFrame(Arrays.asList(
+                createRow(1, null, Insert, "1"),
+                createRow(2, null, Insert, "2"),
+                createRow(3, "2023-11-13 10:52:30.000000", Insert, "3")
+        ), TEST_DATA_SCHEMA);
+
+        LatencyStatistics result = underTest.calculateLatencyStatistics(df, TIMESTAMP, nowMillis);
+        assertEquals(175000L, result.getMinimum());
+        assertEquals(175000L, result.getMaximum());
+        assertEquals(175000L, result.getSum());
+        assertEquals(1L, result.getTotalCount());
+    }
+
+    private long toMillis(String timestampStr) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
+        LocalDateTime dateTime = LocalDateTime.parse(timestampStr, formatter);
+        return dateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
+    }
+
+}

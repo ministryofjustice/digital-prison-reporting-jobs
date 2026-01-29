@@ -10,8 +10,9 @@ import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliatio
 public interface MetricReportingService {
     void reportViolationCount(long count);
     void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults);
-    void reportStreamingThroughputInput(Dataset<Row> inputDf);
-    void reportStreamingThroughputWrittenToStructured(Dataset<Row> structuredDf);
-    void reportStreamingThroughputWrittenToCurated(Dataset<Row> curatedDf);
+    void reportStreamingThroughputInput(long count);
+    void reportStreamingThroughputWrittenToStructured(long count);
+    void reportStreamingThroughputWrittenToCurated(long count);
     void reportStreamingMicroBatchTimeTaken(long timeTakenMs);
+    void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics);
 }
