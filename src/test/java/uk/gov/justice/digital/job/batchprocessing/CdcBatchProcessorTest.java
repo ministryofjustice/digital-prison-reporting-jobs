@@ -14,6 +14,8 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
+import uk.gov.justice.digital.service.metrics.LatencyService;
+import uk.gov.justice.digital.service.metrics.LatencyStatistics;
 import uk.gov.justice.digital.service.metrics.MetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
@@ -25,11 +27,13 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
@@ -60,6 +64,8 @@ class CdcBatchProcessorTest extends SparkTestBase {
     @Mock
     private MetricReportingService mockMetricReportingService;
     @Mock
+    private LatencyService mockLatencyService;
+    @Mock
     private Dataset<Row> outputOfStructuredDf;
     @Mock
     private Dataset<Row> outputOfCuratedDf;
@@ -86,6 +92,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
                 mockDataProvider,
                 mockOperationalDataStoreService,
                 mockMetricReportingService,
+                mockLatencyService,
                 clock
         );
     }
@@ -108,6 +115,8 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
@@ -122,6 +131,9 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
+
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
         verify(mockStructuredZone, times(1)).process(any(), structuredArgumentCaptor.capture(), eq(mockSourceReference));
@@ -140,6 +152,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
@@ -154,6 +167,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(manyRowsPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         when(mockStructuredZone.process(any(), any(), any())).thenReturn(manyRowsPerPk);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(manyRowsPerPk);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
 
@@ -192,7 +206,7 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockMetricReportingService, times(1)).reportStreamingThroughputInput(manyRowsPerPk);
+        verify(mockMetricReportingService, times(1)).reportStreamingThroughputInput(manyRowsPerPk.count());
     }
 
     @Test
@@ -205,8 +219,11 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
+        long expectedCount = 200L;
+        when(outputOfStructuredDf.count()).thenReturn(expectedCount);
+
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToStructured(outputOfStructuredDf);
+        verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToStructured(expectedCount);
     }
 
     @Test
@@ -219,13 +236,16 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
+        long expectedCount = 200L;
+        when(outputOfCuratedDf.count()).thenReturn(expectedCount);
+
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToCurated(outputOfCuratedDf);
+        verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToCurated(expectedCount);
     }
 
     @Test
     void shouldReportMicroBatchTimeTaken() {
-        when(clock.millis()).thenReturn(1000L, 2100L);
+        when(clock.millis()).thenReturn(1000L, 1700L, 2100L);
 
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
@@ -237,5 +257,44 @@ class CdcBatchProcessorTest extends SparkTestBase {
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
         verify(mockMetricReportingService, times(1)).reportStreamingMicroBatchTimeTaken(1100L);
+    }
+
+    @Test
+    void shouldReportDmsToCuratedLatencyUsingCuratedDf() {
+        long writtenToCuratedTimestamp = 1700L;
+        when(clock.millis()).thenReturn(1000L, writtenToCuratedTimestamp, 2100L);
+
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
+        when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
+        long curatedRowCount = 2L;
+        when(outputOfCuratedDf.count()).thenReturn(curatedRowCount);
+        LatencyStatistics latencyStatistics = new LatencyStatistics(10L, 20L, 30L, curatedRowCount);
+        when(mockLatencyService.calculateLatencyStatistics(outputOfCuratedDf, TIMESTAMP, writtenToCuratedTimestamp)).thenReturn(latencyStatistics);
+
+        underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
+        verify(mockMetricReportingService, times(1)).reportStreamingLatencyDmsToCurated(latencyStatistics);
+    }
+
+    @Test
+    void shouldNotReportDmsToCuratedLatencyWhenWrittenToCuratedDfIsEmpty() {
+        long writtenToCuratedTimestamp = 1700L;
+        when(clock.millis()).thenReturn(1000L, writtenToCuratedTimestamp, 2100L);
+
+        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
+        when(mockSourceReference.getSource()).thenReturn("source");
+        when(mockSourceReference.getTable()).thenReturn("table");
+        when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
+        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
+        when(outputOfCuratedDf.count()).thenReturn(0L);
+
+        underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
+        verify(mockMetricReportingService, times(0)).reportStreamingLatencyDmsToCurated(any());
     }
 }
