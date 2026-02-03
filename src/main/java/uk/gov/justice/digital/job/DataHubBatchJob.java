@@ -20,7 +20,9 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +43,8 @@ public class DataHubBatchJob implements Runnable {
     private final S3DataProvider dataProvider;
     private final SourceReferenceService sourceReferenceService;
     private final ViolationService violationService;
+    private final MetricReportingService metricReportingService;
+    private final Clock clock;
 
     @Inject
     public DataHubBatchJob(
@@ -51,7 +55,9 @@ public class DataHubBatchJob implements Runnable {
             BatchProcessor batchProcessor,
             S3DataProvider dataProvider,
             SourceReferenceService sourceReferenceService,
-            ViolationService violationService) {
+            ViolationService violationService,
+            MetricReportingService metricReportingService,
+            Clock clock) {
         this.arguments = arguments;
         this.properties = properties;
         this.sparkSessionProvider = sparkSessionProvider;
@@ -60,6 +66,8 @@ public class DataHubBatchJob implements Runnable {
         this.dataProvider = dataProvider;
         this.sourceReferenceService = sourceReferenceService;
         this.violationService = violationService;
+        this.metricReportingService = metricReportingService;
+        this.clock = clock;
     }
 
     public static void main(String[] args) {
@@ -68,9 +76,7 @@ public class DataHubBatchJob implements Runnable {
 
     @Override
     public void run() {
-        val startTime = System.currentTimeMillis();
         SparkJobRunner.run("DataHubBatchJob", arguments, properties, sparkSessionProvider, logger, this::runJob);
-        logger.info("DataHubBatchJob completed in {}ms", System.currentTimeMillis() - startTime);
     }
 
     /**
@@ -78,7 +84,7 @@ public class DataHubBatchJob implements Runnable {
      */
     @VisibleForTesting
     void runJob(SparkSession sparkSession) throws DataStorageException {
-        val startTime = System.currentTimeMillis();
+        val startTime = clock.millis();
         String rawPath = arguments.getRawS3Path();
         logger.info("Processing Raw {} table by table", rawPath);
         Map<ImmutablePair<String, String>, List<String>> pathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(rawPath, sparkSession);
@@ -88,7 +94,7 @@ public class DataHubBatchJob implements Runnable {
             throw new RuntimeException(msg);
         }
         for (val entry: pathsByTable.entrySet()) {
-            val tableStartTime = System.currentTimeMillis();
+            val tableStartTime = clock.millis();
             val schema = entry.getKey().getLeft();
             val table = entry.getKey().getRight();
             logger.info("Processing table {}.{}", schema, table);
@@ -99,7 +105,9 @@ public class DataHubBatchJob implements Runnable {
                 logger.warn("No paths found for table {}.{}", schema, table);
             }
         }
-        logger.info("Finished processing Raw {} table by table in {}ms", rawPath, System.currentTimeMillis() - startTime);
+        long timeTakenMillis = clock.millis() - startTime;
+        metricReportingService.reportBatchJobTimeTaken(timeTakenMillis);
+        logger.info("Finished processing Raw {} table by table in {}ms", rawPath, timeTakenMillis);
     }
 
     private void processFilePaths(SparkSession sparkSession, String schema, String table, List<String> filePaths, long tableStartTime) throws DataStorageException {
@@ -111,7 +119,7 @@ public class DataHubBatchJob implements Runnable {
             if(maybeSourceReference.isPresent()) {
                 SourceReference sourceReference = maybeSourceReference.get();
                 batchProcessor.processBatch(sparkSession, sourceReference, dataFrame);
-                logger.info("Processed table {}.{} in {}ms", schema, table, System.currentTimeMillis() - tableStartTime);
+                logger.info("Processed table {}.{} in {}ms", schema, table, clock.millis() - tableStartTime);
             } else {
                 logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
                 violationService.handleNoSchemaFound(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);

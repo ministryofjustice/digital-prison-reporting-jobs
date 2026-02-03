@@ -45,4 +45,9 @@ public class DisabledMetricReportingService implements MetricReportingService {
     public void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics) {
         // No op
     }
+
+    @Override
+    public void reportBatchJobTimeTaken(long timeTakenMs) {
+        // No op
+    }
 }

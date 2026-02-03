@@ -39,6 +39,7 @@ import java.util.List;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT;
+import static uk.gov.justice.digital.test.Fixtures.fixedClock;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenDatastoreCredentials;
 import static uk.gov.justice.digital.test.SharedTestFunctions.givenSchemaExists;
@@ -175,6 +176,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
         BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
         underTest = new DataHubBatchJob(
                 arguments,
                 properties,
@@ -183,7 +185,9 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
                 batchProcessor,
                 dataProvider,
                 sourceReferenceService,
-                violationService
+                violationService,
+                disabledMetricReportingService,
+                fixedClock
         );
     }
 

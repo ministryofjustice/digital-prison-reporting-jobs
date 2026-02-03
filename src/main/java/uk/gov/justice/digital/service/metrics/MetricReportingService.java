@@ -15,4 +15,5 @@ public interface MetricReportingService {
     void reportStreamingThroughputWrittenToCurated(long count);
     void reportStreamingMicroBatchTimeTaken(long timeTakenMs);
     void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics);
+    void reportBatchJobTimeTaken(long timeTakenMs);
 }
