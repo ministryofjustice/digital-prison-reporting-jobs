@@ -192,6 +192,8 @@ public class JobArguments {
     static final String CLOUDWATCH_METRICS_NAMESPACE = "dpr.cloudwatch.metrics.namespace";
     static final String CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS = "dpr.cloudwatch.metrics.reporting.period.seconds";
     static final long CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS_DEFAULT = 30L;
+    static final String CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS = "dpr.cloudwatch.metrics.shutdown.flush.timeout.seconds";
+    static final long CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS_DEFAULT = 5L;
     private final Map<String, String> config;
 
     @Inject
@@ -613,6 +615,10 @@ public class JobArguments {
 
     public long getCloudwatchMetricsReportingPeriodSeconds() {
         return getArgument(CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS, CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS_DEFAULT);
+    }
+
+    public long getCloudwatchMetricsShutdownFlushTimeoutSeconds() {
+        return getArgument(CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS, CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS_DEFAULT);
     }
 
     public String getSecretId() {

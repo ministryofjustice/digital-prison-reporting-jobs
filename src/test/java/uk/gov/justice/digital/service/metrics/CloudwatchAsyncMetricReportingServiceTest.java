@@ -17,6 +17,7 @@ import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
+import uk.gov.justice.digital.service.shutdownhooks.ShutdownHookRegistrar;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -72,6 +73,8 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Mock
     private ScheduledExecutorService schedulerService;
     @Mock
+    private ShutdownHookRegistrar shutdownHookRegistrar;
+    @Mock
     private ScheduledFuture scheduledFlushTask;
     @Captor
     private ArgumentCaptor<Collection<MetricDatum>> metricDatumCaptor;
@@ -85,9 +88,19 @@ class CloudwatchAsyncMetricReportingServiceTest {
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
         when(jobArguments.getConfigKey()).thenReturn(DOMAIN);
-        when(schedulerService.scheduleAtFixedRate(any(), anyLong(), anyLong(), any())).thenReturn(scheduledFlushTask);
-        underTest = new CloudwatchAsyncMetricReportingService(jobArguments, jobProperties, cloudwatchClient, clock, schedulerService);
+        underTest = new CloudwatchAsyncMetricReportingService(jobArguments, jobProperties, cloudwatchClient, clock, schedulerService, shutdownHookRegistrar);
+    }
+
+    @Test
+    void startShouldStartTheBackgroundFlushTask() {
+        underTest.start();
         verify(schedulerService, times(1)).scheduleAtFixedRate(any(), anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void startShouldRegisterTheShutdownHook() {
+        underTest.start();
+        verify(shutdownHookRegistrar, times(1)).registerShutdownHook(any());
     }
 
     @Test
@@ -374,7 +387,9 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void closeShouldCancelScheduledFlush() {
         when(clock.instant()).thenReturn(timestamp);
+        when(schedulerService.scheduleAtFixedRate(any(), anyLong(), anyLong(), any())).thenReturn(scheduledFlushTask);
 
+        underTest.start();
         underTest.reportStreamingThroughputWrittenToCurated(100L);
         underTest.close();
 
