@@ -94,10 +94,10 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         this.scheduledMetricFlushTask = schedulerService.scheduleAtFixedRate(this::flush, 0, flushPeriodSeconds, TimeUnit.SECONDS);
         this.shutdownHookRegistrar.registerShutdownHook(
                 ShutdownHooks.withTimeout("best-effort-shutdown-flush", Duration.ofSeconds(shutdownflushTimeoutSeconds), () -> {
-                    ScheduledFuture<?> scheduledMetricFlushTask = this.scheduledMetricFlushTask;
-                    if (scheduledMetricFlushTask != null) {
+                    ScheduledFuture<?> flushTask = this.scheduledMetricFlushTask;
+                    if (flushTask != null) {
                         logger.info("Cancelling scheduled metric flush task");
-                        scheduledMetricFlushTask.cancel(true);
+                        flushTask.cancel(true);
                         logger.info("Flushing metrics before shutdown");
                         flush();
                     }
@@ -163,9 +163,9 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     @PreDestroy
     public void close() {
         logger.info("PreDestroy: Cancelling scheduled flush task");
-        ScheduledFuture<?> scheduledMetricFlushTask = this.scheduledMetricFlushTask;
-        if (scheduledMetricFlushTask != null) {
-            scheduledMetricFlushTask.cancel(false);
+        ScheduledFuture<?> flushTask = this.scheduledMetricFlushTask;
+        if (flushTask != null) {
+            flushTask.cancel(false);
         }
         logger.info("PreDestroy: Flushing metrics to cloudwatch");
         flush();

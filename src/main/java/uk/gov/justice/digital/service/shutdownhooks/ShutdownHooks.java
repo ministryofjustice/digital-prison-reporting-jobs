@@ -7,6 +7,8 @@ import java.time.Duration;
 
 public final class ShutdownHooks {
 
+    private ShutdownHooks() {}
+
     private static final Logger logger = LoggerFactory.getLogger(ShutdownHooks.class);
 
     /**
