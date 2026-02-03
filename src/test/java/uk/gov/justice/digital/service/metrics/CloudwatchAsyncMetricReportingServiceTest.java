@@ -286,6 +286,31 @@ class CloudwatchAsyncMetricReportingServiceTest {
     }
 
     @Test
+    void reportBatchJobTimeTakenShouldPutMetrics() {
+        when(clock.instant()).thenReturn(timestamp);
+
+        underTest.reportBatchJobTimeTaken(30000L);
+        underTest.flush();
+
+        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
+
+        Collection<MetricDatum> sentMetrics = metricDatumCaptor.getValue();
+
+        assertEquals(1, sentMetrics.size());
+        MetricDatum datum = sentMetrics.iterator().next();
+
+        assertEquals("GlueJobBatchTimeTaken", datum.getMetricName());
+        assertEquals(30000L, datum.getValue());
+        assertEquals(Milliseconds.toString(), datum.getUnit());
+        assertEquals(timestamp, datum.getTimestamp().toInstant());
+        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals(1, dimensions.size());
+        Dimension dimension = dimensions.get(0);
+        assertEquals("JobName", dimension.getName());
+        assertEquals(JOB, dimension.getValue());
+    }
+
+    @Test
     void flushShouldSendMetrics() {
         when(clock.instant()).thenReturn(timestamp);
 

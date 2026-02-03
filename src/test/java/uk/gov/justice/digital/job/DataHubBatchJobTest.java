@@ -19,7 +19,9 @@ import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 import uk.gov.justice.digital.service.ViolationService;
+import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -68,6 +70,10 @@ class DataHubBatchJobTest {
     @Mock
     private ViolationService violationService;
     @Mock
+    private MetricReportingService mockMetricReportingService;
+    @Mock
+    private Clock clock;
+    @Mock
     private SourceReference sourceReference1;
     @Mock
     private SourceReference sourceReference2;
@@ -89,7 +95,9 @@ class DataHubBatchJobTest {
                 batchProcessor,
                 dataProvider,
                 sourceReferenceService,
-                violationService
+                violationService,
+                mockMetricReportingService,
+                clock
         );
     }
 
@@ -146,6 +154,22 @@ class DataHubBatchJobTest {
         underTest.runJob(spark);
 
         verify(violationService, times(2)).writeBatchDataToViolations(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldReportBatchTimeTakenToMetricsService() {
+        stubRawPath();
+        stubReadData();
+        stubDiscoveredTablePaths();
+
+        when(clock.millis()).thenReturn(10L, 100L, 200L, 300L, 400L, 1000L);
+
+        when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.of(sourceReference1));
+        when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.of(sourceReference2));
+
+        underTest.runJob(spark);
+
+        verify(mockMetricReportingService, times(1)).reportBatchJobTimeTaken(990L);
     }
 
     private void stubRawPath() {

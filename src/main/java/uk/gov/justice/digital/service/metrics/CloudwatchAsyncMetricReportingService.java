@@ -124,6 +124,12 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         }
     }
 
+    @Override
+    public void reportBatchJobTimeTaken(long timeTakenMs) {
+        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_BATCH_TIME_TAKEN, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
+        bufferMetric(metricDatum);
+    }
+
     /**
      * Flush any leftover metrics to Cloudwatch before Micronaut shuts down
      */
@@ -223,7 +229,8 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED("GlueJobStreamingThroughputStructuredCount"),
         GLUE_JOB_STREAMING_THROUGHPUT_CURATED("GlueJobStreamingThroughputCuratedCount"),
         GLUE_JOB_STREAMING_MICROBATCH_TIME("GlueJobStreamingMicroBatchTime"),
-        GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED("GlueJobStreamingLatencyDmsToCurated");
+        GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED("GlueJobStreamingLatencyDmsToCurated"),
+        GLUE_JOB_BATCH_TIME_TAKEN("GlueJobBatchTimeTaken");
 
         private final String value;
 
