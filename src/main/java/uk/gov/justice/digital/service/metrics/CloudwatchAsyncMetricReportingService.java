@@ -6,6 +6,7 @@ import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import io.micronaut.context.annotation.Requires;
+import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -13,11 +14,14 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
+import uk.gov.justice.digital.service.shutdownhooks.ShutdownHookRegistrar;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
+import uk.gov.justice.digital.service.shutdownhooks.ShutdownHooks;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Named;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -48,15 +52,20 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     private final CloudwatchClient cloudwatchClient;
     private final Clock clock;
+    private final ScheduledExecutorService schedulerService;
+    private final ShutdownHookRegistrar shutdownHookRegistrar;
+
     private final String metricNamespace;
     private final String jobName;
     private final String inputDomain;
+    private final long flushPeriodSeconds;
+    private final long shutdownflushTimeoutSeconds;
 
     // This lock MUST guard all access to the buffered metrics collection for correct metric publishing
     private final Object lock = new Object();
     private List<MetricDatum> bufferedMetrics = new ArrayList<>();
 
-    private final ScheduledFuture<?> scheduledMetricFlushTask;
+    private volatile ScheduledFuture<?> scheduledMetricFlushTask;
 
     @Inject
     public CloudwatchAsyncMetricReportingService(
@@ -65,18 +74,36 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
             CloudwatchClient cloudwatchClient,
             Clock clock,
             @Named("metricsFlusher")
-            ScheduledExecutorService schedulerService
+            ScheduledExecutorService schedulerService,
+            ShutdownHookRegistrar shutdownHookRegistrar
     ) {
         this.cloudwatchClient = cloudwatchClient;
         this.clock = clock;
+        this.schedulerService = schedulerService;
+        this.shutdownHookRegistrar = shutdownHookRegistrar;
         this.metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         this.jobName = jobProperties.getSparkJobName();
         this.inputDomain = jobArguments.getConfigKey();
-        // Flush metrics to Cloudwatch on the configured schedule
-        long periodSeconds = jobArguments.getCloudwatchMetricsReportingPeriodSeconds();
-        logger.info("Starting Cloudwatch metric background flush task, flushing every {} seconds", periodSeconds);
-        this.scheduledMetricFlushTask = schedulerService.scheduleAtFixedRate(this::flush, 0, periodSeconds, TimeUnit.SECONDS);
+        this.flushPeriodSeconds = jobArguments.getCloudwatchMetricsReportingPeriodSeconds();
+        this.shutdownflushTimeoutSeconds = jobArguments.getCloudwatchMetricsShutdownFlushTimeoutSeconds();
     }
+
+    @PostConstruct
+    void start() {
+        logger.info("Starting Cloudwatch metric background flush task, flushing every {} seconds", flushPeriodSeconds);
+        this.scheduledMetricFlushTask = schedulerService.scheduleAtFixedRate(this::flush, 0, flushPeriodSeconds, TimeUnit.SECONDS);
+        this.shutdownHookRegistrar.registerShutdownHook(
+                ShutdownHooks.withTimeout("best-effort-shutdown-flush", Duration.ofSeconds(shutdownflushTimeoutSeconds), () -> {
+                    ScheduledFuture<?> scheduledMetricFlushTask = this.scheduledMetricFlushTask;
+                    if (scheduledMetricFlushTask != null) {
+                        logger.info("Cancelling scheduled metric flush task");
+                        scheduledMetricFlushTask.cancel(true);
+                        logger.info("Flushing metrics before shutdown");
+                        flush();
+                    }
+                }));
+    }
+
 
     @Override
     public void reportViolationCount(long count) {
@@ -136,7 +163,10 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     @PreDestroy
     public void close() {
         logger.info("PreDestroy: Cancelling scheduled flush task");
-        scheduledMetricFlushTask.cancel(false);
+        ScheduledFuture<?> scheduledMetricFlushTask = this.scheduledMetricFlushTask;
+        if (scheduledMetricFlushTask != null) {
+            scheduledMetricFlushTask.cancel(false);
+        }
         logger.info("PreDestroy: Flushing metrics to cloudwatch");
         flush();
         logger.info("PreDestroy: Finished flushing metrics to cloudwatch");
