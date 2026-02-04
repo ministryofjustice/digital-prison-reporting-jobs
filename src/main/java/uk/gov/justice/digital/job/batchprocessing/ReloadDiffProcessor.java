@@ -56,17 +56,17 @@ public class ReloadDiffProcessor {
         logger.info("Processing reload diffs to delete");
         Dataset<Row> recordsToDelete = getRecordsToDelete(sourceReference, raw, activeArchiveRecords)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
-        storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toDelete"), recordsToDelete);
+        storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toDelete"), recordsToDelete.repartition());
 
         logger.info("Processing reload diffs to insert");
         Dataset<Row> recordsToInsert = getRecordsToInsert(sourceReference, raw, activeArchiveRecords)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
-        storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toInsert"), recordsToInsert);
+        storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toInsert"), recordsToInsert.repartition());
 
         logger.info("Processing reload diffs to update");
         Dataset<Row> recordsToUpdate = getRecordsToUpdate(sourceReference, raw, activeArchiveRecords, recordsToInsert)
                 .withColumn(CHECKPOINT_COL, lit(formattedStartTime));
-        storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toUpdate"), recordsToUpdate);
+        storageService.overwriteParquet(createOutputPath(sourceReference, outputBasePath, "toUpdate"), recordsToUpdate.repartition());
 
         activeArchiveRecords.unpersist();
     }
