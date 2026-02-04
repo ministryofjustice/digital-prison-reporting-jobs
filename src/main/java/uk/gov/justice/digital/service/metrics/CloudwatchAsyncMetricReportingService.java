@@ -14,8 +14,8 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
-import uk.gov.justice.digital.service.shutdownhooks.ShutdownHookRegistrar;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
+import uk.gov.justice.digital.service.shutdownhooks.ShutdownHookRegistrar;
 import uk.gov.justice.digital.service.shutdownhooks.ShutdownHooks;
 
 import javax.annotation.PreDestroy;
@@ -57,7 +57,6 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     private final String metricNamespace;
     private final String jobName;
-    private final String inputDomain;
     private final long flushPeriodSeconds;
     private final long shutdownflushTimeoutSeconds;
 
@@ -83,7 +82,6 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         this.shutdownHookRegistrar = shutdownHookRegistrar;
         this.metricNamespace = jobArguments.getCloudwatchMetricsNamespace();
         this.jobName = jobProperties.getSparkJobName();
-        this.inputDomain = jobArguments.getConfigKey();
         this.flushPeriodSeconds = jobArguments.getCloudwatchMetricsReportingPeriodSeconds();
         this.shutdownflushTimeoutSeconds = jobArguments.getCloudwatchMetricsShutdownFlushTimeoutSeconds();
     }
@@ -107,38 +105,38 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     @Override
     public void reportViolationCount(long count) {
-        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, DimensionName.JOB_NAME, jobName, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, Count, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
-        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.FAILED_RECONCILIATION_CHECKS, DimensionName.INPUT_DOMAIN, inputDomain, Count, numChecksFailing);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.FAILED_RECONCILIATION_CHECKS, Count, numChecksFailing);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingThroughputInput(long count) {
-        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, DimensionName.JOB_NAME, jobName, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, Count, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingThroughputWrittenToStructured(long count) {
-        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, DimensionName.JOB_NAME, jobName, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, Count, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingThroughputWrittenToCurated(long count) {
-        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, DimensionName.JOB_NAME, jobName, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, Count, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
-        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, Milliseconds, timeTakenMs);
         bufferMetric(metricDatum);
     }
 
@@ -146,14 +144,14 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     public void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics) {
         if (!isEmpty(latencyStatistics)) {
             StatisticSet statisticSet = convertToStatisticSet(latencyStatistics);
-            MetricDatum metricDatum = buildStatisticMetricWithSingleDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, DimensionName.JOB_NAME, jobName, Milliseconds, statisticSet);
+            MetricDatum metricDatum = buildStatisticMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, Milliseconds, statisticSet);
             bufferMetric(metricDatum);
         }
     }
 
     @Override
     public void reportBatchJobTimeTaken(long timeTakenMs) {
-        MetricDatum metricDatum = buildValueMetricWithSingleDimension(MetricName.GLUE_JOB_BATCH_TIME_TAKEN, DimensionName.JOB_NAME, jobName, Milliseconds, timeTakenMs);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_BATCH_TIME_TAKEN, Milliseconds, timeTakenMs);
         bufferMetric(metricDatum);
     }
 
@@ -196,27 +194,27 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         }
     }
 
-    private MetricDatum buildValueMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, double value) {
+    private MetricDatum buildValueMetricWithJobNameDimension(MetricName metricName, StandardUnit unit, double value) {
         return new MetricDatum()
                 .withMetricName(metricName.toString())
                 .withUnit(unit)
                 .withDimensions(
                         new Dimension()
-                                .withName(metricDimensionName.toString())
-                                .withValue(dimensionValue)
+                                .withName(DimensionName.JOB_NAME.toString())
+                                .withValue(jobName)
                 )
                 .withTimestamp(Date.from(clock.instant()))
                 .withValue(value);
     }
 
-    private MetricDatum buildStatisticMetricWithSingleDimension(MetricName metricName, DimensionName metricDimensionName, String dimensionValue, StandardUnit unit, StatisticSet statistics) {
+    private MetricDatum buildStatisticMetricWithJobNameDimension(MetricName metricName, StandardUnit unit, StatisticSet statistics) {
         return new MetricDatum()
                 .withMetricName(metricName.toString())
                 .withUnit(unit)
                 .withDimensions(
                         new Dimension()
-                                .withName(metricDimensionName.toString())
-                                .withValue(dimensionValue)
+                                .withName(DimensionName.JOB_NAME.toString())
+                                .withValue(jobName)
                 )
                 .withTimestamp(Date.from(clock.instant()))
                 .withStatisticValues(statistics);
@@ -278,7 +276,6 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
      * Enum representing different dimensions for metrics reported to CloudWatch.
      */
     private enum DimensionName {
-        INPUT_DOMAIN("InputDomain"),
         JOB_NAME("JobName");
 
         private final String value;

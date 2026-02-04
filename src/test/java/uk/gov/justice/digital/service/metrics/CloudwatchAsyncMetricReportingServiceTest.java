@@ -58,7 +58,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CloudwatchAsyncMetricReportingServiceTest {
 
-    private static final String DOMAIN = "some domain";
     private static final String JOB = "some job";
     private static final String NAMESPACE = "SomeNamespace";
     private static final Instant timestamp = Instant.ofEpochMilli(123456789L);
@@ -87,7 +86,6 @@ class CloudwatchAsyncMetricReportingServiceTest {
     void setUp() {
         when(jobProperties.getSparkJobName()).thenReturn(JOB);
         when(jobArguments.getCloudwatchMetricsNamespace()).thenReturn(NAMESPACE);
-        when(jobArguments.getConfigKey()).thenReturn(DOMAIN);
         underTest = new CloudwatchAsyncMetricReportingService(jobArguments, jobProperties, cloudwatchClient, clock, schedulerService, shutdownHookRegistrar);
     }
 
@@ -152,8 +150,8 @@ class CloudwatchAsyncMetricReportingServiceTest {
         List<Dimension> dimensions = datum.getDimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("InputDomain", dimension.getName());
-        assertEquals(DOMAIN, dimension.getValue());
+        assertEquals("JobName", dimension.getName());
+        assertEquals(JOB, dimension.getValue());
     }
 
     @Test
