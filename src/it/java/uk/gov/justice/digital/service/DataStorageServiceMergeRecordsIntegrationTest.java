@@ -10,7 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
-import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 
 import java.util.Arrays;
@@ -25,18 +25,21 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 @ExtendWith(MockitoExtension.class)
 class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDataIntegrationTest {
 
-    private DataStorageService underTest;
-
     @Mock
     private JobArguments arguments;
+    @Mock
+    private JobProperties properties;
+
+    private DataStorageService underTest;
 
     private String tablePath;
 
     @BeforeEach
     void setUp() {
         givenRetrySettingsAreConfigured(arguments);
+        givenParquetPartitionSettingsAreConfigured(arguments, properties);
         givenPathIsConfigured();
-        underTest = new DataStorageService(arguments);
+        underTest = new DataStorageService(arguments, properties);
     }
 
     @Test

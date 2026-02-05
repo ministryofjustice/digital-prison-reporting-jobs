@@ -47,6 +47,8 @@ class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
     @Mock
     private JobArguments arguments;
     @Mock
+    private JobProperties properties;
+    @Mock
     private DmsOrchestrationService dmsOrchestrationService;
     @Mock
     private SourceReferenceService sourceReferenceService;
@@ -60,6 +62,7 @@ class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
         givenPathsAreConfigured(arguments);
         givenTableConfigIsConfigured(arguments, configService);
         givenRetrySettingsAreConfigured(arguments);
+        givenParquetPartitionSettingsAreConfigured(arguments, properties);
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getTempReloadOutputFolder()).thenReturn("diffs");
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
@@ -147,10 +150,9 @@ class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
     }
 
     private void givenDependenciesAreInjected() {
-        JobProperties properties = new JobProperties();
         SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
-        DataStorageService storageService = new DataStorageService(arguments);
+        DataStorageService storageService = new DataStorageService(arguments, properties);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         ReloadDiffProcessor reloadDiffProcessor = new ReloadDiffProcessor(storageService);
         underTest = new CreateReloadDiffJob(

@@ -12,6 +12,7 @@ public class JobProperties {
     public static final String SPARK_JOB_NAME_PROPERTY = "spark.glue.JOB_NAME";
     public static final String SPARK_DRIVER_MEMORY_PROPERTY = "spark.driver.memory";
     public static final String SPARK_EXECUTOR_MEMORY_PROPERTY = "spark.executor.memory";
+    public static final String SPARK_EXECUTOR_CORES_PROPERTY = "spark.executor.cores";
 
     public String getSparkJobName() {
         return getString(SPARK_JOB_NAME_PROPERTY);
@@ -23,6 +24,10 @@ public class JobProperties {
 
     public String getSparkExecutorMemory() {
         return getString(SPARK_EXECUTOR_MEMORY_PROPERTY);
+    }
+
+    public int getSparkExecutorCores() {
+        return Integer.parseInt(getString(SPARK_EXECUTOR_CORES_PROPERTY));
     }
 
     private static String getString(String propertyKey) {

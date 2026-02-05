@@ -209,7 +209,7 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
-        DataStorageService storageService = new DataStorageService(arguments);
+        DataStorageService storageService = new DataStorageService(arguments, properties);
         DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
         ViolationService violationService =
                 new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, disabledMetricReportingService);

@@ -502,7 +502,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
     }
 
     private void givenTableStreamingQuery() throws NoSchemaNoDataException {
-        DataStorageService storageService = new DataStorageService(arguments);
+        DataStorageService storageService = new DataStorageService(arguments, properties);
         DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
         ViolationService violationService = new ViolationService(
                 arguments,

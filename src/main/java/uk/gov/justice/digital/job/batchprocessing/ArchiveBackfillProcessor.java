@@ -45,7 +45,7 @@ public class ArchiveBackfillProcessor {
         if (backfilledArchiveRecords.isEmpty()) {
             throw new BackfillException("Computed back-fill data is empty for table " + source + "." + table);
         } else {
-            storageService.overwriteParquet(backfillOutputPath, backfilledArchiveRecords.repartition());
+            storageService.overwriteParquet(backfillOutputPath, backfilledArchiveRecords);
         }
     }
 
