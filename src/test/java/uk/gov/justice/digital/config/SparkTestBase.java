@@ -20,7 +20,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
-import static uk.gov.justice.digital.config.JobArguments.*;
+import static uk.gov.justice.digital.config.JobArguments.LOG_LEVEL;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MIN_WAIT_MILLIS_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT;
+import static uk.gov.justice.digital.config.JobArguments.APPROX_DATA_SIZE_GB_DEFAULT;
 import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 
@@ -142,6 +147,11 @@ public class SparkTestBase {
 		when(arguments.getDataStorageRetryMaxWaitMillis()).thenReturn(DATA_STORAGE_RETRY_MAX_WAIT_MILLIS_DEFAULT);
 		when(arguments.getDataStorageRetryMaxAttempts()).thenReturn(DATA_STORAGE_RETRY_MAX_ATTEMPTS_DEFAULT);
 		when(arguments.getDataStorageRetryJitterFactor()).thenReturn(DATA_STORAGE_RETRY_JITTER_FACTOR_DEFAULT);
+	}
+
+	protected static void givenParquetPartitionSettingsAreConfigured(JobArguments arguments, JobProperties properties) {
+		when(arguments.getApproxDataSizeGigaBytes()).thenReturn(APPROX_DATA_SIZE_GB_DEFAULT);
+		when(properties.getSparkExecutorCores()).thenReturn(2);
 	}
 
 }

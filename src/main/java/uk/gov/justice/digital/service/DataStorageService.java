@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.datahub.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
@@ -50,9 +51,11 @@ public class DataStorageService {
     private static final String SOURCE = "source";
     private static final String TARGET = "target";
     private static final Logger logger = LoggerFactory.getLogger(DataStorageService.class);
+    private static final int MAX_PARTITION_SIZE_MB = 128;
 
     // Retry policy used on operations that are at risk of concurrent modification exceptions
     private final RetryPolicy<Void> retryPolicy;
+    private final int numPartitions;
 
     private final String insertMatchCondition = createMatchExpression(Insert);
     private final String updateMatchCondition = createMatchExpression(Update);
@@ -60,9 +63,10 @@ public class DataStorageService {
     private final String notDeleteMatchCondition = String.format("%s.%s<>'%s'", TARGET, OPERATION, Delete.getName());
 
     @Inject
-    public DataStorageService(JobArguments jobArguments) {
+    public DataStorageService(JobArguments jobArguments, JobProperties properties) {
         RetryConfig retryConfig = new RetryConfig(jobArguments);
         this.retryPolicy = buildRetryPolicy(retryConfig, DeltaConcurrentModificationException.class);
+        this.numPartitions = getNumPartitions(jobArguments.getApproxDataSizeGigaBytes(), properties.getSparkExecutorCores());
     }
 
     public boolean exists(SparkSession spark, TableIdentifier tableId) {
@@ -253,7 +257,7 @@ public class DataStorageService {
     }
 
     public void overwriteParquet(String path, Dataset<Row> dataset) {
-        dataset.write().mode(SaveMode.Overwrite).parquet(path);
+        dataset.coalesce(numPartitions).write().mode(SaveMode.Overwrite).parquet(path);
     }
 
     protected void updateManifest(DeltaTable dt) {
@@ -362,6 +366,23 @@ public class DataStorageService {
 
     private String createMatchExpression(CommonDataFields.ShortOperationCode operation) {
         return String.format("%s.%s=='%s'", TARGET, OPERATION, operation.getName());
+    }
+
+    private int getNumPartitions(double dataSizeGigaBytes, int numExecutorCores) {
+        // We compute the number of partitions for writing a parquet as follows:
+        // - Given a 23.1 GB dataset
+        // - and a maximum partition target size of 128 MB
+        // - and 4 executor cores
+        //
+        // Then the minimum number of 128 MB partitions:
+        // (2 * 23.1 * 1024 MB) / 128 MB = 369.6 partitions
+        //
+        // To prevent having idle cores for the last batch, we choose the next factor of the number of cores:
+        // Math.ceil(369.6 partitions / 4 cores) * 4 cores = 372 partitions
+        double dataSizeMegaBytes = dataSizeGigaBytes * 1024;
+        double maxDataSizeMegaBytes = 2 * dataSizeMegaBytes;
+        double partitionsPerExecutorCore = Math.ceil(maxDataSizeMegaBytes / MAX_PARTITION_SIZE_MB / numExecutorCores);
+        return (int) partitionsPerExecutorCore * numExecutorCores;
     }
 
 }

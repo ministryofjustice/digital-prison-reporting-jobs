@@ -188,6 +188,8 @@ public class JobArguments {
     static final String TEST_DATA_RUN_DURATION_MILLIS = "dpr.test.data.run.duration.millis";
     static final long DEFAULT_TEST_DATA_RUN_DURATION_MILLIS = 3600000; // 1 hour
     public static final String ADJUST_SPARK_MEMORY = "dpr.adjust.spark.memory";
+    public static final String APPROX_DATA_SIZE_GB = "dpr.approx.data.size.gb";
+    public static final double APPROX_DATA_SIZE_GB_DEFAULT = 1.0;
     public static final String REPORT_METRICS_TO_CLOUDWATCH = "dpr.report.metrics.to.cloudwatch";
     static final String CLOUDWATCH_METRICS_NAMESPACE = "dpr.cloudwatch.metrics.namespace";
     static final String CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS = "dpr.cloudwatch.metrics.reporting.period.seconds";
@@ -647,6 +649,10 @@ public class JobArguments {
 
     public boolean adjustSparkMemory() {
         return getArgument(ADJUST_SPARK_MEMORY, false);
+    }
+
+    public double getApproxDataSizeGigaBytes() {
+        return getArgument(APPROX_DATA_SIZE_GB, APPROX_DATA_SIZE_GB_DEFAULT);
     }
 
     private String getArgument(String argumentName) {

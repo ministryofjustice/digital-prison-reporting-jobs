@@ -21,6 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -29,7 +30,6 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import java.nio.file.Path;
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -41,11 +41,11 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.config.JobArguments.APPROX_DATA_SIZE_GB_DEFAULT;
 import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,12 +53,14 @@ class DataStorageServiceTest extends SparkTestBase {
 
     private static final int DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES = 1;
 
-    private static final DataStorageService underTest = new DataStorageService(new JobArguments(Collections.emptyMap()));
-
     private static final SourceReference.PrimaryKey arbitraryPrimaryKey = new SourceReference.PrimaryKey("arbitrary");
 
     private MockedStatic<DeltaTable> mockDeltaTableStatic;
 
+    @Mock
+    private JobArguments mockJobArguments;
+    @Mock
+    private JobProperties mockJobProperties;
     @Mock
     private DeltaTable mockDeltaTable;
     @Mock
@@ -79,6 +81,7 @@ class DataStorageServiceTest extends SparkTestBase {
     private DeltaMergeNotMatchedActionBuilder mockDeltaMergeNotMatchedActionBuilder;
     @Mock
     private DeltaMergeMatchedActionBuilder mockDeltaMergeMatchedActionBuilder;
+    private DataStorageService underTest;
 
     @TempDir
     private Path folder;
@@ -89,6 +92,9 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @BeforeEach
     void setUp() {
+        givenRetrySettingsAreConfigured(mockJobArguments);
+        givenParquetPartitionSettingsAreConfigured(mockJobArguments, mockJobProperties);
+
         mockDeltaTableStatic = mockStatic(DeltaTable.class);
         tableId = new TableIdentifier(
                 folder.toAbsolutePath().toString(),
@@ -97,6 +103,8 @@ class DataStorageServiceTest extends SparkTestBase {
                 "demographics"
         );
         tablePath = tableId.toPath();
+
+        underTest = new DataStorageService(mockJobArguments, mockJobProperties);
     }
 
     @AfterEach
@@ -280,49 +288,42 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Test
     void shouldRetryAppendAndSucceedEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
-
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
         givenSaveThrowsFirstTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         dataStorageService.append(tablePath, mockDataSet);
         verify(mockDataFrameWriter, times(2)).save();
     }
 
     @Test
     void shouldRetryAppendDistinctAndSucceedEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
-
         stubAppendDistinct();
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
         givenMergeThrowsFirstTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         dataStorageService.appendDistinct(tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
         verify(mockDeltaMergeBuilder, times(2)).execute();
     }
 
     @Test
     void shouldRetryUpdateRecordsAndSucceedEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
-
         stubUpdateRecords();
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
         givenMergeThrowsFirstTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         dataStorageService.updateRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
         verify(mockDeltaMergeBuilder, times(2)).execute();
     }
 
     @Test
     void shouldRetryMergeRecordsAndSucceedEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         when(mockDataSet.columns()).thenReturn(new String[0]);
 
         stubDeltaTableCreateIfNotExists();
@@ -332,52 +333,46 @@ class DataStorageServiceTest extends SparkTestBase {
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
         givenMergeThrowsFirstTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         dataStorageService.mergeRecords(spark, tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
         verify(mockDeltaMergeBuilder, times(2)).execute();
     }
 
     @Test
     void shouldRetryCompactAndSucceedEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
-
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
         givenCompactThrowsFirstTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         dataStorageService.compactDeltaTable(spark, tablePath);
         verify(mockDeltaOptimize, times(2)).executeCompaction();
     }
 
     @Test
     void shouldRetryVacuumAndSucceedEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
-
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
         givenVacuumThrowsFirstTime(ConcurrentDeleteReadException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         dataStorageService.vacuum(spark, tablePath);
         verify(mockDeltaTable, times(2)).vacuum();
     }
 
     @Test
     void shouldRetryAppendAndFailEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
         givenSaveThrowsEveryTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> dataStorageService.append(tablePath, mockDataSet));
         verify(mockDataFrameWriter, times(retryAttempts)).save();
     }
     @Test
     void shouldRetryAppendDistinctAndFailEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
         stubAppendDistinct();
@@ -386,7 +381,7 @@ class DataStorageServiceTest extends SparkTestBase {
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
         givenMergeThrowsEveryTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.appendDistinct(tablePath, mockDataSet, arbitraryPrimaryKey);
         });
@@ -395,7 +390,6 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Test
     void shouldRetryMergeRecordsAndFailEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
         when(mockDataSet.columns()).thenReturn(new String[0]);
 
@@ -406,7 +400,7 @@ class DataStorageServiceTest extends SparkTestBase {
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
         givenMergeThrowsEveryTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.mergeRecords(spark, tablePath, mockDataSet, arbitraryPrimaryKey);
         });
@@ -415,7 +409,6 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Test
     void shouldRetryUpdateRecordsAndFailEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
         stubUpdateRecords();
@@ -424,7 +417,7 @@ class DataStorageServiceTest extends SparkTestBase {
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
         givenMergeThrowsEveryTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.updateRecords(spark, tablePath, mockDataSet, arbitraryPrimaryKey);
         });
@@ -433,14 +426,13 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Test
     void shouldRetryCompactAndFailEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
         givenCompactThrowsEveryTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.compactDeltaTable(spark, tablePath);
         });
@@ -449,14 +441,13 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Test
     void shouldRetryVacuumAndFailEventually() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 5;
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
         givenVacuumThrowsEveryTime(ConcurrentAppendException.class);
 
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         assertThrows(DataStorageRetriesExhaustedException.class, () -> {
             dataStorageService.vacuum(spark, tablePath);
         });
@@ -465,11 +456,22 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Test
     void shouldOverwriteParquet() {
-        JobArguments mockJobArguments = mock(JobArguments.class);
         int retryAttempts = 1;
-        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
-        DataStorageService dataStorageService = new DataStorageService(mockJobArguments);
+        double approxDataSize = 3.0;
+        int sparkExecutorCores = 2;
+        // - APPROX_DATA_SIZE_GB = 3.0 GB
+        // - Max partition target size: 128 MB
+        // - NUM_EXECUTOR_CORES = 2
+        // Min number of 128 MB partitions:
+        // (2 * 3 * 1024 MB) / 128 MB = 48 partitions
+        int numPartitions = 48;
 
+        givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);
+        when(mockJobArguments.getApproxDataSizeGigaBytes()).thenReturn(approxDataSize);
+        when(mockJobProperties.getSparkExecutorCores()).thenReturn(sparkExecutorCores);
+        DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
+
+        when(mockDataSet.coalesce(numPartitions)).thenReturn(mockDataSet);
         when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
         when(mockDataFrameWriter.mode(SaveMode.Overwrite)).thenReturn(mockDataFrameWriter);
         String path = "some-path";

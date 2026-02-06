@@ -160,7 +160,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         // Manually creating dependencies because Micronaut test injection is not working
         SparkSessionProvider sparkSessionProvider = new SparkSessionProvider();
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
-        DataStorageService storageService = new DataStorageService(arguments);
+        DataStorageService storageService = new DataStorageService(arguments, properties);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         ViolationService violationService =
                 new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());

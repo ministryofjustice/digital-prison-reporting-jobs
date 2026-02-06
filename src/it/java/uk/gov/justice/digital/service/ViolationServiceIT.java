@@ -12,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.service.metrics.DisabledMetricReportingService;
@@ -76,6 +77,8 @@ class ViolationServiceIT extends SparkTestBase {
     @Mock
     private JobArguments arguments;
     @Mock
+    private JobProperties properties;
+    @Mock
     private ConfigService configService;
     @TempDir
     private Path scratchTempDirRoot;
@@ -89,9 +92,10 @@ class ViolationServiceIT extends SparkTestBase {
     @BeforeEach
     void setUp() {
         givenRetrySettingsAreConfigured(arguments);
+        givenParquetPartitionSettingsAreConfigured(arguments, properties);
         underTest = new ViolationService(
                 arguments,
-                new DataStorageService(arguments),
+                new DataStorageService(arguments, properties),
                 new S3DataProvider(arguments),
                 new TableDiscoveryService(arguments, configService),
                 new DisabledMetricReportingService()

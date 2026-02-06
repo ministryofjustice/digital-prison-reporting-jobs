@@ -2,23 +2,35 @@ package uk.gov.justice.digital.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.SharedTestFunctions.thenEventually;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
+@ExtendWith(MockitoExtension.class)
 class DataStorageServiceIntegrationTest extends DeltaTablesTestBase {
-    private static final DataStorageService underTest = new DataStorageService(new JobArguments(Collections.emptyMap()));
+
+    @Mock
+    private JobArguments arguments;
+    @Mock
+    private JobProperties properties;
+    private DataStorageService underTest;
 
     @BeforeEach
     void setupTest() throws Exception {
         setupDeltaTablesFixture();
         setupNonDeltaFilesAndDirs();
+        givenRetrySettingsAreConfigured(arguments);
+        givenParquetPartitionSettingsAreConfigured(arguments, properties);
+        underTest = new DataStorageService(arguments, properties);
     }
     @Test
     void shouldListDeltaTablePathsInRootIgnoringNonDeltaDirsAndFiles() {

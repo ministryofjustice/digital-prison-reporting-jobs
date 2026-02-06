@@ -282,7 +282,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     private void givenS3BatchProcessorDependenciesAreInjected() {
-        DataStorageService storageService = new DataStorageService(arguments);
+        DataStorageService storageService = new DataStorageService(arguments, properties);
         S3DataProvider dataProvider = new S3DataProvider(arguments);
         TableDiscoveryService tableDiscoveryService = new TableDiscoveryService(arguments, configService);
         ViolationService violationService =

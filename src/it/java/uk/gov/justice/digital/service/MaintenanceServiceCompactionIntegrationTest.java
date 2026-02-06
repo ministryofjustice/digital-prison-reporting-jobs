@@ -2,15 +2,23 @@ package uk.gov.justice.digital.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.digital.config.JobArguments;
+import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
-
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
+@ExtendWith(MockitoExtension.class)
 class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
+
+    @Mock
+    private JobArguments arguments;
+    @Mock
+    private JobProperties properties;
 
     private MaintenanceService underTest;
 
@@ -18,7 +26,9 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     void setupTest() throws Exception {
         setupDeltaTablesFixture();
         setupNonDeltaFilesAndDirs();
-        underTest = new MaintenanceService(new DataStorageService(new JobArguments(Collections.emptyMap())));
+        givenRetrySettingsAreConfigured(arguments);
+        givenParquetPartitionSettingsAreConfigured(arguments, properties);
+        underTest = new MaintenanceService(new DataStorageService(arguments, properties));
     }
 
     @Test
