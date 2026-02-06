@@ -48,6 +48,9 @@ public class CuratedZoneLoad implements Zone {
             logger.info("Appending {} records to deltalake table: {}", dataFrame.count(), path);
             storage.appendDistinct(path, dataFrame, primaryKey);
             logger.info("Append completed successfully to table: {}", path);
+            // This should be moved to the maintenance job ran after ingestion/reload instead
+            storage.optimizeDeltaTableFull(spark, path);
+            logger.info("Ran OPTIMIZE FULL delta table: {}", path);
             storage.updateDeltaManifestForTable(spark, path);
             logger.info("Processed batch for curated {}/{} in {}ms", sourceName, tableName, System.currentTimeMillis() - startTime);
             return dataFrame;
