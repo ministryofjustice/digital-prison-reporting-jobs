@@ -41,6 +41,7 @@ public class SparkSessionProvider {
                 .set("spark.driver.memory", driverMemory)
                 .set("spark.executor.memory", executorMemory)
                 .set("spark.databricks.delta.autoCompact.enabled", "true")
+                .set("spark.databricks.delta.properties.defaults.enableDeletionVectors", "true")
                 .set("spark.databricks.delta.optimizeWrite.enabled", "true")
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.databricks.delta.properties.defaults.targetFileSize", "67110000")

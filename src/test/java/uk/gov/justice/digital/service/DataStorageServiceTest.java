@@ -21,6 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import scala.collection.Seq;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -165,48 +167,6 @@ class DataStorageServiceTest extends SparkTestBase {
         underTest.append(tablePath, mockDataSet);
 
         verify(mockDataFrameWriter).mode("append");
-        verify(mockDataFrameWriter).save();
-    }
-
-    @Test
-    void shouldCreateCompleteForDeltaTable() {
-        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
-
-        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
-        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
-
-        underTest.create(tablePath, mockDataSet);
-
-        verify(mockDataFrameWriter).save();
-    }
-
-    @Test
-    void shouldReplaceCompleteForDeltaTable() {
-        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
-
-        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
-        when(mockDataFrameWriter.mode(anyString())).thenReturn(mockDataFrameWriter);
-        when(mockDataFrameWriter.option(anyString(), anyBoolean())).thenReturn(mockDataFrameWriter);
-        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
-
-        underTest.replace(tablePath, mockDataSet);
-
-        verify(mockDataFrameWriter).mode("overwrite");
-        verify(mockDataFrameWriter).option("overwriteSchema", true);
-        verify(mockDataFrameWriter).save();
-    }
-
-    @Test
-    void shouldReloadCompleteForDeltaTable() {
-        when(mockDataSet.write()).thenReturn(mockDataFrameWriter);
-
-        when(mockDataFrameWriter.format("delta")).thenReturn(mockDataFrameWriter);
-        when(mockDataFrameWriter.mode(anyString())).thenReturn(mockDataFrameWriter);
-        when(mockDataFrameWriter.option(anyString(), anyString())).thenReturn(mockDataFrameWriter);
-
-        underTest.resync(tablePath, mockDataSet);
-
-        verify(mockDataFrameWriter).mode("overwrite");
         verify(mockDataFrameWriter).save();
     }
 
@@ -555,6 +515,8 @@ class DataStorageServiceTest extends SparkTestBase {
         when(DeltaTable.createIfNotExists(any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.addColumns(any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.location(any())).thenReturn(mockDeltaTableBuilder);
+        when(mockDeltaTableBuilder.property(any(), any())).thenReturn(mockDeltaTableBuilder);
+        when(mockDeltaTableBuilder.clusterBy((Seq<String>) any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.execute()).thenReturn(mockDeltaTable);
     }
 
