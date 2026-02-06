@@ -67,6 +67,7 @@ public class DataStorageService {
         RetryConfig retryConfig = new RetryConfig(jobArguments);
         this.retryPolicy = buildRetryPolicy(retryConfig, DeltaConcurrentModificationException.class);
         this.numPartitions = getNumPartitions(jobArguments.getApproxDataSizeGigaBytes(), properties.getSparkExecutorCores());
+        logger.warn("Found {} executor cores", this.numPartitions);
     }
 
     public boolean exists(SparkSession spark, TableIdentifier tableId) {
