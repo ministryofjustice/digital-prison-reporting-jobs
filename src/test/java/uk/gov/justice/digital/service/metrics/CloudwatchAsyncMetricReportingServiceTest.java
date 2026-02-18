@@ -297,6 +297,14 @@ class CloudwatchAsyncMetricReportingServiceTest {
     }
 
     @Test
+    void reportStreamingLatencyDmsToCuratedShouldDoNothingForAllZeroStatistics() {
+        underTest.reportStreamingLatencyDmsToCurated(new LatencyStatistics(0L, 0L, 0L, 0L));
+        underTest.flush();
+
+        verifyNoInteractions(cloudwatchClient);
+    }
+
+    @Test
     void reportBatchJobTimeTakenShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
 
