@@ -6,14 +6,14 @@ import lombok.Data;
 public class LatencyStatistics {
 
     // Represents an empty set of statistics, e.g. for when there is no valid latency data available
-    public static final LatencyStatistics EMPTY = new LatencyStatistics(null, null, null, null);
+    public static final LatencyStatistics EMPTY = new LatencyStatistics(0L, 0L, 0L, 0L);
 
     public static boolean isEmpty(LatencyStatistics latencyStatistics) {
-        return latencyStatistics == null || latencyStatistics == EMPTY;
+        return latencyStatistics == null || latencyStatistics.equals(EMPTY);
     }
 
-    private final Long minimum;
-    private final Long maximum;
-    private final Long sum;
-    private final Long totalCount;
+    private final long minimum;
+    private final long maximum;
+    private final long sum;
+    private final long totalCount;
 }
