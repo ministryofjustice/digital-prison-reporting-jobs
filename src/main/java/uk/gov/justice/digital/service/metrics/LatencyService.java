@@ -3,6 +3,8 @@ package uk.gov.justice.digital.service.metrics;
 import jakarta.inject.Singleton;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
@@ -17,6 +19,8 @@ import static org.apache.spark.sql.functions.unix_millis;
  */
 @Singleton
 public class LatencyService {
+
+    private static final Logger logger = LoggerFactory.getLogger(LatencyService.class);
 
     /**
      * Calculates and returns latency statistics for the provided timestamp column.
@@ -42,16 +46,20 @@ public class LatencyService {
                 lit(nowMillis).minus(unix_millis(to_timestamp(col(timestampColumn), "yyyy-MM-dd HH:mm:ss.SSSSSS")))
         );
 
-        withLatencies.show(true);
-
-        Row stats = withLatencies.agg(
+        Dataset<Row> aggregated = withLatencies.agg(
                 min(dmsLatencyDiffMsColumn).as("Minimum"),
                 max(dmsLatencyDiffMsColumn).as("Maximum"),
                 sum(dmsLatencyDiffMsColumn).as("Sum")
-        ).first();
+        );
+        Row stats = aggregated.first();
         Long min = stats.getAs("Minimum");
         Long max = stats.getAs("Maximum");
         Long sum = stats.getAs("Sum");
+        if (min == null || max == null || sum == null) {
+            logger.warn("Invalid latency statistics: (max: {}, min:{}, sum:{}) calculated for dataset with {} non-null timestamps",
+                    max, min, sum, notNullTimestampCount);
+            return LatencyStatistics.EMPTY;
+        }
         return new LatencyStatistics(min, max, sum, notNullTimestampCount);
     }
 }

@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
 import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
 import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUDWATCH;
-import static uk.gov.justice.digital.service.metrics.LatencyStatistics.isEmpty;
 
 /**
  * Buffers cloudwatch metrics locally before sending them in batches using a background thread to the Cloudwatch API
@@ -142,11 +142,11 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     @Override
     public void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics) {
-        if (!isEmpty(latencyStatistics)) {
-            StatisticSet statisticSet = convertToStatisticSet(latencyStatistics);
-            MetricDatum metricDatum = buildStatisticMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, Milliseconds, statisticSet);
+        Optional<StatisticSet> statisticSet = convertToStatisticSet(latencyStatistics);
+        statisticSet.ifPresent(stat -> {
+            MetricDatum metricDatum = buildStatisticMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, Milliseconds, stat);
             bufferMetric(metricDatum);
-        }
+        });
     }
 
     @Override
@@ -237,13 +237,16 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         }
     }
 
-    private static StatisticSet convertToStatisticSet(LatencyStatistics latencyStatistics) {
+    private static Optional<StatisticSet> convertToStatisticSet(LatencyStatistics latencyStatistics) {
+        if (LatencyStatistics.isEmpty(latencyStatistics)) {
+            return Optional.empty();
+        }
         StatisticSet statisticSet = new StatisticSet();
-        statisticSet.setMaximum(latencyStatistics.getMaximum().doubleValue());
-        statisticSet.setMinimum(latencyStatistics.getMinimum().doubleValue());
-        statisticSet.setSum(latencyStatistics.getSum().doubleValue());
-        statisticSet.setSampleCount(latencyStatistics.getTotalCount().doubleValue());
-        return statisticSet;
+        statisticSet.setMaximum((double) latencyStatistics.getMaximum());
+        statisticSet.setMinimum((double) latencyStatistics.getMinimum());
+        statisticSet.setSum((double) latencyStatistics.getSum());
+        statisticSet.setSampleCount((double) latencyStatistics.getTotalCount());
+        return Optional.of(statisticSet);
     }
 
     /**
