@@ -2,7 +2,7 @@ package uk.gov.justice.digital.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.DefaultGlueClient;
 import uk.gov.justice.digital.config.JobArguments;
 
 import javax.inject.Inject;
@@ -15,10 +15,10 @@ public class GlueOrchestrationService {
 
     private final JobArguments jobArguments;
 
-    private final GlueClient glueClient;
+    private final DefaultGlueClient glueClient;
 
     @Inject
-    public GlueOrchestrationService(JobArguments jobArguments, GlueClient glueClient) {
+    public GlueOrchestrationService(JobArguments jobArguments, DefaultGlueClient glueClient) {
         this.jobArguments = jobArguments;
         this.glueClient = glueClient;
     }

@@ -1,10 +1,12 @@
 package uk.gov.justice.digital.client.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.s3.S3Client;
 import jakarta.inject.Inject;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import uk.gov.justice.digital.common.CheckpointFile;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
@@ -26,7 +28,7 @@ public class S3CheckpointReaderClient {
 
     private static final Logger logger = LoggerFactory.getLogger(S3CheckpointReaderClient.class);
 
-    private final AmazonS3 s3;
+    private final S3Client s3;
 
     @Inject
     public S3CheckpointReaderClient(S3ClientProvider clientProvider) {
@@ -38,7 +40,14 @@ public class S3CheckpointReaderClient {
 
         Set<String> committedFiles = new HashSet<>();
         for (CheckpointFile checkpointFile : reverseOrderedCheckpointFiles) {
-            String committedFileContent = s3.getObjectAsString(checkpointBucket, checkpointFile.getS3key());
+
+            GetObjectRequest request = GetObjectRequest.builder()
+                    .bucket(checkpointBucket)
+                    .key(checkpointFile.getS3key())
+                    .build();
+
+            String committedFileContent = s3.getObject(request, ResponseTransformer.toBytes()).asUtf8String();
+
             List<String> linesContainingCommittedFiles = getLinesContainingCommittedFiles(committedFileContent);
 
             committedFiles.addAll(getCommittedFiles(linesContainingCommittedFiles));

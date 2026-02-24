@@ -1,13 +1,18 @@
 package uk.gov.justice.digital.client.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -15,6 +20,8 @@ import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
@@ -24,7 +31,7 @@ class S3CheckpointReaderClientTest {
     @Mock
     S3ClientProvider mockS3ClientProvider;
     @Mock
-    AmazonS3 mockS3Client;
+    S3Client mockS3Client;
     private final static String CHECKPOINT_BUCKET = "some-bucket";
     private final static String CHECKPOINT_FILE_0 = "v1\n" +
             "{\"path\":\"s3://" + CHECKPOINT_BUCKET + "/source/table0/committed-file-1.parquet\",\"timestamp\":1,\"batchId\":0}\n" +
@@ -49,15 +56,38 @@ class S3CheckpointReaderClientTest {
     }
 
     @Test
+    @SuppressWarnings({"unchecked"})
     void shouldRetrieveCommittedFilesFromCheckpointFiles() {
         List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/2"));
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/1"));
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/0.compact"));
 
-        when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/2")).thenReturn(CHECKPOINT_FILE_2);
-        when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/1")).thenReturn(CHECKPOINT_FILE_1);
-        when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/0.compact")).thenReturn(CHECKPOINT_FILE_0);
+        ResponseBytes<GetObjectResponse> checkpointFile0 = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_0.getBytes(StandardCharsets.UTF_8));
+        ResponseBytes<GetObjectResponse> checkpointFile1 = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_1.getBytes(StandardCharsets.UTF_8));
+        ResponseBytes<GetObjectResponse> checkpointFile2 = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_2.getBytes(StandardCharsets.UTF_8));
+
+        GetObjectRequest request0 = GetObjectRequest.builder()
+                .bucket(CHECKPOINT_BUCKET)
+                .key("checkpoint-path/0.compact")
+                .build();
+
+        GetObjectRequest request1 = GetObjectRequest.builder()
+                .bucket(CHECKPOINT_BUCKET)
+                .key("checkpoint-path/1")
+                .build();
+
+        GetObjectRequest request2 = GetObjectRequest.builder()
+                .bucket(CHECKPOINT_BUCKET)
+                .key("checkpoint-path/2")
+                .build();
+
+        when(mockS3Client.getObject(eq(request0), any(ResponseTransformer.class))).thenReturn(checkpointFile0);
+        when(mockS3Client.getObject(eq(request1), any(ResponseTransformer.class))).thenReturn(checkpointFile1);
+        when(mockS3Client.getObject(eq(request2), any(ResponseTransformer.class))).thenReturn(checkpointFile2);
 
         Set<String> committedFiles = underTest.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles);
 
@@ -73,12 +103,21 @@ class S3CheckpointReaderClientTest {
     }
 
     @Test
+    @SuppressWarnings({"unchecked"})
     void shouldIgnoreTempFilesFromCheckpointFilesList() {
         List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/2"));
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/0.tmp"));
 
-        when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/2")).thenReturn(CHECKPOINT_FILE_2);
+        ResponseBytes<GetObjectResponse> checkpointFile2 = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_2.getBytes(StandardCharsets.UTF_8));
+
+        GetObjectRequest request2 = GetObjectRequest.builder()
+                .bucket(CHECKPOINT_BUCKET)
+                .key("checkpoint-path/2")
+                .build();
+
+        when(mockS3Client.getObject(eq(request2), any(ResponseTransformer.class))).thenReturn(checkpointFile2);
 
         Set<String> committedFiles = underTest.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles);
 
@@ -91,6 +130,7 @@ class S3CheckpointReaderClientTest {
     }
 
     @Test
+    @SuppressWarnings({"unchecked"})
     void shouldIgnoreCheckpointFilesWithNameHavingLowerNaturalOrderThanTheMostRecentCompactFile() {
         List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/0")); // this file has name with lower natural order than the compact file and will be ignored
@@ -98,8 +138,23 @@ class S3CheckpointReaderClientTest {
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/9.compact"));
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/10")); // 10 is after 9.compact and should also be processed
 
-        when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/10")).thenReturn(CHECKPOINT_FILE_2);
-        when(mockS3Client.getObjectAsString(CHECKPOINT_BUCKET, "checkpoint-path/9.compact")).thenReturn(CHECKPOINT_FILE_1);
+        ResponseBytes<GetObjectResponse> checkpointFile1 = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_1.getBytes(StandardCharsets.UTF_8));
+        ResponseBytes<GetObjectResponse> checkpointFile2 = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_2.getBytes(StandardCharsets.UTF_8));
+
+        GetObjectRequest request1 = GetObjectRequest.builder()
+                .bucket(CHECKPOINT_BUCKET)
+                .key("checkpoint-path/9.compact")
+                .build();
+
+        GetObjectRequest request2 = GetObjectRequest.builder()
+                .bucket(CHECKPOINT_BUCKET)
+                .key("checkpoint-path/10")
+                .build();
+
+        when(mockS3Client.getObject(eq(request1), any(ResponseTransformer.class))).thenReturn(checkpointFile1);
+        when(mockS3Client.getObject(eq(request2), any(ResponseTransformer.class))).thenReturn(checkpointFile2);
 
         Set<String> committedFiles = underTest.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles);
 

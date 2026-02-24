@@ -34,7 +34,7 @@ workflows:
           context:
             - hmpps-reporting-common
             - hmpps-reporting-orb
-          cache_key: "dpr-jobs-build-cache-1"
+          cache_key: "dpr-jobs-build-cache"
       - slack/on-hold:
           channel: dpr_cicd_approvals
           filters:

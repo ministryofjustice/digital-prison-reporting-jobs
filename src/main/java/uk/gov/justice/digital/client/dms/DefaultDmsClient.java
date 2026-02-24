@@ -1,14 +1,5 @@
 package uk.gov.justice.digital.client.dms;
 
-import com.amazonaws.services.databasemigrationservice.AWSDatabaseMigrationService;
-import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksRequest;
-import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsRequest;
-import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsResult;
-import com.amazonaws.services.databasemigrationservice.model.Filter;
-import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
-import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
-import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
-import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,9 +10,18 @@ import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.databasemigration.DatabaseMigrationClient;
+import software.amazon.awssdk.services.databasemigration.model.ReplicationTask;
+import software.amazon.awssdk.services.databasemigration.model.StopReplicationTaskRequest;
+import software.amazon.awssdk.services.databasemigration.model.ModifyReplicationTaskRequest;
+import software.amazon.awssdk.services.databasemigration.model.TableStatistics;
+import software.amazon.awssdk.services.databasemigration.model.DescribeTableStatisticsRequest;
+import software.amazon.awssdk.services.databasemigration.model.DescribeTableStatisticsResponse;
+import software.amazon.awssdk.services.databasemigration.model.DescribeReplicationTasksRequest;
+import software.amazon.awssdk.services.databasemigration.model.Filter;
 import uk.gov.justice.digital.exception.DmsClientException;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -31,24 +31,26 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Singleton
-public class DmsClient {
+public class DefaultDmsClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(DmsClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDmsClient.class);
 
-    private final AWSDatabaseMigrationService awsDms;
+    private final DatabaseMigrationClient awsDms;
 
     @Inject
-    public DmsClient(DmsClientProvider dmsClientProvider) {
+    public DefaultDmsClient(DmsClientProvider dmsClientProvider) {
         this.awsDms = dmsClientProvider.getClient();
     }
 
     public void stopTask(String taskId, int waitIntervalSeconds, int maxAttempts) {
         Optional<ReplicationTask> optionalTask = getTask(taskId);
         optionalTask.ifPresent(task -> {
-                    StopReplicationTaskRequest stopReplicationTaskRequest = new StopReplicationTaskRequest()
-                            .withReplicationTaskArn(task.getReplicationTaskArn());
+                    StopReplicationTaskRequest stopReplicationTaskRequest = StopReplicationTaskRequest
+                            .builder()
+                            .replicationTaskArn(task.replicationTaskArn())
+                            .build();
 
-                    if (task.getStatus().equalsIgnoreCase("running")) {
+                    if (task.status().equalsIgnoreCase("running")) {
                         logger.info("Stopping replication task {}", taskId);
                         awsDms.stopReplicationTask(stopReplicationTaskRequest);
 
@@ -65,17 +67,19 @@ public class DmsClient {
         );
     }
 
-    public void updateCdcTaskStartTime(Date cdcStartTime, String cdcTaskId) {
+    public void updateCdcTaskStartTime(Instant cdcStartTime, String cdcTaskId) {
         Optional<ReplicationTask> optionalTask = getTask(cdcTaskId);
 
         if (optionalTask.isPresent()) {
             ReplicationTask cdcTask = optionalTask.get();
 
             logger.info("Modifying replication task");
-            val modifyReplicationTaskRequest = new ModifyReplicationTaskRequest()
-                    .withReplicationTaskIdentifier(cdcTaskId)
-                    .withReplicationTaskArn(cdcTask.getReplicationTaskArn())
-                    .withCdcStartTime(cdcStartTime);
+            val modifyReplicationTaskRequest = ModifyReplicationTaskRequest
+                    .builder()
+                    .replicationTaskIdentifier(cdcTaskId)
+                    .replicationTaskArn(cdcTask.replicationTaskArn())
+                    .cdcStartTime(cdcStartTime)
+                    .build();
 
             awsDms.modifyReplicationTask(modifyReplicationTaskRequest);
             logger.info("Modified replication task");
@@ -84,10 +88,10 @@ public class DmsClient {
         }
     }
 
-    public Date getTaskStartTime(String taskId) {
+    public Instant getTaskStartTime(String taskId) {
         Optional<ReplicationTask> optionalTask = getTask(taskId);
         if (optionalTask.isPresent()) {
-            return Optional.ofNullable(optionalTask.get().getReplicationTaskStartDate())
+            return Optional.ofNullable(optionalTask.get().replicationTaskStartDate())
                     .orElseThrow(() -> new DmsClientException("Start time was null for DMS task with Id: " + taskId));
         } else {
             throw new DmsClientException("Failed to get DMS task with Id: " + taskId);
@@ -99,10 +103,13 @@ public class DmsClient {
         ReplicationTask replicationTask = optionalTask.orElseThrow(() ->
                 new DmsClientException("Replication task with Id: " + taskId + " not found")
         );
-        DescribeTableStatisticsRequest request = new DescribeTableStatisticsRequest();
-        request.setReplicationTaskArn(replicationTask.getReplicationTaskArn());
-        DescribeTableStatisticsResult response = awsDms.describeTableStatistics(request);
-        return response.getTableStatistics();
+        DescribeTableStatisticsRequest request = DescribeTableStatisticsRequest
+                .builder()
+                .replicationTaskArn(replicationTask.replicationTaskArn())
+                .build();
+
+        DescribeTableStatisticsResponse response = awsDms.describeTableStatistics(request);
+        return response.tableStatistics();
     }
 
     public ImmutableSet<ImmutablePair<String, String>> getReplicationTaskTables(String domainKey) throws JsonProcessingException {
@@ -114,7 +121,7 @@ public class DmsClient {
         final Set<String> sources = new HashSet<>();
         final Set<String> tableNames = new HashSet<>();
 
-        String tableMappingsAsString = replicationTask.getTableMappings();
+        String tableMappingsAsString = replicationTask.tableMappings();
         JsonNode tableMappings = new ObjectMapper().readTree(tableMappingsAsString);
         Iterator<JsonNode> ruleElements = tableMappings.get("rules").elements();
 
@@ -145,7 +152,7 @@ public class DmsClient {
         for (int attempts = 0; attempts < maxAttempts; attempts++) {
             logger.info("Ensuring replication task {} is in {} state. Attempt {}", taskId, state, attempts);
             Optional<ReplicationTask> optionalTask = getTask(taskId);
-            if (optionalTask.isPresent() && optionalTask.get().getStatus().equalsIgnoreCase(state)) {
+            if (optionalTask.isPresent() && optionalTask.get().status().equalsIgnoreCase(state)) {
                 return;
             }
 
@@ -158,24 +165,29 @@ public class DmsClient {
 
     public Optional<ReplicationTask> getTask(String taskId) {
         logger.info("Retrieving replication task {}", taskId);
-        val describeReplicationTasksRequest = new DescribeReplicationTasksRequest()
-                .withFilters(new Filter().withName("replication-task-id").withValues(taskId))
-                .withWithoutSettings(true);
+        val describeReplicationTasksRequest = DescribeReplicationTasksRequest
+                .builder()
+                .withoutSettings(true)
+                .filters(Filter.builder().name("replication-task-id").values(taskId).build())
+                .build();
 
         return awsDms.describeReplicationTasks(describeReplicationTasksRequest)
-                .getReplicationTasks()
+                .replicationTasks()
                 .stream()
                 .findFirst();
     }
 
     public Optional<ReplicationTask> getTaskByDomain(String domain) {
         logger.info("Retrieving replication task for domain {}", domain);
-        val describeReplicationTasksRequest = new DescribeReplicationTasksRequest().withWithoutSettings(false);
+        val describeReplicationTasksRequest = DescribeReplicationTasksRequest
+                .builder()
+                .withoutSettings(false)
+                .build();
 
         return awsDms.describeReplicationTasks(describeReplicationTasksRequest)
-                .getReplicationTasks()
+                .replicationTasks()
                 .stream()
-                .filter(task -> task.getReplicationTaskIdentifier().matches("(^.+s3-)(" + domain + ")(-cdc-task|-task)(.+)"))
+                .filter(task -> task.replicationTaskIdentifier().matches("(^.+s3-)(" + domain + ")(-cdc-task|-task)(.+)"))
                 .findFirst();
     }
 }

@@ -29,12 +29,10 @@ import uk.gov.justice.digital.service.TableDiscoveryService;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -141,7 +139,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
 
     @Test
     void shouldCreateReloadDiffForDiscoveredTables() {
-        Date dmsTaskStartTime = Date.from(Instant.now());
+        Instant dmsTaskStartTime = Instant.now();
 
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
@@ -222,7 +220,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
 
     @Test
     void shouldCreateDiffUsingAnEmptyDatasetWhenNoArchiveFileExists() {
-        Date dmsTaskStartTime = new Date();
+        Instant dmsTaskStartTime = Instant.now();
 
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
@@ -266,7 +264,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
     @Test
     void shouldCreateReloadDiffUsingNowWhenConfigured() {
         // The now used by the fixed clock
-        Date expectedNow = Date.from(fixedDateTime.atZone(utcZoneId).toInstant());
+        Instant expectedNow = fixedDateTime.atZone(utcZoneId).toInstant();
 
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(true);
         when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
@@ -300,7 +298,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
 
     @Test
     void shouldNotFailWhenThereAreNoRawFiles() {
-        Date dmsTaskStartTime = new Date();
+        Instant dmsTaskStartTime = Instant.now();
 
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
@@ -316,7 +314,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
 
     @Test
     void shouldFailWhenUnableToRetrieveSourceReference() {
-        Date dmsTaskStartTime = new Date();
+        Instant dmsTaskStartTime = Instant.now();
 
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
@@ -332,7 +330,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
 
     @Test
     void shouldFailWhenAnErrorOccursWhenDiscoveringRawFiles() {
-        Date dmsTaskStartTime = new Date();
+        Instant dmsTaskStartTime = Instant.now();
 
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
@@ -345,7 +343,7 @@ class CreateReloadDiffJobTest extends SparkTestBase {
 
     @Test
     void shouldFailWhenAnErrorOccursWhenDiscoveringArchivedFiles() {
-        Date dmsTaskStartTime = new Date();
+        Instant dmsTaskStartTime = Instant.now();
 
         when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);

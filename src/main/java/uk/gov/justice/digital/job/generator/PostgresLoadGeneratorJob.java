@@ -2,7 +2,7 @@ package uk.gov.justice.digital.job.generator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
+import uk.gov.justice.digital.client.secretsmanager.SecretsClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.generator.DataGenerationConfig;
 import uk.gov.justice.digital.datahub.model.generator.PostgresSecrets;
@@ -25,13 +25,13 @@ public class PostgresLoadGeneratorJob implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(PostgresLoadGeneratorJob.class);
 
     JobArguments arguments;
-    private final SecretsManagerClient secretsManagerClient;
+    private final SecretsClient secretsManagerClient;
     private final Clock clock;
 
     @Inject
     public PostgresLoadGeneratorJob(
             JobArguments arguments,
-            SecretsManagerClient secretsManagerClient,
+            SecretsClient secretsManagerClient,
             Clock clock
     ) {
         this.arguments = arguments;

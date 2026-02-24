@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.client.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import jakarta.inject.Inject;
@@ -9,6 +8,9 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.ConfigReaderClientException;
 
@@ -16,14 +18,13 @@ import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Singleton
 public class S3ConfigReaderClient {
 
     private static final Logger logger = LoggerFactory.getLogger(S3ConfigReaderClient.class);
 
-    private final AmazonS3 s3;
+    private final S3Client s3;
 
     private final String configBucketName;
 
@@ -40,12 +41,17 @@ public class S3ConfigReaderClient {
         this.configBucketName = jobArguments.getConfigS3Bucket();
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked"})
     public ImmutableSet<ImmutablePair<String, String>> getConfiguredTables(String configKey) {
         String configFileKey = CONFIGS_PATH + configKey + CONFIG_FILE_SUFFIX;
         logger.info("Loading config with key: {} from location: {}", configKey, configFileKey);
         try {
-            String configString = s3.getObjectAsString(configBucketName, configFileKey);
+            GetObjectRequest request = GetObjectRequest.builder()
+                    .bucket(configBucketName)
+                    .key(configFileKey)
+                    .build();
+
+            String configString = s3.getObject(request, ResponseTransformer.toBytes()).asUtf8String();
             val config = new ObjectMapper().readValue(configString, HashMap.class);
             return ImmutableSet.copyOf(convertToImmutablePairs((ArrayList<String>) config.get("tables")));
         } catch (Exception e) {

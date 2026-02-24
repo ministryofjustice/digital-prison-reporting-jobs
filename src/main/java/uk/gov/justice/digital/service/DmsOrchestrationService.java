@@ -1,15 +1,15 @@
 package uk.gov.justice.digital.service;
 
-import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.dms.DmsClient;
+import software.amazon.awssdk.services.databasemigration.model.ReplicationTask;
+import uk.gov.justice.digital.client.dms.DefaultDmsClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DmsOrchestrationServiceException;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Optional;
 
 @Singleton
@@ -19,10 +19,10 @@ public class DmsOrchestrationService {
 
     private final JobArguments jobArguments;
 
-    private final DmsClient dmsClient;
+    private final DefaultDmsClient dmsClient;
 
     @Inject
-    public DmsOrchestrationService(JobArguments jobArguments, DmsClient dmsClient) {
+    public DmsOrchestrationService(JobArguments jobArguments, DefaultDmsClient dmsClient) {
         this.jobArguments = jobArguments;
         this.dmsClient = dmsClient;
     }
@@ -41,7 +41,7 @@ public class DmsOrchestrationService {
 
         if (optionalTask.isPresent()) {
             ReplicationTask fullLoadTask = optionalTask.get();
-            Date fullLoadStartTime = fullLoadTask.getReplicationTaskStartDate();
+            Instant fullLoadStartTime = fullLoadTask.replicationTaskStartDate();
             logger.info("Updating start time for CDC replication task");
             dmsClient.updateCdcTaskStartTime(fullLoadStartTime, cdcTaskId);
             logger.info("Updated start time for replication task {}", cdcTaskId);
@@ -51,7 +51,7 @@ public class DmsOrchestrationService {
         }
     }
 
-    public Date getTaskStartTime(String taskId) {
+    public Instant getTaskStartTime(String taskId) {
         return dmsClient.getTaskStartTime(taskId);
     }
 }

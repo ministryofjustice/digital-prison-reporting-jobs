@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.dms.DmsClient;
+import uk.gov.justice.digital.client.dms.DefaultDmsClient;
 import uk.gov.justice.digital.client.s3.S3ConfigReaderClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.ConfigServiceException;
@@ -30,7 +30,7 @@ class ConfigServiceTest {
     @Mock
     private JobArguments mockJobArguments;
     @Mock
-    private DmsClient mockDmsClient;
+    private DefaultDmsClient mockDmsClient;
     @Mock
     private S3ConfigReaderClient mockS3ConfigClient;
 

@@ -1,8 +1,5 @@
 package uk.gov.justice.digital.client.cloudwatch;
 
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,6 +7,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -26,23 +26,23 @@ class CloudwatchClientTest {
     @Mock
     private CloudwatchClientProvider cloudwatchClientProvider;
     @Mock
-    private AmazonCloudWatch client;
+    private CloudWatchClient client;
     @Captor
     private ArgumentCaptor<PutMetricDataRequest> putMetricDataCaptor;
 
-    private CloudwatchClient underTest;
+    private DefaultCloudwatchClient underTest;
 
     @BeforeEach
     void setup() {
         when(cloudwatchClientProvider.getClient()).thenReturn(client);
-        underTest = new CloudwatchClient(cloudwatchClientProvider);
+        underTest = new DefaultCloudwatchClient(cloudwatchClientProvider);
     }
 
     @Test
     void shouldPutMetrics() {
         String inputNamespace = "SomeNamespace";
         Collection<MetricDatum> inputMetricData = new HashSet<>();
-        inputMetricData.add(new MetricDatum().withMetricName("SomeMetric"));
+        inputMetricData.add(MetricDatum.builder().metricName("SomeMetric").build());
 
         underTest.putMetrics(inputNamespace, inputMetricData);
 
@@ -50,7 +50,7 @@ class CloudwatchClientTest {
 
         PutMetricDataRequest putMetricDataRequest = putMetricDataCaptor.getValue();
 
-        assertEquals(inputNamespace, putMetricDataRequest.getNamespace());
-        assertIterableEquals(inputMetricData, putMetricDataRequest.getMetricData());
+        assertEquals(inputNamespace, putMetricDataRequest.namespace());
+        assertIterableEquals(inputMetricData, putMetricDataRequest.metricData());
     }
 }

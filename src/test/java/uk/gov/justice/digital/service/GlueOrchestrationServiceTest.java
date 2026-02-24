@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.DefaultGlueClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.GlueClientException;
 
@@ -18,7 +18,7 @@ class GlueOrchestrationServiceTest {
     @Mock
     private JobArguments mockJobArguments;
     @Mock
-    private GlueClient mockGlueClient;
+    private DefaultGlueClient mockGlueClient;
 
     private static final String TEST_JOB_NAME = "test_glue_job";
     private static final int WAIT_INTERVAL_SECONDS = 2;

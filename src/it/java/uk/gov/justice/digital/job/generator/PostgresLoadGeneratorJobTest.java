@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.secretsmanager.SecretsManagerClient;
+import uk.gov.justice.digital.client.secretsmanager.SecretsClient;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.generator.PostgresSecrets;
@@ -21,7 +21,6 @@ import java.time.Clock;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
@@ -39,7 +38,7 @@ class PostgresLoadGeneratorJobTest extends SparkTestBase {
     @Mock
     private JobArguments mockJobArguments;
     @Mock
-    private SecretsManagerClient mockSecretsManagerClient;
+    private SecretsClient mockSecretsManagerClient;
     @Mock
     private PostgresSecrets mockPostgresSecrets;
     @Mock

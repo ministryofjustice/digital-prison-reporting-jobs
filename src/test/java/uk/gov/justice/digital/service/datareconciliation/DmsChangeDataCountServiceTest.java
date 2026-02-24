@@ -1,13 +1,13 @@
 package uk.gov.justice.digital.service.datareconciliation;
 
-import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.dms.DmsClient;
+import software.amazon.awssdk.services.databasemigration.model.TableStatistics;
+import uk.gov.justice.digital.client.dms.DefaultDmsClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.DmsClientException;
@@ -59,42 +59,48 @@ class DmsChangeDataCountServiceTest {
             null
     );
 
-    private static final TableStatistics tableStats1 = new TableStatistics()
-            .withTableName("table1")
-            .withSchemaName("schema")
-            .withFullLoadRows(100L)
-            .withInserts(1L)
-            .withAppliedInserts(2L)
-            .withUpdates(3L)
-            .withAppliedUpdates(4L)
-            .withDeletes(5L)
-            .withAppliedDeletes(6L);
-    private static final TableStatistics tableStats2 = new TableStatistics()
-            .withTableName("table2")
-            .withSchemaName("schema")
-            .withFullLoadRows(100L)
-            .withInserts(7L)
-            .withAppliedInserts(8L)
-            .withUpdates(9L)
-            .withAppliedUpdates(10L)
-            .withDeletes(11L)
-            .withAppliedDeletes(12L);
-    private static final TableStatistics tableStats3 = new TableStatistics()
-            .withTableName("table3")
-            .withSchemaName("schema")
-            .withFullLoadRows(100L)
-            .withInserts(13L)
-            .withAppliedInserts(14L)
-            .withUpdates(15L)
-            .withAppliedUpdates(16L)
-            .withDeletes(17L)
-            .withAppliedDeletes(18L);
+    private static final TableStatistics tableStats1 = TableStatistics
+            .builder()
+            .tableName("table1")
+            .schemaName("schema")
+            .fullLoadRows(100L)
+            .inserts(1L)
+            .appliedInserts(2L)
+            .updates(3L)
+            .appliedUpdates(4L)
+            .deletes(5L)
+            .appliedDeletes(6L)
+            .build();
+    private static final TableStatistics tableStats2 = TableStatistics
+            .builder()
+            .tableName("table2")
+            .schemaName("schema")
+            .fullLoadRows(100L)
+            .inserts(7L)
+            .appliedInserts(8L)
+            .updates(9L)
+            .appliedUpdates(10L)
+            .deletes(11L)
+            .appliedDeletes(12L)
+            .build();
+    private static final TableStatistics tableStats3 = TableStatistics
+            .builder()
+            .tableName("table3")
+            .schemaName("schema")
+            .fullLoadRows(100L)
+            .inserts(13L)
+            .appliedInserts(14L)
+            .updates(15L)
+            .appliedUpdates(16L)
+            .deletes(17L)
+            .appliedDeletes(18L)
+            .build();
 
     private static final Map<String, ChangeDataTableCount> expectedDmsChangeDataCounts = new HashMap<>();
     private static final Map<String, ChangeDataTableCount> expectedDmsAppliedChangeDataCounts = new HashMap<>();
 
     @Mock
-    private DmsClient dmsClient;
+    private DefaultDmsClient dmsClient;
     @Mock
     private JobArguments jobArguments;
 

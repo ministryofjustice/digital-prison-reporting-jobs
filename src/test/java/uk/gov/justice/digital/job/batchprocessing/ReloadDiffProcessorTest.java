@@ -15,11 +15,11 @@ import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.DataStorageService;
 
+import java.sql.Date;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -58,9 +58,9 @@ class ReloadDiffProcessorTest extends SparkTestBase {
     private static final String TABLE = "table";
     private static final String OUTPUT_BASE_PATH = "s3://bucket/output-folder";
     private static final String LOAD_CHECKPOINT_VALUE = "";
-    private static final Date reloadTime = Date.from(Instant.now());
+    private static final Instant reloadTime = Instant.now();
     private static final String FORMATTED_RELOAD_TIME = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault())
-            .format(reloadTime);
+            .format(Date.from(reloadTime));
 
     private ReloadDiffProcessor underTest;
 

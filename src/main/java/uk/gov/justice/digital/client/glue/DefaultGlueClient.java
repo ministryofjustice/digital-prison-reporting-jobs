@@ -1,22 +1,21 @@
 package uk.gov.justice.digital.client.glue;
 
-import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.model.AWSGlueException;
-import com.amazonaws.services.glue.model.Connection;
-import com.amazonaws.services.glue.model.DeleteTableRequest;
-import com.amazonaws.services.glue.model.BatchStopJobRunRequest;
-import com.amazonaws.services.glue.model.CreateTableRequest;
-import com.amazonaws.services.glue.model.Column;
-import com.amazonaws.services.glue.model.EntityNotFoundException;
-import com.amazonaws.services.glue.model.GetConnectionRequest;
-import com.amazonaws.services.glue.model.StorageDescriptor;
-import com.amazonaws.services.glue.model.SerDeInfo;
-import com.amazonaws.services.glue.model.TableInput;
-import com.amazonaws.services.glue.model.GetJobRunsRequest;
-import com.amazonaws.services.glue.model.GetJobRunRequest;
-import com.amazonaws.services.glue.model.JobRun;
-import com.amazonaws.services.glue.model.StartTriggerRequest;
-import com.amazonaws.services.glue.model.StopTriggerRequest;
+import software.amazon.awssdk.services.glue.model.Connection;
+import software.amazon.awssdk.services.glue.model.GetConnectionRequest;
+import software.amazon.awssdk.services.glue.model.GlueException;
+import software.amazon.awssdk.services.glue.model.DeleteTableRequest;
+import software.amazon.awssdk.services.glue.model.EntityNotFoundException;
+import software.amazon.awssdk.services.glue.model.BatchStopJobRunRequest;
+import software.amazon.awssdk.services.glue.model.JobRunState;
+import software.amazon.awssdk.services.glue.model.StartTriggerRequest;
+import software.amazon.awssdk.services.glue.model.StopTriggerRequest;
+import software.amazon.awssdk.services.glue.model.CreateTableRequest;
+import software.amazon.awssdk.services.glue.model.StorageDescriptor;
+import software.amazon.awssdk.services.glue.model.SerDeInfo;
+import software.amazon.awssdk.services.glue.model.Column;
+import software.amazon.awssdk.services.glue.model.GetJobRunsRequest;
+import software.amazon.awssdk.services.glue.model.JobRun;
+import software.amazon.awssdk.services.glue.model.GetJobRunRequest;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -25,6 +24,7 @@ import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.glue.GlueClient;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.GlueClientException;
 
@@ -44,17 +44,17 @@ import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 
 @Singleton
-public class GlueClient {
+public class DefaultGlueClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(GlueClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultGlueClient.class);
 
     public static final String MAPRED_PARQUET_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat";
     public static final String SYMLINK_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.SymlinkTextInputFormat";
 
-    private final AWSGlue awsGlue;
+    private final GlueClient awsGlue;
 
     @Inject
-    public GlueClient(GlueClientProvider glueClientProvider) {
+    public DefaultGlueClient(GlueClientProvider glueClientProvider) {
         this.awsGlue = glueClientProvider.getClient();
     }
 
@@ -62,8 +62,8 @@ public class GlueClient {
      * Retrieves a Glue Data Connection by name.
      */
     public Connection getConnection(String connectionName) {
-        GetConnectionRequest request = new GetConnectionRequest().withName(connectionName);
-        return awsGlue.getConnection(request).getConnection();
+        GetConnectionRequest request = GetConnectionRequest.builder().name(connectionName).build();
+        return awsGlue.getConnection(request).connection();
     }
 
     public void createParquetTable(
@@ -73,7 +73,7 @@ public class GlueClient {
             StructType schema,
             SourceReference.PrimaryKey primaryKey,
             SourceReference.SensitiveColumns sensitiveColumns
-    ) throws AWSGlueException {
+    ) throws GlueException {
 
         val storageDescriptor = createStorageDescriptor(dataPath, MAPRED_PARQUET_INPUT_FORMAT, schema, primaryKey);
 
@@ -102,17 +102,19 @@ public class GlueClient {
         createTable(database, table, storageDescriptor, params);
     }
 
-    public void createTableWithSymlink(String database, String table, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) throws AWSGlueException {
+    public void createTableWithSymlink(String database, String table, String dataPath, StructType schema, SourceReference.PrimaryKey primaryKey) throws GlueException {
         String location = dataPath + "/_symlink_format_manifest";
         val storageDescriptor = createStorageDescriptor(location, SYMLINK_INPUT_FORMAT, schema, primaryKey);
         val params = Collections.singletonMap("classification", "parquet");
         createTable(database, table, storageDescriptor, params);
     }
 
-    public void deleteTable(String database, String table) throws AWSGlueException {
-        DeleteTableRequest deleteTableRequest = new DeleteTableRequest()
-                .withDatabaseName(database)
-                .withName(table);
+    public void deleteTable(String database, String table) throws GlueException {
+        DeleteTableRequest deleteTableRequest = DeleteTableRequest
+                .builder()
+                .databaseName(database)
+                .name(table)
+                .build();
 
         try {
             logger.info("Deleting table {}.{}", database, table);
@@ -124,17 +126,17 @@ public class GlueClient {
     }
 
     public void stopJob(String jobName, int waitIntervalSeconds, int maxAttempts) {
-        BatchStopJobRunRequest batchStopJobRunRequest = new BatchStopJobRunRequest().withJobName(jobName);
+        val batchStopJobRunRequest = BatchStopJobRunRequest.builder().jobName(jobName);
         Optional<String> optionalRunningJobId = getRunningJobId(jobName);
 
         optionalRunningJobId.ifPresent(
                 runId -> {
-                    batchStopJobRunRequest.withJobRunIds(runId);
+                    batchStopJobRunRequest.jobRunIds(runId);
                     logger.info("Stopping job {} with runId {}", jobName, runId);
-                    awsGlue.batchStopJobRun(batchStopJobRunRequest);
+                    awsGlue.batchStopJobRun(batchStopJobRunRequest.build());
 
                     try {
-                        ensureState(jobName, runId, "STOPPED", waitIntervalSeconds, maxAttempts);
+                        ensureState(jobName, runId, JobRunState.STOPPED, waitIntervalSeconds, maxAttempts);
                     } catch (InterruptedException e) {
                         logger.error("Error while ensuring job {} has stopped", jobName, e);
                         Thread.currentThread().interrupt();
@@ -144,11 +146,11 @@ public class GlueClient {
     }
 
     public void activateTrigger(String triggerName) {
-        awsGlue.startTrigger(new StartTriggerRequest().withName(triggerName));
+        awsGlue.startTrigger(StartTriggerRequest.builder().name(triggerName).build());
     }
 
     public void deactivateTrigger(String triggerName) {
-        awsGlue.stopTrigger(new StopTriggerRequest().withName(triggerName));
+        awsGlue.stopTrigger(StopTriggerRequest.builder().name(triggerName).build());
     }
 
     private void createTable(String database, String table, StorageDescriptor storageDescriptor, Map<String, String> params) {
@@ -160,54 +162,49 @@ public class GlueClient {
     }
 
     private StorageDescriptor createStorageDescriptor(String location, String inputFormat, StructType schema, SourceReference.PrimaryKey primaryKey) {
-        return new StorageDescriptor()
-                .withColumns(getColumnsAndModifyTypes(schema, primaryKey))
-                .withLocation(location)
-                .withInputFormat(inputFormat)
-                .withOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
-                .withSerdeInfo(
-                        new SerDeInfo()
-                                .withSerializationLibrary("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
-                                .withParameters(Collections.singletonMap("serialization.format", ","))
+        return StorageDescriptor
+                .builder()
+                .columns(getColumnsAndModifyTypes(schema, primaryKey))
+                .location(location)
+                .inputFormat(inputFormat)
+                .outputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
+                .serdeInfo(
+                        SerDeInfo
+                                .builder()
+                                .serializationLibrary("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
+                                .parameters(Collections.singletonMap("serialization.format", ","))
+                                .build()
                 )
-                .withCompressed(false)
-                .withNumberOfBuckets(0)
-                .withStoredAsSubDirectories(false);
+                .compressed(false)
+                .numberOfBuckets(0)
+                .storedAsSubDirectories(false)
+                .build();
     }
 
     private CreateTableRequest getCreateTableRequest(String database, String table, StorageDescriptor storageDescriptor, Map<String, String> params) {
-        return new CreateTableRequest()
-                .withDatabaseName(database)
-                .withTableInput(new TableInput()
-                        .withName(table)
-                        .withTableType("EXTERNAL_TABLE")
-                        .withParameters(params)
-                        .withStorageDescriptor(storageDescriptor)
-                );
+        return CreateTableRequest.builder()
+                .databaseName(database)
+                .tableInput(builder -> builder.name(table).tableType("EXTERNAL_TABLE").parameters(params).storageDescriptor(storageDescriptor))
+                .build();
     }
 
     private List<Column> getColumnsAndModifyTypes(StructType schema, SourceReference.PrimaryKey primaryKey) {
         Collection<String> keyColumnNames = primaryKey.getKeyColumnNames();
         val columns = new ArrayList<Column>();
         for (StructField field : schema.fields()) {
-            val column = new Column().withName(field.name()).withType(field.dataType().typeName());
+            val column = Column.builder().name(field.name()).type(field.dataType().typeName()).build();
             // Null type not supported in AWS Glue Catalog.
             // Numerical type mappings should be explicit and not automatically selected.
-            switch (column.getType()) {
-                case "long": column.setType("bigint");
-                    break;
-                case "short": column.setType("smallint");
-                    break;
-                case "integer": column.setType("int");
-                    break;
-                case "byte": column.setType("tinyint");
-                    break;
-                default:
-                    break;
-            }
+            val updatedColumn = switch (column.type()) {
+                case "long" -> Column.builder().name(field.name()).type("bigint");
+                case "short" -> Column.builder().name(field.name()).type("smallint");
+                case "integer" -> Column.builder().name(field.name()).type("int");
+                case "byte" -> Column.builder().name(field.name()).type("tinyint");
+                default -> Column.builder().name(field.name()).type(column.type());
+            };
 
-            if (keyColumnNames.contains(column.getName())) column.setComment("primary_key");
-            columns.add(column);
+            if (keyColumnNames.contains(column.name())) updatedColumn.comment("primary_key");
+            columns.add(updatedColumn.build());
         }
         return columns;
     }
@@ -215,25 +212,25 @@ public class GlueClient {
     @NotNull
     private Optional<String> getRunningJobId(String jobName) {
         logger.info("Retrieving the Id of the running instance of job {}", jobName);
-        GetJobRunsRequest getJobRunsRequest = new GetJobRunsRequest().withJobName(jobName).withMaxResults(200);
-        List<JobRun> jobRuns = awsGlue.getJobRuns(getJobRunsRequest).getJobRuns();
+        GetJobRunsRequest getJobRunsRequest = GetJobRunsRequest.builder().jobName(jobName).maxResults(200).build();
+        List<JobRun> jobRuns = awsGlue.getJobRuns(getJobRunsRequest).jobRuns();
         return jobRuns.stream()
-                .filter(jobRun -> jobRun.getJobRunState().equalsIgnoreCase("RUNNING"))
-                .map(JobRun::getId)
+                .filter(jobRun -> jobRun.jobRunState().equals(JobRunState.RUNNING))
+                .map(JobRun::id)
                 .findFirst();
     }
 
-    private void ensureState(String jobName, String runId, String state, int waitIntervalSeconds, int maxAttempts) throws InterruptedException {
+    private void ensureState(String jobName, String runId, JobRunState state, int waitIntervalSeconds, int maxAttempts) throws InterruptedException {
         GetJobRunRequest getJobRunRequest;
-        String jobRunState;
+        JobRunState jobRunState;
 
         for (int attempts = 0; attempts < maxAttempts; attempts++) {
             logger.info("Ensuring job {} with runId {} is in {} state. Attempt {}", jobName, runId, state, attempts);
-            getJobRunRequest = new GetJobRunRequest().withJobName(jobName).withRunId(runId);
-            jobRunState = awsGlue.getJobRun(getJobRunRequest).getJobRun().getJobRunState();
+            getJobRunRequest = GetJobRunRequest.builder().jobName(jobName).runId(runId).build();
+            jobRunState = awsGlue.getJobRun(getJobRunRequest).jobRun().jobRunState();
             TimeUnit.SECONDS.sleep(waitIntervalSeconds);
 
-            if (jobRunState.equalsIgnoreCase(state)) return;
+            if (jobRunState.equals(state)) return;
         }
 
         String errorMessage = String.format("Exhausted attempts waiting for job %s with runId %s to be %s", jobName, runId, state);

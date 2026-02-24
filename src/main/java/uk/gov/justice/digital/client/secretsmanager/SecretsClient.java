@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.client.secretsmanager;
 
-import com.amazonaws.services.secretsmanager.AWSSecretsManager;
-import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
 import lombok.val;
@@ -12,22 +12,22 @@ import uk.gov.justice.digital.exception.SecretsManagerClientException;
 import javax.inject.Singleton;
 
 @Singleton
-public class SecretsManagerClient {
+public class SecretsClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(SecretsManagerClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(SecretsClient.class);
 
-    private final AWSSecretsManager secretsClient;
+    private final SecretsManagerClient secretsManagerClient;
 
     @Inject
-    public SecretsManagerClient(SecretsManagerClientProvider secretsClient) {
-        this.secretsClient = secretsClient.getClient();
+    public SecretsClient(SecretsManagerClientProvider secretsClient) {
+        this.secretsManagerClient = secretsClient.getClient();
     }
 
     public <T> T getSecret(String secretId, Class<T> type) throws SecretsManagerClientException {
         logger.info("Getting secret {}", secretId);
         try {
-            val request = new GetSecretValueRequest().withSecretId(secretId);
-            val secretValue = secretsClient.getSecretValue(request).getSecretString();
+            val request = GetSecretValueRequest.builder().secretId(secretId).build();
+            val secretValue = secretsManagerClient.getSecretValue(request).secretString();
             return new ObjectMapper().readValue(secretValue, type);
         } catch (Exception ex) {
             val errorMessage = "Secret " + secretId + " is missing";

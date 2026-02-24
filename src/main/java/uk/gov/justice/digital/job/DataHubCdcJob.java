@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.job;
 
-import com.amazonaws.AbortedException;
 import com.amazonaws.services.glue.GlueContext;
 import com.amazonaws.services.glue.util.Job;
 import com.google.common.annotations.VisibleForTesting;
@@ -18,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import software.amazon.awssdk.core.exception.AbortedException;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.exception.NoSchemaNoDataException;

@@ -75,8 +75,8 @@ ext {
     mockitoVersion = '4.11.0'
     sparkVersion = '3.5.4'
     scalaBinary = '2.12'
-    awsSdkVersion = '2.41.14'
-    glueApiVersion = '5.1.0'
+    awsSdkVersion = '2.42.1'
+    glueApiVersion = '5.0.0'
     failSafeVersion = '3.3.2'
     postgresVersion = '42.7.3'
     h2Version = '2.2.224'
@@ -106,12 +106,12 @@ dependencies {
     }
 
     implementation platform("software.amazon.awssdk:bom:$awsSdkVersion")
-    implementation "com.amazonaws:aws-java-sdk-core"
-    implementation "com.amazonaws:aws-java-sdk-glue"
-    implementation "com.amazonaws:aws-java-sdk-dms"
-    implementation "com.amazonaws:aws-java-sdk-secretsmanager"
-    implementation "com.amazonaws:aws-java-sdk-s3"
-    implementation "com.amazonaws:aws-java-sdk-cloudwatch"
+    implementation "software.amazon.awssdk:aws-core:$awsSdkVersion"
+    implementation "software.amazon.awssdk:glue:$awsSdkVersion"
+    implementation "software.amazon.awssdk:databasemigration:$awsSdkVersion"
+    implementation "software.amazon.awssdk:secretsmanager:$awsSdkVersion"
+    implementation "software.amazon.awssdk:s3:$awsSdkVersion"
+    implementation "software.amazon.awssdk:cloudwatch:$awsSdkVersion"
 
     implementation "org.apache.spark:spark-avro_$scalaBinary:$sparkVersion"
     implementation "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"

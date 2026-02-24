@@ -1,11 +1,5 @@
 package uk.gov.justice.digital.service.metrics;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,7 +7,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
+import software.amazon.awssdk.services.cloudwatch.model.StatisticSet;
+import uk.gov.justice.digital.client.cloudwatch.DefaultCloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
@@ -36,8 +35,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
-import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -66,7 +63,7 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Mock
     private JobProperties jobProperties;
     @Mock
-    private CloudwatchClient cloudwatchClient;
+    private DefaultCloudwatchClient cloudwatchClient;
     @Mock
     private Clock clock;
     @Mock
@@ -77,8 +74,6 @@ class CloudwatchAsyncMetricReportingServiceTest {
     private ScheduledFuture scheduledFlushTask;
     @Captor
     private ArgumentCaptor<Collection<MetricDatum>> metricDatumCaptor;
-    @Mock
-    private Dataset<Row> mockDf;
 
     private CloudwatchAsyncMetricReportingService underTest;
 
@@ -115,15 +110,15 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("GlueJobViolationCount", datum.getMetricName());
-        assertEquals(10L, datum.getValue());
-        assertEquals(Count.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("GlueJobViolationCount", datum.metricName());
+        assertEquals(10L, datum.value());
+        assertEquals(StandardUnit.COUNT, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -143,15 +138,15 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("FailedReconciliationChecks", datum.getMetricName());
-        assertEquals(2L, datum.getValue());
-        assertEquals(Count.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("FailedReconciliationChecks", datum.metricName());
+        assertEquals(2L, datum.value());
+        assertEquals(StandardUnit.COUNT, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -169,15 +164,15 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("GlueJobStreamingThroughputInputCount", datum.getMetricName());
-        assertEquals(expectedCount, datum.getValue());
-        assertEquals(Count.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("GlueJobStreamingThroughputInputCount", datum.metricName());
+        assertEquals(expectedCount, datum.value());
+        assertEquals(StandardUnit.COUNT, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -194,15 +189,15 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("GlueJobStreamingThroughputStructuredCount", datum.getMetricName());
-        assertEquals(expectedCount, datum.getValue());
-        assertEquals(Count.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("GlueJobStreamingThroughputStructuredCount", datum.metricName());
+        assertEquals(expectedCount, datum.value());
+        assertEquals(StandardUnit.COUNT, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -221,15 +216,15 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("GlueJobStreamingThroughputCuratedCount", datum.getMetricName());
-        assertEquals(expectedCount, datum.getValue());
-        assertEquals(Count.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("GlueJobStreamingThroughputCuratedCount", datum.metricName());
+        assertEquals(expectedCount, datum.value());
+        assertEquals(StandardUnit.COUNT, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -246,15 +241,15 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("GlueJobStreamingMicroBatchTime", datum.getMetricName());
-        assertEquals(1000L, datum.getValue());
-        assertEquals(Milliseconds.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("GlueJobStreamingMicroBatchTime", datum.metricName());
+        assertEquals(1000L, datum.value());
+        assertEquals(StandardUnit.MILLISECONDS, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -273,19 +268,19 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("GlueJobStreamingLatencyDmsToCurated", datum.getMetricName());
-        StatisticSet actualStatisticSet = datum.getStatisticValues();
-        assertEquals(10L, actualStatisticSet.getMinimum());
-        assertEquals(1000L, actualStatisticSet.getMaximum());
-        assertEquals(1010L, actualStatisticSet.getSum());
-        assertEquals(2L, actualStatisticSet.getSampleCount());
-        assertEquals(Milliseconds.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("GlueJobStreamingLatencyDmsToCurated", datum.metricName());
+        StatisticSet actualStatisticSet = datum.statisticValues();
+        assertEquals(10L, actualStatisticSet.minimum());
+        assertEquals(1000L, actualStatisticSet.maximum());
+        assertEquals(1010L, actualStatisticSet.sum());
+        assertEquals(2L, actualStatisticSet.sampleCount());
+        assertEquals(StandardUnit.MILLISECONDS, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -318,15 +313,15 @@ class CloudwatchAsyncMetricReportingServiceTest {
         assertEquals(1, sentMetrics.size());
         MetricDatum datum = sentMetrics.iterator().next();
 
-        assertEquals("GlueJobBatchTimeTaken", datum.getMetricName());
-        assertEquals(30000L, datum.getValue());
-        assertEquals(Milliseconds.toString(), datum.getUnit());
-        assertEquals(timestamp, datum.getTimestamp().toInstant());
-        List<Dimension> dimensions = datum.getDimensions();
+        assertEquals("GlueJobBatchTimeTaken", datum.metricName());
+        assertEquals(30000L, datum.value());
+        assertEquals(StandardUnit.MILLISECONDS, datum.unit());
+        assertEquals(timestamp, datum.timestamp());
+        List<Dimension> dimensions = datum.dimensions();
         assertEquals(1, dimensions.size());
         Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.getName());
-        assertEquals(JOB, dimension.getValue());
+        assertEquals("JobName", dimension.name());
+        assertEquals(JOB, dimension.value());
     }
 
     @Test
@@ -375,7 +370,7 @@ class CloudwatchAsyncMetricReportingServiceTest {
     @Test
     void flushShouldContinueWhenCloudwatchThrows() {
         when(clock.instant()).thenReturn(timestamp);
-        doThrow(new AmazonClientException("Test Exception")).when(cloudwatchClient).putMetrics(anyString(), anyList());
+        doThrow(SdkClientException.builder().message("Test Exception").build()).when(cloudwatchClient).putMetrics(anyString(), anyList());
         underTest.reportStreamingMicroBatchTimeTaken(1000L);
         assertDoesNotThrow(() -> underTest.flush());
     }
