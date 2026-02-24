@@ -65,6 +65,10 @@ public class SourceReference {
             return JavaConverters.asScalaBufferConverter(javaPkCols).asScala().toSeq();
         }
 
+        public Seq<String> getStringKeyColumnNames() {
+            return JavaConverters.asScalaBufferConverter(getKeyColumnNames().stream().toList()).asScala().toSeq();
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;

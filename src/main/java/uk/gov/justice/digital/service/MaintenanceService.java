@@ -38,6 +38,19 @@ public class MaintenanceService {
     }
 
     /**
+     * Runs a full delta lake compaction on all delta lake tables recursively below rootPath with the given depth limit
+     */
+    public void compactDeltaTablesFull(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
+        logger.info("Beginning delta table full compaction for tables under root path: {}", rootPath);
+        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
+        logger.info("Found {} delta tables", deltaTablePaths.size());
+        String paths = String.join(", ", (deltaTablePaths));
+        logger.debug("Found delta tables at the following paths: {}", paths);
+        attemptAll(deltaTablePaths, path -> storageService.compactDeltaTableFull(spark, path));
+        logger.info("Finished full delta table compaction for root path: {}", rootPath);
+    }
+
+    /**
      * Runs a delta lake vacuum on all delta lake tables recursively below rootPath with the given depth limit
      */
     public void vacuumDeltaTables(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {

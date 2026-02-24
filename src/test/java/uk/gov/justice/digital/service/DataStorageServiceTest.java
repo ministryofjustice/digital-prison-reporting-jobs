@@ -515,7 +515,6 @@ class DataStorageServiceTest extends SparkTestBase {
         when(DeltaTable.createIfNotExists(any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.addColumns(any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.location(any())).thenReturn(mockDeltaTableBuilder);
-        when(mockDeltaTableBuilder.property(any(), any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.clusterBy((Seq<String>) any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.execute()).thenReturn(mockDeltaTable);
     }

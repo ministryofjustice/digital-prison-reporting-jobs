@@ -18,7 +18,6 @@ import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.collection.JavaConverters;
 import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
@@ -95,7 +94,6 @@ public class DataStorageService {
                 df.write()
                         .format("delta")
                         .mode("append")
-                        .option("optimizeWrite", "true")
                         .option("path", tablePath)
                         .save()
         );
@@ -132,10 +130,8 @@ public class DataStorageService {
                 .createIfNotExists(spark)
                 .addColumns(schema)
                 .location(tablePath)
-                // Enable Deletion Vectors
-                .property("delta.enableDeletionVectors", "true")
                 // Set Liquid Clustering columns
-                .clusterBy(JavaConverters.asScalaBufferConverter(primaryKey.getKeyColumnNames().stream().toList()).asScala().toSeq())
+                .clusterBy(primaryKey.getStringKeyColumnNames())
                 .execute();
     }
 
@@ -286,19 +282,19 @@ public class DataStorageService {
     }
 
     /**
-     * Runs a full delta lake compaction (optimize full) on the Delta table at the given tablePath.
+     * Runs a full delta lake compaction (OPTIMIZE FULL) on the Delta table at the given tablePath.
      * This is an expensive operation that only usually needs to be run once, when the table is created,
      * for a table with liquid clustering enabled
      */
-    public void optimizeDeltaTableFull(SparkSession spark, String tablePath) throws DataStorageException {
-        logger.info("Running OPTIMIZE FULL for table at path: {}", tablePath);
+    public void compactDeltaTableFull(SparkSession spark, String tablePath) throws DataStorageException {
+        logger.info("Running full compaction (OPTIMIZE FULL) for table at path: {}", tablePath);
         val optionalDeltaTable = getTable(spark, tablePath);
 
         if (optionalDeltaTable.isPresent()) {
             val deltaTable = optionalDeltaTable.get();
             doWithRetryOnConcurrentModification(() -> spark.sql(format("OPTIMIZE delta.`%s` FULL", tablePath)));
             updateManifest(deltaTable);
-            logger.info("Finished OPTIMIZE FULL for table at path: {}", tablePath);
+            logger.info("Finished full compaction (OPTIMIZE FULL) for table at path: {}", tablePath);
         } else {
             String missingDeltaTableMessage = format("Failed to compact table at path %s. Table does not exist", tablePath);
             logger.warn(missingDeltaTableMessage);
