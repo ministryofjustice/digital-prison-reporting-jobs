@@ -8,6 +8,7 @@ import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.MaintenanceOperationFailedException;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import static java.lang.String.format;
 
@@ -29,10 +30,7 @@ public class MaintenanceService {
      */
     public void compactDeltaTables(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table compaction for tables under root path: {}", rootPath);
-        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
-        logger.info("Found {} delta tables", deltaTablePaths.size());
-        String paths = String.join(", ", (deltaTablePaths));
-        logger.debug("Found delta tables at the following paths: {}", paths);
+        List<String> deltaTablePaths = calculatePaths(spark, rootPath, recurseForTablesDepthLimit);
         attemptAll(deltaTablePaths, path -> storageService.compactDeltaTable(spark, path));
         logger.info("Finished delta table compaction for root path: {}", rootPath);
     }
@@ -42,10 +40,7 @@ public class MaintenanceService {
      */
     public void compactDeltaTablesFull(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table full compaction for tables under root path: {}", rootPath);
-        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
-        logger.info("Found {} delta tables", deltaTablePaths.size());
-        String paths = String.join(", ", (deltaTablePaths));
-        logger.debug("Found delta tables at the following paths: {}", paths);
+        List<String> deltaTablePaths = calculatePaths(spark, rootPath, recurseForTablesDepthLimit);
         attemptAll(deltaTablePaths, path -> storageService.compactDeltaTableFull(spark, path));
         logger.info("Finished full delta table compaction for root path: {}", rootPath);
     }
@@ -55,21 +50,17 @@ public class MaintenanceService {
      */
     public void vacuumDeltaTables(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) throws DataStorageException, MaintenanceOperationFailedException {
         logger.info("Beginning delta table vacuum for tables under root path {}", rootPath);
-        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
-
-        logger.info("Found {} delta tables", deltaTablePaths.size());
-        String paths = String.join(", ", (deltaTablePaths));
-        logger.debug("Found delta tables at the following paths: {}", paths);
+        List<String> deltaTablePaths = calculatePaths(spark, rootPath, recurseForTablesDepthLimit);
         attemptAll(deltaTablePaths, path -> storageService.vacuum(spark, path));
         logger.info("Finished delta table vacuum for tables under root path: {}", rootPath);
     }
 
-    /**
-     * Specialised functional interface to allow throwing checked Exceptions which is not available in the Java stdlib
-     */
-    @FunctionalInterface
-    private interface MaintenanceOperation {
-        void apply(String path);
+    private List<String> calculatePaths(SparkSession spark, String rootPath, int recurseForTablesDepthLimit) {
+        List<String> deltaTablePaths = storageService.listDeltaTablePaths(spark, rootPath, recurseForTablesDepthLimit);
+        logger.info("Found {} delta tables", deltaTablePaths.size());
+        String paths = String.join(", ", (deltaTablePaths));
+        logger.debug("Found delta tables at the following paths: {}", paths);
+        return deltaTablePaths;
     }
 
     /**
@@ -77,11 +68,11 @@ public class MaintenanceService {
      * maintenance operation failed.
      * @throws MaintenanceOperationFailedException If any maintenance operation failed
      */
-    private static void attemptAll(Iterable<String> paths, MaintenanceOperation f) throws MaintenanceOperationFailedException {
+    private static void attemptAll(Iterable<String> paths, Consumer<String> maintenanceOperationOnPath) throws MaintenanceOperationFailedException {
         int numFailed = 0;
         for (String path: paths) {
             try {
-                f.apply(path);
+                maintenanceOperationOnPath.accept(path);
             } catch (Exception e) {
                 numFailed++;
                 logger.error(format("Failed maintenance operation on %s", path), e);
