@@ -62,11 +62,15 @@ public class SourceReference {
 
         public Seq<Column> getSparkKeyColumns() {
             List<Column> javaPkCols = getKeyColumnNames().stream().map(Column::new).collect(Collectors.toList());
-            return JavaConverters.asScalaBufferConverter(javaPkCols).asScala().toSeq();
+            return toScalaSeq(javaPkCols);
         }
 
         public Seq<String> getStringKeyColumnNames() {
-            return JavaConverters.asScalaBufferConverter(getKeyColumnNames().stream().toList()).asScala().toSeq();
+            return toScalaSeq(getKeyColumnNames().stream().toList());
+        }
+
+        private <T> Seq<T> toScalaSeq(List<T> list) {
+            return JavaConverters.asScalaBufferConverter(list).asScala().toSeq();
         }
 
         @Override
