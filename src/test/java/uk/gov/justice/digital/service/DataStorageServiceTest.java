@@ -14,6 +14,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,35 +23,34 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import scala.collection.JavaConverters;
 import scala.collection.Seq;
+import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.config.SparkTestBase;
-import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.datahub.model.TableIdentifier;
 import uk.gov.justice.digital.exception.DataStorageException;
 import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import static java.lang.String.format;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.config.JobArguments.APPROX_DATA_SIZE_GB_DEFAULT;
 import static uk.gov.justice.digital.test.TestHelpers.givenConfiguredRetriesJobArgs;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,6 +76,9 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Mock
     private Dataset<Row> mockDataSet;
+
+    @Mock
+    private StructType mockSchema;
 
     @Mock
     private DataFrameWriter<Row> mockDataFrameWriter;
@@ -279,6 +282,40 @@ class DataStorageServiceTest extends SparkTestBase {
         DataStorageService dataStorageService = new DataStorageService(mockJobArguments, mockJobProperties);
         dataStorageService.appendDistinct(tablePath, mockDataSet, new SourceReference.PrimaryKey("arbitrary"));
         verify(mockDeltaMergeBuilder, times(2)).execute();
+    }
+
+    @Test
+    void shouldCreateDeltaTableClusteringByPrimaryKey() {
+        stubDeltaTableCreateIfNotExists();
+        Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
+
+        underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
+
+        verify(mockDeltaTableBuilder, times(1)).clusterBy(expectedClusterColumns);
+    }
+
+    @Test
+    void shouldClusteringDeltaTableByFirst4ColumnsOfPrimaryKeyOnly() {
+        stubDeltaTableCreateIfNotExists();
+        SourceReference.PrimaryKey manyColumnsPrimaryKey = new SourceReference.PrimaryKey(List.of(
+                "col1",
+                "col2",
+                "col3",
+                "col4",
+                "col5",
+                "col6"
+        ));
+
+        Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of(
+                "col1",
+                "col2",
+                "col3",
+                "col4"
+        )).asScala().toSeq();
+
+        underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, manyColumnsPrimaryKey);
+
+        verify(mockDeltaTableBuilder, times(1)).clusterBy(expectedClusterColumns);
     }
 
     @Test
@@ -527,6 +564,7 @@ class DataStorageServiceTest extends SparkTestBase {
         when(DeltaTable.createIfNotExists(any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.addColumns(any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.location(any())).thenReturn(mockDeltaTableBuilder);
+        // The cast to Seq is necessary to avoid compile errors with Scala's type inference
         when(mockDeltaTableBuilder.clusterBy((Seq<String>) any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.execute()).thenReturn(mockDeltaTable);
     }

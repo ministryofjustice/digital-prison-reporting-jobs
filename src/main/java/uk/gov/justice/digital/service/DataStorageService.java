@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import com.google.common.annotations.VisibleForTesting;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedRunnable;
@@ -18,6 +19,7 @@ import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.Seq;
 import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
@@ -120,19 +122,28 @@ public class DataStorageService {
     /**
      * Create a delta table with our preferred settings.
      */
-    private DeltaTable createDeltaTableIfNotExists(
+    @VisibleForTesting
+    DeltaTable createDeltaTableIfNotExists(
             SparkSession spark,
             String tablePath,
             StructType schema,
             SourceReference.PrimaryKey primaryKey
     ) {
+        Seq<String> clusteringColumns = getClusteringColumns(primaryKey);
         return DeltaTable
                 .createIfNotExists(spark)
                 .addColumns(schema)
                 .location(tablePath)
                 // Set Liquid Clustering columns
-                .clusterBy(primaryKey.getStringKeyColumnNames())
+                .clusterBy(clusteringColumns)
                 .execute();
+    }
+
+    private static Seq<String> getClusteringColumns(SourceReference.PrimaryKey primaryKey) {
+        // Delta Lake has a limit on the number of clustering columns.
+        int maxNumClusterColumns = 4;
+        // Let's ensure we don't try to use more columns than the limit for a complex primary key.
+        return primaryKey.getStringKeyColumnNames().take(maxNumClusterColumns).toSeq();
     }
 
     public void mergeRecords(
