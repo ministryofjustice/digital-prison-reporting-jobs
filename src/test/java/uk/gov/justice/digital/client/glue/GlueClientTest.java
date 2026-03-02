@@ -1,24 +1,5 @@
 package uk.gov.justice.digital.client.glue;
 
-import com.amazonaws.services.glue.AWSGlue;
-import com.amazonaws.services.glue.model.AWSGlueException;
-import com.amazonaws.services.glue.model.BatchStopJobRunRequest;
-import com.amazonaws.services.glue.model.BatchStopJobRunResult;
-import com.amazonaws.services.glue.model.Column;
-import com.amazonaws.services.glue.model.Connection;
-import com.amazonaws.services.glue.model.CreateTableRequest;
-import com.amazonaws.services.glue.model.DeleteTableRequest;
-import com.amazonaws.services.glue.model.EntityNotFoundException;
-import com.amazonaws.services.glue.model.GetConnectionResult;
-import com.amazonaws.services.glue.model.GetJobRunRequest;
-import com.amazonaws.services.glue.model.GetJobRunResult;
-import com.amazonaws.services.glue.model.GetJobRunsRequest;
-import com.amazonaws.services.glue.model.GetJobRunsResult;
-import com.amazonaws.services.glue.model.StorageDescriptor;
-import com.amazonaws.services.glue.model.TableInput;
-import com.amazonaws.services.glue.model.JobRun;
-import com.amazonaws.services.glue.model.StartTriggerRequest;
-import com.amazonaws.services.glue.model.StopTriggerRequest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,14 +8,31 @@ import org.mockito.ArgumentCaptor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.glue.GlueClient;
+import software.amazon.awssdk.services.glue.model.BatchStopJobRunResponse;
+import software.amazon.awssdk.services.glue.model.GetJobRunsResponse;
+import software.amazon.awssdk.services.glue.model.GetJobRunResponse;
+import software.amazon.awssdk.services.glue.model.GetConnectionResponse;
+import software.amazon.awssdk.services.glue.model.CreateTableRequest;
+import software.amazon.awssdk.services.glue.model.DeleteTableRequest;
+import software.amazon.awssdk.services.glue.model.BatchStopJobRunRequest;
+import software.amazon.awssdk.services.glue.model.GetJobRunsRequest;
+import software.amazon.awssdk.services.glue.model.GetJobRunRequest;
+import software.amazon.awssdk.services.glue.model.StartTriggerRequest;
+import software.amazon.awssdk.services.glue.model.StopTriggerRequest;
+import software.amazon.awssdk.services.glue.model.GetConnectionRequest;
+import software.amazon.awssdk.services.glue.model.TableInput;
+import software.amazon.awssdk.services.glue.model.StorageDescriptor;
+import software.amazon.awssdk.services.glue.model.GlueException;
+import software.amazon.awssdk.services.glue.model.EntityNotFoundException;
+import software.amazon.awssdk.services.glue.model.JobRunState;
+import software.amazon.awssdk.services.glue.model.JobRun;
+import software.amazon.awssdk.services.glue.model.Column;
+import software.amazon.awssdk.services.glue.model.Connection;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.GlueClientException;
 
@@ -52,8 +50,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static uk.gov.justice.digital.client.glue.GlueClient.MAPRED_PARQUET_INPUT_FORMAT;
-import static uk.gov.justice.digital.client.glue.GlueClient.SYMLINK_INPUT_FORMAT;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.times;
+import static uk.gov.justice.digital.client.glue.DefaultGlueClient.MAPRED_PARQUET_INPUT_FORMAT;
+import static uk.gov.justice.digital.client.glue.DefaultGlueClient.SYMLINK_INPUT_FORMAT;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
@@ -69,19 +72,19 @@ class GlueClientTest {
     private GlueClientProvider mockClientProvider;
 
     @Mock
-    private AWSGlue mockGlueClient;
+    private GlueClient mockGlueClient;
 
     @Mock
-    private BatchStopJobRunResult mockBatchStopJobRunResult;
+    private BatchStopJobRunResponse mockBatchStopJobRunResponse;
 
     @Mock
-    private GetJobRunsResult mockGetJobRunsResult;
+    private GetJobRunsResponse mockGetJobRunsResponse;
 
     @Mock
-    private GetJobRunResult mockGetJobRunResult;
+    private GetJobRunResponse mockGetJobRunResponse;
 
     @Mock
-    private GetConnectionResult mockGetConnectionResult;
+    private GetConnectionResponse mockGetConnectionResponse;
 
     @Mock
     private Connection mockConnection;
@@ -121,28 +124,28 @@ class GlueClientTest {
 
     private static final Collection<String> sensitiveFields = new ArrayList<>();
 
-    private GlueClient underTest;
+    private DefaultGlueClient underTest;
 
     @BeforeEach
     void setup() {
         sensitiveFields.add(SENSITIVE_FIELD_1);
         sensitiveFields.add(SENSITIVE_FIELD_2);
 
-        reset(mockClientProvider, mockGlueClient, mockBatchStopJobRunResult, mockGetJobRunsResult, mockGetJobRunResult);
+        reset(mockClientProvider, mockGlueClient, mockBatchStopJobRunResponse, mockGetJobRunsResponse, mockGetJobRunResponse);
 
         when(mockClientProvider.getClient()).thenReturn(mockGlueClient);
-        underTest = new GlueClient(mockClientProvider);
+        underTest = new DefaultGlueClient(mockClientProvider);
     }
 
     @Test
     void shouldGetAndReturnConnection() {
-        when(mockGlueClient.getConnection(any())).thenReturn(mockGetConnectionResult);
-        when(mockGetConnectionResult.getConnection()).thenReturn(mockConnection);
+        when(mockGlueClient.getConnection(any(GetConnectionRequest.class))).thenReturn(mockGetConnectionResponse);
+        when(mockGetConnectionResponse.connection()).thenReturn(mockConnection);
 
         Connection actualConnection = underTest.getConnection("some-connection-name");
         assertEquals(mockConnection, actualConnection);
 
-        verify(mockGlueClient, times(1)).getConnection(any());
+        verify(mockGlueClient, times(1)).getConnection(any(GetConnectionRequest.class));
     }
 
     @Test
@@ -152,13 +155,13 @@ class GlueClientTest {
 
         verify(mockGlueClient, times(1)).createTable(createTableRequestCaptor.capture());
 
-        TableInput tableInput = createTableRequestCaptor.getValue().getTableInput();
-        StorageDescriptor storageDescriptor = tableInput.getStorageDescriptor();
-        assertThat(storageDescriptor.getLocation(), equalTo(TEST_PATH));
-        assertThat(storageDescriptor.getInputFormat(), equalTo(MAPRED_PARQUET_INPUT_FORMAT));
+        TableInput tableInput = createTableRequestCaptor.getValue().tableInput();
+        StorageDescriptor storageDescriptor = tableInput.storageDescriptor();
+        assertThat(storageDescriptor.location(), equalTo(TEST_PATH));
+        assertThat(storageDescriptor.inputFormat(), equalTo(MAPRED_PARQUET_INPUT_FORMAT));
         assertThat(getPrimaryKeys(storageDescriptor), containsInAnyOrder(Collections.singleton(PRIMARY_KEY_FIELD).toArray()));
 
-        Map<String, String> parameters = tableInput.getParameters();
+        Map<String, String> parameters = tableInput.parameters();
         assertThat(parameters.get("extraction_timestamp_column_name"), is(equalTo(TIMESTAMP.toLowerCase())));
         assertThat(parameters.get("extraction_operation_column_name"), is(equalTo(OPERATION.toLowerCase())));
         assertThat(parameters.get("sensitive_columns"), is(equalTo("['" + SENSITIVE_FIELD_1.toLowerCase() + "','" + SENSITIVE_FIELD_2.toLowerCase() + "']")));
@@ -169,10 +172,10 @@ class GlueClientTest {
     @Test
     void shouldThrowAnExceptionIfAnErrorOccursWhenCreatingParquetTable() {
         SourceReference.SensitiveColumns sensitiveColumns = new SourceReference.SensitiveColumns(sensitiveFields);
-        when(mockGlueClient.createTable(any())).thenThrow(new AWSGlueException("failed to create table"));
+        when(mockGlueClient.createTable(any(CreateTableRequest.class))).thenThrow(GlueException.builder().message("failed to create table").build());
 
         assertThrows(
-                AWSGlueException.class,
+                GlueException.class,
                 () -> underTest.createParquetTable(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys, sensitiveColumns)
         );
     }
@@ -183,18 +186,18 @@ class GlueClientTest {
 
         verify(mockGlueClient, times(1)).createTable(createTableRequestCaptor.capture());
 
-        StorageDescriptor storageDescriptor = createTableRequestCaptor.getValue().getTableInput().getStorageDescriptor();
-        assertThat(storageDescriptor.getLocation(), equalTo(TEST_PATH + "/_symlink_format_manifest"));
-        assertThat(storageDescriptor.getInputFormat(), equalTo(SYMLINK_INPUT_FORMAT));
+        StorageDescriptor storageDescriptor = createTableRequestCaptor.getValue().tableInput().storageDescriptor();
+        assertThat(storageDescriptor.location(), equalTo(TEST_PATH + "/_symlink_format_manifest"));
+        assertThat(storageDescriptor.inputFormat(), equalTo(SYMLINK_INPUT_FORMAT));
         assertThat(getPrimaryKeys(storageDescriptor), containsInAnyOrder(Collections.singleton(PRIMARY_KEY_FIELD).toArray()));
     }
 
     @Test
     void shouldThrowAnExceptionIfAnErrorOccursWhenCreatingSymlinkTable() {
-        when(mockGlueClient.createTable(any())).thenThrow(new AWSGlueException("failed to create table"));
+        when(mockGlueClient.createTable(any(CreateTableRequest.class))).thenThrow(GlueException.builder().message("failed to create table").build());
 
         assertThrows(
-                AWSGlueException.class,
+                GlueException.class,
                 () -> underTest.createTableWithSymlink(TEST_DATABASE, TEST_TABLE, TEST_PATH, JSON_DATA_SCHEMA, primaryKeys)
         );
     }
@@ -206,77 +209,77 @@ class GlueClientTest {
         verify(mockGlueClient, times(1)).deleteTable(deleteTableRequestCaptor.capture());
 
         DeleteTableRequest deleteTableRequest = deleteTableRequestCaptor.getValue();
-        assertThat(deleteTableRequest.getDatabaseName(), equalTo(TEST_DATABASE));
-        assertThat(deleteTableRequest.getName(), equalTo(TEST_TABLE));
+        assertThat(deleteTableRequest.databaseName(), equalTo(TEST_DATABASE));
+        assertThat(deleteTableRequest.name(), equalTo(TEST_TABLE));
     }
 
     @Test
     void shouldNotFailWhenAnAttemptIsMadeToDeleteTableThatDoesNotExist() {
-        when(mockGlueClient.deleteTable(any())).thenThrow(new EntityNotFoundException("failed to delete non-existent table"));
+        when(mockGlueClient.deleteTable(any(DeleteTableRequest.class))).thenThrow(EntityNotFoundException.builder().message("failed to delete non-existent table").build());
 
         assertDoesNotThrow(() -> underTest.deleteTable(TEST_DATABASE, TEST_TABLE));
     }
 
     @Test
     void shouldThrowAnExceptionIfAnyOtherErrorOccursWhenDeletingTable() {
-        when(mockGlueClient.deleteTable(any())).thenThrow(new AWSGlueException("failed to delete table"));
+        when(mockGlueClient.deleteTable(any(DeleteTableRequest.class))).thenThrow(GlueException.builder().message("failed to delete table").build());
 
-        assertThrows(AWSGlueException.class, () -> underTest.deleteTable(TEST_DATABASE, TEST_TABLE));
+        assertThrows(GlueException.class, () -> underTest.deleteTable(TEST_DATABASE, TEST_TABLE));
     }
 
     @Test
     void stopJobShouldStopRunningJobInstanceWhenThereIsOne() {
         List<JobRun> jobRuns = new ArrayList<>();
-        jobRuns.add(createJobRun("STOPPED"));
-        jobRuns.add(createJobRun("STOPPING"));
-        jobRuns.add(createJobRun("STARTING"));
-        jobRuns.add(createJobRun("SUCCEEDED"));
-        jobRuns.add(createJobRun("FAILED"));
-        jobRuns.add(createJobRun("RUNNING").withId("running-job-id"));
-        jobRuns.add(createJobRun("TIMEOUT"));
-        jobRuns.add(createJobRun("ERROR"));
-        jobRuns.add(createJobRun("WAITING"));
+        jobRuns.add(createJobRun(JobRunState.STOPPED));
+        jobRuns.add(createJobRun(JobRunState.STOPPING));
+        jobRuns.add(createJobRun(JobRunState.STARTING));
+        jobRuns.add(createJobRun(JobRunState.SUCCEEDED));
+        jobRuns.add(createJobRun(JobRunState.FAILED));
+        jobRuns.add(JobRun.builder().jobName(TEST_JOB_NAME).jobRunState(JobRunState.RUNNING).id("running-job-id").build());
+        jobRuns.add(createJobRun(JobRunState.TIMEOUT));
+        jobRuns.add(createJobRun(JobRunState.ERROR));
+        jobRuns.add(createJobRun(JobRunState.WAITING));
 
-        when(mockGetJobRunsResult.getJobRuns()).thenReturn(jobRuns);
-        when(mockGlueClient.getJobRuns(getJobRunsRequestCaptor.capture())).thenReturn(mockGetJobRunsResult);
-        when(mockGlueClient.batchStopJobRun(stopJobRunRequestCaptor.capture())).thenReturn(mockBatchStopJobRunResult);
-        when(mockGetJobRunResult.getJobRun()).thenReturn(createJobRun("STOPPED"));
-        when(mockGlueClient.getJobRun(getJobRunRequestCaptor.capture())).thenReturn(mockGetJobRunResult);
+        when(mockGetJobRunsResponse.jobRuns()).thenReturn(jobRuns);
+        when(mockGlueClient.getJobRuns(getJobRunsRequestCaptor.capture())).thenReturn(mockGetJobRunsResponse);
+        when(mockGlueClient.batchStopJobRun(stopJobRunRequestCaptor.capture())).thenReturn(mockBatchStopJobRunResponse);
+        when(mockGetJobRunResponse.jobRun()).thenReturn(createJobRun(JobRunState.STOPPED));
+        when(mockGlueClient.getJobRun(getJobRunRequestCaptor.capture())).thenReturn(mockGetJobRunResponse);
 
         underTest.stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
 
         GetJobRunsRequest getJobRunsRequestCaptorValue = getJobRunsRequestCaptor.getValue();
-        assertThat(getJobRunsRequestCaptorValue.getJobName(), is(equalTo(TEST_JOB_NAME)));
-        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(200)));
-        assertThat(stopJobRunRequestCaptor.getValue().getJobName(), is(equalTo(TEST_JOB_NAME)));
-        assertThat(getJobRunRequestCaptor.getValue().getJobName(), is(equalTo(TEST_JOB_NAME)));
+        assertThat(getJobRunsRequestCaptorValue.jobName(), is(equalTo(TEST_JOB_NAME)));
+        assertThat(getJobRunsRequestCaptorValue.maxResults(), is(equalTo(200)));
+        assertThat(stopJobRunRequestCaptor.getValue().jobName(), is(equalTo(TEST_JOB_NAME)));
+        assertThat(getJobRunRequestCaptor.getValue().jobName(), is(equalTo(TEST_JOB_NAME)));
     }
 
     @Test
     void stopJobShouldNotFailWhenThereIsNoRunningJobInstance() {
         List<JobRun> jobRuns = Collections.emptyList();
 
-        when(mockGetJobRunsResult.getJobRuns()).thenReturn(jobRuns);
-        when(mockGlueClient.getJobRuns(getJobRunsRequestCaptor.capture())).thenReturn(mockGetJobRunsResult);
+        when(mockGetJobRunsResponse.jobRuns()).thenReturn(jobRuns);
+        when(mockGlueClient.getJobRuns(getJobRunsRequestCaptor.capture())).thenReturn(mockGetJobRunsResponse);
 
         underTest.stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
 
         GetJobRunsRequest getJobRunsRequestCaptorValue = getJobRunsRequestCaptor.getValue();
-        assertThat(getJobRunsRequestCaptorValue.getJobName(), is(equalTo(TEST_JOB_NAME)));
-        assertThat(getJobRunsRequestCaptorValue.getMaxResults(), is(equalTo(200)));
-        verifyNoInteractions(mockGetJobRunResult);
+        assertThat(getJobRunsRequestCaptorValue.jobName(), is(equalTo(TEST_JOB_NAME)));
+        assertThat(getJobRunsRequestCaptorValue.maxResults(), is(equalTo(200)));
+        verifyNoInteractions(mockGetJobRunResponse);
     }
 
     @Test
     void stopJobShouldFailWhenUnableToStopRunningInstance() {
         List<JobRun> jobRuns = new ArrayList<>();
-        jobRuns.add(createJobRun("RUNNING").withId("running-job-id"));
+        jobRuns.add(JobRun.builder().jobName(TEST_JOB_NAME).jobRunState(JobRunState.RUNNING).id("running-job-id").build());
 
-        when(mockGetJobRunsResult.getJobRuns()).thenReturn(jobRuns);
-        when(mockGlueClient.getJobRuns(any())).thenReturn(mockGetJobRunsResult);
-        when(mockGlueClient.batchStopJobRun(any())).thenReturn(mockBatchStopJobRunResult);
-        when(mockGetJobRunResult.getJobRun()).thenReturn(createJobRun("STOPPING"));
-        when(mockGlueClient.getJobRun(any())).thenReturn(mockGetJobRunResult);
+        when(mockGetJobRunsResponse.jobRuns()).thenReturn(jobRuns);
+        when(mockGlueClient.getJobRuns(any(GetJobRunsRequest.class))).thenReturn(mockGetJobRunsResponse);
+        when(mockGlueClient.batchStopJobRun(any(BatchStopJobRunRequest.class))).thenReturn(mockBatchStopJobRunResponse);
+        when(mockGetJobRunResponse.jobRun()).thenReturn(createJobRun(JobRunState.STOPPING));
+        when(mockGlueClient.getJobRun(any(GetJobRunRequest.class))).thenReturn(mockGetJobRunResponse);
 
         assertThrows(GlueClientException.class, () -> underTest.stopJob(TEST_JOB_NAME, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS));
     }
@@ -286,7 +289,7 @@ class GlueClientTest {
         underTest.activateTrigger(TRIGGER_NAME);
 
         verify(mockGlueClient, times(1)).startTrigger(startTriggerRequestCaptor.capture());
-        assertThat(startTriggerRequestCaptor.getValue().getName(), is(equalTo(TRIGGER_NAME)));
+        assertThat(startTriggerRequestCaptor.getValue().name(), is(equalTo(TRIGGER_NAME)));
     }
 
     @Test
@@ -294,20 +297,20 @@ class GlueClientTest {
         underTest.deactivateTrigger(TRIGGER_NAME);
 
         verify(mockGlueClient, times(1)).stopTrigger(stopTriggerRequestCaptor.capture());
-        assertThat(stopTriggerRequestCaptor.getValue().getName(), is(equalTo(TRIGGER_NAME)));
+        assertThat(stopTriggerRequestCaptor.getValue().name(), is(equalTo(TRIGGER_NAME)));
     }
 
-    private static JobRun createJobRun(String RUNNING) {
-        return new JobRun().withJobName(TEST_JOB_NAME).withJobRunState(RUNNING);
+    private static JobRun createJobRun(JobRunState state) {
+        return JobRun.builder().jobName(TEST_JOB_NAME).jobRunState(state).build();
     }
 
     @NotNull
     private static Set<String> getPrimaryKeys(StorageDescriptor storageDescriptor) {
         return storageDescriptor
-                .getColumns()
+                .columns()
                 .stream()
-                .filter(column -> "primary_key".equals(column.getComment()))
-                .map(Column::getName)
+                .filter(column -> "primary_key".equals(column.comment()))
+                .map(Column::name)
                 .collect(Collectors.toSet());
     }
 }

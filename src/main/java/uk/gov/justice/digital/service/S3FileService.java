@@ -1,7 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.google.common.collect.ImmutableSet;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
@@ -10,6 +8,8 @@ import org.apache.http.entity.ContentType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkServiceException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
 import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
@@ -58,9 +58,9 @@ public class S3FileService {
                 Math.max(1, Runtime.getRuntime().availableProcessors() - 1) :
                 jobArguments.getFileTransferParallelism();
         RetryConfig retryConfig = new RetryConfig(jobArguments);
-        this.voidRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
-        this.fileListRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
-        this.stringSetRetryPolicy = buildRetryPolicy(retryConfig, AmazonS3Exception.class);
+        this.voidRetryPolicy = buildRetryPolicy(retryConfig, S3Exception.class);
+        this.fileListRetryPolicy = buildRetryPolicy(retryConfig, S3Exception.class);
+        this.stringSetRetryPolicy = buildRetryPolicy(retryConfig, S3Exception.class);
     }
 
     public List<FileLastModifiedDate> listFiles(String bucket, String sourcePrefix, Pattern fileNameMatchRegex, Duration retentionPeriod) {
@@ -125,8 +125,8 @@ public class S3FileService {
     public Set<String> deleteObjects(List<String> objectKeys, String sourceBucket) {
         try {
             return Failsafe.with(stringSetRetryPolicy).get(() -> s3Client.deleteObjects(objectKeys, sourceBucket));
-        } catch (AmazonServiceException e) {
-            logger.warn("Failed to delete S3 objects: {}", e.getErrorMessage());
+        } catch (SdkServiceException e) {
+            logger.warn("Failed to delete S3 objects: {}", e.getMessage());
             return new HashSet<>(objectKeys);
         }
     }
@@ -140,12 +140,12 @@ public class S3FileService {
                     .map(String::trim)
                     .collect(Collectors.toSet())
             );
-        } catch (AmazonServiceException e) {
+        } catch (SdkServiceException e) {
             logger.warn(
                     "Failed to get last archived keys from {}/{}. Returning empty set: {}",
                     sourceBucket,
                     lastArchivedFilesPath,
-                    e.getErrorMessage()
+                    e.getMessage()
             );
             return Collections.emptySet();
         }
@@ -159,8 +159,8 @@ public class S3FileService {
             try {
                 byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
                 Failsafe.with(voidRetryPolicy).run(() -> s3Client.saveObject(destinationBucket, lastArchivedFilesPath, dataBytes, ContentType.DEFAULT_TEXT));
-            } catch (AmazonServiceException e) {
-                logger.warn("Failed to save archived keys to {}/{}: {}", destinationBucket, lastArchivedFilesPath, e.getErrorMessage());
+            } catch (SdkServiceException e) {
+                logger.warn("Failed to save archived keys to {}/{}: {}", destinationBucket, lastArchivedFilesPath, e.getMessage());
             }
         }
     }
@@ -206,7 +206,7 @@ public class S3FileService {
             }
 
             Failsafe.with(voidRetryPolicy).run(() -> s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket));
-        } catch (AmazonServiceException e) {
+        } catch (SdkServiceException e) {
             logger.warn("Failed to move S3 object {}", objectKey, e);
             failedObjects.putIfAbsent(objectKey, objectKey);
         }

@@ -3,7 +3,7 @@ package uk.gov.justice.digital.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import uk.gov.justice.digital.client.dms.DmsClient;
+import uk.gov.justice.digital.client.dms.DefaultDmsClient;
 import uk.gov.justice.digital.client.s3.S3ConfigReaderClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.ConfigServiceException;
@@ -15,11 +15,11 @@ import javax.inject.Singleton;
 public class ConfigService {
 
     private final JobArguments arguments;
-    private final DmsClient dmsClient;
+    private final DefaultDmsClient dmsClient;
     private final S3ConfigReaderClient s3ConfigClient;
 
     @Inject
-    public ConfigService(JobArguments arguments, DmsClient dmsClient, S3ConfigReaderClient s3ConfigClient) {
+    public ConfigService(JobArguments arguments, DefaultDmsClient dmsClient, S3ConfigReaderClient s3ConfigClient) {
         this.arguments = arguments;
         this.dmsClient = dmsClient;
         this.s3ConfigClient = s3ConfigClient;

@@ -1,18 +1,5 @@
 package uk.gov.justice.digital.client.dms;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.databasemigrationservice.AWSDatabaseMigrationService;
-import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksRequest;
-import com.amazonaws.services.databasemigrationservice.model.DescribeReplicationTasksResult;
-import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsRequest;
-import com.amazonaws.services.databasemigrationservice.model.DescribeTableStatisticsResult;
-import com.amazonaws.services.databasemigrationservice.model.Filter;
-import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskRequest;
-import com.amazonaws.services.databasemigrationservice.model.ModifyReplicationTaskResult;
-import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
-import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskRequest;
-import com.amazonaws.services.databasemigrationservice.model.StopReplicationTaskResult;
-import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -27,12 +14,25 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.exception.SdkServiceException;
+import software.amazon.awssdk.services.databasemigration.DatabaseMigrationClient;
+import software.amazon.awssdk.services.databasemigration.model.DescribeReplicationTasksResponse;
+import software.amazon.awssdk.services.databasemigration.model.StopReplicationTaskResponse;
+import software.amazon.awssdk.services.databasemigration.model.DescribeTableStatisticsResponse;
+import software.amazon.awssdk.services.databasemigration.model.DescribeReplicationTasksRequest;
+import software.amazon.awssdk.services.databasemigration.model.StopReplicationTaskRequest;
+import software.amazon.awssdk.services.databasemigration.model.DescribeTableStatisticsRequest;
+import software.amazon.awssdk.services.databasemigration.model.ModifyReplicationTaskRequest;
+import software.amazon.awssdk.services.databasemigration.model.ReplicationTask;
+import software.amazon.awssdk.services.databasemigration.model.TableStatistics;
+import software.amazon.awssdk.services.databasemigration.model.ModifyReplicationTaskResponse;
+import software.amazon.awssdk.services.databasemigration.model.Filter;
 import uk.gov.justice.digital.exception.DmsClientException;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -47,10 +47,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class DmsClientTest {
@@ -58,13 +58,13 @@ class DmsClientTest {
     @Mock
     private DmsClientProvider mockClientProvider;
     @Mock
-    private AWSDatabaseMigrationService mockDmsClient;
+    private DatabaseMigrationClient mockDmsClient;
     @Mock
-    private DescribeReplicationTasksResult mockDescribeReplicationTasksResult;
+    private DescribeReplicationTasksResponse mockDescribeReplicationTasksResponse;
     @Mock
-    private StopReplicationTaskResult mockStopReplicationTaskResult;
+    private StopReplicationTaskResponse mockStopReplicationTaskResponse;
     @Mock
-    private DescribeTableStatisticsResult mockDescribeTableStatisticsResult;
+    private DescribeTableStatisticsResponse mockDescribeTableStatisticsResponse;
     @Captor
     private ArgumentCaptor<DescribeReplicationTasksRequest> describeReplicationTasksRequestCaptor;
     @Captor
@@ -80,46 +80,46 @@ class DmsClientTest {
     private static final int WAIT_INTERVAL_SECONDS = 1;
     private static final int MAX_ATTEMPTS = 1;
 
-    private DmsClient underTest;
+    private DefaultDmsClient underTest;
 
     @BeforeEach
     void setup() {
-        reset(mockClientProvider, mockDmsClient, mockDescribeReplicationTasksResult, mockStopReplicationTaskResult, mockDescribeTableStatisticsResult);
+        reset(mockClientProvider, mockDmsClient, mockDescribeReplicationTasksResponse, mockStopReplicationTaskResponse, mockDescribeTableStatisticsResponse);
 
         when(mockClientProvider.getClient()).thenReturn(mockDmsClient);
-        underTest = new DmsClient(mockClientProvider);
+        underTest = new DefaultDmsClient(mockClientProvider);
     }
 
     @SuppressWarnings("unchecked")
     @Test
     void stopTaskShouldStopRunningDmsTaskWhenThereIsOne() {
         List<ReplicationTask> runningTasks = new ArrayList<>();
-        runningTasks.add(createReplicationTask("running").withReplicationTaskArn("replication-task-arn"));
+        runningTasks.add(ReplicationTask.builder().status("running").replicationTaskArn("replication-task-arn").build());
 
         List<ReplicationTask> stoppedTasks = new ArrayList<>();
-        stoppedTasks.add(createReplicationTask("stopped").withReplicationTaskArn("replication-task-arn"));
+        stoppedTasks.add(ReplicationTask.builder().status("stopped").replicationTaskArn("replication-task-arn").build());
 
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(runningTasks, stoppedTasks);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(runningTasks, stoppedTasks);
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
-                .thenReturn(mockDescribeReplicationTasksResult);
+                .thenReturn(mockDescribeReplicationTasksResponse);
         when(mockDmsClient.stopReplicationTask(stopReplicationTaskRequestCaptor.capture()))
-                .thenReturn(mockStopReplicationTaskResult);
+                .thenReturn(mockStopReplicationTaskResponse);
 
         underTest.stopTask(TEST_TASK_ID, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
 
         StopReplicationTaskRequest stopReplicationTaskRequest = stopReplicationTaskRequestCaptor.getValue();
-        assertThat(stopReplicationTaskRequest.getReplicationTaskArn(), equalTo("replication-task-arn"));
+        assertThat(stopReplicationTaskRequest.replicationTaskArn(), equalTo("replication-task-arn"));
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
     }
 
     @Test
     void stopTaskShouldNotFailWhenTaskIsAlreadyStopped() {
         List<ReplicationTask> stoppedTasks = new ArrayList<>();
-        stoppedTasks.add(createReplicationTask("stopped").withReplicationTaskArn("replication-task-arn"));
+        stoppedTasks.add(ReplicationTask.builder().status("stopped").replicationTaskArn("replication-task-arn").build());
 
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(stoppedTasks);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(stoppedTasks);
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
-                .thenReturn(mockDescribeReplicationTasksResult);
+                .thenReturn(mockDescribeReplicationTasksResponse);
 
         underTest.stopTask(TEST_TASK_ID, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
 
@@ -131,127 +131,137 @@ class DmsClientTest {
     void stopTaskShouldNotFailWhenThereIsNoRunningReplicationTask() {
         List<ReplicationTask> tasks = Collections.emptyList();
 
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
-        when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture())).thenReturn(mockDescribeReplicationTasksResult);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(tasks);
+        when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture())).thenReturn(mockDescribeReplicationTasksResponse);
 
         underTest.stopTask(TEST_TASK_ID, WAIT_INTERVAL_SECONDS, MAX_ATTEMPTS);
 
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
-        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResponse);
     }
 
     @Test
     void getTaskStartTimeShouldReturnTheStartTimeOfReplicationTask() {
-        Date taskStartTime = new Date();
+        Instant taskStartTime = Instant.now();
         List<ReplicationTask> tasks = new ArrayList<>();
-        tasks.add(createReplicationTask("stopped").withReplicationTaskStartDate(taskStartTime));
+        tasks.add(ReplicationTask.builder().status("stopped").replicationTaskStartDate(taskStartTime).build());
 
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(tasks);
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
-                .thenReturn(mockDescribeReplicationTasksResult);
+                .thenReturn(mockDescribeReplicationTasksResponse);
 
-        Date actualTaskStartTime = underTest.getTaskStartTime(TEST_TASK_ID);
+        Instant actualTaskStartTime = underTest.getTaskStartTime(TEST_TASK_ID);
 
         assertThat(actualTaskStartTime, equalTo(taskStartTime));
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
-        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResponse);
     }
 
     @Test
     void getTaskStartTimeShouldThrowAnExceptionWhenReplicationTaskStartTimeIsNull() {
         List<ReplicationTask> tasks = new ArrayList<>();
-        tasks.add(createReplicationTask("stopped").withReplicationTaskStartDate(null));
+        tasks.add(ReplicationTask.builder().status("stopped").replicationTaskStartDate(null).build());
 
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(tasks);
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
-                .thenReturn(mockDescribeReplicationTasksResult);
+                .thenReturn(mockDescribeReplicationTasksResponse);
 
         assertThrows(DmsClientException.class, () -> underTest.getTaskStartTime(TEST_TASK_ID));
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
-        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResponse);
     }
 
     @Test
     void getTaskStartTimeShouldThrowAnExceptionWhenNoReplicationTaskIsFound() {
         List<ReplicationTask> tasks = Collections.emptyList();
 
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(tasks);
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
-                .thenReturn(mockDescribeReplicationTasksResult);
+                .thenReturn(mockDescribeReplicationTasksResponse);
 
         assertThrows(DmsClientException.class, () -> underTest.getTaskStartTime(TEST_TASK_ID));
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
-        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResponse);
     }
 
     @Test
     void getReplicationTaskTableStatisticsShouldReturnListOfTableStatistics() {
         List<ReplicationTask> tasks = new ArrayList<>();
-        tasks.add(createReplicationTask("running")
-                .withReplicationTaskIdentifier(TEST_TASK_ID)
-                .withReplicationTaskArn("replication-task-arn"));
+        tasks.add(ReplicationTask
+                .builder()
+                .status("running")
+                .replicationTaskIdentifier(TEST_TASK_ID)
+                .replicationTaskArn("replication-task-arn")
+                .build()
+        );
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture()))
-                .thenReturn(mockDescribeReplicationTasksResult);
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+                .thenReturn(mockDescribeReplicationTasksResponse);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(tasks);
 
 
         when(mockDmsClient.describeTableStatistics(describeTableStatisticsRequestCaptor.capture()))
-                .thenReturn(mockDescribeTableStatisticsResult);
+                .thenReturn(mockDescribeTableStatisticsResponse);
 
         List<TableStatistics> expectedTableStatistics = Collections.singletonList(
-                new TableStatistics()
-                        .withAppliedDeletes(10L)
-                        .withDeletes(10L)
+                TableStatistics
+                        .builder()
+                        .appliedDeletes(10L)
+                        .deletes(10L)
+                        .build()
         );
-        when(mockDescribeTableStatisticsResult.getTableStatistics()).thenReturn(expectedTableStatistics);
+        when(mockDescribeTableStatisticsResponse.tableStatistics()).thenReturn(expectedTableStatistics);
 
         List<TableStatistics> actualTableStatistics = underTest.getReplicationTaskTableStatistics(TEST_TASK_ID);
         assertEquals(expectedTableStatistics, actualTableStatistics);
 
         verifyDescribeReplicationTasksRequestParams(describeReplicationTasksRequestCaptor.getValue());
-        assertEquals("replication-task-arn", describeTableStatisticsRequestCaptor.getValue().getReplicationTaskArn());
-        verifyNoMoreInteractions(mockDescribeReplicationTasksResult);
+        assertEquals("replication-task-arn", describeTableStatisticsRequestCaptor.getValue().replicationTaskArn());
+        verifyNoMoreInteractions(mockDescribeReplicationTasksResponse);
     }
 
     @Test
     void getReplicationTaskTableStatisticsShouldThrowWhenNoReplicationTaskIsFound() {
         List<ReplicationTask> tasks = Collections.emptyList();
 
-        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(mockDescribeReplicationTasksResult);
-        when(mockDescribeReplicationTasksResult.getReplicationTasks()).thenReturn(tasks);
+        when(mockDmsClient.describeReplicationTasks(any(DescribeReplicationTasksRequest.class))).thenReturn(mockDescribeReplicationTasksResponse);
+        when(mockDescribeReplicationTasksResponse.replicationTasks()).thenReturn(tasks);
 
         assertThrows(DmsClientException.class, () -> underTest.getReplicationTaskTableStatistics(TEST_TASK_ID));
     }
 
     @Test
     void updateCdcTaskStartTimeShouldSetTheStartTimeOfCdcTask() {
-        Date cdcStartTime = new Date();
+        Instant cdcStartTime = Instant.now();
 
-        ReplicationTask cdcReplicationTask = new ReplicationTask().withReplicationTaskArn(TASK_TASK_ARN);
-        DescribeReplicationTasksResult describeReplicationTasksResult = new DescribeReplicationTasksResult()
-                .withReplicationTasks(Collections.singletonList(cdcReplicationTask));
+        ReplicationTask cdcReplicationTask = ReplicationTask.builder().replicationTaskArn(TASK_TASK_ARN).build();
+        DescribeReplicationTasksResponse describeReplicationTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(Collections.singletonList(cdcReplicationTask))
+                .build();
 
-        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(describeReplicationTasksResult);
+        when(mockDmsClient.describeReplicationTasks(any(DescribeReplicationTasksRequest.class))).thenReturn(describeReplicationTasksResult);
         when(mockDmsClient.modifyReplicationTask(modifyReplicationTaskRequestCaptor.capture()))
-                .thenReturn(new ModifyReplicationTaskResult());
+                .thenReturn(ModifyReplicationTaskResponse.builder().build());
 
         underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID);
 
         ModifyReplicationTaskRequest modifyReplicationTaskRequest = modifyReplicationTaskRequestCaptor.getValue();
-        assertThat(modifyReplicationTaskRequest.getReplicationTaskArn(), equalTo(TASK_TASK_ARN));
-        assertThat(modifyReplicationTaskRequest.getReplicationTaskIdentifier(), equalTo(TEST_TASK_ID));
-        assertThat(modifyReplicationTaskRequest.getCdcStartTime(), equalTo(cdcStartTime));
+        assertThat(modifyReplicationTaskRequest.replicationTaskArn(), equalTo(TASK_TASK_ARN));
+        assertThat(modifyReplicationTaskRequest.replicationTaskIdentifier(), equalTo(TEST_TASK_ID));
+        assertThat(modifyReplicationTaskRequest.cdcStartTime(), equalTo(cdcStartTime));
     }
 
     @Test
     void updateCdcTaskStartTimeShouldThrowExceptionWhenNoReplicationTaskIsFound() {
-        Date cdcStartTime = new Date();
+        Instant cdcStartTime = Instant.now();
         List<ReplicationTask> tasks = Collections.emptyList();
 
-        DescribeReplicationTasksResult describeReplicationTasksResult = new DescribeReplicationTasksResult()
-                .withReplicationTasks(tasks);
+        DescribeReplicationTasksResponse describeReplicationTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(tasks)
+                .build();
 
-        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(describeReplicationTasksResult);
+        when(mockDmsClient.describeReplicationTasks(any(DescribeReplicationTasksRequest.class))).thenReturn(describeReplicationTasksResult);
 
         assertThrows(DmsClientException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
         verifyNoMoreInteractions(mockDmsClient);
@@ -259,36 +269,45 @@ class DmsClientTest {
 
     @Test
     void updateCdcTaskStartTimeShouldThrowExceptionWhenDescribingReplicationTasksFails() {
-        Date cdcStartTime = new Date();
+        Instant cdcStartTime = Instant.now();
 
-        doThrow(new AmazonServiceException("Client exception")).when(mockDmsClient).describeReplicationTasks(any());
+        doThrow(SdkServiceException.builder().message("Client exception").build())
+                .when(mockDmsClient)
+                .describeReplicationTasks(any(DescribeReplicationTasksRequest.class));
 
-        assertThrows(AmazonServiceException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
+        assertThrows(SdkServiceException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
         verifyNoMoreInteractions(mockDmsClient);
     }
 
     @Test
     void updateCdcTaskStartTimeShouldThrowExceptionWhenModifyingReplicationTaskFails() {
-        Date cdcStartTime = new Date();
+        Instant cdcStartTime = Instant.now();
 
-        ReplicationTask cdcReplicationTask = new ReplicationTask().withReplicationTaskArn(TASK_TASK_ARN);
-        DescribeReplicationTasksResult describeReplicationTasksResult = new DescribeReplicationTasksResult()
-                .withReplicationTasks(Collections.singletonList(cdcReplicationTask));
+        ReplicationTask cdcReplicationTask = ReplicationTask.builder().replicationTaskArn(TASK_TASK_ARN).build();
+        DescribeReplicationTasksResponse describeReplicationTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(Collections.singletonList(cdcReplicationTask))
+                .build();
 
-        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(describeReplicationTasksResult);
-        doThrow(new AmazonServiceException("Client exception")).when(mockDmsClient).modifyReplicationTask(any());
+        when(mockDmsClient.describeReplicationTasks(any(DescribeReplicationTasksRequest.class))).thenReturn(describeReplicationTasksResult);
+        doThrow(SdkServiceException.builder().message("Client exception").build())
+                .when(mockDmsClient)
+                .modifyReplicationTask(any(ModifyReplicationTaskRequest.class));
 
-        assertThrows(AmazonServiceException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
+        assertThrows(SdkServiceException.class, () -> underTest.updateCdcTaskStartTime(cdcStartTime, TEST_TASK_ID));
     }
 
     @Test
     void getReplicationTaskTablesShouldFailWhenThereIsNoReplicationTaskFound() {
-        DescribeReplicationTasksResult dmsTasksResult = new DescribeReplicationTasksResult().withReplicationTasks(Collections.emptyList());
+        DescribeReplicationTasksResponse dmsTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(Collections.emptyList())
+                .build();
 
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture())).thenReturn(dmsTasksResult);
 
         assertThrows(DmsClientException.class, () -> underTest.getReplicationTaskTables(DOMAIN_KEY));
-        assertFalse(describeReplicationTasksRequestCaptor.getValue().getWithoutSettings());
+        assertFalse(describeReplicationTasksRequestCaptor.getValue().withoutSettings());
     }
 
     @Test
@@ -308,11 +327,17 @@ class DmsClientTest {
 
         tableMappings.set("rules", createRules(selections, transformations));
 
-        ReplicationTask replicationTask = createReplicationTaskWithMappings(tableMappings);
-        DescribeReplicationTasksResult dmsTasksResult = new DescribeReplicationTasksResult()
-                .withReplicationTasks(Collections.singletonList(replicationTask));
+        ReplicationTask replicationTask = ReplicationTask
+                .builder()
+                .replicationTaskIdentifier("project-dms-source-s3-" + DOMAIN_KEY + "-task-env")
+                .tableMappings(tableMappings.toPrettyString())
+                .build();
+        DescribeReplicationTasksResponse dmsTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(Collections.singletonList(replicationTask))
+                .build();
 
-        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(dmsTasksResult);
+        when(mockDmsClient.describeReplicationTasks(any(DescribeReplicationTasksRequest.class))).thenReturn(dmsTasksResult);
 
         ImmutableSet<ImmutablePair<String, String>> tables = underTest.getReplicationTaskTables(DOMAIN_KEY);
 
@@ -333,11 +358,17 @@ class DmsClientTest {
 
         tableMappings.set("rules", createRules(selections, transformations));
 
-        ReplicationTask replicationTask = createReplicationTaskWithMappings(tableMappings);
-        DescribeReplicationTasksResult dmsTasksResult = new DescribeReplicationTasksResult()
-                .withReplicationTasks(Collections.singletonList(replicationTask));
+        ReplicationTask replicationTask = ReplicationTask
+                .builder()
+                .replicationTaskIdentifier("project-dms-source-s3-" + DOMAIN_KEY + "-task-env")
+                .tableMappings(tableMappings.toPrettyString())
+                .build();
+        DescribeReplicationTasksResponse dmsTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(Collections.singletonList(replicationTask))
+                .build();
 
-        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(dmsTasksResult);
+        when(mockDmsClient.describeReplicationTasks(any(DescribeReplicationTasksRequest.class))).thenReturn(dmsTasksResult);
 
         assertThrows(DmsClientException.class, () -> underTest.getReplicationTaskTables(DOMAIN_KEY));
     }
@@ -356,11 +387,17 @@ class DmsClientTest {
 
         tableMappings.set("rules", createRules(selections, transformations));
 
-        ReplicationTask replicationTask = createReplicationTaskWithMappings(tableMappings);
-        DescribeReplicationTasksResult dmsTasksResult = new DescribeReplicationTasksResult()
-                .withReplicationTasks(Collections.singletonList(replicationTask));
+        ReplicationTask replicationTask = ReplicationTask
+                .builder()
+                .replicationTaskIdentifier("project-dms-source-s3-" + DOMAIN_KEY + "-task-env")
+                .tableMappings(tableMappings.toPrettyString())
+                .build();
+        DescribeReplicationTasksResponse dmsTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(Collections.singletonList(replicationTask))
+                .build();
 
-        when(mockDmsClient.describeReplicationTasks(any())).thenReturn(dmsTasksResult);
+        when(mockDmsClient.describeReplicationTasks(any(DescribeReplicationTasksRequest.class))).thenReturn(dmsTasksResult);
 
         assertThrows(DmsClientException.class, () -> underTest.getReplicationTaskTables(DOMAIN_KEY));
     }
@@ -377,11 +414,13 @@ class DmsClientTest {
         ));
 
         List<ReplicationTask> replicationTasks = taskIds.stream()
-                .map(taskId -> new ReplicationTask().withReplicationTaskIdentifier(taskId))
+                .map(taskId -> ReplicationTask.builder().replicationTaskIdentifier(taskId).build())
                 .toList();
 
-        DescribeReplicationTasksResult dmsTasksResult = new DescribeReplicationTasksResult()
-                .withReplicationTasks(replicationTasks);
+        DescribeReplicationTasksResponse dmsTasksResult = DescribeReplicationTasksResponse
+                .builder()
+                .replicationTasks(replicationTasks)
+                .build();
 
         when(mockDmsClient.describeReplicationTasks(describeReplicationTasksRequestCaptor.capture())).thenReturn(dmsTasksResult);
 
@@ -393,7 +432,7 @@ class DmsClientTest {
 
         List<Boolean> booleanStream = describeReplicationTasksRequestCaptor.getAllValues()
                 .stream()
-                .map(DescribeReplicationTasksRequest::getWithoutSettings)
+                .map(DescribeReplicationTasksRequest::withoutSettings)
                 .toList();
 
         assertThat(booleanStream, everyItem(is(false)));
@@ -403,25 +442,15 @@ class DmsClientTest {
         Optional<ReplicationTask> retrievedTask = underTest.getTaskByDomain(domain);
 
         assertTrue(retrievedTask.isPresent());
-        assertEquals(expected, retrievedTask.get().getReplicationTaskIdentifier());
+        assertEquals(expected, retrievedTask.get().replicationTaskIdentifier());
     }
 
     private static void verifyDescribeReplicationTasksRequestParams(DescribeReplicationTasksRequest describeReplicationTasksRequest) {
         assertThat(
-                new HashSet<>(describeReplicationTasksRequest.getFilters()),
-                containsInAnyOrder(new Filter().withName("replication-task-id").withValues(TEST_TASK_ID))
+                new HashSet<>(describeReplicationTasksRequest.filters()),
+                containsInAnyOrder(Filter.builder().name("replication-task-id").values(TEST_TASK_ID).build())
         );
-        assertTrue(describeReplicationTasksRequest.getWithoutSettings());
-    }
-
-    private static ReplicationTask createReplicationTask(String state) {
-        return new ReplicationTask().withStatus(state);
-    }
-
-    private static ReplicationTask createReplicationTaskWithMappings(ObjectNode tableMappings) {
-        return new ReplicationTask()
-                .withReplicationTaskIdentifier("project-dms-source-s3-" + DOMAIN_KEY + "-task-env")
-                .withTableMappings(tableMappings.toPrettyString());
+        assertTrue(describeReplicationTasksRequest.withoutSettings());
     }
 
     @NotNull

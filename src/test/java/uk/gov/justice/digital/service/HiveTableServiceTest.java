@@ -11,7 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.DefaultGlueClient;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
@@ -55,7 +55,7 @@ class HiveTableServiceTest extends SparkTestBase {
     @Mock
     private DataStorageService mockStorageService;
     @Mock
-    private GlueClient mockGlueClient;
+    private DefaultGlueClient mockGlueClient;
 
     @Captor
     ArgumentCaptor<String> deleteDatabaseArgCaptor, createArchiveDatabaseArgCaptor, createSymlinkDatabaseArgCaptor;

@@ -16,8 +16,8 @@ import uk.gov.justice.digital.service.DataStorageService;
 
 import javax.inject.Singleton;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
@@ -25,7 +25,9 @@ import static org.apache.spark.sql.functions.not;
 import static org.apache.spark.sql.functions.row_number;
 import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
-import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.*;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 
 @Singleton
@@ -43,8 +45,9 @@ public class ReloadDiffProcessor {
     }
 
 
-    public void createDiff(SourceReference sourceReference, String outputBasePath, Dataset<Row> raw, Dataset<Row> archive, Date reloadTime) {
-        String formattedStartTime = new SimpleDateFormat(DATE_TIME_PATTERN).format(reloadTime);
+    public void createDiff(SourceReference sourceReference, String outputBasePath, Dataset<Row> raw, Dataset<Row> archive, Instant reloadTime) {
+        val reloadDateTime = java.util.Date.from(reloadTime);
+        val formattedStartTime = new SimpleDateFormat(DATE_TIME_PATTERN).format(reloadDateTime);
         val windowFunction = Window.partitionBy(getKeyColumnsAsSeq(sourceReference)).orderBy(col(CHECKPOINT_COL).desc());
 
         Dataset<Row> activeArchiveRecords = archive

@@ -1,17 +1,17 @@
 package uk.gov.justice.digital.service;
 
-import com.amazonaws.services.databasemigrationservice.model.ReplicationTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.digital.client.dms.DmsClient;
+import software.amazon.awssdk.services.databasemigration.model.ReplicationTask;
+import uk.gov.justice.digital.client.dms.DefaultDmsClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.exception.DmsClientException;
 import uk.gov.justice.digital.exception.DmsOrchestrationServiceException;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -24,7 +24,7 @@ class DmsOrchestrationServiceTest {
     @Mock
     private JobArguments mockJobArguments;
     @Mock
-    private DmsClient mockDmsClient;
+    private DefaultDmsClient mockDmsClient;
 
     private static final String TEST_TASK_ID = "test_task_id";
     private static final String TEST_CDC_TASK_ID = "test_cdc_task_id";
@@ -77,9 +77,9 @@ class DmsOrchestrationServiceTest {
 
     @Test
     void updateCdcTaskStartTimeShouldSetTheStartTimeOfCdcDmsTask() {
-        Date startTime = new Date();
+        Instant startTime = Instant.now();
 
-        when(mockDmsClient.getTask(TEST_TASK_ID)).thenReturn(Optional.of(new ReplicationTask().withReplicationTaskStartDate(startTime)));
+        when(mockDmsClient.getTask(TEST_TASK_ID)).thenReturn(Optional.of(ReplicationTask.builder().replicationTaskStartDate(startTime).build()));
         doNothing().when(mockDmsClient).updateCdcTaskStartTime(startTime, TEST_CDC_TASK_ID);
 
         assertDoesNotThrow(() -> underTest.updateCdcTaskStartTime(TEST_TASK_ID, TEST_CDC_TASK_ID));

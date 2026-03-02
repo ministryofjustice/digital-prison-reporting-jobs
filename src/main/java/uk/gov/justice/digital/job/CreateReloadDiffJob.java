@@ -21,6 +21,7 @@ import uk.gov.justice.digital.service.TableDiscoveryService;
 
 import javax.inject.Inject;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
@@ -79,9 +80,9 @@ public class CreateReloadDiffJob implements Runnable {
     @VisibleForTesting
     void runJob(SparkSession sparkSession) throws RuntimeException {
         val useNow = jobArguments.shouldUseNowAsCheckpointForReloadJob();
-        Date dmsStartTime;
+        Instant dmsStartTime;
         if (useNow) {
-            dmsStartTime = Date.from(clock.instant());
+            dmsStartTime = clock.instant();
         } else {
             dmsStartTime = dmsOrchestrationService.getTaskStartTime(jobArguments.getDmsTaskId());
         }

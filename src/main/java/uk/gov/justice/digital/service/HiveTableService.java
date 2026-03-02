@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.glue.GlueClient;
+import uk.gov.justice.digital.client.glue.DefaultGlueClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.HiveSchemaServiceException;
@@ -32,14 +32,14 @@ public class HiveTableService {
     private final JobArguments jobArguments;
     private final SourceReferenceService sourceReferenceService;
     private final DataStorageService storageService;
-    private final GlueClient glueClient;
+    private final DefaultGlueClient glueClient;
 
     @Inject
     public HiveTableService(
             JobArguments jobArguments,
             SourceReferenceService sourceReferenceService,
             DataStorageService storageService,
-            GlueClient glueClient
+            DefaultGlueClient glueClient
     ) {
         this.jobArguments = jobArguments;
         this.sourceReferenceService = sourceReferenceService;

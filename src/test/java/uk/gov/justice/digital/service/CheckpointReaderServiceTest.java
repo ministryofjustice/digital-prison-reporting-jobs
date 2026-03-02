@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.amazonaws.AmazonClientException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.justice.digital.client.s3.S3CheckpointReaderClient;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
 import uk.gov.justice.digital.config.JobArguments;
@@ -114,9 +114,11 @@ class CheckpointReaderServiceTest {
     void getCommittedFilesForTableShouldPropagateExceptionsThrownByS3Client() {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         when(mockJobArguments.getCheckpointLocation()).thenReturn(CHECKPOINT_LOCATION);
-        doThrow(new AmazonClientException("s3-client-error")).when(mockS3Client).getObjectsOlderThan(any(), any(), any(), any(), any());
+        doThrow(SdkClientException.builder().message("s3-client-error").build())
+                .when(mockS3Client)
+                .getObjectsOlderThan(any(), any(), any(), any(), any());
 
-        assertThrows(AmazonClientException.class, () -> underTest.getCommittedFilesForTable(configuredTable));
+        assertThrows(SdkClientException.class, () -> underTest.getCommittedFilesForTable(configuredTable));
     }
 
     @Test
@@ -124,8 +126,8 @@ class CheckpointReaderServiceTest {
         ImmutablePair<String, String> configuredTable = ImmutablePair.of("schema_1", "table_1");
         when(mockJobArguments.getCheckpointLocation()).thenReturn(CHECKPOINT_LOCATION);
         when(mockS3Client.getObjectsOlderThan(any(), any(), any(), any(), any())).thenReturn(Collections.emptyList());
-        doThrow(new AmazonClientException("checkpoint-client-error")).when(mockCheckpointReaderClient).getCommittedFiles(any(), any());
+        doThrow(SdkClientException.builder().message("checkpoint-client-error").build()).when(mockCheckpointReaderClient).getCommittedFiles(any(), any());
 
-        assertThrows(AmazonClientException.class, () -> underTest.getCommittedFilesForTable(configuredTable));
+        assertThrows(SdkClientException.class, () -> underTest.getCommittedFilesForTable(configuredTable));
     }
 }

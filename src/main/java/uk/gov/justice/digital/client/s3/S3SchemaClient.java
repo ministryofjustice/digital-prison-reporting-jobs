@@ -1,14 +1,5 @@
 package uk.gov.justice.digital.client.s3;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.util.IOUtils;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -19,15 +10,25 @@ import dev.failsafe.RetryPolicy;
 import jakarta.inject.Inject;
 import lombok.Data;
 import lombok.val;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
 
 import javax.inject.Singleton;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.List;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class S3SchemaClient {
 
     private static final Logger logger = LoggerFactory.getLogger(S3SchemaClient.class);
 
-    private final AmazonS3 s3;
+    private final S3Client s3;
     private final RetryPolicy<S3SchemaResponse> retryPolicy;
     private final LoadingCache<String, S3SchemaResponse> cache;
     private final String contractRegistryName;
@@ -59,7 +60,7 @@ public class S3SchemaClient {
     ) {
         this.s3 = schemaClientProvider.getClient();
         RetryConfig retryConfig = new RetryConfig(jobArguments);
-        this.retryPolicy = buildRetryPolicy(retryConfig, AmazonClientException.class);
+        this.retryPolicy = buildRetryPolicy(retryConfig, SdkClientException.class);
         this.cache = CacheBuilder.newBuilder()
                 .maximumSize(jobArguments.getSchemaCacheMaxSize())
                 .expireAfterWrite(jobArguments.getSchemaCacheExpiryInMinutes(), TimeUnit.MINUTES)
@@ -102,34 +103,34 @@ public class S3SchemaClient {
     private List<String> listObjects() throws SdkClientException {
         List<String> objectPaths = new LinkedList<>();
 
-        ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(contractRegistryName).withMaxKeys(maxObjectsPerPage);
+        ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+                .bucket(contractRegistryName)
+                .maxKeys(maxObjectsPerPage);
 
-        ListObjectsV2Result objectList;
+        ListObjectsV2Response objectList;
         do {
-            objectList = s3.listObjectsV2(request);
-            for (S3ObjectSummary summary : objectList.getObjectSummaries()) {
-                String summaryKey = summary.getKey();
-                if (summaryKey.endsWith(SCHEMA_FILE_EXTENSION)) {
-                    objectPaths.add(summaryKey);
-                }
-            }
-            request.setContinuationToken(objectList.getNextContinuationToken());
-        } while (objectList.isTruncated());
+            objectList = s3.listObjectsV2(requestBuilder.build());
+            objectList.contents().stream()
+                    .filter(x -> x.key().toLowerCase().endsWith(SCHEMA_FILE_EXTENSION.toLowerCase()))
+                    .forEach(x -> objectPaths.add(x.key()));
+            requestBuilder.continuationToken(objectList.nextContinuationToken());
+        } while (objectList.isTruncated().booleanValue());
 
         return objectPaths;
     }
 
-    private @NotNull S3SchemaResponse getSchemaResponse(String schemaNameWithExtension) throws AmazonClientException, IOException {
+    private @NotNull S3SchemaResponse getSchemaResponse(String schemaNameWithExtension) throws SdkClientException, IOException {
         logger.info("Getting schema for {}", schemaNameWithExtension);
-        S3Object schemaObject = s3.getObject(contractRegistryName, schemaNameWithExtension);
-        S3ObjectInputStream schemaObjectInputStream = schemaObject.getObjectContent();
-        try {
-            String schemaAvroString = IOUtils.toString(schemaObjectInputStream);
-            String versionId = schemaObject.getObjectMetadata().getVersionId();
+        GetObjectRequest request = GetObjectRequest.builder()
+                .bucket(contractRegistryName)
+                .key(schemaNameWithExtension)
+                .build();
+
+        ResponseInputStream<GetObjectResponse> schemaObject = s3.getObject(request, ResponseTransformer.toInputStream());
+        try (schemaObject) {
+            String schemaAvroString = IOUtils.toString(schemaObject, StandardCharsets.UTF_8);
+            String versionId = schemaObject.response().versionId();
             return new S3SchemaResponse(schemaNameWithExtension.split("\\.")[0], schemaAvroString, versionId);
-        } finally {
-            IOUtils.closeQuietly(schemaObjectInputStream, null);
-            IOUtils.closeQuietly(schemaObject, null);
         }
     }
 

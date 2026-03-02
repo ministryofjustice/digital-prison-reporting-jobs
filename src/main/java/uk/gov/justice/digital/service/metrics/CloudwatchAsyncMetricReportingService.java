@@ -1,17 +1,17 @@
 package uk.gov.justice.digital.service.metrics;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
 import io.micronaut.context.annotation.Requires;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.cloudwatch.CloudwatchClient;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
+import software.amazon.awssdk.services.cloudwatch.model.StatisticSet;
+import uk.gov.justice.digital.client.cloudwatch.DefaultCloudwatchClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.service.datareconciliation.model.DataReconciliationResults;
@@ -23,15 +23,12 @@ import javax.inject.Named;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.amazonaws.services.cloudwatch.model.StandardUnit.Count;
-import static com.amazonaws.services.cloudwatch.model.StandardUnit.Milliseconds;
 import static uk.gov.justice.digital.config.JobArguments.REPORT_METRICS_TO_CLOUDWATCH;
 
 /**
@@ -50,7 +47,7 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     // We expect that the buffer should never grow beyond a certain size
     private static final int MAX_EXPECTED_METRICS_IN_BUFFER = 1000;
 
-    private final CloudwatchClient cloudwatchClient;
+    private final DefaultCloudwatchClient cloudwatchClient;
     private final Clock clock;
     private final ScheduledExecutorService schedulerService;
     private final ShutdownHookRegistrar shutdownHookRegistrar;
@@ -70,7 +67,7 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     public CloudwatchAsyncMetricReportingService(
             JobArguments jobArguments,
             JobProperties jobProperties,
-            CloudwatchClient cloudwatchClient,
+            DefaultCloudwatchClient cloudwatchClient,
             Clock clock,
             @Named("metricsFlusher")
             ScheduledExecutorService schedulerService,
@@ -105,38 +102,38 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
 
     @Override
     public void reportViolationCount(long count) {
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_VIOLATION_COUNT, StandardUnit.COUNT, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportDataReconciliationResults(DataReconciliationResults dataReconciliationResults) {
         double numChecksFailing = dataReconciliationResults.numReconciliationChecksFailing();
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.FAILED_RECONCILIATION_CHECKS, Count, numChecksFailing);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.FAILED_RECONCILIATION_CHECKS, StandardUnit.COUNT, numChecksFailing);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingThroughputInput(long count) {
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_INPUT, StandardUnit.COUNT, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingThroughputWrittenToStructured(long count) {
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, StandardUnit.COUNT, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingThroughputWrittenToCurated(long count) {
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, Count, count);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, StandardUnit.COUNT, count);
         bufferMetric(metricDatum);
     }
 
     @Override
     public void reportStreamingMicroBatchTimeTaken(long timeTakenMs) {
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, Milliseconds, timeTakenMs);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_MICROBATCH_TIME, StandardUnit.MILLISECONDS, timeTakenMs);
         bufferMetric(metricDatum);
     }
 
@@ -144,14 +141,14 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     public void reportStreamingLatencyDmsToCurated(LatencyStatistics latencyStatistics) {
         Optional<StatisticSet> statisticSet = convertToStatisticSet(latencyStatistics);
         statisticSet.ifPresent(stat -> {
-            MetricDatum metricDatum = buildStatisticMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, Milliseconds, stat);
+            MetricDatum metricDatum = buildStatisticMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED, StandardUnit.MILLISECONDS, stat);
             bufferMetric(metricDatum);
         });
     }
 
     @Override
     public void reportBatchJobTimeTaken(long timeTakenMs) {
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_BATCH_TIME_TAKEN, Milliseconds, timeTakenMs);
+        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_BATCH_TIME_TAKEN, StandardUnit.MILLISECONDS, timeTakenMs);
         bufferMetric(metricDatum);
     }
 
@@ -187,7 +184,7 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         // We don't want to increase contention by serialising the network call under the lock
         try {
             cloudwatchClient.putMetrics(metricNamespace, copiedMetricData);
-        } catch (AmazonClientException e) {
+        } catch (SdkClientException e) {
             // Metrics are published on a best effort basis based on the underlying client's retry policy.
             // We don't want to fail a job due to the Cloudwatch API being unavailable.
             logger.error("Failed to report metrics to CloudWatch", e);
@@ -195,33 +192,39 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     }
 
     private MetricDatum buildValueMetricWithJobNameDimension(MetricName metricName, StandardUnit unit, double value) {
-        return new MetricDatum()
-                .withMetricName(metricName.toString())
-                .withUnit(unit)
-                .withDimensions(
-                        new Dimension()
-                                .withName(DimensionName.JOB_NAME.toString())
-                                .withValue(jobName)
+        return MetricDatum
+                .builder()
+                .metricName(metricName.toString())
+                .unit(unit)
+                .dimensions(
+                        Dimension.builder()
+                                .name(DimensionName.JOB_NAME.toString())
+                                .value(jobName)
+                                .build()
                 )
-                .withTimestamp(Date.from(clock.instant()))
-                .withValue(value);
+                .timestamp(clock.instant())
+                .value(value)
+                .build();
     }
 
     private MetricDatum buildStatisticMetricWithJobNameDimension(MetricName metricName, StandardUnit unit, StatisticSet statistics) {
-        return new MetricDatum()
-                .withMetricName(metricName.toString())
-                .withUnit(unit)
-                .withDimensions(
-                        new Dimension()
-                                .withName(DimensionName.JOB_NAME.toString())
-                                .withValue(jobName)
+        return MetricDatum
+                .builder()
+                .metricName(metricName.toString())
+                .unit(unit)
+                .dimensions(
+                        Dimension.builder()
+                                .name(DimensionName.JOB_NAME.toString())
+                                .value(jobName)
+                                .build()
                 )
-                .withTimestamp(Date.from(clock.instant()))
-                .withStatisticValues(statistics);
+                .timestamp(clock.instant())
+                .statisticValues(statistics)
+                .build();
     }
 
     private void bufferMetric(MetricDatum metricDatum) {
-        logger.debug("Reporting {} metric for namespace {} with value {}", metricDatum.getMetricName(), metricNamespace, metricDatum.getValue());
+        logger.debug("Reporting {} metric for namespace {} with value {}", metricDatum.metricName(), metricNamespace, metricDatum.value());
         int bufferedCount;
         synchronized (lock) {
             bufferedMetrics.add(
@@ -230,7 +233,7 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
             bufferedCount = bufferedMetrics.size();
         }
 
-        logger.debug("Finished batching {} metric for namespace {} with value {}", metricDatum.getMetricName(), metricNamespace, metricDatum.getValue());
+        logger.debug("Finished batching {} metric for namespace {} with value {}", metricDatum.metricName(), metricNamespace, metricDatum.value());
 
         if (bufferedCount > MAX_EXPECTED_METRICS_IN_BUFFER) {
             logger.error("There are {} buffered metrics. This could be an indicator that metrics are not being flushed correctly", bufferedCount);
@@ -241,11 +244,12 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         if (LatencyStatistics.isEmpty(latencyStatistics)) {
             return Optional.empty();
         }
-        StatisticSet statisticSet = new StatisticSet();
-        statisticSet.setMaximum((double) latencyStatistics.getMaximum());
-        statisticSet.setMinimum((double) latencyStatistics.getMinimum());
-        statisticSet.setSum((double) latencyStatistics.getSum());
-        statisticSet.setSampleCount((double) latencyStatistics.getTotalCount());
+        StatisticSet statisticSet = StatisticSet.builder()
+                .maximum((double) latencyStatistics.getMaximum())
+                .minimum((double) latencyStatistics.getMinimum())
+                .sum((double) latencyStatistics.getSum())
+                .sampleCount((double) latencyStatistics.getTotalCount())
+                .build();
         return Optional.of(statisticSet);
     }
 

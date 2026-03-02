@@ -67,7 +67,7 @@ class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
         when(arguments.getTempReloadOutputFolder()).thenReturn("diffs");
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("*.parquet");
-        when(dmsOrchestrationService.getTaskStartTime(DMS_TASK_ID)).thenReturn(dmsTaskStartTime);
+        when(dmsOrchestrationService.getTaskStartTime(DMS_TASK_ID)).thenReturn(dmsTaskStartTime.toInstant());
         givenDependenciesAreInjected();
     }
 

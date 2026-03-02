@@ -1,11 +1,11 @@
 package uk.gov.justice.digital.service.datareconciliation;
 
-import com.amazonaws.services.databasemigrationservice.model.TableStatistics;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.gov.justice.digital.client.dms.DmsClient;
+import software.amazon.awssdk.services.databasemigration.model.TableStatistics;
+import uk.gov.justice.digital.client.dms.DefaultDmsClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
@@ -27,10 +27,10 @@ public class DmsChangeDataCountService {
     private static final Logger logger = LoggerFactory.getLogger(DmsChangeDataCountService.class);
 
     private final JobArguments jobArguments;
-    private final DmsClient dmsClient;
+    private final DefaultDmsClient dmsClient;
 
     @Inject
-    public DmsChangeDataCountService(JobArguments jobArguments, DmsClient dmsClient) {
+    public DmsChangeDataCountService(JobArguments jobArguments, DefaultDmsClient dmsClient) {
         this.jobArguments = jobArguments;
         this.dmsClient = dmsClient;
     }
@@ -47,7 +47,7 @@ public class DmsChangeDataCountService {
         Map<String, ChangeDataTableCount> dmsChangeDataCounts = new HashMap<>();
         Map<String, ChangeDataTableCount> dmsAppliedChangeDataCounts = new HashMap<>();
         dmsTableStatistics.forEach(tableStatistics -> {
-            String tableName = tableStatistics.getTableName().toLowerCase();
+            String tableName = tableStatistics.tableName().toLowerCase();
             // We can't use the schema on the table statistics because it is the input schema rather than the 'source'.
             // It might be 'OMS_OWNER', for example, when we need 'nomis'.
             String source = tableToSource.get(tableName);
@@ -56,7 +56,7 @@ public class DmsChangeDataCountService {
                 dmsChangeDataCounts.put(fullTableName, convertToChangeDataTableCount(tableStatistics));
                 dmsAppliedChangeDataCounts.put(fullTableName, convertToAppliedChangeDataTableCount(tableStatistics));
             } else {
-                logger.warn("Cannot find table {} (with source schema {}) in the SourceReferences", tableName, tableStatistics.getSchemaName());
+                logger.warn("Cannot find table {} (with source schema {}) in the SourceReferences", tableName, tableStatistics.schemaName());
             }
         });
         return new DmsChangeDataCountsPair(dmsChangeDataCounts, dmsAppliedChangeDataCounts);
@@ -67,10 +67,10 @@ public class DmsChangeDataCountService {
     }
 
     private ChangeDataTableCount convertToChangeDataTableCount(TableStatistics tableStatistics) {
-        Long cdcInsertCount = tableStatistics.getInserts();
-        Long fullLoadInserts = tableStatistics.getFullLoadRows();
-        Long cdcUpdateCount = tableStatistics.getUpdates();
-        Long cdcDeleteCount = tableStatistics.getDeletes();
+        Long cdcInsertCount = tableStatistics.inserts();
+        Long fullLoadInserts = tableStatistics.fullLoadRows();
+        Long cdcUpdateCount = tableStatistics.updates();
+        Long cdcDeleteCount = tableStatistics.deletes();
 
         double relativeTolerance = jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage();
         long absoluteTolerance = jobArguments.getReconciliationChangeDataCountsToleranceAbsolute();
@@ -79,10 +79,10 @@ public class DmsChangeDataCountService {
     }
 
     private ChangeDataTableCount convertToAppliedChangeDataTableCount(TableStatistics tableStatistics) {
-        Long appliedInsertCount = tableStatistics.getAppliedInserts();
-        Long fullLoadInserts = tableStatistics.getFullLoadRows();
-        Long appliedCdcUpdateCount = tableStatistics.getAppliedUpdates();
-        Long appliedCdcDeleteCount = tableStatistics.getAppliedDeletes();
+        Long appliedInsertCount = tableStatistics.appliedInserts();
+        Long fullLoadInserts = tableStatistics.fullLoadRows();
+        Long appliedCdcUpdateCount = tableStatistics.appliedUpdates();
+        Long appliedCdcDeleteCount = tableStatistics.appliedDeletes();
 
         double relativeTolerance = jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage();
         long absoluteTolerance = jobArguments.getReconciliationChangeDataCountsToleranceAbsolute();

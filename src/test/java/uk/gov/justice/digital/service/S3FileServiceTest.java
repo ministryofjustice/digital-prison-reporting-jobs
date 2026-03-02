@@ -1,7 +1,5 @@
 package uk.gov.justice.digital.service;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -14,10 +12,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.exception.SdkServiceException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import uk.gov.justice.digital.client.s3.S3ObjectClient;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -26,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsEmptyCollection.empty;
@@ -107,11 +107,11 @@ class S3FileServiceTest {
     void listFilesShouldRetryWhenErrorOccursDuringListingOfFiles() {
         int numRetries = 2;
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObjectsOlderThan(any(), any(), any(), any(), any());
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).getObjectsOlderThan(any(), any(), any(), any(), any());
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
-        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period));
+        assertThrows(S3Exception.class, () -> s3FileService.listFiles(SOURCE_BUCKET, SOURCE_PREFIX, parquetFileRegex, period));
 
         verify(mockS3Client, times(numRetries)).getObjectsOlderThan(any(), any(), any(), any(), any());
     }
@@ -203,11 +203,11 @@ class S3FileServiceTest {
         int numRetries = 2;
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(ImmutablePair.of("schema_1", "table_1"));
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObjectsOlderThan(any(), any(), any(), any(), any());
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).getObjectsOlderThan(any(), any(), any(), any(), any());
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
-        assertThrows(AmazonS3Exception.class, () -> s3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period));
+        assertThrows(S3Exception.class, () -> s3FileService.listFilesBeforePeriod(SOURCE_BUCKET, SOURCE_PREFIX, configuredTables, parquetFileRegex, period));
 
         verify(mockS3Client, times(numRetries)).getObjectsOlderThan(any(), any(), any(), any(), any());
     }
@@ -306,7 +306,7 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file2.parquet");
         expectedFailedObjects.add("file4.parquet");
 
-        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any(), any());
+        doThrow(SdkServiceException.builder().message("failure").build()).when(mockS3Client).copyObject(any(), any(), any(), any());
         doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any(), any());
 
         Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, false);
@@ -344,7 +344,7 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file2.parquet");
         expectedFailedObjects.add("file4.parquet");
 
-        doThrow(new AmazonServiceException("failure")).when(mockS3Client).copyObject(any(), any(), any(), any());
+        doThrow(SdkServiceException.builder().message("failure").build()).when(mockS3Client).copyObject(any(), any(), any(), any());
         doNothing().when(mockS3Client).copyObject(eq("file3.parquet"), any(), any(), any());
         when(mockS3Client.deleteObjects(Collections.singletonList("file3.parquet"), SOURCE_BUCKET)).thenReturn(Collections.emptySet());
 
@@ -368,7 +368,7 @@ class S3FileServiceTest {
         expectedFailedObjects.add("file4.parquet");
 
         doNothing().when(mockS3Client).copyObject(any(), any(), any(), any());
-        doThrow(new AmazonServiceException("failure")).when(mockS3Client).deleteObjects(deleteObjectsArgCaptor.capture(), eq(SOURCE_BUCKET));
+        doThrow(SdkServiceException.builder().message("failure").build()).when(mockS3Client).deleteObjects(deleteObjectsArgCaptor.capture(), eq(SOURCE_BUCKET));
 
         Set<String> failedObjects = undertest.copyObjects(objectKeys, SOURCE_BUCKET, SOURCE_PREFIX, DESTINATION_BUCKET, DESTINATION_PREFIX, true);
 
@@ -381,7 +381,7 @@ class S3FileServiceTest {
         int numRetries = 2;
         List<String> objectKeys = Collections.singletonList("file1.parquet");
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).copyObject(any(), any(), any(), any());
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).copyObject(any(), any(), any(), any());
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
@@ -396,7 +396,7 @@ class S3FileServiceTest {
         List<String> objectKeys = Collections.singletonList("file1.parquet");
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
         doNothing().when(mockS3Client).copyObject(any(), any(), any(), any());
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).deleteObjects(any(), any());
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).deleteObjects(any(), any());
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
@@ -444,7 +444,7 @@ class S3FileServiceTest {
         int numRetries = 2;
         List<String> objectKeys = Collections.singletonList("file1.parquet");
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).deleteObjects(any(), any());
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).deleteObjects(any(), any());
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
 
@@ -454,8 +454,8 @@ class S3FileServiceTest {
     }
 
     @Test
-    void getPreviousArchivedKeysShouldReturnEmptySetWhenAnErrorOccursReadingFile() {
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObject(SOURCE_BUCKET, "last-archived-files/" + TEST_CONFIG_KEY + "/archived.txt");
+    void getPreviousArchivedKeysShouldReturnEmptySetWhenAnErrorOccursReadingFile() throws IOException {
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).getObject(SOURCE_BUCKET, "last-archived-files/" + TEST_CONFIG_KEY + "/archived.txt");
 
         Set<String> previouslyArchivedKeys = undertest.getPreviousArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY);
 
@@ -463,7 +463,7 @@ class S3FileServiceTest {
     }
 
     @Test
-    void getPreviousArchivedKeysShouldReturnSetOfPreviouslyArchivedKeys() {
+    void getPreviousArchivedKeysShouldReturnSetOfPreviouslyArchivedKeys() throws IOException {
         Set<String> expectedKeys = new HashSet<>();
         expectedKeys.add("file1");
         expectedKeys.add("file2");
@@ -478,10 +478,10 @@ class S3FileServiceTest {
     }
 
     @Test
-    void getPreviousArchivedKeysShouldRetryWhenAnErrorOccursWhileReadingArchivedKeys() {
+    void getPreviousArchivedKeysShouldRetryWhenAnErrorOccursWhileReadingArchivedKeys() throws IOException {
         int numRetries = 2;
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).getObject(any(), any());
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).getObject(any(), any());
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
         s3FileService.getPreviousArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY);
@@ -511,7 +511,7 @@ class S3FileServiceTest {
     void saveArchivedKeysShouldRetryWhenAnErrorOccursWhileSavingArchivedKeys() {
         int numRetries = 2;
         givenConfiguredRetriesJobArgs(numRetries, mockJobArguments);
-        doThrow(new AmazonS3Exception("s3 error")).when(mockS3Client).saveObject(any(), any(), any(), any());
+        doThrow(S3Exception.builder().message("s3 error").build()).when(mockS3Client).saveObject(any(), any(), any(), any());
 
         S3FileService s3FileService = new S3FileService(mockS3Client, fixedClock, mockJobArguments);
         s3FileService.saveArchivedKeys(SOURCE_BUCKET, TEST_CONFIG_KEY, Collections.singletonList("file1"));
