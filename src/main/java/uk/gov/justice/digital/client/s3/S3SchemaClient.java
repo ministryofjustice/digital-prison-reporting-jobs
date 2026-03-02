@@ -128,6 +128,7 @@ public class S3SchemaClient {
 
         ResponseInputStream<GetObjectResponse> schemaObject = s3.getObject(request, ResponseTransformer.toInputStream());
         String schemaAvroString = IOUtils.toString(schemaObject, StandardCharsets.UTF_8);
+        schemaObject.close();
         String versionId = schemaObject.response().versionId();
         return new S3SchemaResponse(schemaNameWithExtension.split("\\.")[0], schemaAvroString, versionId);
     }
