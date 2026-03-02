@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.datahub.model;
 
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.types.StringType$;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
@@ -56,6 +57,12 @@ class SourceReferenceTest {
     @Test
     void shouldGetNamespace() {
         assertEquals("namespace", underTest.getNamespace());
+    }
+
+    @Test
+    void shouldGetSparkKeyColumns() {
+        Seq<Column> expectedKeyColumnNames = JavaConverters.asScalaBufferConverter(List.of(new Column("pk_column"))).asScala().toSeq();
+        assertEquals(expectedKeyColumnNames, underTest.getPrimaryKey().getSparkKeyColumns());
     }
 
     @Test

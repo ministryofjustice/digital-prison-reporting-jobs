@@ -13,6 +13,7 @@ import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import uk.gov.justice.digital.exception.DataStorageRetriesExhaustedException;
 
 import java.nio.file.Path;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,6 +43,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -204,6 +207,15 @@ class DataStorageServiceTest extends SparkTestBase {
         underTest.compactDeltaTable(spark, tableId.toPath());
         verify(mockDeltaTable).optimize();
         verify(mockDeltaOptimize).executeCompaction();
+    }
+
+    @Test
+    void shouldFullyCompactDeltaTable() {
+        SparkSession mockSparkSession = mock(SparkSession.class);
+        givenDeltaTableExists();
+
+        underTest.compactDeltaTableFull(mockSparkSession, tableId.toPath());
+        verify(mockSparkSession).sql(format("OPTIMIZE delta.`%s` FULL", tableId.toPath()));
     }
 
     @Test
