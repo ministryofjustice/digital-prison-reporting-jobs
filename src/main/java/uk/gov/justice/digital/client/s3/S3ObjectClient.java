@@ -53,9 +53,9 @@ public class S3ObjectClient {
     public String getObject(String bucket, String key) throws IOException {
         GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(key).build();
         ResponseInputStream<GetObjectResponse> object = s3.getObject(request, ResponseTransformer.toInputStream());
-        String objectString = IOUtils.toString(object, StandardCharsets.UTF_8);
-        object.close();
-        return objectString;
+        try (object) {
+            return IOUtils.toString(object, StandardCharsets.UTF_8);
+        }
     }
 
     public void saveObject(String bucket, String key, byte[] data, ContentType contentType) {
