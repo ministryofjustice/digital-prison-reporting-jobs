@@ -264,7 +264,7 @@ class JobArgumentsIntegrationTest {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.ADD_IDLE_TIME_BETWEEN_READS, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals("false", jobArguments.getMaintenanceFullCompactionFlag());
+        assertEquals("false", jobArguments.addIdleTimeBetweenReads());
     }
 
     @Test
