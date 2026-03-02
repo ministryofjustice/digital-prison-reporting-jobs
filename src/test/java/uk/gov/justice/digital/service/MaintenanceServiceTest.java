@@ -42,7 +42,7 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    void shouldCompactAllTablesWhenNoConfigIsProvided() {
+    void shouldCompactAllTables() {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)).thenReturn(deltaTablePaths);
         underTest.compactDeltaTables(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES);
         verify(mockDataStorageService).compactDeltaTable(mockSparkSession, table1);
@@ -51,11 +51,12 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    void shouldCompactConfiguredTablesWhenConfigIsProvided() {
+    void shouldFullCompactAllTables() {
         when(mockDataStorageService.listDeltaTablePaths(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES)).thenReturn(deltaTablePaths);
-        underTest.compactDeltaTables(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES);
-        verify(mockDataStorageService).compactDeltaTable(mockSparkSession, table1);
-        verify(mockDataStorageService).compactDeltaTable(mockSparkSession, table3);
+        underTest.compactDeltaTablesFull(mockSparkSession, rootPath, DEPTH_LIMIT_TO_RECURSE_DELTA_TABLES);
+        verify(mockDataStorageService).compactDeltaTableFull(mockSparkSession, table1);
+        verify(mockDataStorageService).compactDeltaTableFull(mockSparkSession, table2);
+        verify(mockDataStorageService).compactDeltaTableFull(mockSparkSession, table3);
     }
 
     @Test

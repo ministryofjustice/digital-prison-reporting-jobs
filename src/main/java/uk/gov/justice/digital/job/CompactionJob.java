@@ -65,7 +65,15 @@ public class CompactionJob implements Runnable {
 
         if (optionalConfigKey.isPresent()) {
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(optionalConfigKey.get());
-            configuredTables.forEach(table -> maintenanceService.compactDeltaTables(sparkSession, format("%s%s", ensureEndsWithSlash(rootPath), table.right), 0));
+                configuredTables.forEach(table -> {
+                    String tablePath = format("%s%s", ensureEndsWithSlash(rootPath), table.right);
+                    int compactionRecurseLimit = 0;
+                    if (jobArguments.getMaintenanceFullCompactionFlag()) {
+                        maintenanceService.compactDeltaTablesFull(sparkSession, tablePath, compactionRecurseLimit);
+                    } else {
+                        maintenanceService.compactDeltaTables(sparkSession, tablePath, compactionRecurseLimit);
+                    }
+                });
         } else {
             maintenanceService.compactDeltaTables(sparkSession, ensureEndsWithSlash(rootPath), maxDepth);
         }

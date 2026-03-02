@@ -23,6 +23,7 @@ import java.util.Optional;
 import static com.ginsberg.junit.exit.assertions.SystemExitAssertion.assertThatCallsSystemExit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.any;
@@ -80,6 +81,30 @@ class CompactionJobTest extends SparkTestBase {
         underTest.run();
 
         assertThat(deltaPathCaptor.getAllValues(), containsInAnyOrder(expectedPaths.toArray()));
+        verify(maintenanceService, times(2)).compactDeltaTables(any(), any(), anyInt());
+    }
+
+    @Test
+    void shouldFullCompactConfiguredTables() {
+        when(arguments.getMaintenanceFullCompactionFlag()).thenReturn(true);
+        when(arguments.getMaintenanceTablesRootPath()).thenReturn(ROOT_PATH);
+        when(arguments.getMaintenanceListTableRecurseMaxDepth()).thenReturn(RECURSE_MAX_DEPTH);
+        when(arguments.getOptionalConfigKey()).thenReturn(Optional.of(TEST_CONFIG_KEY));
+        when(properties.getSparkDriverMemory()).thenReturn("2g");
+        when(properties.getSparkExecutorMemory()).thenReturn("2g");
+        when(configService.getConfiguredTables(TEST_CONFIG_KEY))
+                .thenReturn(ImmutableSet.of(ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_1), ImmutablePair.of(DOMAIN_CONFIG_PATH, DOMAIN_CONFIG_TABLE_2)));
+        doNothing().when(maintenanceService).compactDeltaTablesFull(eq(spark), deltaPathCaptor.capture(), eq(0));
+
+        List<String> expectedPaths = Arrays.asList(
+                ROOT_PATH + "/" + DOMAIN_CONFIG_TABLE_1,
+                ROOT_PATH + "/" + DOMAIN_CONFIG_TABLE_2
+        );
+
+        underTest.run();
+
+        assertThat(deltaPathCaptor.getAllValues(), containsInAnyOrder(expectedPaths.toArray()));
+        verify(maintenanceService, times(2)).compactDeltaTablesFull(any(), any(), anyInt());
     }
 
     @Test

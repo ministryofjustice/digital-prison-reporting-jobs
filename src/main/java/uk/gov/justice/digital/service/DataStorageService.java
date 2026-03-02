@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.service;
 
+import com.google.common.annotations.VisibleForTesting;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedRunnable;
@@ -14,9 +15,11 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.delta.DeltaConcurrentModificationException;
+import org.apache.spark.sql.types.StructType;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.Seq;
 import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.common.retry.RetryConfig;
 import uk.gov.justice.digital.config.JobArguments;
@@ -110,9 +113,37 @@ public class DataStorageService {
                                 .execute()
                 );
             } else {
+                createDeltaTableIfNotExists(df.sparkSession(), tablePath, df.schema(), primaryKey);
                 append(tablePath, df);
             }
         }
+    }
+
+    /**
+     * Create a delta table with our preferred settings.
+     */
+    @VisibleForTesting
+    DeltaTable createDeltaTableIfNotExists(
+            SparkSession spark,
+            String tablePath,
+            StructType schema,
+            SourceReference.PrimaryKey primaryKey
+    ) {
+        Seq<String> clusteringColumns = getClusteringColumns(primaryKey);
+        return DeltaTable
+                .createIfNotExists(spark)
+                .addColumns(schema)
+                .location(tablePath)
+                // Set Liquid Clustering columns
+                .clusterBy(clusteringColumns)
+                .execute();
+    }
+
+    private static Seq<String> getClusteringColumns(SourceReference.PrimaryKey primaryKey) {
+        // Delta Lake has a limit on the number of clustering columns.
+        int maxNumClusterColumns = 4;
+        // Let's ensure we don't try to use more columns than the limit for a complex primary key.
+        return primaryKey.getStringKeyColumnNames().take(maxNumClusterColumns).toSeq();
     }
 
     public void mergeRecords(
@@ -120,11 +151,8 @@ public class DataStorageService {
             String tablePath,
             Dataset<Row> dataFrame,
             SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        val dt = DeltaTable
-                .createIfNotExists(spark)
-                .addColumns(dataFrame.schema())
-                .location(tablePath)
-                .execute();
+
+        val dt = createDeltaTableIfNotExists(spark, tablePath, dataFrame.schema(), primaryKey);
 
         val expression = createMergeExpression(dataFrame, Collections.emptyList());
         val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
@@ -175,33 +203,6 @@ public class DataStorageService {
             val errorMessage = String.format("Failed to update table %s", tablePath);
             logger.error(errorMessage, e);
         }
-    }
-
-    public void create(@NotNull String tablePath, @NotNull Dataset<Row> df) {
-        logger.info("Inserting schema and data to " + tablePath);
-        df.write()
-                .format("delta")
-                .option("path", tablePath)
-                .save();
-    }
-
-    public void replace(@NotNull String tablePath, @NotNull Dataset<Row> df) {
-        logger.info("Overwriting schema and data to " + tablePath);
-        df.write()
-                .format("delta")
-                .mode("overwrite")
-                .option("overwriteSchema", true)
-                .option("path", tablePath)
-                .save();
-    }
-
-    public void resync(@NotNull String tablePath, @NotNull Dataset<Row> df) {
-        logger.info("Syncing data to " + tablePath);
-        df.write()
-                .format("delta")
-                .mode("overwrite")
-                .option("path", tablePath)
-                .save();
     }
 
     public void delete(SparkSession spark, TableIdentifier tableId) throws DataStorageException {
@@ -276,7 +277,6 @@ public class DataStorageService {
     /**
      * Runs a delta lake compaction on the Delta table at the given tablePath
      */
-
     public void compactDeltaTable(SparkSession spark, String tablePath) throws DataStorageException {
         logger.info("Compacting table at path: {}", tablePath);
         val optionalDeltaTable = getTable(spark, tablePath);
@@ -286,6 +286,26 @@ public class DataStorageService {
             doWithRetryOnConcurrentModification(() -> deltaTable.optimize().executeCompaction());
             updateManifest(deltaTable);
             logger.info("Finished compacting table at path: {}", tablePath);
+        } else {
+            String missingDeltaTableMessage = format("Failed to compact table at path %s. Table does not exist", tablePath);
+            logger.warn(missingDeltaTableMessage);
+        }
+    }
+
+    /**
+     * Runs a full delta lake compaction (OPTIMIZE FULL) on the Delta table at the given tablePath.
+     * This is an expensive operation that only usually needs to be run once, when the table is created,
+     * for a table with liquid clustering enabled
+     */
+    public void compactDeltaTableFull(SparkSession spark, String tablePath) throws DataStorageException {
+        logger.info("Running full compaction (OPTIMIZE FULL) for table at path: {}", tablePath);
+        val optionalDeltaTable = getTable(spark, tablePath);
+
+        if (optionalDeltaTable.isPresent()) {
+            val deltaTable = optionalDeltaTable.get();
+            doWithRetryOnConcurrentModification(() -> spark.sql(format("OPTIMIZE delta.`%s` FULL", tablePath)));
+            updateManifest(deltaTable);
+            logger.info("Finished full compaction (OPTIMIZE FULL) for table at path: {}", tablePath);
         } else {
             String missingDeltaTableMessage = format("Failed to compact table at path %s. Table does not exist", tablePath);
             logger.warn(missingDeltaTableMessage);

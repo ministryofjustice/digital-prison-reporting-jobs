@@ -81,6 +81,8 @@ public class JobArguments {
     // The Domain layer only has a depth of 2, with tables nested under domains
     // e.g. s3://dpr-domain-preproduction/establishment/living_unit/
     public static final int MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH_DEFAULT = 2;
+    public static final String MAINTENANCE_FULL_COMPACTION = "dpr.maintenance.full.compaction";
+    public static final boolean MAINTENANCE_FULL_COMPACTION_DEFAULT = false;
     public static final String CHECKPOINT_LOCATION = "checkpoint.location";
     public static final String BATCH_MAX_RETRIES = "dpr.batch.max.retries";
     public static final int BATCH_MAX_RETRIES_DEFAULT = 3;
@@ -381,6 +383,10 @@ public class JobArguments {
 
     public int getMaintenanceListTableRecurseMaxDepth() {
         return getArgument(MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH_DEFAULT);
+    }
+
+    public boolean getMaintenanceFullCompactionFlag() {
+        return getArgument(MAINTENANCE_FULL_COMPACTION, MAINTENANCE_FULL_COMPACTION_DEFAULT);
     }
 
     public String getCheckpointLocation() {

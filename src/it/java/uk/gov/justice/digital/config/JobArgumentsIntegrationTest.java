@@ -79,6 +79,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.BATCH_MAX_RETRIES, "5" },
             { JobArguments.LOG_LEVEL, "debug" },
             { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, "1" },
+            { JobArguments.MAINTENANCE_FULL_COMPACTION, "true" },
             { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, "dpr-source-bucket" },
             { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
             { JobArguments.FILE_SOURCE_PREFIX, "dpr-source-prefix" },
@@ -153,6 +154,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.BATCH_MAX_RETRIES, Integer.toString(validArguments.getBatchMaxRetries()) },
                 { JobArguments.LOG_LEVEL, validArguments.getLogLevel().toString().toLowerCase() },
                 { JobArguments.MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH, Integer.toString(validArguments.getMaintenanceListTableRecurseMaxDepth()) },
+                { JobArguments.MAINTENANCE_FULL_COMPACTION, Boolean.toString(validArguments.getMaintenanceFullCompactionFlag()) },
                 { JobArguments.FILE_TRANSFER_SOURCE_BUCKET_NAME, validArguments.getTransferSourceBucket() },
                 { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
                 { JobArguments.FILE_SOURCE_PREFIX, validArguments.getSourcePrefix() },
@@ -246,6 +248,14 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.LOG_LEVEL, "some level");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals("WARN", jobArguments.getLogLevel().toString().toUpperCase());
+    }
+
+    @Test
+    void shouldDefaultToFalseForGetMaintenanceFullCompactionFlag() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.MAINTENANCE_FULL_COMPACTION);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.getMaintenanceFullCompactionFlag());
     }
 
     @ParameterizedTest
