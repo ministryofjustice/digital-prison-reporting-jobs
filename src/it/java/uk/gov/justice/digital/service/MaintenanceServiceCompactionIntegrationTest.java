@@ -10,6 +10,7 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.test.DeltaTablesTestBase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.justice.digital.test.SharedTestFunctions.thenEventually;
 import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,7 +33,7 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
     }
 
     @Test
-    void shouldCompactDeltaTableWhenRecursingWithDepth1() throws Exception {
+    void shouldCompactDeltaTableWhenRecursingWithDepth1() throws Throwable {
         int depthLimit = 1;
         assertMultipleParquetFilesPrecondition(offendersTablePath);
         assertMultipleParquetFilesPrecondition(offenderBookingsTablePath);
@@ -52,38 +53,38 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
         long expectedNumFilesAfterOffenders = originalNumFilesOffenders + 1;
         long expectedNumbFilesAfterOffenderBookings = originalNumFilesOffenderBookings + 1;
 
-        assertEquals(expectedNumFilesAfterOffenders, countParquetFiles(offendersTablePath));
-        assertEquals(expectedNumbFilesAfterOffenderBookings, countParquetFiles(offenderBookingsTablePath));
-        assertEquals(originalNumFilesAgencyLocations, countParquetFiles(agencyLocationsTablePathDepth2));
-        assertEquals(originalNumFilesInternalLocations, countParquetFiles(internalLocationsTablePathDepth3));
+        thenEventually(() -> assertEquals(expectedNumFilesAfterOffenders, countParquetFiles(offendersTablePath)));
+        thenEventually(() -> assertEquals(expectedNumbFilesAfterOffenderBookings, countParquetFiles(offenderBookingsTablePath)));
+        thenEventually(() -> assertEquals(originalNumFilesAgencyLocations, countParquetFiles(agencyLocationsTablePathDepth2)));
+        thenEventually(() -> assertEquals(originalNumFilesInternalLocations, countParquetFiles(internalLocationsTablePathDepth3)));
 
-        assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
-        assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
-        assertEquals(0, numberOfCompactions(agencyLocationsTablePathDepth2.toString()));
-        assertEquals(0, numberOfCompactions(internalLocationsTablePathDepth3.toString()));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(offendersTablePath.toString())));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString())));
+        thenEventually(() -> assertEquals(0, numberOfCompactions(agencyLocationsTablePathDepth2.toString())));
+        thenEventually(() -> assertEquals(0, numberOfCompactions(internalLocationsTablePathDepth3.toString())));
     }
 
     @Test
-    void shouldCompactDeltaTablesWhenRecursingWithDepth2() {
+    void shouldCompactDeltaTablesWhenRecursingWithDepth2() throws Throwable {
         int depthLimit = 2;
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
-        assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
-        assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
-        assertEquals(1, numberOfCompactions(agencyLocationsTablePathDepth2.toString()));
-        assertEquals(0, numberOfCompactions(internalLocationsTablePathDepth3.toString()));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(offendersTablePath.toString())));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString())));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(agencyLocationsTablePathDepth2.toString())));
+        thenEventually(() -> assertEquals(0, numberOfCompactions(internalLocationsTablePathDepth3.toString())));
     }
 
     @Test
-    void shouldCompactDeltaTablesWhenRecursingWithDepth3() {
+    void shouldCompactDeltaTablesWhenRecursingWithDepth3() throws Throwable {
         int depthLimit = 3;
 
         underTest.compactDeltaTables(spark, rootPath.toString(), depthLimit);
 
-        assertEquals(1, numberOfCompactions(offendersTablePath.toString()));
-        assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString()));
-        assertEquals(1, numberOfCompactions(agencyLocationsTablePathDepth2.toString()));
-        assertEquals(1, numberOfCompactions(internalLocationsTablePathDepth3.toString()));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(offendersTablePath.toString())));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString())));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(agencyLocationsTablePathDepth2.toString())));
+        thenEventually(() -> assertEquals(1, numberOfCompactions(internalLocationsTablePathDepth3.toString())));
     }
 }
