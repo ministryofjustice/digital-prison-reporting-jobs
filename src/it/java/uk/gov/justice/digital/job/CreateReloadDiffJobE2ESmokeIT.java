@@ -42,7 +42,7 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
 
     private static final String DMS_TASK_ID = "some-dms-task-id";
-    private final Instant dmsTaskStartTime = Instant.now();
+    private final Date dmsTaskStartTime = Date.from(Instant.now());
 
     @Mock
     private JobArguments arguments;
@@ -67,7 +67,7 @@ class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
         when(arguments.getTempReloadOutputFolder()).thenReturn("diffs");
         when(arguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         when(arguments.getBatchLoadFileGlobPattern()).thenReturn("*.parquet");
-        when(dmsOrchestrationService.getTaskStartTime(DMS_TASK_ID)).thenReturn(dmsTaskStartTime);
+        when(dmsOrchestrationService.getTaskStartTime(DMS_TASK_ID)).thenReturn(dmsTaskStartTime.toInstant());
         givenDependenciesAreInjected();
     }
 
@@ -88,11 +88,11 @@ class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
         );
 
         List<Row> archiveDataEveryTable = Arrays.asList(
-                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "record_1", formatDate(DateUtils.addSeconds(Date.from(dmsTaskStartTime), -2))),
-                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "record_2", formatDate(DateUtils.addSeconds(Date.from(dmsTaskStartTime), -2))),
-                RowFactory.create(3, "2023-11-13 10:50:00.123456", Insert.getName(), "record_3_insert", formatDate(DateUtils.addSeconds(Date.from(dmsTaskStartTime), -2))),
-                RowFactory.create(3, "2023-11-13 10:50:00.123456", Delete.getName(), "record_3_delete", formatDate(DateUtils.addSeconds(Date.from(dmsTaskStartTime), -1))),
-                RowFactory.create(5, "2023-11-13 10:50:00.123456", Insert.getName(), "record_5", formatDate(DateUtils.addSeconds(Date.from(dmsTaskStartTime), -2)))
+                RowFactory.create(1, "2023-11-13 10:50:00.123456", Insert.getName(), "record_1", formatDate(DateUtils.addSeconds(dmsTaskStartTime, -2))),
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Insert.getName(), "record_2", formatDate(DateUtils.addSeconds(dmsTaskStartTime, -2))),
+                RowFactory.create(3, "2023-11-13 10:50:00.123456", Insert.getName(), "record_3_insert", formatDate(DateUtils.addSeconds(dmsTaskStartTime, -2))),
+                RowFactory.create(3, "2023-11-13 10:50:00.123456", Delete.getName(), "record_3_delete", formatDate(DateUtils.addSeconds(dmsTaskStartTime, -1))),
+                RowFactory.create(5, "2023-11-13 10:50:00.123456", Insert.getName(), "record_5", formatDate(DateUtils.addSeconds(dmsTaskStartTime, -2)))
         );
 
         givenRawDataIsAddedToEveryTable(rawDataEveryTable);
@@ -101,16 +101,16 @@ class CreateReloadDiffJobE2ESmokeIT extends E2ETestBase {
         whenTheJobRuns();
 
         List<Row> expectedDiffsToDelete = Collections.singletonList(
-                RowFactory.create(5, "2023-11-13 10:50:00.123456", Delete.getName(), "record_5", formatDate(Date.from(dmsTaskStartTime)))
+                RowFactory.create(5, "2023-11-13 10:50:00.123456", Delete.getName(), "record_5", formatDate(dmsTaskStartTime))
         );
 
         List<Row> expectedDiffsToInsert = Arrays.asList(
-                RowFactory.create(3, "2023-11-13 10:50:00.123456", Insert.getName(), "record_3", formatDate(Date.from(dmsTaskStartTime))),
-                RowFactory.create(4, "2023-11-13 10:50:00.123456", Insert.getName(), "record_4", formatDate(Date.from(dmsTaskStartTime)))
+                RowFactory.create(3, "2023-11-13 10:50:00.123456", Insert.getName(), "record_3", formatDate(dmsTaskStartTime)),
+                RowFactory.create(4, "2023-11-13 10:50:00.123456", Insert.getName(), "record_4", formatDate(dmsTaskStartTime))
         );
 
         List<Row> expectedDiffsToUpdate = Collections.singletonList(
-                RowFactory.create(2, "2023-11-13 10:50:00.123456", Update.getName(), "record_2_update", formatDate(Date.from(dmsTaskStartTime)))
+                RowFactory.create(2, "2023-11-13 10:50:00.123456", Update.getName(), "record_2_update", formatDate(dmsTaskStartTime))
         );
 
         List<String> tables = Arrays.asList(agencyInternalLocationsTable,
