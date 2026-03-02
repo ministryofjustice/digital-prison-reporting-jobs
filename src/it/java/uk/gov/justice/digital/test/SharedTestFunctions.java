@@ -95,8 +95,12 @@ public class SharedTestFunctions {
     }
 
     public static void thenEventually(Thunk thunk) throws Throwable {
+        thenEventually(thunk, 30);
+    }
+
+    public static void thenEventually(Thunk thunk, int numIterations) throws Throwable {
         Optional<Throwable> maybeEx = Optional.empty();
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < numIterations; i++) {
             try {
                 thunk.apply();
                 maybeEx = Optional.empty();

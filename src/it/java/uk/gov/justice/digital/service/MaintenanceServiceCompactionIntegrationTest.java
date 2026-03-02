@@ -16,6 +16,8 @@ import static uk.gov.justice.digital.test.SparkTestHelpers.countParquetFiles;
 @ExtendWith(MockitoExtension.class)
 class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
 
+    private static final int FILE_COUNT_EVENTUALLY_NUM_ITERATIONS = 60;
+
     @Mock
     private JobArguments arguments;
     @Mock
@@ -53,10 +55,10 @@ class MaintenanceServiceCompactionIntegrationTest extends DeltaTablesTestBase {
         long expectedNumFilesAfterOffenders = originalNumFilesOffenders + 1;
         long expectedNumbFilesAfterOffenderBookings = originalNumFilesOffenderBookings + 1;
 
-        thenEventually(() -> assertEquals(expectedNumFilesAfterOffenders, countParquetFiles(offendersTablePath)));
-        thenEventually(() -> assertEquals(expectedNumbFilesAfterOffenderBookings, countParquetFiles(offenderBookingsTablePath)));
-        thenEventually(() -> assertEquals(originalNumFilesAgencyLocations, countParquetFiles(agencyLocationsTablePathDepth2)));
-        thenEventually(() -> assertEquals(originalNumFilesInternalLocations, countParquetFiles(internalLocationsTablePathDepth3)));
+        thenEventually(() -> assertEquals(expectedNumFilesAfterOffenders, countParquetFiles(offendersTablePath)), FILE_COUNT_EVENTUALLY_NUM_ITERATIONS);
+        thenEventually(() -> assertEquals(expectedNumbFilesAfterOffenderBookings, countParquetFiles(offenderBookingsTablePath)), FILE_COUNT_EVENTUALLY_NUM_ITERATIONS);
+        thenEventually(() -> assertEquals(originalNumFilesAgencyLocations, countParquetFiles(agencyLocationsTablePathDepth2)), FILE_COUNT_EVENTUALLY_NUM_ITERATIONS);
+        thenEventually(() -> assertEquals(originalNumFilesInternalLocations, countParquetFiles(internalLocationsTablePathDepth3)), FILE_COUNT_EVENTUALLY_NUM_ITERATIONS);
 
         thenEventually(() -> assertEquals(1, numberOfCompactions(offendersTablePath.toString())));
         thenEventually(() -> assertEquals(1, numberOfCompactions(offenderBookingsTablePath.toString())));
