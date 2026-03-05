@@ -72,6 +72,7 @@ public class MinimalTestData {
                 createRow(3, "2023-11-13 10:50:00.123456", Insert, "3")
         ), TEST_DATA_SCHEMA);
     }
+
     public static Dataset<Row> rowPerPkDfSameTimestamp(SparkSession spark) {
         return spark.createDataFrame(Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.123456", Insert, "1a"),
@@ -98,9 +99,9 @@ public class MinimalTestData {
 
     public static List<Row> manyRowsPerPkSameTimestampLatest() {
         return Arrays.asList(
-        createRow(1, "2023-11-13 10:49:30.000000", Delete, "1c"),
-        createRow(2, "2023-11-13 10:49:30.000000", Update, "2c"),
-        createRow(3, "2023-11-13 10:49:30.000000", Insert, "3c")
+                createRow(1, "2023-11-13 10:49:30.000000", Delete, "1c"),
+                createRow(2, "2023-11-13 10:49:30.000000", Update, "2c"),
+                createRow(3, "2023-11-13 10:49:30.000000", Insert, "3c")
         );
     }
 
@@ -126,7 +127,11 @@ public class MinimalTestData {
         );
     }
 
-     public static Row createRow(Integer pk, String timestamp, CommonDataFields.ShortOperationCode operation, String data) {
+    public static Row createRow(Integer pk, String timestamp, CommonDataFields.ShortOperationCode operation, String data) {
+        return createRow(pk, timestamp, operation, data, CHECKPOINT_COL_VALUE);
+    }
+
+     public static Row createRow(Integer pk, String timestamp, CommonDataFields.ShortOperationCode operation, String data, String checkpointCol) {
          String operationName;
         // For tests we want to allow nulls for special test cases
         if(operation != null) {
@@ -134,7 +139,7 @@ public class MinimalTestData {
         } else {
             operationName = null;
         }
-        return RowFactory.create(pk, timestamp, operationName, data, CHECKPOINT_COL_VALUE);
+        return RowFactory.create(pk, timestamp, operationName, data, checkpointCol);
      }
 
      private MinimalTestData() {}

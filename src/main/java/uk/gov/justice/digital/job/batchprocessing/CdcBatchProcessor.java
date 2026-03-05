@@ -27,6 +27,7 @@ import java.time.Clock;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.row_number;
+import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 
@@ -115,7 +116,7 @@ public class CdcBatchProcessor {
                 .toSeq();
         val window = Window
                 .partitionBy(primaryKeys)
-                .orderBy(col(TIMESTAMP).desc());
+                .orderBy(col(CHECKPOINT_COL).desc());
 
         return df
                 .withColumn("row_number", row_number().over(window))
