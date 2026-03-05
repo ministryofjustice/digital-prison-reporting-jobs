@@ -22,6 +22,7 @@ import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,10 +34,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
+import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkDfSameTimestamp;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimestampLatest;
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
@@ -161,19 +165,30 @@ class CdcBatchProcessorTest extends SparkTestBase {
 
     @Test
     void shouldCallStructuredWithLatestRecordsByPK() {
+
+        Dataset<Row> df = spark.createDataFrame(Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", "20260205124524000000000000050700870"),
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1a", "20260205124524000000000000050700869"),
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1c", "20260205124524000000000000050700123"),
+                createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a", "20260205124524000000000000050700123")
+        ), TEST_DATA_SCHEMA);
+
         when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
         when(mockSourceReference.getSource()).thenReturn("source");
         when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(manyRowsPerPk);
+        when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(df);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(manyRowsPerPk);
-        when(mockCuratedZone.process(any(), any(), any())).thenReturn(manyRowsPerPk);
+        when(mockStructuredZone.process(any(), any(), any())).thenReturn(df);
+        when(mockCuratedZone.process(any(), any(), any())).thenReturn(df);
 
-        underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
+        underTest.processBatch(mockSourceReference, spark, df, batchId);
 
         verify(mockStructuredZone, times(1)).process(any(), structuredArgumentCaptor.capture(), eq(mockSourceReference));
 
-        List<Row> expected = manyRowsPerPkSameTimestampLatest();
+        List<Row> expected = Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", "20260205124524000000000000050700870"),
+                createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a", "20260205124524000000000000050700123")
+        );
 
         List<Row> structuredActual = structuredArgumentCaptor.getValue().collectAsList();
         assertEquals(expected.size(), structuredActual.size());

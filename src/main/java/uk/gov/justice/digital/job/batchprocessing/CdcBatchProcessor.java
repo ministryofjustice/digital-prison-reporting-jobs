@@ -116,7 +116,7 @@ public class CdcBatchProcessor {
                 .toSeq();
         val window = Window
                 .partitionBy(primaryKeys)
-                .orderBy(col(CHECKPOINT_COL).desc());
+                .orderBy(col(CHECKPOINT_COL).desc_nulls_last());
 
         return df
                 .withColumn("row_number", row_number().over(window))

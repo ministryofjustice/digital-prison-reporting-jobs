@@ -71,4 +71,24 @@ class CdcBatchProcessorLatestRecordsTest extends SparkTestBase {
         assertEquals(expected.size(), result.size());
         assertTrue(result.containsAll(expected));
     }
+
+    @Test
+    void shouldTakeTheLatestRecordByPKForNullCheckpointCol() {
+        // We shouldn't get nulls in this column, but we explicitly define them as older
+        Dataset<Row> inputDf = spark.createDataFrame(Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", null),
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1a", "20260205124524000000000000050700869"),
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1c", null),
+                createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a", null)
+        ), TEST_DATA_SCHEMA);
+        List<Row> expected = Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1a", "20260205124524000000000000050700869"),
+                createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a", null)
+        );
+
+        List<Row> result = CdcBatchProcessor.latestRecords(inputDf, primaryKey).collectAsList();
+
+        assertEquals(expected.size(), result.size());
+        assertTrue(result.containsAll(expected));
+    }
 }
