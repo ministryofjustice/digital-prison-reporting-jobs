@@ -3,7 +3,6 @@ package uk.gov.justice.digital.job.batchprocessing;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
-import uk.gov.justice.digital.common.CommonDataFields;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
@@ -71,9 +70,5 @@ class CdcBatchProcessorLatestRecordsTest extends SparkTestBase {
 
         assertEquals(expected.size(), result.size());
         assertTrue(result.containsAll(expected));
-    }
-
-    static Row createRw(Integer pk, CommonDataFields.ShortOperationCode operation, String data, String checkpointCol) {
-        return createRow(pk, "2023-11-13 10:49:28.123458", operation, data, checkpointCol);
     }
 }
