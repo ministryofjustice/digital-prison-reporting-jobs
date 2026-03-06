@@ -141,23 +141,23 @@ public class E2ETestBase extends SparkTestBase {
                 .parquet(tablePath);
     }
 
-    protected void whenInsertOccursForTableAndPK(String table, int primaryKey, String data, String timestamp) {
+    protected void whenInsertOccursForTableAndPK(String table, int primaryKey, String data, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, timestamp, Insert, data)
+                createRow(primaryKey, "", Insert, data, checkpointCol)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
-    protected void whenUpdateOccursForTableAndPK(String table, int primaryKey, String data, String timestamp) {
+    protected void whenUpdateOccursForTableAndPK(String table, int primaryKey, String data, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, timestamp, Update, data)
+                createRow(primaryKey, "", Update, data, checkpointCol)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
-    protected void whenDeleteOccursForTableAndPK(String table, int primaryKey, String timestamp) {
+    protected void whenDeleteOccursForTableAndPK(String table, int primaryKey, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, timestamp, Delete, null)
+                createRow(primaryKey, "", Delete, null, checkpointCol)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
     }

@@ -159,14 +159,14 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "1a", pk1));
         thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "2a", pk2));
 
-        whenUpdateOccursForTableAndPK(agencyInternalLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
-        whenUpdateOccursForTableAndPK(agencyLocationsTable, pk1, "1b", "2023-11-13 10:01:00.000000");
+        whenUpdateOccursForTableAndPK(agencyInternalLocationsTable, pk1, "1b", "20260205124524000000000000050700001");
+        whenUpdateOccursForTableAndPK(agencyLocationsTable, pk1, "1b", "20260205124524000000000000050700001");
 
-        whenDeleteOccursForTableAndPK(movementReasonsTable, pk2, "2023-11-13 10:01:00.000000");
-        whenDeleteOccursForTableAndPK(offenderBookingsTable, pk2, "2023-11-13 10:01:00.000000");
+        whenDeleteOccursForTableAndPK(movementReasonsTable, pk2, "20260205124524000000000000050700001");
+        whenDeleteOccursForTableAndPK(offenderBookingsTable, pk2, "20260205124524000000000000050700001");
 
-        whenInsertOccursForTableAndPK(offenderExternalMovementsTable, pk3, "3a", "2023-11-13 10:01:00.000000");
-        whenInsertOccursForTableAndPK(offendersTable, pk3, "3a", "2023-11-13 10:01:00.000000");
+        whenInsertOccursForTableAndPK(offenderExternalMovementsTable, pk3, "3a", "20260205124524000000000000050700001");
+        whenInsertOccursForTableAndPK(offendersTable, pk3, "3a", "20260205124524000000000000050700001");
 
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1b", pk1, testQueryConnection));
         thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1b", pk1, testQueryConnection));

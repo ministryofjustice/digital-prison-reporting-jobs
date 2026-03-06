@@ -6,7 +6,6 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -17,10 +16,12 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import java.util.Arrays;
 import java.util.List;
 
-import static uk.gov.justice.digital.common.CommonDataFields.*;
+import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 
 public class MinimalTestData {
     public static final String PRIMARY_KEY_COLUMN = "pk";
@@ -102,28 +103,6 @@ public class MinimalTestData {
                 createRow(1, "2023-11-13 10:49:30.000000", Delete, "1c"),
                 createRow(2, "2023-11-13 10:49:30.000000", Update, "2c"),
                 createRow(3, "2023-11-13 10:49:30.000000", Insert, "3c")
-        );
-    }
-
-    public static Dataset<Row> manyRowsPerPkDfSameTimestampToMicroSecondAccuracy(SparkSession spark) {
-        return spark.createDataFrame(Arrays.asList(
-                createRow(1, "2023-11-13 10:49:28.123456", Insert, "1a"),
-                createRow(1, "2023-11-13 10:49:28.123457", Update, "1b"),
-                createRow(1, "2023-11-13 10:49:28.123458", Delete, "1c"),
-                createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a"),
-                createRow(2, "2023-11-13 10:49:28.123457", Delete, "2b"),
-                createRow(2, "2023-11-13 10:49:28.123458", Update, "2c"),
-                createRow(3, "2023-11-13 10:49:28.123456", Update, "3a"),
-                createRow(3, "2023-11-13 10:49:28.123457", Delete, "3b"),
-                createRow(3, "2023-11-13 10:49:28.123458", Insert, "3c")
-        ), TEST_DATA_SCHEMA);
-    }
-
-    public static List<Row> manyRowsPerPkSameTimestampToMicroSecondAccuracyLatest() {
-        return Arrays.asList(
-                createRow(1, "2023-11-13 10:49:28.123458", Delete, "1c"),
-                createRow(2, "2023-11-13 10:49:28.123458", Update, "2c"),
-                createRow(3, "2023-11-13 10:49:28.123458", Insert, "3c")
         );
     }
 
