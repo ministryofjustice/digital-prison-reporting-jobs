@@ -116,11 +116,16 @@ public class CdcBatchProcessor {
                 .toSeq();
         val window = Window
                 .partitionBy(primaryKeys)
+                // Take the latest record by primary key using the checkpoint column (empty string and then nulls considered last)
+                // with a backup of using the timestamp column. The secondary sort on timestamp should not be required
+                // but will preserve the previous behaviour just in case any data do not include the checkpoint column.
+                // For example, if we processed data from two different loads for the same primary key then checkpoint col
+                // should be empty string for both and we would take the record with the most recent timestamp.
                 .orderBy(
                         col(CHECKPOINT_COL).desc_nulls_last(),
                         // We include a secondary sort which should be redundant to preserve the
                         // previous behaviour just in case any data do not include the checkpoint column
-                        col(TIMESTAMP).desc()
+                        col(TIMESTAMP).desc_nulls_last()
                 );
 
         return df
