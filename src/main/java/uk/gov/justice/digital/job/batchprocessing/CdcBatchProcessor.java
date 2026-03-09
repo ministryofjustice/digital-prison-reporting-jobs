@@ -123,8 +123,6 @@ public class CdcBatchProcessor {
                 // should be empty string for both and we would take the record with the most recent timestamp.
                 .orderBy(
                         col(CHECKPOINT_COL).desc_nulls_last(),
-                        // We include a secondary sort which should be redundant to preserve the
-                        // previous behaviour just in case any data do not include the checkpoint column
                         col(TIMESTAMP).desc_nulls_last()
                 );
 
