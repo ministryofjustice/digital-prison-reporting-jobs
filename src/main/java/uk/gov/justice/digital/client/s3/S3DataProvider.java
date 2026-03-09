@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
@@ -53,7 +54,7 @@ public class S3DataProvider {
         String tablePath = tablePath(arguments.getRawS3Path(), source, table);
 
         String fileGlobPath = ensureEndsWithSlash(tablePath) + arguments.getCdcFileGlobPattern();
-        StructType schema = withMetadataFields(sourceReference.getSchema());
+        StructType schema = withCheckpointField(withMetadataFields(sourceReference.getSchema()));
         logger.info("Provided schema for {}.{}: \n{}", source, table, schema.treeString());
         logger.info("Initialising S3 data source for {}.{} with file glob path {}", source, table, fileGlobPath);
 

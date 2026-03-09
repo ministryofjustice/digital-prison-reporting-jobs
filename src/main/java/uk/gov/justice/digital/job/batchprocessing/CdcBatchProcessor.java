@@ -69,7 +69,7 @@ public class CdcBatchProcessor {
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
-        if(!df.isEmpty()) {
+        if (!df.isEmpty()) {
             val batchStartTime = clock.millis();
 
             String source = sourceReference.getSource();
@@ -116,7 +116,12 @@ public class CdcBatchProcessor {
                 .toSeq();
         val window = Window
                 .partitionBy(primaryKeys)
-                .orderBy(col(CHECKPOINT_COL).desc_nulls_last());
+                .orderBy(
+                        col(CHECKPOINT_COL).desc_nulls_last(),
+                        // We include a secondary sort which should be redundant to preserve the
+                        // previous behaviour just in case any data do not include the checkpoint column
+                        col(TIMESTAMP).desc()
+                );
 
         return df
                 .withColumn("row_number", row_number().over(window))

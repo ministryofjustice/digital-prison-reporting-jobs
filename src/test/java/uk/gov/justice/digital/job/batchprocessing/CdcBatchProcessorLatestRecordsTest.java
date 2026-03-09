@@ -34,7 +34,7 @@ class CdcBatchProcessorLatestRecordsTest extends SparkTestBase {
     }
 
     @Test
-    void shouldTakeTheLatestRecordByPK() {
+    void shouldTakeTheLatestRecordByPKUsingCheckpointCol() {
         Dataset<Row> inputDf = spark.createDataFrame(Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", "20260205124524000000000000050700865"),
                 createRow(1, "2023-11-13 10:49:28.123456", Update, "1a", "20260205124524000000000000050700869"),
@@ -44,6 +44,27 @@ class CdcBatchProcessorLatestRecordsTest extends SparkTestBase {
         List<Row> expected = Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.123456", Update, "1a", "20260205124524000000000000050700869"),
                 createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a", "20260205124524000000000000050700456")
+        );
+
+        List<Row> result = CdcBatchProcessor.latestRecords(inputDf, primaryKey).collectAsList();
+
+        assertEquals(expected.size(), result.size());
+        assertTrue(result.containsAll(expected));
+    }
+
+    @Test
+    void shouldUseTimestampAsATieBreakerForEqualCheckpointCol() {
+        // This case should only occur if the checkpoint column is null or empty
+        Dataset<Row> inputDf = spark.createDataFrame(Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", ""),
+                createRow(1, "2023-11-13 10:49:27.123456", Update, "1a", ""),
+                createRow(1, "2023-11-13 10:49:26.123456", Update, "1c", ""),
+                createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a", null),
+                createRow(2, "2023-11-13 10:49:29.123456", Insert, "2b", null)
+        ), TEST_DATA_SCHEMA);
+        List<Row> expected = Arrays.asList(
+                createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", ""),
+                createRow(2, "2023-11-13 10:49:29.123456", Insert, "2b", null)
         );
 
         List<Row> result = CdcBatchProcessor.latestRecords(inputDf, primaryKey).collectAsList();

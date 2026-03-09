@@ -143,21 +143,21 @@ public class E2ETestBase extends SparkTestBase {
 
     protected void whenInsertOccursForTableAndPK(String table, int primaryKey, String data, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, "", Insert, data, checkpointCol)
+                createRow(primaryKey, "2023-11-13 10:00:00.000000", Insert, data, checkpointCol)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
     protected void whenUpdateOccursForTableAndPK(String table, int primaryKey, String data, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, "", Update, data, checkpointCol)
+                createRow(primaryKey, "2023-11-13 10:00:00.000000", Update, data, checkpointCol)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
     protected void whenDeleteOccursForTableAndPK(String table, int primaryKey, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, "", Delete, null, checkpointCol)
+                createRow(primaryKey, "2023-11-13 10:00:00.000000", Delete, null, checkpointCol)
         );
         whenDataIsAddedToPathForTable(table, input, rawPath);
     }

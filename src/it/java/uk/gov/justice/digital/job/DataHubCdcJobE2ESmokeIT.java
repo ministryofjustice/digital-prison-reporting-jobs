@@ -136,8 +136,8 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         givenNoSourceReferenceFor(offendersTable, sourceReferenceService);
 
         List<Row> initialDataEveryTable = Arrays.asList(
-                createRow(pk1, "2023-11-13 10:00:00.000000", Insert, "1a"),
-                createRow(pk2, "2023-11-13 10:00:00.000000", Insert, "2a")
+                createRow(pk1, "2023-11-13 10:00:00.000000", Insert, "1a", ""),
+                createRow(pk2, "2023-11-13 10:00:00.000000", Insert, "2a", "")
         );
 
         givenRawDataIsAddedToEveryTable(initialDataEveryTable);

@@ -37,11 +37,16 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
+import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
+import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.config.JobArguments.CDC_FILE_GLOB_PATTERN_DEFAULT;
 import static uk.gov.justice.digital.config.JobArguments.STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER;
+import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
+import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
@@ -108,7 +113,7 @@ class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
 
         Dataset<Row> df = underTest.getPrimaryKeysInCurated(spark, sourceReference);
         assertEquals(3, df.count());
-        assertArrayEquals(new String[] {PRIMARY_KEY_COLUMN}, df.columns());
+        assertArrayEquals(new String[]{PRIMARY_KEY_COLUMN}, df.columns());
     }
 
     @Test
@@ -139,6 +144,10 @@ class S3DataProviderIT extends BaseMinimalDataIntegrationTest {
         when(sourceReference.getTable()).thenReturn(tableName);
 
         Dataset<Row> df = underTest.getStreamingSourceData(spark, sourceReference);
+
+        assertArrayEquals(new String[]{
+                PRIMARY_KEY_COLUMN, DATA_COLUMN, OPERATION, TIMESTAMP, CHECKPOINT_COL
+        }, df.columns());
 
         StreamingQuery query = df.writeStream()
                 .format("memory")
