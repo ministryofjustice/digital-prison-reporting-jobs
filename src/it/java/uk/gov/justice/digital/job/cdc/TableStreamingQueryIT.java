@@ -143,9 +143,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:01.000000");
-        whenInsertOccursForPK(pk2, "data2", "2023-11-13 10:00:01.000000");
-        whenInsertOccursForPK(pk3, "data3", "2023-11-13 10:00:02.000000");
+        whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
+        whenInsertOccursForPK(pk2, "data2", "20260205124524000000000000050700001");
+        whenInsertOccursForPK(pk3, "data3", "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -164,9 +164,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenInsertOccursForPK(pk1, "data1a", "2023-11-13 10:00:01.000000");
-        whenInsertOccursForPK(pk2, "data2a", "2023-11-13 10:00:01.000000");
-        whenInsertOccursForPK(pk3, "data3a", "2023-11-13 10:00:02.000000");
+        whenInsertOccursForPK(pk1, "data1a", "20260205124524000000000000050700001");
+        whenInsertOccursForPK(pk2, "data2a", "20260205124524000000000000050700001");
+        whenInsertOccursForPK(pk3, "data3a", "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -174,9 +174,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data2a", pk2, testQueryConnection);
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data3a", pk3, testQueryConnection);
 
-        whenUpdateOccursForPK(pk1, "data1b", "2023-11-13 10:01:01.000000");
-        whenUpdateOccursForPK(pk2, "data2b", "2023-11-13 10:01:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:01:01.000000");
+        whenUpdateOccursForPK(pk1, "data1b", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk2, "data2b", "20260205124524000000000000050700001");
+        whenDeleteOccursForPK(pk3, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -204,13 +204,13 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:00.000000");
+        whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
 
-        whenDeleteOccursForPK(pk1, "2023-11-13 10:00:00.000000");
+        whenDeleteOccursForPK(pk1, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -227,24 +227,24 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenInsertOccursForPK(pk1, "data1a", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk1, "data1b", "2023-11-13 10:00:02.000000");
-        whenUpdateOccursForPK(pk1, "data1c", "2023-11-13 10:00:03.000000");
-        whenDeleteOccursForPK(pk1, "2023-11-13 10:00:04.000000");
+        whenInsertOccursForPK(pk1, "data1a", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk1, "data1b", "20260205124524000000000000050700002");
+        whenUpdateOccursForPK(pk1, "data1c", "20260205124524000000000000050700003");
+        whenDeleteOccursForPK(pk1, "20260205124524000000000000050700004");
 
-        whenInsertOccursForPK(pk2, "data2a", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk2, "data2b", "2023-11-13 10:00:02.000000");
-        whenUpdateOccursForPK(pk2, "data2c", "2023-11-13 10:00:03.000000");
+        whenInsertOccursForPK(pk2, "data2a", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk2, "data2b", "20260205124524000000000000050700002");
+        whenUpdateOccursForPK(pk2, "data2c", "20260205124524000000000000050700003");
 
-        whenInsertOccursForPK(pk3, "data3a", "2023-11-13 10:00:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:02.000000");
+        whenInsertOccursForPK(pk3, "data3a", "20260205124524000000000000050700001");
+        whenDeleteOccursForPK(pk3, "20260205124524000000000000050700002");
 
-        whenInsertOccursForPK(pk4, "data4a", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk4, "data4b", "2023-11-13 10:00:02.000000");
+        whenInsertOccursForPK(pk4, "data4a", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk4, "data4b", "20260205124524000000000000050700002");
 
-        whenInsertOccursForPK(pk5, "data5a", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk5, "data5b", "2023-11-13 10:00:02.000000");
-        whenDeleteOccursForPK(pk5, "2023-11-13 10:00:03.000000");
+        whenInsertOccursForPK(pk5, "data5a", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk5, "data5b", "20260205124524000000000000050700002");
+        whenDeleteOccursForPK(pk5, "20260205124524000000000000050700003");
 
         whenTheNextBatchIsProcessed();
 
@@ -264,25 +264,25 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:01:00.000000");
+        whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
 
-        whenUpdateOccursForPK(pk1, "data2", "2023-11-13 10:02:00.000000");
+        whenUpdateOccursForPK(pk1, "data2", "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk1, testQueryConnection);
 
-        whenUpdateOccursForPK(pk1, "data3", "2023-11-13 10:03:00.000000");
+        whenUpdateOccursForPK(pk1, "data3", "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
         thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk1, testQueryConnection);
 
-        whenDeleteOccursForPK(pk1, "2023-11-13 10:04:00.000000");
+        whenDeleteOccursForPK(pk1, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -299,8 +299,8 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenUpdateOccursForPK(pk1, "data1", "2023-11-13 10:00:00.000000");
-        whenDeleteOccursForPK(pk2, "2023-11-13 10:00:00.000000");
+        whenUpdateOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
+        whenDeleteOccursForPK(pk2, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -318,9 +318,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:01:00.000000");
-        whenInsertOccursForPK(pk2, "data2", null);
-        whenInsertOccursForPK(pk3, "data3", "2023-11-13 10:01:00.000000");
+        whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
+        whenInsertOccursForWithNullForNonNullableTimestampColumn(pk2, "data2", "20260205124524000000000000050700001");
+        whenInsertOccursForPK(pk3, "data3", "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -339,9 +339,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTheStreamingQueryRuns();
 
 
-        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk2, "data2", "2023-11-13 10:00:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk2, "data2", "20260205124524000000000000050700001");
+        whenDeleteOccursForPK(pk3, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -352,9 +352,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
 
-        whenInsertOccursForPK(pk1, "data4", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk2, "data5", "2023-11-13 10:00:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk1, "data4", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk2, "data5", "20260205124524000000000000050700001");
+        whenDeleteOccursForPK(pk3, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -376,9 +376,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
 
-        whenInsertOccursForPK(pk1, "data1", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk2, "data2", "2023-11-13 10:00:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk2, "data2", "20260205124524000000000000050700001");
+        whenDeleteOccursForPK(pk3, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -389,9 +389,9 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
         thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
 
-        whenInsertOccursForPK(pk1, "data4", "2023-11-13 10:00:01.000000");
-        whenUpdateOccursForPK(pk2, "data5", "2023-11-13 10:00:01.000000");
-        whenDeleteOccursForPK(pk3, "2023-11-13 10:00:01.000000");
+        whenInsertOccursForPK(pk1, "data4", "20260205124524000000000000050700001");
+        whenUpdateOccursForPK(pk2, "data5", "20260205124524000000000000050700001");
+        whenDeleteOccursForPK(pk3, "20260205124524000000000000050700001");
 
         whenTheNextBatchIsProcessed();
 
@@ -543,23 +543,30 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         streamingQuery.processAllAvailable();
     }
 
-    private void whenInsertOccursForPK(int primaryKey, String data, String timestamp) {
+    private void whenInsertOccursForWithNullForNonNullableTimestampColumn(int primaryKey, String data, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, timestamp, Insert, data)
+                createRow(primaryKey, null, Insert, data, checkpointCol)
         );
         whenDataIsAddedToTheInputStream(input);
     }
 
-    private void whenUpdateOccursForPK(int primaryKey, String data, String timestamp) {
+    private void whenInsertOccursForPK(int primaryKey, String data, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, timestamp, Update, data)
+                createRow(primaryKey, "", Insert, data, checkpointCol)
         );
         whenDataIsAddedToTheInputStream(input);
     }
 
-    private void whenDeleteOccursForPK(int primaryKey, String timestamp) {
+    private void whenUpdateOccursForPK(int primaryKey, String data, String checkpointCol) {
         List<Row> input = Collections.singletonList(
-                createRow(primaryKey, timestamp, Delete, null)
+                createRow(primaryKey, "", Update, data, checkpointCol)
+        );
+        whenDataIsAddedToTheInputStream(input);
+    }
+
+    private void whenDeleteOccursForPK(int primaryKey, String checkpointCol) {
+        List<Row> input = Collections.singletonList(
+                createRow(primaryKey, "", Delete, null, checkpointCol)
         );
         whenDataIsAddedToTheInputStream(input);
     }

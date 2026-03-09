@@ -27,6 +27,7 @@ import java.time.Clock;
 
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.row_number;
+import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
 
@@ -68,7 +69,7 @@ public class CdcBatchProcessor {
     }
 
     public void processBatch(SourceReference sourceReference, SparkSession spark, Dataset<Row> df, Long batchId) {
-        if(!df.isEmpty()) {
+        if (!df.isEmpty()) {
             val batchStartTime = clock.millis();
 
             String source = sourceReference.getSource();
@@ -115,7 +116,15 @@ public class CdcBatchProcessor {
                 .toSeq();
         val window = Window
                 .partitionBy(primaryKeys)
-                .orderBy(col(TIMESTAMP).desc());
+                // Take the latest record by primary key using the checkpoint column (empty string and then nulls considered last)
+                // with a backup of using the timestamp column. The secondary sort on timestamp should not be required
+                // but will preserve the previous behaviour just in case any data do not include the checkpoint column.
+                // For example, if we processed data from two different loads for the same primary key then checkpoint col
+                // should be empty string for both and we would take the record with the most recent timestamp.
+                .orderBy(
+                        col(CHECKPOINT_COL).desc_nulls_last(),
+                        col(TIMESTAMP).desc_nulls_last()
+                );
 
         return df
                 .withColumn("row_number", row_number().over(window))
