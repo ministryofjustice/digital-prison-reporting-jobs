@@ -105,9 +105,9 @@ public class DataStorageService {
     }
 
     public void appendDistinct(@NotNull String tablePath, @NotNull Dataset<Row> df, @NotNull SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        if(!df.isEmpty()) {
+        if (!df.isEmpty()) {
             val dt = getTable(df.sparkSession(), tablePath);
-            if(dt.isPresent()) {
+            if (dt.isPresent()) {
                 val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
                 doWithRetryOnConcurrentModification(() ->
                         dt.get().as(SOURCE)
@@ -135,7 +135,8 @@ public class DataStorageService {
         DeltaTableBuilder builder = DeltaTable
                 .createIfNotExists(spark)
                 .addColumns(schema)
-                .location(tablePath);
+                .location(tablePath)
+                .property("delta.enableDeletionVectors", Boolean.toString(jobArguments.areDeltaLakeDeletionVectorsEnabled()));
         if (jobArguments.isDeltaLakeLiquidClusteringEnabled()) {
             Seq<String> clusteringColumns = getClusteringColumns(primaryKey);
             // Set Liquid Clustering columns
@@ -319,6 +320,7 @@ public class DataStorageService {
 
     /**
      * List all Delta table paths below rootPath recursively to the provided depth limit
+     *
      * @return The list of delta table paths (including hadoop filesystem prefix, e.g. s3://)
      */
     public List<String> listDeltaTablePaths(SparkSession spark, String rootPath, int depthLimit) throws DataStorageException {
@@ -360,7 +362,7 @@ public class DataStorageService {
         accumulator.addAll(deltaTables);
         logger.debug("Found {} delta tables under {}", deltaTables.size(), rootPath);
 
-        if(depthLimit > 1) {
+        if (depthLimit > 1) {
             // We can keep recursing so let's look in all the directories at this level
             val otherDirs = deltaTablesAndOtherDirs.get(false);
             logger.debug("Found {} directories that are not delta tables to recurse under {}", otherDirs.size(), rootPath);

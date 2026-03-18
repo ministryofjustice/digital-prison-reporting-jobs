@@ -288,18 +288,21 @@ class DataStorageServiceTest extends SparkTestBase {
     @Test
     void shouldCreateDeltaTableClusteringByPrimaryKey() {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(true);
+        when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(false);
         stubDeltaTableCreateIfNotExists();
         Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
 
         underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
 
         verify(mockDeltaTableBuilder, times(1)).clusterBy(expectedClusterColumns);
+        verify(mockDeltaTableBuilder, times(0)).property("delta.enableDeletionVectors", "true");
         verify(mockDeltaTableBuilder, times(1)).execute();
     }
 
     @Test
     void shouldBeAbleToCreateDeltaTableWithoutClustering() {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(false);
+        when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(false);
         stubDeltaTableCreateIfNotExists();
         Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
 
@@ -310,8 +313,21 @@ class DataStorageServiceTest extends SparkTestBase {
     }
 
     @Test
+    void shouldBeAbleToCreateDeltaTableWithDeletionVectorsEnabled() {
+        when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(false);
+        when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(true);
+        stubDeltaTableCreateIfNotExists();
+
+        underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
+
+        verify(mockDeltaTableBuilder, times(1)).execute();
+        verify(mockDeltaTableBuilder, times(1)).property("delta.enableDeletionVectors", "true");
+    }
+
+    @Test
     void shouldClusteringDeltaTableByFirst4ColumnsOfPrimaryKeyOnly() {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(true);
+        when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(false);
         stubDeltaTableCreateIfNotExists();
         SourceReference.PrimaryKey manyColumnsPrimaryKey = new SourceReference.PrimaryKey(List.of(
                 "col1",
@@ -582,6 +598,7 @@ class DataStorageServiceTest extends SparkTestBase {
         when(mockDeltaTableBuilder.location(any())).thenReturn(mockDeltaTableBuilder);
         // The cast to Seq is necessary to avoid compile errors with Scala's type inference
         lenient().when(mockDeltaTableBuilder.clusterBy((Seq<String>) any())).thenReturn(mockDeltaTableBuilder);
+        lenient().when(mockDeltaTableBuilder.property(anyString(), anyString())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.execute()).thenReturn(mockDeltaTable);
     }
 
