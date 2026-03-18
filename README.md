@@ -10,7 +10,7 @@
 ## Overview
 
 Provides code defining a number of jobs to be launched by AWS Glue supporting a
-number of processes within the Digital Prison Reporting platform.
+number of processes within the Digital Prison Reporting platform. 
 
 ## Local Development
 
