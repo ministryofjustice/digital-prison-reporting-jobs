@@ -313,11 +313,10 @@ class DataStorageServiceTest extends SparkTestBase {
     }
 
     @Test
-    void shouldBeAbleToCreateDeltaTableWithDeletionvectorsEnabled() {
+    void shouldBeAbleToCreateDeltaTableWithDeletionVectorsEnabled() {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(false);
         when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(true);
         stubDeltaTableCreateIfNotExists();
-        Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
 
         underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
 
