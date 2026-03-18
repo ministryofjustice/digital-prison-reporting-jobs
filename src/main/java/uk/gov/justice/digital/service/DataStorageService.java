@@ -5,6 +5,7 @@ import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedRunnable;
 import io.delta.tables.DeltaTable;
+import io.delta.tables.DeltaTableBuilder;
 import jakarta.inject.Inject;
 import lombok.val;
 import org.apache.hadoop.fs.FileStatus;
@@ -59,6 +60,7 @@ public class DataStorageService {
     // Retry policy used on operations that are at risk of concurrent modification exceptions
     private final RetryPolicy<Void> retryPolicy;
     private final int numPartitions;
+    private final JobArguments jobArguments;
 
     private final String insertMatchCondition = createMatchExpression(Insert);
     private final String updateMatchCondition = createMatchExpression(Update);
@@ -67,6 +69,7 @@ public class DataStorageService {
 
     @Inject
     public DataStorageService(JobArguments jobArguments, JobProperties properties) {
+        this.jobArguments = jobArguments;
         RetryConfig retryConfig = new RetryConfig(jobArguments);
         this.retryPolicy = buildRetryPolicy(retryConfig, DeltaConcurrentModificationException.class);
         this.numPartitions = getNumPartitions(jobArguments.getApproxDataSizeGigaBytes(), properties.getSparkExecutorCores());
@@ -129,14 +132,16 @@ public class DataStorageService {
             StructType schema,
             SourceReference.PrimaryKey primaryKey
     ) {
-        Seq<String> clusteringColumns = getClusteringColumns(primaryKey);
-        return DeltaTable
+        DeltaTableBuilder builder = DeltaTable
                 .createIfNotExists(spark)
                 .addColumns(schema)
-                .location(tablePath)
-                // Set Liquid Clustering columns
-                .clusterBy(clusteringColumns)
-                .execute();
+                .location(tablePath);
+        if (jobArguments.isDeltaLakeLiquidClusteringEnabled()) {
+            Seq<String> clusteringColumns = getClusteringColumns(primaryKey);
+            // Set Liquid Clustering columns
+            builder.clusterBy(clusteringColumns);
+        }
+        return builder.execute();
     }
 
     private static Seq<String> getClusteringColumns(SourceReference.PrimaryKey primaryKey) {

@@ -268,6 +268,22 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
+    void shouldSetDeltaLakeLiquidClusteringEnabled() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DELTA_LAKE_LIQUID_CLUSTERING_ENABLED, "false");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.isDeltaLakeLiquidClusteringEnabled());
+    }
+
+    @Test
+    void shouldDefaultToTrueForDeltaLakeLiquidClusteringEnabled() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DELTA_LAKE_LIQUID_CLUSTERING_ENABLED);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertTrue(jobArguments.isDeltaLakeLiquidClusteringEnabled());
+    }
+
+    @Test
     void shouldDefaultOperationalDataStoreJdbcBatchSizeTo1000() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE);
