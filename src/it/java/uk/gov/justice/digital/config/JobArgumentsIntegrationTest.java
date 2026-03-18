@@ -284,6 +284,22 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
+    void shouldSetDeltaLakeDeletionVectorsEnabled() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DELTA_LAKE_DELETION_VECTORS_ENABLED, "true");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertTrue(jobArguments.areDeltaLakeDeletionVectorsEnabled());
+    }
+
+    @Test
+    void shouldDefaultToFalseForDeltaLakeDeletionvectorsEnabled() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DELTA_LAKE_DELETION_VECTORS_ENABLED);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.areDeltaLakeDeletionVectorsEnabled());
+    }
+
+    @Test
     void shouldDefaultOperationalDataStoreJdbcBatchSizeTo1000() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE);

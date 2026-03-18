@@ -124,6 +124,8 @@ public class JobArguments {
     // For Delta Lake storage
     public static final String DELTA_LAKE_LIQUID_CLUSTERING_ENABLED = "dpr.delta.lake.liquid.clustering.enabled";
     public static final boolean DELTA_LAKE_LIQUID_CLUSTERING_ENABLED_DEFAULT = true;
+    public static final String DELTA_LAKE_DELETION_VECTORS_ENABLED = "dpr.delta.lake.deletion.vectors.enabled";
+    public static final boolean DELTA_LAKE_DELETION_VECTORS_ENABLED_DEFAULT = false;
 
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
@@ -467,6 +469,10 @@ public class JobArguments {
 
     public boolean isDeltaLakeLiquidClusteringEnabled() {
         return getArgument(DELTA_LAKE_LIQUID_CLUSTERING_ENABLED, DELTA_LAKE_LIQUID_CLUSTERING_ENABLED_DEFAULT);
+    }
+
+    public boolean areDeltaLakeDeletionVectorsEnabled() {
+        return getArgument(DELTA_LAKE_DELETION_VECTORS_ENABLED, DELTA_LAKE_DELETION_VECTORS_ENABLED_DEFAULT);
     }
 
     public Duration getRawFileRetentionPeriod() {
