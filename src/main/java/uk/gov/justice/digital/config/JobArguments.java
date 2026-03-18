@@ -121,6 +121,10 @@ public class JobArguments {
     public static final String FILE_TRANSFER_USE_DEFAULT_PARALLELISM = "dpr.file.transfer.use.default.parallelism";
     public static final String FILE_TRANSFER_PARALLELISM = "dpr.file.transfer.parallelism";
 
+    // For Delta Lake storage
+    public static final String DELTA_LAKE_LIQUID_CLUSTERING_ENABLED = "dpr.delta.lake.liquid.clustering.enabled";
+    public static final boolean DELTA_LAKE_LIQUID_CLUSTERING_ENABLED_DEFAULT = true;
+
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
     // A comma separated list of s3 file extensions. The wildcard '*' includes all extensions.
@@ -459,6 +463,10 @@ public class JobArguments {
                 return fileTransferParallelism;
             }
         }
+    }
+
+    public boolean isDeltaLakeLiquidClusteringEnabled() {
+        return getArgument(DELTA_LAKE_LIQUID_CLUSTERING_ENABLED, DELTA_LAKE_LIQUID_CLUSTERING_ENABLED_DEFAULT);
     }
 
     public Duration getRawFileRetentionPeriod() {

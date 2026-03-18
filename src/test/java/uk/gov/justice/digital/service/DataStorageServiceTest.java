@@ -46,6 +46,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
@@ -286,16 +287,31 @@ class DataStorageServiceTest extends SparkTestBase {
 
     @Test
     void shouldCreateDeltaTableClusteringByPrimaryKey() {
+        when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(true);
         stubDeltaTableCreateIfNotExists();
         Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
 
         underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
 
         verify(mockDeltaTableBuilder, times(1)).clusterBy(expectedClusterColumns);
+        verify(mockDeltaTableBuilder, times(1)).execute();
+    }
+
+    @Test
+    void shouldBeAbleToCreateDeltaTableWithoutClustering() {
+        when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(false);
+        stubDeltaTableCreateIfNotExists();
+        Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
+
+        underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
+
+        verify(mockDeltaTableBuilder, times(0)).clusterBy(expectedClusterColumns);
+        verify(mockDeltaTableBuilder, times(1)).execute();
     }
 
     @Test
     void shouldClusteringDeltaTableByFirst4ColumnsOfPrimaryKeyOnly() {
+        when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(true);
         stubDeltaTableCreateIfNotExists();
         SourceReference.PrimaryKey manyColumnsPrimaryKey = new SourceReference.PrimaryKey(List.of(
                 "col1",
@@ -565,7 +581,7 @@ class DataStorageServiceTest extends SparkTestBase {
         when(mockDeltaTableBuilder.addColumns(any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.location(any())).thenReturn(mockDeltaTableBuilder);
         // The cast to Seq is necessary to avoid compile errors with Scala's type inference
-        when(mockDeltaTableBuilder.clusterBy((Seq<String>) any())).thenReturn(mockDeltaTableBuilder);
+        lenient().when(mockDeltaTableBuilder.clusterBy((Seq<String>) any())).thenReturn(mockDeltaTableBuilder);
         when(mockDeltaTableBuilder.execute()).thenReturn(mockDeltaTable);
     }
 
