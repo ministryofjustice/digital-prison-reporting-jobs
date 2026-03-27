@@ -36,8 +36,6 @@ import static uk.gov.justice.digital.service.datareconciliation.model.Reconcilia
 @ExtendWith(MockitoExtension.class)
 class DataReconciliationServiceTest {
 
-    private static final String DMS_TASK_ID = "dms-task-id";
-
     @Mock
     private JobArguments jobArguments;
     @Mock
@@ -92,7 +90,6 @@ class DataReconciliationServiceTest {
     @Test
     void shouldGetChangeDataCounts() {
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CHANGE_DATA_COUNTS));
-        when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
                 ImmutablePair.of("schema", "table2")
@@ -102,13 +99,13 @@ class DataReconciliationServiceTest {
                 sourceReference1, sourceReference2
         );
         when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
-        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID)).thenReturn(changeDataResult);
+        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences)).thenReturn(changeDataResult);
 
         List<DataReconciliationResult> results = ((DataReconciliationResults) underTest.reconcileData(sparkSession)).getResults();
 
         assertEquals(1, results.size());
         assertTrue(results.contains(changeDataResult));
-        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences);
     }
 
     @Test
@@ -135,7 +132,6 @@ class DataReconciliationServiceTest {
     @Test
     void shouldGetCurrentStateCountsAndChangeDataCounts() {
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
-        when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
                 ImmutablePair.of("schema", "table2")
@@ -146,7 +142,7 @@ class DataReconciliationServiceTest {
         );
         when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
         when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(currentStateResult);
-        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID)).thenReturn(changeDataResult);
+        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences)).thenReturn(changeDataResult);
 
         List<DataReconciliationResult> results = ((DataReconciliationResults) underTest.reconcileData(sparkSession)).getResults();
 
@@ -154,12 +150,11 @@ class DataReconciliationServiceTest {
         assertTrue(results.contains(currentStateResult));
         assertTrue(results.contains(changeDataResult));
         verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
-        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences);
     }
 
     @Test
     void shouldRunJustConfiguredReconciliationChecks() {
-        when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
                 ImmutablePair.of("schema", "table2")
@@ -175,21 +170,21 @@ class DataReconciliationServiceTest {
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS));
         underTest.reconcileData(sparkSession);
         verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
-        verify(changeDataCountService, times(0)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+        verify(changeDataCountService, times(0)).changeDataCounts(sparkSession, allSourceReferences);
 
         reset(currentStateCountService);
         reset(changeDataCountService);
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CHANGE_DATA_COUNTS));
         underTest.reconcileData(sparkSession);
         verify(currentStateCountService, times(0)).currentStateCounts(sparkSession, allSourceReferences);
-        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences);
 
         reset(currentStateCountService);
         reset(changeDataCountService);
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
         underTest.reconcileData(sparkSession);
         verify(currentStateCountService, times(1)).currentStateCounts(sparkSession, allSourceReferences);
-        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences);
     }
 
     @Test
@@ -234,7 +229,6 @@ class DataReconciliationServiceTest {
     @Test
     void shouldReportMetrics() {
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
-        when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
                 ImmutablePair.of("schema", "table2")
@@ -245,7 +239,7 @@ class DataReconciliationServiceTest {
         );
         when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
         when(currentStateCountService.currentStateCounts(sparkSession, allSourceReferences)).thenReturn(currentStateResult);
-        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID)).thenReturn(changeDataResult);
+        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences)).thenReturn(changeDataResult);
 
         DataReconciliationResults results = ((DataReconciliationResults) underTest.reconcileData(sparkSession));
 

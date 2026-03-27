@@ -15,4 +15,11 @@ public class DmsChangeDataCountsPair {
     private final Map<String, ChangeDataTableCount> dmsChangeDataCounts;
     // The counts the DMS thinks it has applied to the target data store
     private final Map<String, ChangeDataTableCount> dmsAppliedChangeDataCounts;
+
+    public void sum(DmsChangeDataCountsPair other) {
+        other.getDmsChangeDataCounts()
+                .forEach((k, v) -> getDmsChangeDataCounts().merge(k, v, ChangeDataTableCount::combineCounts));
+        other.getDmsAppliedChangeDataCounts()
+                .forEach((k, v) -> getDmsAppliedChangeDataCounts().merge(k, v, ChangeDataTableCount::combineCounts));
+    }
 }

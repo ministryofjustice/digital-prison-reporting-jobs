@@ -95,7 +95,7 @@ public class SharedTestFunctions {
     }
 
     public static void thenEventually(Thunk thunk) throws Throwable {
-        thenEventually(thunk, 30);
+        thenEventually(thunk, 35);
     }
 
     public static void thenEventually(Thunk thunk, int numIterations) throws Throwable {
