@@ -137,6 +137,7 @@ public class JobArguments {
     static final String ORCHESTRATION_MAX_ATTEMPTS = "dpr.orchestration.max.attempts";
     static final int DEFAULT_ORCHESTRATION_MAX_ATTEMPTS = 40;
     static final String STOP_GLUE_INSTANCE_JOB_NAME = "dpr.stop.glue.instance.job.name";
+    static final String DMS_IS_SPLIT_PIPELINE = "dpr.dms.task.is.split.pipeline";
     static final String DMS_REPLICATION_TASK_ID = "dpr.dms.replication.task.id";
     static final String CDC_DMS_REPLICATION_TASK_ID = "dpr.cdc.dms.replication.task.id";
     static final String RELOAD_JOB_USE_NOW_AS_CHECKPOINT = "dpr.reload.checkpoint.use.now";
@@ -501,6 +502,10 @@ public class JobArguments {
 
     public String getStopGlueInstanceJobName() {
         return getArgument(STOP_GLUE_INSTANCE_JOB_NAME);
+    }
+
+    public boolean isSplitPipeline() {
+        return getArgument(DMS_IS_SPLIT_PIPELINE, false);
     }
 
     public String getDmsTaskId() {

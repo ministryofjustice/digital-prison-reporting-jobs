@@ -19,6 +19,18 @@ public class ChangeDataTotalCounts implements DataReconciliationResult {
     private Map<String, ChangeDataTableCount> dmsCounts;
     private Map<String, ChangeDataTableCount> dmsAppliedCounts;
 
+    public Map<String, ChangeDataTableCount> getRawZoneCounts() {
+        return rawZoneCounts;
+    }
+
+    public Map<String, ChangeDataTableCount> getDmsCounts() {
+        return dmsCounts;
+    }
+
+    public Map<String, ChangeDataTableCount> getDmsAppliedCounts() {
+        return dmsAppliedCounts;
+    }
+
     @Override
     public boolean isSuccess() {
         return sameTables() && rawCountsMatchDmsCountsWithinTolerance();
