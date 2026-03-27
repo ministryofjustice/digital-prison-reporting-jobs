@@ -67,9 +67,13 @@ public class DataReconciliationService {
             logger.info("Configured to run {}", checkToRun);
             switch (checkToRun) {
                 case CHANGE_DATA_COUNTS:
-                    String dmsTaskId = jobArguments.getDmsTaskId();
-                    logger.info("Getting change data counts with DMS Task ID: {}", dmsTaskId);
-                    return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+                    if (jobArguments.isSplitPipeline()) {
+                        String cdcDmsTaskId = jobArguments.getCdcDmsTaskId();
+                        return getChangeDataCounts(sparkSession, allSourceReferences, cdcDmsTaskId);
+                    } else {
+                        String dmsTaskId = jobArguments.getDmsTaskId();
+                        return getChangeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+                    }
                 case CURRENT_STATE_COUNTS:
                     logger.info("Getting current state counts");
                     return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
@@ -84,6 +88,11 @@ public class DataReconciliationService {
         DataReconciliationResults dataReconciliationResults = new DataReconciliationResults(results);
         metricReportingService.reportDataReconciliationResults(dataReconciliationResults);
         return dataReconciliationResults;
+    }
+
+    private DataReconciliationResult getChangeDataCounts(SparkSession sparkSession, List<SourceReference> allSourceReferences, String dmsTaskId) {
+        logger.info("Getting change data counts with DMS Task ID: {}", dmsTaskId);
+        return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
     }
 }
 

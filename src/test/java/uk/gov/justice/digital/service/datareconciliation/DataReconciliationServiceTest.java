@@ -37,6 +37,7 @@ import static uk.gov.justice.digital.service.datareconciliation.model.Reconcilia
 class DataReconciliationServiceTest {
 
     private static final String DMS_TASK_ID = "dms-task-id";
+    private static final String DMS_CDC_TASK_ID = "dms-cdc-task-id";
 
     @Mock
     private JobArguments jobArguments;
@@ -92,6 +93,7 @@ class DataReconciliationServiceTest {
     @Test
     void shouldGetChangeDataCounts() {
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CHANGE_DATA_COUNTS));
+        when(jobArguments.isSplitPipeline()).thenReturn(false);
         when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
@@ -109,6 +111,29 @@ class DataReconciliationServiceTest {
         assertEquals(1, results.size());
         assertTrue(results.contains(changeDataResult));
         verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_TASK_ID);
+    }
+
+    @Test
+    void shouldGetChangeDataCountsFromCdcDmsTaskForSplitPipelines() {
+        when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CHANGE_DATA_COUNTS));
+        when(jobArguments.isSplitPipeline()).thenReturn(true);
+        when(jobArguments.getCdcDmsTaskId()).thenReturn(DMS_CDC_TASK_ID);
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
+                ImmutablePair.of("schema", "table1"),
+                ImmutablePair.of("schema", "table2")
+        );
+        when(configService.getConfiguredTables(any())).thenReturn(configuredTables);
+        List<SourceReference> allSourceReferences = Arrays.asList(
+                sourceReference1, sourceReference2
+        );
+        when(sourceReferenceService.getAllSourceReferences(configuredTables)).thenReturn(allSourceReferences);
+        when(changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, DMS_CDC_TASK_ID)).thenReturn(changeDataResult);
+
+        List<DataReconciliationResult> results = ((DataReconciliationResults) underTest.reconcileData(sparkSession)).getResults();
+
+        assertEquals(1, results.size());
+        assertTrue(results.contains(changeDataResult));
+        verify(changeDataCountService, times(1)).changeDataCounts(sparkSession, allSourceReferences, DMS_CDC_TASK_ID);
     }
 
     @Test
@@ -135,6 +160,7 @@ class DataReconciliationServiceTest {
     @Test
     void shouldGetCurrentStateCountsAndChangeDataCounts() {
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
+        when(jobArguments.isSplitPipeline()).thenReturn(false);
         when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
@@ -159,6 +185,7 @@ class DataReconciliationServiceTest {
 
     @Test
     void shouldRunJustConfiguredReconciliationChecks() {
+        when(jobArguments.isSplitPipeline()).thenReturn(false);
         when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),
@@ -234,6 +261,7 @@ class DataReconciliationServiceTest {
     @Test
     void shouldReportMetrics() {
         when(jobArguments.getReconciliationChecksToRun()).thenReturn(ImmutableSet.of(CURRENT_STATE_COUNTS, CHANGE_DATA_COUNTS));
+        when(jobArguments.isSplitPipeline()).thenReturn(false);
         when(jobArguments.getDmsTaskId()).thenReturn(DMS_TASK_ID);
         ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(
                 ImmutablePair.of("schema", "table1"),

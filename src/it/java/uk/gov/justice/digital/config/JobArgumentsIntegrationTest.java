@@ -84,6 +84,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, "dpr-destination-bucket" },
             { JobArguments.FILE_SOURCE_PREFIX, "dpr-source-prefix" },
             { JobArguments.STOP_GLUE_INSTANCE_JOB_NAME, "dpr-glue-job-name" },
+            { JobArguments.DMS_IS_SPLIT_PIPELINE, "true" },
             { JobArguments.DMS_REPLICATION_TASK_ID, "dpr-dms-task-id" },
             { JobArguments.CDC_DMS_REPLICATION_TASK_ID, "cdc-dpr-dms-task-id" },
             { JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, "true" },
@@ -159,6 +160,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.FILE_TRANSFER_DESTINATION_BUCKET_NAME, validArguments.getTransferDestinationBucket() },
                 { JobArguments.FILE_SOURCE_PREFIX, validArguments.getSourcePrefix() },
                 { JobArguments.STOP_GLUE_INSTANCE_JOB_NAME, validArguments.getStopGlueInstanceJobName() },
+                { JobArguments.DMS_IS_SPLIT_PIPELINE, validArguments.isSplitPipeline() },
                 { JobArguments.DMS_REPLICATION_TASK_ID, validArguments.getDmsTaskId() },
                 { JobArguments.CDC_DMS_REPLICATION_TASK_ID, validArguments.getCdcDmsTaskId() },
                 { JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, validArguments.shouldUseNowAsCheckpointForReloadJob() },
@@ -939,6 +941,14 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS_DEFAULT, jobArguments.getCloudwatchMetricsShutdownFlushTimeoutSeconds());
+    }
+
+    @Test
+    void isSplitPipelineShouldDefaultToFalseWhenNotConfigured() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DMS_IS_SPLIT_PIPELINE);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.isSplitPipeline());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {
