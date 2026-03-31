@@ -67,9 +67,7 @@ public class DataReconciliationService {
             logger.info("Configured to run {}", checkToRun);
             switch (checkToRun) {
                 case CHANGE_DATA_COUNTS:
-                    String dmsTaskId = jobArguments.getDmsTaskId();
-                    logger.info("Getting change data counts with DMS Task ID: {}", dmsTaskId);
-                    return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences, dmsTaskId);
+                    return changeDataCountService.changeDataCounts(sparkSession, allSourceReferences);
                 case CURRENT_STATE_COUNTS:
                     logger.info("Getting current state counts");
                     return currentStateCountService.currentStateCounts(sparkSession, allSourceReferences);
