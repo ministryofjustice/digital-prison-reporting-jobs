@@ -49,6 +49,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -260,6 +261,14 @@ class DataStorageServiceTest extends SparkTestBase {
         givenDeltaTableExists();
         underTest.updateDeltaManifestForTable(spark, tablePath);
         verifyManifestGeneratedWithExpectedModeString();
+    }
+
+    @Test
+    void shouldNotUpdateDeltaManifestForTableWhenDeletionVectorsAreEnabled() {
+        givenDeltaTableExists();
+        when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(true);
+        underTest.updateDeltaManifestForTable(spark, tablePath);
+        verify(mockDeltaTable, never()).generate("symlink_format_manifest");
     }
 
     @Test

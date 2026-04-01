@@ -268,6 +268,10 @@ public class DataStorageService {
     }
 
     protected void updateManifest(DeltaTable dt) {
+        if (jobArguments.areDeltaLakeDeletionVectorsEnabled()) {
+            logger.warn("Skipping updating manifest for table with deletion vectors enabled");
+            return;
+        }
         dt.generate("symlink_format_manifest");
     }
 
