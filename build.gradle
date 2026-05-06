@@ -83,6 +83,7 @@ ext {
     oracleJdbcVersion = '23.5.0.24.07'
     hikariCPVersion = '4.0.3'
     junitSystemExitVersion = '2.0.2'
+    openLineageVersion = '1.46.0'
 }
 
 dependencies {
@@ -133,6 +134,7 @@ dependencies {
     implementation "org.postgresql:postgresql:$postgresVersion"
     implementation "com.oracle.database.jdbc:ojdbc8:$oracleJdbcVersion"
     implementation "com.zaxxer:HikariCP:$hikariCPVersion"
+    implementation "io.openlineage:openlineage-spark_$scalaBinary:$openLineageVersion"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
