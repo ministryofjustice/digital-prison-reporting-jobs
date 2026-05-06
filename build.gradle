@@ -135,6 +135,7 @@ dependencies {
     implementation "com.oracle.database.jdbc:ojdbc8:$oracleJdbcVersion"
     implementation "com.zaxxer:HikariCP:$hikariCPVersion"
     implementation "io.openlineage:openlineage-spark_$scalaBinary:$openLineageVersion"
+    implementation "io.openlineage:transports-s3:$openLineageVersion"
 
     // Where spark core is pulled in transitively, ensure that it is excluded so that we
     // don't include it in the jar build by the shadowJar plugin.
