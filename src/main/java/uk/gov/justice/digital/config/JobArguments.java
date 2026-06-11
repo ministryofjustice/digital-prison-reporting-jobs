@@ -205,6 +205,8 @@ public class JobArguments {
     static final long CLOUDWATCH_METRICS_REPORTING_PERIOD_SECONDS_DEFAULT = 30L;
     static final String CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS = "dpr.cloudwatch.metrics.shutdown.flush.timeout.seconds";
     static final long CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS_DEFAULT = 5L;
+    static final String VACUUM_PARALLEL_DELETION = "dpr.vacuum.parallel.deletion";
+    static final boolean VACUUM_PARALLEL_DELETION_DEFAULT = true;
     private final Map<String, String> config;
 
     @Inject
@@ -678,6 +680,10 @@ public class JobArguments {
 
     public double getApproxDataSizeGigaBytes() {
         return getArgument(APPROX_DATA_SIZE_GB, APPROX_DATA_SIZE_GB_DEFAULT);
+    }
+
+    public boolean vacuumParallelDeletion() {
+        return getArgument(VACUUM_PARALLEL_DELETION, VACUUM_PARALLEL_DELETION_DEFAULT);
     }
 
     private String getArgument(String argumentName) {
