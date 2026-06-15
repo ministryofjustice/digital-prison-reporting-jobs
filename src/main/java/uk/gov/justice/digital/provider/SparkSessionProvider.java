@@ -65,6 +65,10 @@ public class SparkSessionProvider {
                     .set("spark.sql.autoBroadcastJoinThreshold", "-1")
                     .set("spark.sql.adaptive.autoBroadcastJoinThreshold", "-1");
         }
+
+        if (arguments.vacuumParallelDeletion()) {
+            sparkConf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true");
+        }
     }
 
     private static String getSparkMemory(JobArguments arguments, String memory) {

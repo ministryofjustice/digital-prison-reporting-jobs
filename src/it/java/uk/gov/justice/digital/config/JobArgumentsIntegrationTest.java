@@ -114,6 +114,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.ADJUST_SPARK_MEMORY, "true" },
             { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, "50000" },
             { JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, "false" },
+            { JobArguments.VACUUM_PARALLEL_DELETION, "false" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -190,6 +191,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.ADJUST_SPARK_MEMORY, validArguments.adjustSparkMemory() },
                 { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, Integer.toString(validArguments.getSparkSqlMaxRecordsPerFile()) },
                 { JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, validArguments.fileTransferUseDefaultParallelism() },
+                { JobArguments.VACUUM_PARALLEL_DELETION, validArguments.vacuumParallelDeletion() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -949,6 +951,14 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.DMS_IS_SPLIT_PIPELINE);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.isSplitPipeline());
+    }
+
+    @Test
+    void vacuumParallelDeletionShouldDefaultToTrue() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.VACUUM_PARALLEL_DELETION);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertTrue(jobArguments.vacuumParallelDeletion());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {
