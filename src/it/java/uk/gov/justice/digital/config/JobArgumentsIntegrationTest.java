@@ -274,17 +274,17 @@ class JobArgumentsIntegrationTest {
     @Test
     void shouldSetDeltaLakeLiquidClusteringEnabled() {
         HashMap<String, String> args = cloneTestArguments();
-        args.put(JobArguments.DELTA_LAKE_LIQUID_CLUSTERING_ENABLED, "false");
+        args.put(JobArguments.DELTA_LAKE_LIQUID_CLUSTERING_ENABLED, "true");
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertFalse(jobArguments.isDeltaLakeLiquidClusteringEnabled());
+        assertTrue(jobArguments.isDeltaLakeLiquidClusteringEnabled());
     }
 
     @Test
-    void shouldDefaultToTrueForDeltaLakeLiquidClusteringEnabled() {
+    void shouldDefaultToFalseForDeltaLakeLiquidClusteringEnabled() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.DELTA_LAKE_LIQUID_CLUSTERING_ENABLED);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertTrue(jobArguments.isDeltaLakeLiquidClusteringEnabled());
+        assertFalse(jobArguments.isDeltaLakeLiquidClusteringEnabled());
     }
 
     @Test
