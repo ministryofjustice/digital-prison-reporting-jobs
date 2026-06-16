@@ -123,7 +123,7 @@ public class JobArguments {
 
     // For Delta Lake storage
     public static final String DELTA_LAKE_LIQUID_CLUSTERING_ENABLED = "dpr.delta.lake.liquid.clustering.enabled";
-    public static final boolean DELTA_LAKE_LIQUID_CLUSTERING_ENABLED_DEFAULT = true;
+    public static final boolean DELTA_LAKE_LIQUID_CLUSTERING_ENABLED_DEFAULT = false;
     public static final String DELTA_LAKE_DELETION_VECTORS_ENABLED = "dpr.delta.lake.deletion.vectors.enabled";
     public static final boolean DELTA_LAKE_DELETION_VECTORS_ENABLED_DEFAULT = false;
 
