@@ -40,11 +40,6 @@ class S3CheckpointReaderClientTest {
     private final static String CHECKPOINT_FILE_1 = "v1\n" +
             "{\"path\":\"s3://" + CHECKPOINT_BUCKET + "/source/table1/committed-file-1.parquet\",\"timestamp\":1,\"batchId\":0}";
 
-    private final static String CHECKPOINT_FILE_2 = "v1\n" +
-            "{\"path\":\"s3://" + CHECKPOINT_BUCKET + "/source/table2/committed-file-1.parquet\",\"timestamp\":1,\"batchId\":0}\n" +
-            "{\"path\":\"s3://" + CHECKPOINT_BUCKET + "/source/table2/committed-file-2.parquet\",\"timestamp\":2,\"batchId\":1}\n" +
-            "{\"path\":\"s3://" + CHECKPOINT_BUCKET + "/source/table2/committed-file-3.parquet\",\"timestamp\":3,\"batchId\":1}";
-
     private S3CheckpointReaderClient underTest;
 
     @BeforeEach
@@ -67,8 +62,6 @@ class S3CheckpointReaderClientTest {
                 .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_0.getBytes(StandardCharsets.UTF_8));
         ResponseBytes<GetObjectResponse> checkpointFile1 = ResponseBytes
                 .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_1.getBytes(StandardCharsets.UTF_8));
-        ResponseBytes<GetObjectResponse> checkpointFile2 = ResponseBytes
-                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_2.getBytes(StandardCharsets.UTF_8));
 
         GetObjectRequest request0 = GetObjectRequest.builder()
                 .bucket(CHECKPOINT_BUCKET)
@@ -80,14 +73,8 @@ class S3CheckpointReaderClientTest {
                 .key("checkpoint-path/1")
                 .build();
 
-        GetObjectRequest request2 = GetObjectRequest.builder()
-                .bucket(CHECKPOINT_BUCKET)
-                .key("checkpoint-path/2")
-                .build();
-
         when(mockS3Client.getObject(eq(request0), any(ResponseTransformer.class))).thenReturn(checkpointFile0);
         when(mockS3Client.getObject(eq(request1), any(ResponseTransformer.class))).thenReturn(checkpointFile1);
-        when(mockS3Client.getObject(eq(request2), any(ResponseTransformer.class))).thenReturn(checkpointFile2);
 
         Set<String> committedFiles = underTest.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles);
 
@@ -95,9 +82,6 @@ class S3CheckpointReaderClientTest {
         expectedCommittedFiles.add("source/table0/committed-file-1.parquet");
         expectedCommittedFiles.add("source/table0/committed-file-2.parquet");
         expectedCommittedFiles.add("source/table1/committed-file-1.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-1.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-2.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-3.parquet");
 
         assertThat(committedFiles, containsInAnyOrder(expectedCommittedFiles.toArray()));
     }
@@ -106,25 +90,24 @@ class S3CheckpointReaderClientTest {
     @SuppressWarnings({"unchecked"})
     void shouldIgnoreTempFilesFromCheckpointFilesList() {
         List<FileLastModifiedDate> checkpointFiles = new ArrayList<>();
-        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/2"));
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/2")); // Most recent file will be ignored to allow reprocessing after recovery from failure
+        checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/1"));
         checkpointFiles.add(new FileLastModifiedDate("checkpoint-path/0.tmp"));
 
-        ResponseBytes<GetObjectResponse> checkpointFile2 = ResponseBytes
-                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_2.getBytes(StandardCharsets.UTF_8));
+        ResponseBytes<GetObjectResponse> checkpointFile1 = ResponseBytes
+                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_1.getBytes(StandardCharsets.UTF_8));
 
-        GetObjectRequest request2 = GetObjectRequest.builder()
+        GetObjectRequest request1 = GetObjectRequest.builder()
                 .bucket(CHECKPOINT_BUCKET)
-                .key("checkpoint-path/2")
+                .key("checkpoint-path/1")
                 .build();
 
-        when(mockS3Client.getObject(eq(request2), any(ResponseTransformer.class))).thenReturn(checkpointFile2);
+        when(mockS3Client.getObject(eq(request1), any(ResponseTransformer.class))).thenReturn(checkpointFile1);
 
         Set<String> committedFiles = underTest.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles);
 
         Set<String> expectedCommittedFiles = new HashSet<>();
-        expectedCommittedFiles.add("source/table2/committed-file-1.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-2.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-3.parquet");
+        expectedCommittedFiles.add("source/table1/committed-file-1.parquet");
 
         assertThat(committedFiles, containsInAnyOrder(expectedCommittedFiles.toArray()));
     }
@@ -140,29 +123,18 @@ class S3CheckpointReaderClientTest {
 
         ResponseBytes<GetObjectResponse> checkpointFile1 = ResponseBytes
                 .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_1.getBytes(StandardCharsets.UTF_8));
-        ResponseBytes<GetObjectResponse> checkpointFile2 = ResponseBytes
-                .fromByteArray(GetObjectResponse.builder().build(), CHECKPOINT_FILE_2.getBytes(StandardCharsets.UTF_8));
 
         GetObjectRequest request1 = GetObjectRequest.builder()
                 .bucket(CHECKPOINT_BUCKET)
                 .key("checkpoint-path/9.compact")
                 .build();
 
-        GetObjectRequest request2 = GetObjectRequest.builder()
-                .bucket(CHECKPOINT_BUCKET)
-                .key("checkpoint-path/10")
-                .build();
-
         when(mockS3Client.getObject(eq(request1), any(ResponseTransformer.class))).thenReturn(checkpointFile1);
-        when(mockS3Client.getObject(eq(request2), any(ResponseTransformer.class))).thenReturn(checkpointFile2);
 
         Set<String> committedFiles = underTest.getCommittedFiles(CHECKPOINT_BUCKET, checkpointFiles);
 
         Set<String> expectedCommittedFiles = new HashSet<>();
         expectedCommittedFiles.add("source/table1/committed-file-1.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-1.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-2.parquet");
-        expectedCommittedFiles.add("source/table2/committed-file-3.parquet");
 
         assertThat(committedFiles, containsInAnyOrder(expectedCommittedFiles.toArray()));
     }

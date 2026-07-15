@@ -64,7 +64,7 @@ public class S3CheckpointReaderClient {
 
     @NotNull
     private List<CheckpointFile> orderCheckpointFilesInReverseOrdering(List<FileLastModifiedDate> checkpointFiles) {
-        return checkpointFiles.stream()
+        List<CheckpointFile> processedCheckpointedFiles = checkpointFiles.stream()
                 .filter(checkpointFile -> !checkpointFile.key.toLowerCase().endsWith(".tmp"))
                 .map(checkpointFile -> {
                     Matcher matcher = checkpointFileRegexPattern.matcher(checkpointFile.key);
@@ -76,6 +76,12 @@ public class S3CheckpointReaderClient {
                     }
                 }).sorted(Collections.reverseOrder())
                 .collect(Collectors.toList());
+
+        // We ignore the most recent checkpoint file so the raw associated files with it do not get archived.
+        // This allows them to be reprocessed when the streaming job is restarted after a failure
+        if (!processedCheckpointedFiles.isEmpty()) processedCheckpointedFiles.remove(0);
+
+        return processedCheckpointedFiles;
     }
 
     private Set<String> getCommittedFiles(List<String> linesContainingCommittedFiles) {
