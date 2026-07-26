@@ -23,7 +23,6 @@ import javax.inject.Inject;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Optional;
 
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
@@ -84,7 +83,7 @@ public class CreateReloadDiffJob implements Runnable {
         if (useNow) {
             dmsStartTime = clock.instant();
         } else {
-            dmsStartTime = dmsOrchestrationService.getTaskStartTime(jobArguments.getDmsTaskId());
+            dmsStartTime = useStartTime();
         }
         val rawFilesPathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(jobArguments.getRawS3Path(), sparkSession);
         val rawArchiveFilesPathsByTable = tableDiscoveryService.discoverBatchFilesToLoad(jobArguments.getRawArchiveS3Path(), sparkSession);
@@ -119,6 +118,16 @@ public class CreateReloadDiffJob implements Runnable {
                 logger.warn("No raw file paths found for table {}.{}", schema, table);
             }
         }
+    }
+
+    private Instant useStartTime() {
+        Instant dmsStartTime;
+        if (jobArguments.shouldUseFixedTimeAsCheckpointForReloadJob()) {
+            dmsStartTime = jobArguments.reloadJobFixedStartDateTime();
+        } else {
+            dmsStartTime = dmsOrchestrationService.getTaskStartTime(jobArguments.getDmsTaskId());
+        }
+        return dmsStartTime;
     }
 
 }

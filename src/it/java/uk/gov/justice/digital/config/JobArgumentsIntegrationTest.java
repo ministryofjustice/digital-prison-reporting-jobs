@@ -10,7 +10,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.time.DateTimeException;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.AbstractMap;
 import java.util.Collections;
@@ -88,6 +90,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.DMS_REPLICATION_TASK_ID, "dpr-dms-task-id" },
             { JobArguments.CDC_DMS_REPLICATION_TASK_ID, "cdc-dpr-dms-task-id" },
             { JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, "true" },
+            { JobArguments.RELOAD_JOB_USE_FIXED_TIME_AS_CHECKPOINT, "false" },
             { JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS, "5" },
             { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, "10" },
             { JobArguments.MAX_S3_PAGE_SIZE, "100" },
@@ -165,6 +168,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.DMS_REPLICATION_TASK_ID, validArguments.getDmsTaskId() },
                 { JobArguments.CDC_DMS_REPLICATION_TASK_ID, validArguments.getCdcDmsTaskId() },
                 { JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, validArguments.shouldUseNowAsCheckpointForReloadJob() },
+                { JobArguments.RELOAD_JOB_USE_FIXED_TIME_AS_CHECKPOINT, validArguments.shouldUseFixedTimeAsCheckpointForReloadJob() },
                 { JobArguments.ORCHESTRATION_WAIT_INTERVAL_SECONDS, validArguments.orchestrationWaitIntervalSeconds() },
                 { JobArguments.ORCHESTRATION_MAX_ATTEMPTS, validArguments.orchestrationMaxAttempts() },
                 { JobArguments.MAX_S3_PAGE_SIZE, validArguments.getMaxObjectsPerPage() },
@@ -661,6 +665,46 @@ class JobArgumentsIntegrationTest {
         args.put(JobArguments.RELOAD_JOB_USE_NOW_AS_CHECKPOINT, input);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertEquals(expected, jobArguments.shouldUseNowAsCheckpointForReloadJob());
+    }
+
+    @Test
+    void shouldUseFixedTimeAsCheckpointForReloadJobForReloadJobShouldDefaultToFalseWhenMissing() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.RELOAD_JOB_USE_FIXED_TIME_AS_CHECKPOINT);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertFalse(jobArguments.shouldUseFixedTimeAsCheckpointForReloadJob());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false"})
+    void shouldUseFixedTimeAsCheckpointForReloadJobForReloadJobShouldUseProvidedBooleanValue(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.RELOAD_JOB_USE_FIXED_TIME_AS_CHECKPOINT, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.shouldUseFixedTimeAsCheckpointForReloadJob());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-04-15T21:11:09+01:00"})
+    void shouldParseReloadJobFixedDmsStartTime(String input) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.RELOAD_JOB_FIXED_DATE_TIME, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        Instant instant = jobArguments.reloadJobFixedStartDateTime();
+        assertEquals(1776283869, instant.getEpochSecond());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "2026-04-15T21:11:09, No time zone",
+            "2026-04T21:11:09+01:00, No month or day",
+            "04-15T21:11:09+01:00, No year"
+    })
+    void shouldFailToParseInvalidReloadJobFixedDmsStartTime(String input, String comment) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.RELOAD_JOB_FIXED_DATE_TIME, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(DateTimeException.class, jobArguments::reloadJobFixedStartDateTime, comment);
     }
 
     @Test

@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.service.datareconciliation.model.ReconciliationCheck;
 
 import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
@@ -141,6 +144,8 @@ public class JobArguments {
     static final String DMS_REPLICATION_TASK_ID = "dpr.dms.replication.task.id";
     static final String CDC_DMS_REPLICATION_TASK_ID = "dpr.cdc.dms.replication.task.id";
     static final String RELOAD_JOB_USE_NOW_AS_CHECKPOINT = "dpr.reload.checkpoint.use.now";
+    static final String RELOAD_JOB_USE_FIXED_TIME_AS_CHECKPOINT = "dpr.reload.checkpoint.use.fixed.time";
+    static final String RELOAD_JOB_FIXED_DATE_TIME = "dpr.reload.job.dms.date.time"; // Expected format: 2026-04-15T21:11:09+01:00
     static final String MAX_S3_PAGE_SIZE = "dpr.s3.max.page.size";
     static final Integer DEFAULT_MAX_S3_PAGE_SIZE = 1000;
     static final String CLEAN_CDC_CHECKPOINT = "dpr.clean.cdc.checkpoint";
@@ -520,6 +525,16 @@ public class JobArguments {
 
     public boolean shouldUseNowAsCheckpointForReloadJob() {
         return getArgument(RELOAD_JOB_USE_NOW_AS_CHECKPOINT, false);
+    }
+
+    public boolean shouldUseFixedTimeAsCheckpointForReloadJob() {
+        return getArgument(RELOAD_JOB_USE_FIXED_TIME_AS_CHECKPOINT, false);
+    }
+
+    public Instant reloadJobFixedStartDateTime() {
+        // Expected format: 2026-04-15T21:11:09+01:00
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+        return ZonedDateTime.parse(getArgument(RELOAD_JOB_FIXED_DATE_TIME), formatter).toInstant();
     }
 
     public boolean isOperationalDataStoreWriteEnabled() {

@@ -297,6 +297,42 @@ class CreateReloadDiffJobTest extends SparkTestBase {
     }
 
     @Test
+    void shouldCreateReloadDiffUsingFixedTimeWhenConfigured() {
+        Instant fixedStartTime = fixedDateTime.atZone(utcZoneId).minusDays(100).toInstant();
+
+        when(arguments.shouldUseNowAsCheckpointForReloadJob()).thenReturn(false);
+        when(arguments.shouldUseFixedTimeAsCheckpointForReloadJob()).thenReturn(true);
+        when(arguments.reloadJobFixedStartDateTime()).thenReturn(fixedStartTime);
+        when(arguments.getRawS3Path()).thenReturn(RAW_PATH);
+        when(arguments.getRawArchiveS3Path()).thenReturn(ARCHIVE_PATH);
+        when(arguments.getTempReloadS3Path()).thenReturn(TEMP_RELOAD_PATH);
+        when(arguments.getTempReloadOutputFolder()).thenReturn(OUTPUT_FOLDER);
+        when(tableDiscoveryService.discoverBatchFilesToLoad(RAW_PATH, spark))
+                .thenReturn(Collections.singletonMap(s1T1, Collections.singletonList("raw-t1-file1")));
+        when(tableDiscoveryService.discoverBatchFilesToLoad(ARCHIVE_PATH, spark)).thenReturn(Collections.emptyMap());
+        mockSourceReference(s1T1);
+
+        Dataset<Row> dataset = spark.createDataFrame(Collections.singletonList(
+                        createRow(1, "2023-11-13 10:50:00.123456", Insert, "1")),
+                TEST_DATA_SCHEMA
+        );
+
+        when(dataProvider.getBatchSourceData(spark, Collections.singletonList("raw-t1-file1"))).thenReturn(dataset);
+
+        underTest.runJob(spark);
+
+        verify(reloadDiffProcessor, times(1)).createDiff(
+                any(),
+                any(),
+                any(),
+                any(),
+                eq(fixedStartTime)
+        );
+
+        verify(dmsOrchestrationService, times(0)).getTaskStartTime(any());
+    }
+
+    @Test
     void shouldNotFailWhenThereAreNoRawFiles() {
         Instant dmsTaskStartTime = Instant.now();
 
