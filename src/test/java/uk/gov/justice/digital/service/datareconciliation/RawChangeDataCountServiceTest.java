@@ -14,6 +14,7 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
 
 import java.util.Arrays;
@@ -64,6 +65,8 @@ class RawChangeDataCountServiceTest extends SparkTestBase {
     @Mock
     private S3DataProvider s3DataProvider;
     @Mock
+    private RawArchiveLocationService rawArchiveLocationService;
+    @Mock
     private AnalysisException analysisException;
 
     @InjectMocks
@@ -73,6 +76,8 @@ class RawChangeDataCountServiceTest extends SparkTestBase {
     void shouldCombineRawAndRawArchiveCountsByOperation() {
         when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
+        when(rawArchiveLocationService.tablePath(RAW_ARCHIVE_PATH, "source", "table1")).thenReturn(RAW_ARCHIVE_PATH + "source/table1");
+        when(rawArchiveLocationService.tablePath(RAW_ARCHIVE_PATH, "source", "table2")).thenReturn(RAW_ARCHIVE_PATH + "source/table2");
 
         when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenReturn(inserts(spark));
         when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1")).thenReturn(rowPerPkDfSameTimestamp(spark));
@@ -99,6 +104,7 @@ class RawChangeDataCountServiceTest extends SparkTestBase {
     void shouldSetCountsToZeroWhenTablePathDoesNotExist() {
         when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
+        when(rawArchiveLocationService.tablePath(RAW_ARCHIVE_PATH, "source", "table1")).thenReturn(RAW_ARCHIVE_PATH + "source/table1");
 
         when(analysisException.getMessage()).thenReturn("Path does not exist");
         // We use thenAnswer instead of thenThrow because Scala treats checked
@@ -123,6 +129,7 @@ class RawChangeDataCountServiceTest extends SparkTestBase {
     void shouldIgnoreUnknownOperations() {
         when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
+        when(rawArchiveLocationService.tablePath(RAW_ARCHIVE_PATH, "source", "table1")).thenReturn(RAW_ARCHIVE_PATH + "source/table1");
 
         when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenReturn(withUnknownOperations(spark));
         when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1")).thenReturn(withUnknownOperations(spark));
@@ -143,6 +150,8 @@ class RawChangeDataCountServiceTest extends SparkTestBase {
 
         when(jobArguments.getRawS3Path()).thenReturn(RAW_PATH);
         when(jobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_PATH);
+        when(rawArchiveLocationService.tablePath(RAW_ARCHIVE_PATH, "source", "table1")).thenReturn(RAW_ARCHIVE_PATH + "source/table1");
+        when(rawArchiveLocationService.tablePath(RAW_ARCHIVE_PATH, "source", "table2")).thenReturn(RAW_ARCHIVE_PATH + "source/table2");
 
         when(s3DataProvider.getBatchSourceData(spark, RAW_PATH + "source/table1")).thenReturn(inserts(spark));
         when(s3DataProvider.getBatchSourceData(spark, RAW_ARCHIVE_PATH + "source/table1")).thenReturn(rowPerPkDfSameTimestamp(spark));

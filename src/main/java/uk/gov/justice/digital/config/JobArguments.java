@@ -68,6 +68,11 @@ public class JobArguments {
     public static final String IDLE_TIME_BETWEEN_READS_IN_MILLIS = "dpr.idle.time.between.reads.millis";
     public static final String RAW_S3_PATH = "dpr.raw.s3.path";
     public static final String RAW_ARCHIVE_S3_PATH = "dpr.raw.archive.s3.path";
+    // Versions raw archive paths as schema/table/<version>/... instead of schema/table/..., so pipelines can
+    // be migrated one at a time.
+    public static final String RAW_ARCHIVE_VERSIONED_PATHS_ENABLED = "dpr.raw.archive.versioned.paths.enabled";
+    // Required when RAW_ARCHIVE_VERSIONED_PATHS_ENABLED is true.
+    public static final String RAW_ARCHIVE_VERSION = "dpr.raw.archive.version";
     public static final String STRUCTURED_S3_PATH = "dpr.structured.s3.path";
     public static final String VIOLATIONS_S3_PATH = "dpr.violations.s3.path";
     public static final String TEMP_RELOAD_S3_PATH = "dpr.temp.reload.s3.path";
@@ -280,6 +285,14 @@ public class JobArguments {
 
     public String getRawArchiveS3Path() {
         return getArgument(RAW_ARCHIVE_S3_PATH);
+    }
+
+    public boolean isRawArchiveVersionedPathsEnabled() {
+        return getArgument(RAW_ARCHIVE_VERSIONED_PATHS_ENABLED, false);
+    }
+
+    public Optional<String> getRawArchiveVersion() {
+        return Optional.ofNullable(config.get(RAW_ARCHIVE_VERSION));
     }
 
     public String getStructuredS3Path() {
