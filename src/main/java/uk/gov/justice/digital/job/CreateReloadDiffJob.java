@@ -12,10 +12,12 @@ import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.RawArchiveVersioningException;
 import uk.gov.justice.digital.exception.SchemaNotFoundException;
 import uk.gov.justice.digital.job.batchprocessing.ReloadDiffProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DmsOrchestrationService;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
@@ -44,6 +46,7 @@ public class CreateReloadDiffJob implements Runnable {
     private final ReloadDiffProcessor reloadDiffProcessor;
     private final SourceReferenceService sourceReferenceService;
     private final Clock clock;
+    private final RawArchiveLocationService rawArchiveLocationService;
 
     @Inject
     public CreateReloadDiffJob(
@@ -55,7 +58,8 @@ public class CreateReloadDiffJob implements Runnable {
             DmsOrchestrationService dmsOrchestrationService,
             ReloadDiffProcessor reloadDiffProcessor,
             SourceReferenceService sourceReferenceService,
-            Clock clock
+            Clock clock,
+            RawArchiveLocationService rawArchiveLocationService
     ) {
         this.jobArguments = jobArguments;
         this.dataProvider = dataProvider;
@@ -66,6 +70,7 @@ public class CreateReloadDiffJob implements Runnable {
         this.reloadDiffProcessor = reloadDiffProcessor;
         this.sourceReferenceService = sourceReferenceService;
         this.clock = clock;
+        this.rawArchiveLocationService = rawArchiveLocationService;
     }
 
     public static void main(String[] args) {
@@ -79,6 +84,14 @@ public class CreateReloadDiffJob implements Runnable {
 
     @VisibleForTesting
     void runJob(SparkSession sparkSession) throws RuntimeException {
+        // This job is being phased out and never handles versioned raw archive paths - fail fast rather than
+        // read against the wrong layout.
+        if (rawArchiveLocationService.isVersioningEnabled()) {
+            throw new RawArchiveVersioningException(
+                    "CreateReloadDiffJob does not support versioned raw archive paths and should not be run once a pipeline has migrated to them"
+            );
+        }
+
         val useNow = jobArguments.shouldUseNowAsCheckpointForReloadJob();
         Instant dmsStartTime;
         if (useNow) {
