@@ -126,6 +126,14 @@ public class JobArguments {
     public static final boolean DELTA_LAKE_LIQUID_CLUSTERING_ENABLED_DEFAULT = false;
     public static final String DELTA_LAKE_DELETION_VECTORS_ENABLED = "dpr.delta.lake.deletion.vectors.enabled";
     public static final boolean DELTA_LAKE_DELETION_VECTORS_ENABLED_DEFAULT = false;
+    public static final String DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_AMOUNT = "dpr.delta.lake.deleted.file.retention.duration.amount";
+    public static final String DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT = "dpr.delta.lake.deleted.file.retention.duration.unit";
+    public static final long DEFAULT_DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_AMOUNT = 1L;
+    public static final String DEFAULT_DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT = "days";
+    public static final String DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT = "dpr.delta.lake.log.retention.duration.amount";
+    public static final long DEFAULT_DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT = 1L;
+    public static final String DELTA_LAKE_LOG_RETENTION_DURATION_UNIT = "dpr.delta.lake.log.retention.duration.unit";
+    public static final String DEFAULT_DELTA_LAKE_LOG_RETENTION_DURATION_UNIT = "days";
 
     // A comma separated list of buckets to delete files from
     static final String FILE_DELETION_BUCKETS = "dpr.file.deletion.buckets";
@@ -478,6 +486,24 @@ public class JobArguments {
         return getArgument(DELTA_LAKE_DELETION_VECTORS_ENABLED, DELTA_LAKE_DELETION_VECTORS_ENABLED_DEFAULT);
     }
 
+    public String deltaLakeDeletedFileRetentionDuration() {
+        return getDeltaLakeRetentionDuration(
+                DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_AMOUNT,
+                DEFAULT_DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_AMOUNT,
+                DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT,
+                DEFAULT_DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT
+        );
+    }
+
+    public String deltaLakeLogRetentionDuration() {
+        return getDeltaLakeRetentionDuration(
+                DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT,
+                DEFAULT_DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT,
+                DELTA_LAKE_LOG_RETENTION_DURATION_UNIT,
+                DEFAULT_DELTA_LAKE_LOG_RETENTION_DURATION_UNIT
+        );
+    }
+
     public Duration getRawFileRetentionPeriod() {
         long retentionAmount = getArgument(RAW_FILE_RETENTION_PERIOD_AMOUNT, DEFAULT_RAW_FILE_RETENTION_PERIOD_AMOUNT);
         String retentionUnit = getArgument(RAW_FILE_RETENTION_PERIOD_UNIT, DEFAULT_RAW_FILE_RETENTION_PERIOD_UNIT);
@@ -787,6 +813,19 @@ public class JobArguments {
             default:
                 String error = String.format("Unsupported %s=%s. Allowed values are: minutes, hours, days", argumentKey, retentionUnit);
                 throw new IllegalArgumentException(error);
+        }
+    }
+
+    @NotNull
+    private String getDeltaLakeRetentionDuration(String amountKey, long defaultAmount, String unitKey, String defaultUnit) {
+        long durationAmount = getArgument(amountKey, defaultAmount);
+        String durationUnit = getArgument(unitKey, defaultUnit);
+        try {
+            return durationAmount + " " + ChronoUnit.valueOf(durationUnit.toUpperCase()).name().toLowerCase();
+        } catch (Exception ex) {
+            String allowedDurationUnits = Arrays.toString(ChronoUnit.values());
+            String error = String.format("Unsupported delta retention duration unit [%s]. Allowed values are: %s", unitKey, allowedDurationUnits);
+            throw new IllegalArgumentException(error);
         }
     }
 }

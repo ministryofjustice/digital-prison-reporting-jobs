@@ -148,6 +148,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         givenRetrySettingsAreConfigured(arguments);
         when(arguments.getOperationalDataStoreJdbcBatchSize()).thenReturn(OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE_DEFAULT);
         when(arguments.getOperationalDataStoreGlueConnectionName()).thenReturn("operational-datastore-connection-name");
+        givenDeltaRetentionDurationArguments(arguments);
         when(properties.getSparkDriverMemory()).thenReturn("2g");
         when(properties.getSparkExecutorMemory()).thenReturn("2g");
     }

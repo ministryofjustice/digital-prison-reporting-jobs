@@ -76,8 +76,9 @@ public class DataStorageService {
     }
 
     public boolean exists(SparkSession spark, TableIdentifier tableId) {
-        val exists = DeltaTable.isDeltaTable(spark, tableId.toPath());
-        logger.info("Delta table path {} {}", tableId.toPath(), (exists) ? "exists" : "does not exist");
+        String tablePath = tableId.toPath();
+        val exists = DeltaTable.isDeltaTable(spark, tablePath);
+        logger.info("Delta table path {} {}", tablePath, (exists) ? "exists" : "does not exist");
         return exists;
     }
 
@@ -94,7 +95,7 @@ public class DataStorageService {
     }
 
     public void append(@NotNull String tablePath, @NotNull Dataset<Row> df) throws DataStorageRetriesExhaustedException {
-        logger.debug("Appending schema and data to " + tablePath);
+        logger.debug("Appending schema and data to {}", tablePath);
         doWithRetryOnConcurrentModification(() ->
                 df.write()
                         .format("delta")
@@ -136,7 +137,9 @@ public class DataStorageService {
                 .createIfNotExists(spark)
                 .addColumns(schema)
                 .location(tablePath)
-                .property("delta.enableDeletionVectors", Boolean.toString(jobArguments.areDeltaLakeDeletionVectorsEnabled()));
+                .property("delta.enableDeletionVectors", Boolean.toString(jobArguments.areDeltaLakeDeletionVectorsEnabled()))
+                .property("delta.deletedFileRetentionDuration", jobArguments.deltaLakeDeletedFileRetentionDuration())
+                .property("delta.logRetentionDuration", jobArguments.deltaLakeLogRetentionDuration());
         if (jobArguments.isDeltaLakeLiquidClusteringEnabled()) {
             Seq<String> clusteringColumns = getClusteringColumns(primaryKey);
             // Set Liquid Clustering columns

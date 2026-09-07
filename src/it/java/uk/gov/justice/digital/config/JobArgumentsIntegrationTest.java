@@ -304,6 +304,60 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
+    void shouldDefaultToOneDayForDeltaLakeDeletedFileRetentionDuration() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_AMOUNT);
+        args.remove(JobArguments.DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("1 days", jobArguments.deltaLakeDeletedFileRetentionDuration());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "minute", "hour", "day", "week", "month" })
+    void shouldFailForNonPluralizedDeltaLakeDeletedFileRetentionDurationUnit(String unit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT, unit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::deltaLakeDeletedFileRetentionDuration);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "any", "1" })
+    void shouldFailForInvalidDeltaLakeDeletedFileRetentionDurationUnit(String unit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT, unit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::deltaLakeDeletedFileRetentionDuration);
+    }
+
+    @Test
+    void shouldDefaultToOneDayForDeltaLakeLogRetentionDuration() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT);
+        args.remove(JobArguments.DELTA_LAKE_LOG_RETENTION_DURATION_UNIT);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("1 days", jobArguments.deltaLakeLogRetentionDuration());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "minute", "hour", "day", "week", "month" })
+    void shouldFailForNonPluralizedDeltaLakeLogRetentionDurationUnit(String unit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DELTA_LAKE_LOG_RETENTION_DURATION_UNIT, unit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::deltaLakeLogRetentionDuration);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "any", "1" })
+    void shouldFailForInvalidDeltaLakeLogRetentionDurationUnit(String unit) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DELTA_LAKE_LOG_RETENTION_DURATION_UNIT, unit);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertThrows(IllegalArgumentException.class, jobArguments::deltaLakeLogRetentionDuration);
+    }
+
+    @Test
     void shouldDefaultOperationalDataStoreJdbcBatchSizeTo1000() {
         HashMap<String, String> args = cloneTestArguments();
         args.remove(JobArguments.OPERATIONAL_DATA_STORE_JDBC_BATCH_SIZE);

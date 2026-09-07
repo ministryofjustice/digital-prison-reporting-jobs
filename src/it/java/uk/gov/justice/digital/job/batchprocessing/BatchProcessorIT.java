@@ -105,6 +105,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ), TEST_DATA_SCHEMA_NON_NULLABLE_COLUMNS);
 
         givenEmptyTableExists(operationalDataStoreFullTableName, input, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, input);
 
@@ -124,6 +125,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ), TEST_DATA_SCHEMA);
 
         givenEmptyTableExists(operationalDataStoreFullTableName, input, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, input);
 
@@ -245,6 +247,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ), TEST_DATA_SCHEMA);
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfNullNonNullableCols, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, dfNullNonNullableCols);
 

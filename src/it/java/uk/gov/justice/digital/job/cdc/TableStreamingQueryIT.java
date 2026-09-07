@@ -142,6 +142,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
         whenInsertOccursForPK(pk2, "data2", "20260205124524000000000000050700001");
@@ -163,6 +164,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenInsertOccursForPK(pk1, "data1a", "20260205124524000000000000050700001");
         whenInsertOccursForPK(pk2, "data2a", "20260205124524000000000000050700001");
@@ -203,6 +205,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
 
@@ -226,6 +229,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenInsertOccursForPK(pk1, "data1a", "20260205124524000000000000050700001");
         whenUpdateOccursForPK(pk1, "data1b", "20260205124524000000000000050700002");
@@ -263,6 +267,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
 
@@ -298,6 +303,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenUpdateOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
         whenDeleteOccursForPK(pk2, "20260205124524000000000000050700001");
@@ -317,6 +323,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
         whenInsertOccursForWithNullForNonNullableTimestampColumn(pk2, "data2", "20260205124524000000000000050700001");
@@ -375,6 +382,7 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         givenAnInputStream();
         givenTableStreamingQuery();
         givenTheStreamingQueryRuns();
+        givenDeltaRetentionDurationArguments(arguments);
 
         whenInsertOccursForPK(pk1, "data1", "20260205124524000000000000050700001");
         whenUpdateOccursForPK(pk2, "data2", "20260205124524000000000000050700001");
