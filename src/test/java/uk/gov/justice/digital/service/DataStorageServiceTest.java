@@ -299,6 +299,7 @@ class DataStorageServiceTest extends SparkTestBase {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(true);
         when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(false);
         stubDeltaTableCreateIfNotExists();
+        givenDeltaRetentionDurationArguments(mockJobArguments);
         Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
 
         underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
@@ -313,6 +314,7 @@ class DataStorageServiceTest extends SparkTestBase {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(false);
         when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(false);
         stubDeltaTableCreateIfNotExists();
+        givenDeltaRetentionDurationArguments(mockJobArguments);
         Seq<String> expectedClusterColumns = JavaConverters.asScalaBufferConverter(List.of("arbitrary")).asScala().toSeq();
 
         underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
@@ -326,6 +328,7 @@ class DataStorageServiceTest extends SparkTestBase {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(false);
         when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(true);
         stubDeltaTableCreateIfNotExists();
+        givenDeltaRetentionDurationArguments(mockJobArguments);
 
         underTest.createDeltaTableIfNotExists(spark, tableId.toPath(), mockSchema, arbitraryPrimaryKey);
 
@@ -338,6 +341,7 @@ class DataStorageServiceTest extends SparkTestBase {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(true);
         when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(false);
         stubDeltaTableCreateIfNotExists();
+        givenDeltaRetentionDurationArguments(mockJobArguments);
         SourceReference.PrimaryKey manyColumnsPrimaryKey = new SourceReference.PrimaryKey(List.of(
                 "col1",
                 "col2",
@@ -378,6 +382,7 @@ class DataStorageServiceTest extends SparkTestBase {
 
         stubDeltaTableCreateIfNotExists();
         stubMergeRecordsCdc();
+        givenDeltaRetentionDurationArguments(mockJobArguments);
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(3, mockJobArguments);
@@ -445,6 +450,7 @@ class DataStorageServiceTest extends SparkTestBase {
 
         stubDeltaTableCreateIfNotExists();
         stubMergeRecordsCdc();
+        givenDeltaRetentionDurationArguments(mockJobArguments);
 
         givenDeltaTableExists();
         givenConfiguredRetriesJobArgs(retryAttempts, mockJobArguments);

@@ -37,6 +37,7 @@ class DataStorageServiceMergeRecordsIntegrationTest extends BaseMinimalDataInteg
     @BeforeEach
     void setUp() {
         givenRetrySettingsAreConfigured(arguments);
+        givenDeltaRetentionDurationArguments(arguments);
         givenParquetPartitionSettingsAreConfigured(arguments, properties);
         givenPathIsConfigured();
         underTest = new DataStorageService(arguments, properties);

@@ -154,4 +154,9 @@ public class SparkTestBase {
 		when(properties.getSparkExecutorCores()).thenReturn(2);
 	}
 
+	protected static void givenDeltaRetentionDurationArguments(JobArguments arguments) {
+		when(arguments.deltaLakeDeletedFileRetentionDuration()).thenReturn("1 days");
+		when(arguments.deltaLakeLogRetentionDuration()).thenReturn("1 days");
+	}
+
 }
