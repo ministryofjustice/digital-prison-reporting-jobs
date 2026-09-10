@@ -106,9 +106,9 @@ public class DataStorageService {
     }
 
     public void appendDistinct(@NotNull String tablePath, @NotNull Dataset<Row> df, @NotNull SourceReference.PrimaryKey primaryKey) throws DataStorageRetriesExhaustedException {
-        if (!df.isEmpty()) {
-            val dt = getTable(df.sparkSession(), tablePath);
-            if (dt.isPresent()) {
+        val dt = getTable(df.sparkSession(), tablePath);
+        if (dt.isPresent()) {
+            if (!df.isEmpty()) {
                 val condition = primaryKey.getSparkCondition(SOURCE, TARGET);
                 doWithRetryOnConcurrentModification(() ->
                         dt.get().as(SOURCE)
@@ -116,8 +116,10 @@ public class DataStorageService {
                                 .whenNotMatched().insertAll()
                                 .execute()
                 );
-            } else {
-                createDeltaTableIfNotExists(df.sparkSession(), tablePath, df.schema(), primaryKey);
+            }
+        } else {
+            createDeltaTableIfNotExists(df.sparkSession(), tablePath, df.schema(), primaryKey);
+            if (!df.isEmpty()) {
                 append(tablePath, df);
             }
         }

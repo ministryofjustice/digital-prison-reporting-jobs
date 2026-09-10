@@ -5,7 +5,10 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -23,10 +26,13 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
 import java.time.Clock;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
+import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
 
 @Singleton
@@ -94,20 +100,66 @@ public class DataHubBatchJob implements Runnable {
             throw new RuntimeException(msg);
         }
         for (val entry: pathsByTable.entrySet()) {
-            val tableStartTime = clock.millis();
-            val schema = entry.getKey().getLeft();
-            val table = entry.getKey().getRight();
-            logger.info("Processing table {}.{}", schema, table);
-            val filePaths = entry.getValue();
-            if(!filePaths.isEmpty()) {
-                processFilePaths(sparkSession, schema, table, filePaths, tableStartTime);
-            } else {
-                logger.warn("No paths found for table {}.{}", schema, table);
+            String schema = entry.getKey().getLeft();
+            String table = entry.getKey().getRight();
+            List<String> filePaths = entry.getValue();
+            processTable(sparkSession, schema, table, filePaths);
+        }
+
+        // Some configured tables have no raw files at all, so they're missing from pathsByTable entirely.
+        // Process those too, passing no file paths, so their curated/structured tables still get created.
+        for (val configuredTable: tableDiscoveryService.discoverTablesToProcess()) {
+            boolean alreadyProcessedAbove = pathsByTable.containsKey(configuredTable);
+            if (!alreadyProcessedAbove) {
+                String schema = configuredTable.getLeft();
+                String table = configuredTable.getRight();
+                processTable(sparkSession, schema, table, Collections.emptyList());
             }
         }
+
         long timeTakenMillis = clock.millis() - startTime;
         metricReportingService.reportBatchJobTimeTaken(timeTakenMillis);
         logger.info("Finished processing Raw {} table by table in {}ms", rawPath, timeTakenMillis);
+    }
+
+    /**
+     * Processes a single configured table for this run: from its raw files if it has any, or - so its
+     * curated/structured Delta tables still get created with the correct schema - as an empty table if not.
+     */
+    private void processTable(SparkSession sparkSession, String schema, String table, List<String> filePaths) throws DataStorageException {
+        val tableStartTime = clock.millis();
+        logger.info("Processing table {}.{}", schema, table);
+        if (!filePaths.isEmpty()) {
+            processFilePaths(sparkSession, schema, table, filePaths, tableStartTime);
+        } else {
+            processEmptyTable(sparkSession, schema, table, tableStartTime);
+        }
+    }
+
+    /**
+     * Runs an empty, but correctly schema'd, DataFrame through the batch processor so the structured/curated
+     * Delta tables are still created (with no rows) for a table that has no raw batch files this run.
+     */
+    private void processEmptyTable(SparkSession sparkSession, String schema, String table, long tableStartTime) {
+        Optional<SourceReference> maybeSourceReference = sourceReferenceService.getSourceReference(schema, table);
+        if (maybeSourceReference.isPresent()) {
+            SourceReference sourceReference = maybeSourceReference.get();
+            logger.info("No files found for table {}.{} - creating empty table(s) with schema", schema, table);
+            Dataset<Row> emptyDataFrame = createEmptyRawDataFrame(sparkSession, sourceReference);
+            batchProcessor.processBatch(sparkSession, sourceReference, emptyDataFrame);
+            logger.info("Processed table {}.{} in {}ms", schema, table, clock.millis() - tableStartTime);
+        } else {
+            logger.warn("No source reference for table {}.{} and no files found - skipping", schema, table);
+        }
+    }
+
+    /**
+     * Builds an empty DataFrame shaped like a real raw batch for this table, including the DMS metadata columns,
+     * so a table created from it has the same schema as one created from real data.
+     */
+    private Dataset<Row> createEmptyRawDataFrame(SparkSession sparkSession, SourceReference sourceReference) {
+        StructType rawSchema = withCheckpointField(withMetadataFields(sourceReference.getSchema()));
+        return sparkSession.createDataFrame(Collections.<Row>emptyList(), rawSchema);
     }
 
     private void processFilePaths(SparkSession sparkSession, String schema, String table, List<String> filePaths, long tableStartTime) throws DataStorageException {
