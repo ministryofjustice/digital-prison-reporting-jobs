@@ -22,6 +22,7 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.service.metrics.MetricReportingService;
 
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -102,13 +103,14 @@ class DataHubBatchJobTest {
     }
 
     @Test
-    void shouldRunAQueryPerTableButIgnoreTablesWithoutFiles() {
+    void shouldRunAQueryPerTableButSkipTablesWithoutFilesOrASchema() {
         stubRawPath();
         stubReadData();
         stubDiscoveredTablePaths();
 
         when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.of(sourceReference1));
         when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.of(sourceReference2));
+        // s3/t3 has no files and no schema/source reference, so it can't be processed at all
 
         underTest.runJob(spark);
 
@@ -117,6 +119,51 @@ class DataHubBatchJobTest {
         verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
         // and no other tables...
         verify(batchProcessor, times(2)).processBatch(any(), any(), any());
+    }
+
+    @Test
+    void shouldCreateEmptyTableForConfiguredTableWithAnEmptyFileList() {
+        stubRawPath();
+        stubReadData();
+        stubDiscoveredTablePaths();
+
+        // s1/t1 and s2/t2 have real files too - give them no schema so they're simply written to violations
+        when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.empty());
+        when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.empty());
+        // s3/t3 is present in discoveredPathsByTable with an empty file list
+        when(sourceReferenceService.getSourceReference("s3", "t3")).thenReturn(Optional.of(sourceReference1));
+        when(sourceReference1.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+
+        underTest.runJob(spark);
+
+        // Batch processor is still invoked (with an empty DataFrame) so the empty table gets created
+        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
+    }
+
+    @Test
+    void shouldCreateEmptyTableForConfiguredTableMissingFromDiscoveredPaths() {
+        stubRawPath();
+        stubReadData();
+        when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(discoveredPathsByTable);
+
+        // s4/t4 is configured but has no files at all, so it's missing from discoveredPathsByTable
+        ImmutablePair<String, String> missingTable = new ImmutablePair<>("s4", "t4");
+        List<ImmutablePair<String, String>> allConfiguredTables = new ArrayList<>(discoveredPathsByTable.keySet());
+        allConfiguredTables.add(missingTable);
+        when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(allConfiguredTables);
+
+        // s1/t1 and s2/t2 have real files too - give them no schema so they're simply written to violations
+        when(sourceReferenceService.getSourceReference("s1", "t1")).thenReturn(Optional.empty());
+        when(sourceReferenceService.getSourceReference("s2", "t2")).thenReturn(Optional.empty());
+        // s3/t3 has an empty file list and no schema either
+        when(sourceReferenceService.getSourceReference("s3", "t3")).thenReturn(Optional.empty());
+        when(sourceReferenceService.getSourceReference("s4", "t4")).thenReturn(Optional.of(sourceReference1));
+        when(sourceReference1.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS);
+
+        underTest.runJob(spark);
+
+        // Batch processor is still invoked (with an empty DataFrame) so the empty table gets created
+        verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference1), any());
     }
 
     @Test
@@ -178,6 +225,9 @@ class DataHubBatchJobTest {
 
     private void stubDiscoveredTablePaths() {
         when(tableDiscoveryService.discoverBatchFilesToLoad(rawPath, spark)).thenReturn(discoveredPathsByTable);
+        // By default, every configured table already has a key in discoveredPathsByTable (even s3/t3 - just with
+        // an empty file list), so the "missing from the map entirely" case is not exercised unless a test overrides this.
+        when(tableDiscoveryService.discoverTablesToProcess()).thenReturn(new ArrayList<>(discoveredPathsByTable.keySet()));
     }
 
     private void stubEmptyDiscoveredTablePaths() {

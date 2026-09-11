@@ -18,6 +18,7 @@ import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.apache.spark.sql.functions.lit;
@@ -83,11 +84,16 @@ class BatchProcessorTest extends SparkTestBase {
     }
 
     @Test
-    void shouldSkipProcessingForEmptyDataframe() {
-        underTest.processBatch(spark, sourceReference, spark.emptyDataFrame());
+    void shouldStillProcessZonesForEmptyDataframeToEnsureTablesAreCreated() {
+        Dataset<Row> emptyDf = spark.createDataFrame(Collections.<Row>emptyList(), TEST_DATA_SCHEMA);
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), any(), eq(STRUCTURED_LOAD))).thenReturn(emptyDf);
+        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(emptyDf);
+        when(curatedZoneLoad.process(any(), any(), any())).thenReturn(emptyDf);
 
-        verify(structuredZoneLoad, times(0)).process(any(), any(), any());
-        verify(curatedZoneLoad, times(0)).process(any(), any(), any());
+        underTest.processBatch(spark, sourceReference, emptyDf);
+
+        verify(structuredZoneLoad, times(1)).process(any(), any(), any());
+        verify(curatedZoneLoad, times(1)).process(any(), any(), any());
         verify(operationalDataStoreService, times(0)).overwriteData(any(), any());
     }
 

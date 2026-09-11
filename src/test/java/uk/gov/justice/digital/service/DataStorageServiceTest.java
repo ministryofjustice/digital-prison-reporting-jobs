@@ -295,6 +295,31 @@ class DataStorageServiceTest extends SparkTestBase {
     }
 
     @Test
+    void shouldCreateDeltaTableWhenAppendDistinctCalledWithEmptyDataframeAndNoExistingTable() {
+        when(mockDataSet.isEmpty()).thenReturn(true);
+        when(mockDataSet.sparkSession()).thenReturn(spark);
+        when(mockDataSet.schema()).thenReturn(mockSchema);
+        stubDeltaTableCreateIfNotExists();
+        givenDeltaRetentionDurationArguments(mockJobArguments);
+
+        underTest.appendDistinct(tablePath, mockDataSet, arbitraryPrimaryKey);
+
+        verify(mockDeltaTableBuilder, times(1)).execute();
+        verify(mockDataSet, never()).write();
+    }
+
+    @Test
+    void shouldNotAttemptMergeWhenAppendDistinctCalledWithEmptyDataframeAndTableAlreadyExists() {
+        when(mockDataSet.isEmpty()).thenReturn(true);
+        when(mockDataSet.sparkSession()).thenReturn(spark);
+        givenDeltaTableExists();
+
+        underTest.appendDistinct(tablePath, mockDataSet, arbitraryPrimaryKey);
+
+        verify(mockDeltaTable, never()).merge(any(), anyString());
+    }
+
+    @Test
     void shouldCreateDeltaTableClusteringByPrimaryKey() {
         when(mockJobArguments.isDeltaLakeLiquidClusteringEnabled()).thenReturn(true);
         when(mockJobArguments.areDeltaLakeDeletionVectorsEnabled()).thenReturn(false);

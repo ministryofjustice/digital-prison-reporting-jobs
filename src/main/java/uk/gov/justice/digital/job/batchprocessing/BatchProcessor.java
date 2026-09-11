@@ -52,28 +52,33 @@ public class BatchProcessor {
 
     @SuppressWarnings({"java:S2139", "java:S112"})
     public void processBatch(SparkSession spark, SourceReference sourceReference, Dataset<Row> dataFrame) {
-        if(!dataFrame.isEmpty()) {
-            String sourceName = sourceReference.getSource();
-            String tableName = sourceReference.getTable();
-            logger.info("Processing records {}/{}", sourceName, tableName);
+        String sourceName = sourceReference.getSource();
+        String tableName = sourceReference.getTable();
+        logger.info("Processing records {}/{}", sourceName, tableName);
 
-            val startTime = System.currentTimeMillis();
+        val startTime = System.currentTimeMillis();
+        boolean hasData = !dataFrame.isEmpty();
+        if (hasData) {
             dataFrame.persist();
-            val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
-            StructType inferredSchema = filteredDf.schema();
-            val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
-            val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-            val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+        } else {
+            logger.info("Batch is empty for {}/{} - ensuring tables exist with correct schema, skipping Operational Data Store write", sourceName, tableName);
+        }
+
+        val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
+        StructType inferredSchema = filteredDf.schema();
+        val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
+        val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
+        val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+
+        if (hasData) {
             operationalDataStoreService.overwriteData(curatedLoadDf, sourceReference);
             dataFrame.unpersist();
-
-            logger.info("Processed records {}/{} in {}ms",
-                    sourceName,
-                    tableName,
-                    System.currentTimeMillis() - startTime
-            );
-        } else {
-            logger.info("Skipping empty batch");
         }
+
+        logger.info("Processed records {}/{} in {}ms",
+                sourceName,
+                tableName,
+                System.currentTimeMillis() - startTime
+        );
     }
 }
