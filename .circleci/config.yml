@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@1.0.68
+  reporting: ministryofjustice/hmpps-reporting@v1.0.80-dev.1+DPR2-3168-pass-test_command.a11665e
   slack: circleci/slack@4.12.5  
 
 workflows:
@@ -24,7 +24,7 @@ workflows:
           notify_jira: true
           notify_slack: true
           channel: dpr_cicd_alerts
-          test_command: check # Run unit and integration tests (check.dependsOn integrationTest)
+          test_command: check # Run unit and integration tests
           command: jar shadowJar # Skip tests when building jar, they've already run
           filters:
             branches:
