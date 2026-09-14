@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  reporting: ministryofjustice/hmpps-reporting@v1.0.80-dev.1+DPR2-3168-pass-test_command.a11665e
+  reporting: ministryofjustice/hmpps-reporting@dev:a11665e45c3e81df4e0bbc7ff53b8b3459f01aa6
   slack: circleci/slack@4.12.5  
 
 workflows:
