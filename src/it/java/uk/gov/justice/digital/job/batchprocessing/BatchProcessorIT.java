@@ -145,6 +145,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ), TEST_DATA_SCHEMA).withColumn("extra-column", lit(1));
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -166,6 +167,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         when(sourceReference.getSchema()).thenReturn(SCHEMA_WITHOUT_METADATA_FIELDS_NON_NULLABLE_DATA_COLUMN);
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -186,6 +188,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1));
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -206,6 +209,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1));
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
@@ -226,6 +230,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ), TEST_DATA_SCHEMA).withColumn("data", lit(1L));
 
         givenEmptyTableExists(operationalDataStoreFullTableName, dfWithMisMatchingSchema, testQueryConnection, operationalDataStore);
+        givenDeltaRetentionDurationArguments(arguments);
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 

@@ -214,7 +214,7 @@ tasks.register('integrationTest', Test) {
 
     reports {
         html.outputLocation = file("$buildDir/reports/integration-test")
-        junitXml.outputLocation = file("$buildDir/integration-test-results")
+        junitXml.outputLocation = file("$buildDir/test-results/integrationTest")
     }
 
     shouldRunAfter test
