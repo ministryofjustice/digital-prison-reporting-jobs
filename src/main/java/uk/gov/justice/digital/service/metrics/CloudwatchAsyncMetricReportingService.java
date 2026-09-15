@@ -120,12 +120,6 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToStructured(long count) {
-        MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED, StandardUnit.COUNT, count);
-        bufferMetric(metricDatum);
-    }
-
-    @Override
     public void reportStreamingThroughputWrittenToCurated(long count) {
         MetricDatum metricDatum = buildValueMetricWithJobNameDimension(MetricName.GLUE_JOB_STREAMING_THROUGHPUT_CURATED, StandardUnit.COUNT, count);
         bufferMetric(metricDatum);
@@ -261,7 +255,6 @@ public class CloudwatchAsyncMetricReportingService implements MetricReportingSer
         FAILED_RECONCILIATION_CHECKS("FailedReconciliationChecks"),
         GLUE_JOB_VIOLATION_COUNT("GlueJobViolationCount"),
         GLUE_JOB_STREAMING_THROUGHPUT_INPUT("GlueJobStreamingThroughputInputCount"),
-        GLUE_JOB_STREAMING_THROUGHPUT_STRUCTURED("GlueJobStreamingThroughputStructuredCount"),
         GLUE_JOB_STREAMING_THROUGHPUT_CURATED("GlueJobStreamingThroughputCuratedCount"),
         GLUE_JOB_STREAMING_MICROBATCH_TIME("GlueJobStreamingMicroBatchTime"),
         GLUE_JOB_STREAMING_LATENCY_DMS_TO_CURATED("GlueJobStreamingLatencyDmsToCurated"),
