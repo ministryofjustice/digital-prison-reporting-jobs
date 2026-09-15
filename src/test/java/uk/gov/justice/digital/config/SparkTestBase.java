@@ -113,7 +113,7 @@ public class SparkTestBase {
 		try {
 			Dataset<Row> df = spark.read().format("delta").load(tablePath);
 			List<Row> result = df
-					.select(DATA_COLUMN)
+					.select(PRIMARY_KEY_COLUMN)
 					.where(col(PRIMARY_KEY_COLUMN).equalTo(lit(primaryKey)))
 					.collectAsList();
 			assertEquals(0, result.size());
