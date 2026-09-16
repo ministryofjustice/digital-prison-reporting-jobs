@@ -336,7 +336,7 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT);
         args.remove(JobArguments.DELTA_LAKE_LOG_RETENTION_DURATION_UNIT);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals("1 days", jobArguments.deltaLakeLogRetentionDuration());
+        assertEquals("7 days", jobArguments.deltaLakeLogRetentionDuration());
     }
 
     @ParameterizedTest

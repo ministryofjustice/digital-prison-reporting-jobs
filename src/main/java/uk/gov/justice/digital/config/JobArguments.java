@@ -131,7 +131,7 @@ public class JobArguments {
     public static final long DEFAULT_DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_AMOUNT = 1L;
     public static final String DEFAULT_DELTA_LAKE_DELETED_FILE_RETENTION_DURATION_UNIT = "days";
     public static final String DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT = "dpr.delta.lake.log.retention.duration.amount";
-    public static final long DEFAULT_DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT = 1L;
+    public static final long DEFAULT_DELTA_LAKE_LOG_RETENTION_DURATION_AMOUNT = 7L;
     public static final String DELTA_LAKE_LOG_RETENTION_DURATION_UNIT = "dpr.delta.lake.log.retention.duration.unit";
     public static final String DEFAULT_DELTA_LAKE_LOG_RETENTION_DURATION_UNIT = "days";
 
