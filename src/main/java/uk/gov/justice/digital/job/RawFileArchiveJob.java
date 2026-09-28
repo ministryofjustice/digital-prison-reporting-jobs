@@ -10,6 +10,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.service.CheckpointReaderService;
 import uk.gov.justice.digital.service.ConfigService;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import javax.inject.Inject;
@@ -36,6 +37,7 @@ public class RawFileArchiveJob implements Runnable {
     private final CheckpointReaderService checkpointReaderService;
     private final Clock clock;
     private final JobArguments jobArguments;
+    private final RawArchiveLocationService rawArchiveLocationService;
 
     @Inject
     public RawFileArchiveJob(
@@ -43,13 +45,15 @@ public class RawFileArchiveJob implements Runnable {
             S3FileService s3FileService,
             CheckpointReaderService checkpointReaderService,
             Clock clock,
-            JobArguments jobArguments
+            JobArguments jobArguments,
+            RawArchiveLocationService rawArchiveLocationService
     ) {
         this.configService = configService;
         this.s3FileService = s3FileService;
         this.checkpointReaderService = checkpointReaderService;
         this.clock = clock;
         this.jobArguments = jobArguments;
+        this.rawArchiveLocationService = rawArchiveLocationService;
     }
 
     public static void main(String[] args) {
@@ -89,7 +93,9 @@ public class RawFileArchiveJob implements Runnable {
                 .collect(Collectors.toList());
 
         logger.info("Archiving {} files in S3 source location: {}", newFilesToArchive.size(), rawBucket);
-        Set<String> failedFiles = s3FileService.copyObjects(newFilesToArchive, rawBucket, "", archiveBucket, "", false);
+        Set<String> failedFiles = s3FileService.copyObjects(
+                newFilesToArchive, rawBucket, archiveBucket, false, rawArchiveLocationService::applyVersionToKey
+        );
         logger.info("Successfully archived {} S3 files", newFilesToArchive.size());
 
         if (failedFiles.isEmpty()) {

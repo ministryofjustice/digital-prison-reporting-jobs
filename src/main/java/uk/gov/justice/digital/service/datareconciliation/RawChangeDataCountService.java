@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.client.s3.S3DataProvider;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.datareconciliation.model.ChangeDataTableCount;
 
 import java.util.HashMap;
@@ -33,11 +34,17 @@ public class RawChangeDataCountService {
 
     private final JobArguments jobArguments;
     private final S3DataProvider s3DataProvider;
+    private final RawArchiveLocationService rawArchiveLocationService;
 
     @Inject
-    public RawChangeDataCountService(JobArguments jobArguments, S3DataProvider s3DataProvider) {
+    public RawChangeDataCountService(
+            JobArguments jobArguments,
+            S3DataProvider s3DataProvider,
+            RawArchiveLocationService rawArchiveLocationService
+    ) {
         this.jobArguments = jobArguments;
         this.s3DataProvider = s3DataProvider;
+        this.rawArchiveLocationService = rawArchiveLocationService;
     }
 
     /**
@@ -49,10 +56,17 @@ public class RawChangeDataCountService {
         Map<String, ChangeDataTableCount> totalCounts = new HashMap<>();
         sourceReferences.forEach(sourceReference -> {
             String tableName = sourceReference.getFullDatahubTableName();
+            String source = sourceReference.getSource();
+            String table = sourceReference.getTable();
+
             logger.debug("Getting raw zone counts by operation for table {}", tableName);
-            ChangeDataTableCount rawZoneCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawS3Path());
+            String rawTablePath = tablePath(jobArguments.getRawS3Path(), source, table);
+            ChangeDataTableCount rawZoneCount = changeDataCountsForTable(sparkSession, rawTablePath);
+
             logger.debug("Getting raw zone archive counts by operation for table {}", tableName);
-            ChangeDataTableCount rawArchiveCount = changeDataCountsForTable(sparkSession, sourceReference, jobArguments.getRawArchiveS3Path());
+            String rawArchiveTablePath = rawArchiveLocationService.tablePath(jobArguments.getRawArchiveS3Path(), source, table);
+            ChangeDataTableCount rawArchiveCount = changeDataCountsForTable(sparkSession, rawArchiveTablePath);
+
             ChangeDataTableCount combinedTableCount = rawZoneCount.combineCounts(rawArchiveCount);
             totalCounts.put(tableName, combinedTableCount);
         });
@@ -60,13 +74,12 @@ public class RawChangeDataCountService {
         return totalCounts;
     }
 
-    private ChangeDataTableCount changeDataCountsForTable(SparkSession sparkSession, SourceReference sourceReference, String s3Path) {
+    private ChangeDataTableCount changeDataCountsForTable(SparkSession sparkSession, String rawTablePath) {
         double relativeTolerance = jobArguments.getReconciliationChangeDataCountsToleranceRelativePercentage();
         long absoluteTolerance = jobArguments.getReconciliationChangeDataCountsToleranceAbsolute();
 
         ChangeDataTableCount result = new ChangeDataTableCount(relativeTolerance, absoluteTolerance);
 
-        String rawTablePath = tablePath(s3Path, sourceReference.getSource(), sourceReference.getTable());
         try {
             Dataset<Row> raw = s3DataProvider.getBatchSourceData(sparkSession, rawTablePath);
             List<Row> countsByOperation = raw.groupBy(OPERATION).count().collectAsList();

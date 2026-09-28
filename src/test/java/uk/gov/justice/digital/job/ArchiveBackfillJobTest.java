@@ -19,10 +19,12 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.BackfillException;
+import uk.gov.justice.digital.exception.RawArchiveVersioningException;
 import uk.gov.justice.digital.exception.SchemaNotFoundException;
 import uk.gov.justice.digital.job.batchprocessing.ArchiveBackfillProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
@@ -85,6 +87,8 @@ class ArchiveBackfillJobTest extends SparkTestBase {
     private ArchiveBackfillProcessor archiveBackfillProcessor;
     @Mock
     private SourceReferenceService sourceReferenceService;
+    @Mock
+    private RawArchiveLocationService rawArchiveLocationService;
     @Captor
     private ArgumentCaptor<String> outputPathCaptor;
     @Captor
@@ -102,8 +106,10 @@ class ArchiveBackfillJobTest extends SparkTestBase {
                 dataProvider,
                 tableDiscoveryService,
                 archiveBackfillProcessor,
-                sourceReferenceService
+                sourceReferenceService,
+                rawArchiveLocationService
         );
+        when(rawArchiveLocationService.isVersioningEnabled()).thenReturn(false);
 
         underTest = new ArchiveBackfillJob(
                 arguments,
@@ -113,8 +119,18 @@ class ArchiveBackfillJobTest extends SparkTestBase {
                 sparkSessionProvider,
                 tableDiscoveryService,
                 archiveBackfillProcessor,
-                sourceReferenceService
+                sourceReferenceService,
+                rawArchiveLocationService
         );
+    }
+
+    @Test
+    void shouldFailWhenRawArchiveVersioningIsEnabled() {
+        when(rawArchiveLocationService.isVersioningEnabled()).thenReturn(true);
+
+        assertThrows(RawArchiveVersioningException.class, () -> underTest.runJob(spark));
+
+        verifyNoInteractions(archiveBackfillProcessor);
     }
 
     @Test

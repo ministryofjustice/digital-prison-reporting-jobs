@@ -14,9 +14,11 @@ import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.exception.BackfillException;
 import uk.gov.justice.digital.exception.SchemaNotFoundException;
+import uk.gov.justice.digital.exception.RawArchiveVersioningException;
 import uk.gov.justice.digital.job.batchprocessing.ArchiveBackfillProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.ConfigService;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
@@ -42,6 +44,7 @@ public class ArchiveBackfillJob implements Runnable {
     private final TableDiscoveryService tableDiscoveryService;
     private final ArchiveBackfillProcessor archiveBackfillProcessor;
     private final SourceReferenceService sourceReferenceService;
+    private final RawArchiveLocationService rawArchiveLocationService;
 
     @Inject
     public ArchiveBackfillJob(
@@ -52,7 +55,8 @@ public class ArchiveBackfillJob implements Runnable {
             SparkSessionProvider sparkSessionProvider,
             TableDiscoveryService tableDiscoveryService,
             ArchiveBackfillProcessor archiveBackfillProcessor,
-            SourceReferenceService sourceReferenceService
+            SourceReferenceService sourceReferenceService,
+            RawArchiveLocationService rawArchiveLocationService
     ) {
         this.jobArguments = jobArguments;
         this.dataProvider = dataProvider;
@@ -62,6 +66,7 @@ public class ArchiveBackfillJob implements Runnable {
         this.tableDiscoveryService = tableDiscoveryService;
         this.archiveBackfillProcessor = archiveBackfillProcessor;
         this.sourceReferenceService = sourceReferenceService;
+        this.rawArchiveLocationService = rawArchiveLocationService;
     }
 
     public static void main(String[] args) {
@@ -75,6 +80,14 @@ public class ArchiveBackfillJob implements Runnable {
 
     @VisibleForTesting
     void runJob(SparkSession sparkSession) throws RuntimeException {
+        // This job is being phased out and never handles versioned raw archive paths - fail fast rather than
+        // read against the wrong layout.
+        if (rawArchiveLocationService.isVersioningEnabled()) {
+            throw new RawArchiveVersioningException(
+                    "ArchiveBackfillJob does not support versioned raw archive paths and should not be run once a pipeline has migrated to them"
+            );
+        }
+
         String configKey = jobArguments.getConfigKey();
         ImmutableSet<ImmutablePair<String, String>> configuredTables = configService.getConfiguredTables(configKey);
         List<SourceReference> sourceReferences = sourceReferenceService.getAllSourceReferences(configuredTables);

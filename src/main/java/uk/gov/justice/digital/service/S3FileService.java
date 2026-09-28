@@ -29,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -91,6 +92,20 @@ public class S3FileService {
             String destinationPrefix,
             boolean deleteCopiedFiles
     ) {
+        return copyObjects(objectKeys, sourceBucket, destinationBucket, deleteCopiedFiles, prefixKeyMapper(sourcePrefix, destinationPrefix));
+    }
+
+    /*
+     * Same as copyObjects(List, String, String, String, String, boolean) above, but for when the destination
+     * key needs a segment inserted rather than a prefix swapped, e.g. raw archive versioning.
+     */
+    public Set<String> copyObjects(
+            List<String> objectKeys,
+            String sourceBucket,
+            String destinationBucket,
+            boolean deleteCopiedFiles,
+            Function<String, String> destinationKeyMapper
+    ) {
         ConcurrentHashMap<String, String> failedObjects = new ConcurrentHashMap<>();
 
         ExecutorService executor = Executors.newFixedThreadPool(fileTransferParallelism);
@@ -100,9 +115,8 @@ public class S3FileService {
                 .map(objectKey -> CompletableFuture.runAsync(
                         () -> copyFunction(
                                 sourceBucket,
-                                sourcePrefix,
                                 destinationBucket,
-                                destinationPrefix,
+                                destinationKeyMapper,
                                 failedObjects,
                                 objectKey
                         ), executor)).toArray(CompletableFuture[]::new
@@ -187,29 +201,32 @@ public class S3FileService {
 
     private void copyFunction(
             String sourceBucket,
-            String sourcePrefix,
             String destinationBucket,
-            String destinationPrefix,
+            Function<String, String> destinationKeyMapper,
             ConcurrentHashMap<String, String> failedObjects,
             String objectKey
     ) {
-        String destinationKey;
         try {
-            if (!sourcePrefix.isEmpty()) {
-                destinationKey = destinationPrefix.isEmpty() ?
-                        objectKey.replaceFirst(sourcePrefix + DELIMITER, destinationPrefix) :
-                        objectKey.replaceFirst(sourcePrefix, destinationPrefix);
-            } else {
-                destinationKey = destinationPrefix.isEmpty() ?
-                        objectKey.replaceFirst(sourcePrefix, destinationPrefix) :
-                        destinationPrefix + DELIMITER + objectKey;
-            }
-
+            String destinationKey = destinationKeyMapper.apply(objectKey);
             Failsafe.with(voidRetryPolicy).run(() -> s3Client.copyObject(objectKey, destinationKey, sourceBucket, destinationBucket));
         } catch (SdkServiceException e) {
             logger.warn("Failed to move S3 object {}", objectKey, e);
             failedObjects.putIfAbsent(objectKey, objectKey);
         }
+    }
+
+    private static Function<String, String> prefixKeyMapper(String sourcePrefix, String destinationPrefix) {
+        return objectKey -> {
+            if (!sourcePrefix.isEmpty()) {
+                return destinationPrefix.isEmpty() ?
+                        objectKey.replaceFirst(sourcePrefix + DELIMITER, destinationPrefix) :
+                        objectKey.replaceFirst(sourcePrefix, destinationPrefix);
+            } else {
+                return destinationPrefix.isEmpty() ?
+                        objectKey.replaceFirst(sourcePrefix, destinationPrefix) :
+                        destinationPrefix + DELIMITER + objectKey;
+            }
+        };
     }
 
     @NotNull

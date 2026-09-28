@@ -294,6 +294,43 @@ class S3FileServiceTest {
     }
 
     @Test
+    void copyObjectsWithKeyMapperShouldCopyEachObjectToTheKeyReturnedByTheMapper() {
+        List<String> objectKeys = new ArrayList<>();
+        objectKeys.add("schema/table/file1.parquet");
+        objectKeys.add("schema/table/file2.parquet");
+
+        Set<String> failedObjects = undertest.copyObjects(
+                objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, false, key -> key.replaceFirst("schema/table/", "schema/table/v2/")
+        );
+
+        verify(mockS3Client).copyObject("schema/table/file1.parquet", "schema/table/v2/file1.parquet", SOURCE_BUCKET, DESTINATION_BUCKET);
+        verify(mockS3Client).copyObject("schema/table/file2.parquet", "schema/table/v2/file2.parquet", SOURCE_BUCKET, DESTINATION_BUCKET);
+        assertThat(failedObjects, is(empty()));
+    }
+
+    @Test
+    void copyObjectsWithKeyMapperShouldDeleteCopiedFilesWhenDeleteCopiedFilesIsTrue() {
+        List<String> objectKeys = Collections.singletonList("schema/table/file1.parquet");
+
+        undertest.copyObjects(objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, true, key -> key.replaceFirst("schema/table/", "schema/table/v2/"));
+
+        verify(mockS3Client).deleteObjects(deleteObjectsArgCaptor.capture(), eq(SOURCE_BUCKET));
+        assertThat(deleteObjectsArgCaptor.getValue(), containsInAnyOrder(objectKeys.toArray()));
+    }
+
+    @Test
+    void copyObjectsWithKeyMapperShouldReturnFailedObjectsWhenCopyFails() {
+        List<String> objectKeys = Collections.singletonList("schema/table/file1.parquet");
+        doThrow(SdkServiceException.builder().message("failure").build()).when(mockS3Client).copyObject(any(), any(), any(), any());
+
+        Set<String> failedObjects = undertest.copyObjects(
+                objectKeys, SOURCE_BUCKET, DESTINATION_BUCKET, false, key -> key.replaceFirst("schema/table/", "schema/table/v2/")
+        );
+
+        assertEquals(new HashSet<>(objectKeys), failedObjects);
+    }
+
+    @Test
     void copyObjectsShouldReturnListOfFailedObjectsWhenDeleteCopiedFilesIsFalse() {
         List<String> objectKeys = new ArrayList<>();
         objectKeys.add("file1.parquet");
