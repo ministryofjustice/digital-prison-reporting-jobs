@@ -4,6 +4,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.DecimalType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +31,19 @@ class ValidationServiceSchemasMatchTest {
         StructType specifiedSchema = new StructType(new StructField[]{
                 new StructField("column 1", DataTypes.IntegerType, false, Metadata.empty()),
                 new StructField("column 2", DataTypes.IntegerType, true, Metadata.empty()),
+        });
+
+        assertTrue(schemasMatch(inferredSchema, specifiedSchema));
+    }
+
+    @Test
+    void shouldAllowInferredDecimalTypeWhenSpecifiedTypeIsBinaryType() {
+        StructType inferredSchema = new StructType(new StructField[]{
+                new StructField("column 1", new DecimalType(), false, Metadata.empty())
+        });
+
+        StructType specifiedSchema = new StructType(new StructField[]{
+                new StructField("column 1", DataTypes.BinaryType, false, Metadata.empty())
         });
 
         assertTrue(schemasMatch(inferredSchema, specifiedSchema));

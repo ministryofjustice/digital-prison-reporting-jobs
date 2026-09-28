@@ -9,8 +9,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.BinaryType;
 import org.apache.spark.sql.types.ByteType;
 import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.IntegerType;
 import org.apache.spark.sql.types.ShortType;
 import org.apache.spark.sql.types.StringType;
@@ -85,9 +87,15 @@ public class ValidationService {
                             .otherwise(col(ERROR))
             );
         } else {
-            String msg = format("Record does not match schema version %s", sourceReference.getVersionId());
-            logger.warn(msg + " Inferred schema:\n{}\nActual schema:\n{}\nFor {}.{}",
-                    inferredSchema, schema, sourceReference.getSource(), sourceReference.getTable()
+            String versionId = sourceReference.getVersionId();
+            String msg = format("Record does not match schema version %s", versionId);
+            logger.warn(
+                    "{}%nInferred schema:%n{}%nActual schema:%n{}%nFor {}.{}",
+                    msg,
+                    inferredSchema,
+                    schema,
+                    sourceReference.getSource(),
+                    sourceReference.getTable()
             );
             return validatedDf.withColumn(ERROR, concatenateErrors(msg));
         }
@@ -118,7 +126,8 @@ public class ValidationService {
     private static boolean isAllowedDifference(DataType inferredDataType, DataType specifiedDataType) {
         // We represent 8 and 16 bit ints as 32 bit ints in avro so this difference is allowed
         return (inferredDataType instanceof ShortType && specifiedDataType instanceof IntegerType) ||
-                (inferredDataType instanceof ByteType && specifiedDataType instanceof IntegerType);
+                (inferredDataType instanceof ByteType && specifiedDataType instanceof IntegerType) ||
+                (inferredDataType instanceof DecimalType && specifiedDataType instanceof BinaryType);
     }
 
     private static Column pkIsNull(SourceReference sourceReference) {
