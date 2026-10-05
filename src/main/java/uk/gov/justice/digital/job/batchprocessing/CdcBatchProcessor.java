@@ -20,7 +20,6 @@ import uk.gov.justice.digital.service.metrics.LatencyService;
 import uk.gov.justice.digital.service.metrics.LatencyStatistics;
 import uk.gov.justice.digital.service.metrics.MetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.time.Clock;
@@ -40,7 +39,6 @@ public class CdcBatchProcessor {
     private static final Logger logger = LoggerFactory.getLogger(CdcBatchProcessor.class);
     private final ValidationService validationService;
     private final StructuredZoneCDC structuredZone;
-    private final CuratedZoneCDC curatedZone;
     private final S3DataProvider dataProvider;
     private final OperationalDataStoreService operationalDataStoreService;
     private final MetricReportingService metricReportingService;
@@ -51,7 +49,6 @@ public class CdcBatchProcessor {
     public CdcBatchProcessor(
             ValidationService validationService,
             StructuredZoneCDC structuredZone,
-            CuratedZoneCDC curatedZone,
             S3DataProvider dataProvider,
             OperationalDataStoreService operationalDataStoreService,
             MetricReportingService metricReportingService,
@@ -60,7 +57,6 @@ public class CdcBatchProcessor {
     ) {
         this.validationService = validationService;
         this.structuredZone = structuredZone;
-        this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
         this.operationalDataStoreService = operationalDataStoreService;
         this.metricReportingService = metricReportingService;
@@ -85,15 +81,14 @@ public class CdcBatchProcessor {
             val structuredDf = structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
             metricReportingService.reportStreamingThroughputWrittenToStructured(structuredDf.count());
 
-            val curatedDf = curatedZone.process(spark, structuredDf, sourceReference);
             long curatedWriteEndTime = clock.millis();
-            long curatedCount = curatedDf.count();
+            long curatedCount = structuredDf.count();
 
-            operationalDataStoreService.mergeData(curatedDf, sourceReference);
+            operationalDataStoreService.mergeData(structuredDf, sourceReference);
 
             metricReportingService.reportStreamingThroughputWrittenToCurated(curatedCount);
             if (curatedCount > 0) {
-                LatencyStatistics dmsToCuratedLatency = latencyService.calculateLatencyStatistics(curatedDf, TIMESTAMP, curatedWriteEndTime);
+                LatencyStatistics dmsToCuratedLatency = latencyService.calculateLatencyStatistics(structuredDf, TIMESTAMP, curatedWriteEndTime);
                 metricReportingService.reportStreamingLatencyDmsToCurated(dmsToCuratedLatency);
             }
 

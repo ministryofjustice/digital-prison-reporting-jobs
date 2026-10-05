@@ -32,7 +32,6 @@ import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
-import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.io.IOException;
@@ -215,7 +214,6 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         ViolationService violationService =
                 new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, disabledMetricReportingService);
         ValidationService validationService = new ValidationService(violationService);
-        CuratedZoneCDC curatedZone = new CuratedZoneCDC(arguments, violationService, storageService);
         StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
@@ -228,7 +226,6 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 validationService,
                 structuredZone,
-                curatedZone,
                 dataProvider,
                 operationalDataStoreService,
                 disabledMetricReportingService,

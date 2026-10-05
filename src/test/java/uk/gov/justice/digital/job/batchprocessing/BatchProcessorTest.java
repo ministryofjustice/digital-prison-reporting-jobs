@@ -14,7 +14,6 @@ import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
@@ -40,8 +39,6 @@ import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 @ExtendWith(MockitoExtension.class)
 class BatchProcessorTest extends SparkTestBase {
 
-    private static final String table = "table";
-    private static final String source = "source";
     private static final List<Row> inputRows = Arrays.asList(
             createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
             createRow(2, "2023-11-13 10:00:00.000000", Insert, "2"),
@@ -56,11 +53,7 @@ class BatchProcessorTest extends SparkTestBase {
     private static Dataset<Row> validatedDf;
 
     @Mock
-    private Dataset<Row> curatedDfMock;
-    @Mock
     private StructuredZoneLoad structuredZoneLoad;
-    @Mock
-    private CuratedZoneLoad curatedZoneLoad;
     @Mock
     private SourceReference sourceReference;
     @Mock
@@ -80,7 +73,7 @@ class BatchProcessorTest extends SparkTestBase {
 
     @BeforeEach
     void setUp() {
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        underTest = new BatchProcessor(structuredZoneLoad, validationService, operationalDataStoreService);
     }
 
     @Test
@@ -88,12 +81,10 @@ class BatchProcessorTest extends SparkTestBase {
         Dataset<Row> emptyDf = spark.createDataFrame(Collections.<Row>emptyList(), TEST_DATA_SCHEMA);
         when(validationService.handleValidation(any(), any(), eq(sourceReference), any(), eq(STRUCTURED_LOAD))).thenReturn(emptyDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(emptyDf);
-        when(curatedZoneLoad.process(any(), any(), any())).thenReturn(emptyDf);
 
         underTest.processBatch(spark, sourceReference, emptyDf);
 
         verify(structuredZoneLoad, times(1)).process(any(), any(), any());
-        verify(curatedZoneLoad, times(1)).process(any(), any(), any());
         verify(operationalDataStoreService, times(0)).overwriteData(any(), any());
     }
 
@@ -112,29 +103,14 @@ class BatchProcessorTest extends SparkTestBase {
     }
 
     @Test
-    void shouldProcessCurated() {
+    void shouldWriteStructuredOutputToOperationalDataStore() {
         when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
                 .thenReturn(validatedDf);
         when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
         underTest.processBatch(spark, sourceReference, inputDf);
 
-        verify(curatedZoneLoad, times(1)).process(any(), argumentCaptor.capture(), eq(sourceReference));
-        List<Row> result = argumentCaptor.getValue().collectAsList();
-        assertEquals(validatedRows.size(), result.size());
-        assertTrue(result.containsAll(validatedRows));
-    }
-
-    @Test
-    void shouldWriteCuratedOutputToOperationalDataStore() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
-                .thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
-        when(curatedZoneLoad.process(any(), any(), any())).thenReturn(curatedDfMock);
-
-        underTest.processBatch(spark, sourceReference, inputDf);
-
-        verify(operationalDataStoreService, times(1)).overwriteData(curatedDfMock, sourceReference);
+        verify(operationalDataStoreService, times(1)).overwriteData(validatedDf, sourceReference);
     }
 
     @Test
