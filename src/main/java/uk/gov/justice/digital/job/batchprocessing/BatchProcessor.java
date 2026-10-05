@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import javax.inject.Singleton;
@@ -32,19 +31,16 @@ public class BatchProcessor {
     private static final Logger logger = LoggerFactory.getLogger(BatchProcessor.class);
 
     private final StructuredZoneLoad structuredZoneLoad;
-    private final CuratedZoneLoad curatedZoneLoad;
     private final ValidationService validationService;
     private final OperationalDataStoreService operationalDataStoreService;
 
     @Inject
     public BatchProcessor(
             StructuredZoneLoad structuredZoneLoad,
-            CuratedZoneLoad curatedZoneLoad,
             ValidationService validationService,
             OperationalDataStoreService operationalDataStoreService) {
         logger.info("Initializing S3BatchProcessor");
         this.structuredZoneLoad = structuredZoneLoad;
-        this.curatedZoneLoad = curatedZoneLoad;
         this.validationService = validationService;
         this.operationalDataStoreService = operationalDataStoreService;
         logger.info("S3BatchProcessor initialization complete");
@@ -68,10 +64,9 @@ public class BatchProcessor {
         StructType inferredSchema = filteredDf.schema();
         val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
         val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-        val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
 
         if (hasData) {
-            operationalDataStoreService.overwriteData(curatedLoadDf, sourceReference);
+            operationalDataStoreService.overwriteData(structuredLoadDf, sourceReference);
             dataFrame.unpersist();
         }
 

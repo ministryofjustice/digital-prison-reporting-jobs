@@ -40,7 +40,6 @@ import uk.gov.justice.digital.service.operationaldatastore.dataaccess.Operationa
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
-import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
 import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.sql.Connection;
@@ -530,7 +529,6 @@ class TableStreamingQueryIT extends BaseMinimalDataIntegrationTest {
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 new ValidationService(violationService),
                 new StructuredZoneCDC(arguments, violationService, storageService),
-                new CuratedZoneCDC(arguments, violationService, storageService),
                 dataProvider,
                 operationalDataStoreService,
                 disabledMetricReportingService,

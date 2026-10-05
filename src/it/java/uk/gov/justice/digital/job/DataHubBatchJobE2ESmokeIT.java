@@ -28,7 +28,6 @@ import uk.gov.justice.digital.service.JDBCGlueConnectionDetailsService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreDataAccessService;
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
-import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
 import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.sql.Connection;
@@ -167,7 +166,6 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
                 new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
         ValidationService validationService = new ValidationService(violationService);
         StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
-        CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
@@ -176,7 +174,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
-        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, validationService, operationalDataStoreService);
         DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
         underTest = new DataHubBatchJob(
                 arguments,
