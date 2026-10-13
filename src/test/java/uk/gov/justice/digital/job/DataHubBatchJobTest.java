@@ -37,7 +37,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_LOAD;
 import static uk.gov.justice.digital.test.MinimalTestData.SCHEMA_WITHOUT_METADATA_FIELDS;
 
 @ExtendWith(MockitoExtension.class)
@@ -185,7 +185,7 @@ class DataHubBatchJobTest {
         underTest.runJob(spark);
 
         // Should write table 1 to violations
-        verify(violationService, times(1)).handleNoSchemaFound(any(), any(), eq("s1"), eq("t1"), eq(STRUCTURED_LOAD));
+        verify(violationService, times(1)).handleNoSchemaFound(any(), any(), eq("s1"), eq("t1"), eq(CURATED_LOAD));
         // Should process table 2 and no other tables
         verify(batchProcessor, times(1)).processBatch(any(), eq(sourceReference2), any());
         verify(batchProcessor, times(1)).processBatch(any(), any(), any());

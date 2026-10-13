@@ -43,10 +43,6 @@ class CurrentStateCountServiceTest {
     @Mock
     private SparkSession sparkSession;
     @Mock
-    private Dataset<Row> structured1;
-    @Mock
-    private Dataset<Row> structured2;
-    @Mock
     private Dataset<Row> curated1;
     @Mock
     private Dataset<Row> curated2;
@@ -62,10 +58,8 @@ class CurrentStateCountServiceTest {
         when(sourceReference1.getTable()).thenReturn("table");
         when(sourceReference1.getFullOperationalDataStoreTableNameWithSchema()).thenReturn("namespace.source_table");
 
-        when(jobArguments.getStructuredS3Path()).thenReturn("s3://structured");
         when(jobArguments.getCuratedS3Path()).thenReturn("s3://curated");
 
-        when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://structured/source/table")).thenReturn(structured1);
         when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://curated/source/table")).thenReturn(curated1);
     }
 
@@ -75,12 +69,10 @@ class CurrentStateCountServiceTest {
         when(sourceReference1.getFullDatahubTableName()).thenReturn("source.table");
 
         long oracleCount1 = 1L;
-        long structuredCount1 = 1L;
         long curatedCount1 = 1L;
         long odsCount1 = 1L;
 
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount1);
-        when(structured1.count()).thenReturn(structuredCount1);
         when(curated1.count()).thenReturn(curatedCount1);
         when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference1)).thenReturn(true);
         when(operationalDataStoreService.getTableRowCount("namespace.source_table")).thenReturn(odsCount1);
@@ -91,16 +83,13 @@ class CurrentStateCountServiceTest {
         when(sourceReference2.getFullOperationalDataStoreTableNameWithSchema()).thenReturn("namespace.source_table2");
         when(sourceReference2.getFullDatahubTableName()).thenReturn("source.table2");
 
-        when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://structured/source/table2")).thenReturn(structured2);
         when(s3DataProvider.getBatchDeltaTableData(sparkSession, "s3://curated/source/table2")).thenReturn(curated2);
 
         long oracleCount2 = 4L;
-        long structuredCount2 = 3L;
         long curatedCount2 = 2L;
         long odsCount2 = 1L;
 
         when(reconciliationDataSourceService.getTableRowCount("table2")).thenReturn(oracleCount2);
-        when(structured2.count()).thenReturn(structuredCount2);
         when(curated2.count()).thenReturn(curatedCount2);
         when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference2)).thenReturn(true);
         when(operationalDataStoreService.getTableRowCount("namespace.source_table2")).thenReturn(odsCount2);
@@ -108,11 +97,11 @@ class CurrentStateCountServiceTest {
         CurrentStateTotalCounts results =
                 (CurrentStateTotalCounts) underTest.currentStateCounts(sparkSession, Arrays.asList(sourceReference1, sourceReference2));
 
-        CurrentStateTableCount expectedTable1Counts = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L);
+        CurrentStateTableCount expectedTable1Counts = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L);
         CurrentStateTableCount table1Result = results.get("source.table");
         assertEquals(expectedTable1Counts, table1Result);
 
-        CurrentStateTableCount expectedTable2Counts = new CurrentStateTableCount(0.0, 0L, 4L, 3L, 2L, 1L);
+        CurrentStateTableCount expectedTable2Counts = new CurrentStateTableCount(0.0, 0L, 4L, 2L, 1L);
         CurrentStateTableCount table2Result = results.get("source.table2");
         assertEquals(expectedTable2Counts, table2Result);
     }
@@ -120,12 +109,10 @@ class CurrentStateCountServiceTest {
     @Test
     void shouldGetCurrentStateCountForTable() {
         long oracleCount = 4L;
-        long structuredCount = 3L;
         long curatedCount = 2L;
         long odsCount = 1L;
 
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount);
-        when(structured1.count()).thenReturn(structuredCount);
         when(curated1.count()).thenReturn(curatedCount);
 
         when(operationalDataStoreService.isEnabled()).thenReturn(true);
@@ -135,7 +122,6 @@ class CurrentStateCountServiceTest {
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
         assertEquals(oracleCount, result.getDataSourceCount());
-        assertEquals(structuredCount, result.getStructuredCount());
         assertEquals(curatedCount, result.getCuratedCount());
         assertEquals(odsCount, result.getOperationalDataStoreCount());
     }
@@ -143,11 +129,9 @@ class CurrentStateCountServiceTest {
     @Test
     void shouldGetCurrentStateCountForTableWhenOperationalDataStoreIsDisabled() {
         long oracleCount = 4L;
-        long structuredCount = 3L;
         long curatedCount = 2L;
 
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount);
-        when(structured1.count()).thenReturn(structuredCount);
         when(curated1.count()).thenReturn(curatedCount);
 
         when(operationalDataStoreService.isEnabled()).thenReturn(false);
@@ -155,7 +139,6 @@ class CurrentStateCountServiceTest {
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
         assertEquals(oracleCount, result.getDataSourceCount());
-        assertEquals(structuredCount, result.getStructuredCount());
         assertEquals(curatedCount, result.getCuratedCount());
         assertNull(result.getOperationalDataStoreCount());
     }
@@ -163,11 +146,9 @@ class CurrentStateCountServiceTest {
     @Test
     void shouldGetCurrentStateCountForTableWhenOperationalDataStoreDoesNotManageTheTable() {
         long oracleCount = 4L;
-        long structuredCount = 3L;
         long curatedCount = 2L;
 
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(oracleCount);
-        when(structured1.count()).thenReturn(structuredCount);
         when(curated1.count()).thenReturn(curatedCount);
 
         when(operationalDataStoreService.isEnabled()).thenReturn(true);
@@ -176,7 +157,6 @@ class CurrentStateCountServiceTest {
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
         assertEquals(oracleCount, result.getDataSourceCount());
-        assertEquals(structuredCount, result.getStructuredCount());
         assertEquals(curatedCount, result.getCuratedCount());
         assertNull(result.getOperationalDataStoreCount());
     }
@@ -187,7 +167,6 @@ class CurrentStateCountServiceTest {
         when(reconciliationDataSourceService.getTableRowCount("table")).thenThrow(
                 new ReconciliationDataSourceException("Table does not exist")
         );
-        when(structured1.count()).thenReturn(1L);
         when(curated1.count()).thenReturn(1L);
 
         when(operationalDataStoreService.isEnabled()).thenReturn(true);
@@ -197,28 +176,6 @@ class CurrentStateCountServiceTest {
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
         assertEquals(0L, result.getDataSourceCount());
-        assertEquals(1L, result.getStructuredCount());
-        assertEquals(1L, result.getCuratedCount());
-        assertEquals(1L, result.getOperationalDataStoreCount());
-    }
-
-    @Test
-    void shouldReturnZeroCountWhenStructuredTablePathDoesNotExist() {
-        when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
-        when(deltaAnalysisException.getMessage()).thenReturn("Delta table `s3://bucket/path/path` doesn't exist.");
-        when(structured1.count()).thenAnswer(i -> {
-            throw deltaAnalysisException;
-        });
-        when(curated1.count()).thenReturn(1L);
-
-        when(operationalDataStoreService.isEnabled()).thenReturn(true);
-        when(operationalDataStoreService.isOperationalDataStoreManagedTable(sourceReference1)).thenReturn(true);
-        when(operationalDataStoreService.getTableRowCount("namespace.source_table")).thenReturn(1L);
-
-        CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
-
-        assertEquals(1L, result.getDataSourceCount());
-        assertEquals(0L, result.getStructuredCount());
         assertEquals(1L, result.getCuratedCount());
         assertEquals(1L, result.getOperationalDataStoreCount());
     }
@@ -227,7 +184,6 @@ class CurrentStateCountServiceTest {
     void shouldReturnZeroCountWhenCuratedTablePathDoesNotExist() {
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
         when(deltaAnalysisException.getMessage()).thenReturn("Delta table `s3://bucket/path/path` doesn't exist.");
-        when(structured1.count()).thenReturn(1L);
         when(curated1.count()).thenAnswer(i -> {
             throw deltaAnalysisException;
         });
@@ -239,7 +195,6 @@ class CurrentStateCountServiceTest {
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
         assertEquals(1L, result.getDataSourceCount());
-        assertEquals(1L, result.getStructuredCount());
         assertEquals(0L, result.getCuratedCount());
         assertEquals(1L, result.getOperationalDataStoreCount());
     }
@@ -247,7 +202,6 @@ class CurrentStateCountServiceTest {
     @Test
     void shouldReturnZeroCountWhenODSThrows() {
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(1L);
-        when(structured1.count()).thenReturn(1L);
         when(curated1.count()).thenReturn(1L);
 
         when(operationalDataStoreService.isEnabled()).thenReturn(true);
@@ -259,7 +213,6 @@ class CurrentStateCountServiceTest {
         CurrentStateTableCount result = underTest.currentStateCountForTable(sparkSession, sourceReference1);
 
         assertEquals(1L, result.getDataSourceCount());
-        assertEquals(1L, result.getStructuredCount());
         assertEquals(1L, result.getCuratedCount());
         assertEquals(0L, result.getOperationalDataStoreCount());
     }
@@ -270,7 +223,6 @@ class CurrentStateCountServiceTest {
         long absoluteTolerance = 7L;
 
         when(reconciliationDataSourceService.getTableRowCount("table")).thenReturn(3L);
-        when(structured1.count()).thenReturn(2L);
         when(curated1.count()).thenReturn(1L);
         when(operationalDataStoreService.isEnabled()).thenReturn(false);
 
