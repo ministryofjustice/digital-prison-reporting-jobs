@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service.operationaldatastore;
 
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.val;
@@ -17,12 +18,13 @@ import static java.lang.String.format;
 import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED;
 
 /**
  * Entrypoint for access to the Operational DataStore.
  */
 @Singleton
-@Requires(property = "dpr.operational.data.store.write.enabled")
+@Requires(property = OPERATIONAL_DATA_STORE_WRITE_ENABLED, value = StringUtils.TRUE)
 public class OperationalDataStoreServiceImpl implements OperationalDataStoreService {
 
     private static final Logger logger = LoggerFactory.getLogger(OperationalDataStoreServiceImpl.class);

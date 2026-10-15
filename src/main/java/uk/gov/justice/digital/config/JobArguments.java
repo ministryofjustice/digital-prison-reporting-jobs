@@ -168,7 +168,7 @@ public class JobArguments {
     static final String ACTIVATE_GLUE_TRIGGER = "dpr.glue.trigger.activate";
     static final String STREAMING_JOB_MAX_FILES_PER_TRIGGER = "dpr.streaming.job.max.files.per.trigger";
     public static final long STREAMING_JOB_DEFAULT_MAX_FILES_PER_TRIGGER = 1000;
-    static final String OPERATIONAL_DATA_STORE_WRITE_ENABLED = "dpr.operational.data.store.write.enabled";
+    public static final String OPERATIONAL_DATA_STORE_WRITE_ENABLED = "dpr.operational.data.store.write.enabled";
     static final String OPERATIONAL_DATA_STORE_GLUE_CONNECTION_NAME = "dpr.operational.data.store.glue.connection.name";
     static final String OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME = "dpr.operational.data.store.loading.schema.name";
     static final String OPERATIONAL_DATA_STORE_LOADING_SCHEMA_NAME_DEFAULT = "loading";

@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.service.operationaldatastore;
 
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -8,8 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.digital.datahub.model.SourceReference;
 
+import static uk.gov.justice.digital.config.JobArguments.OPERATIONAL_DATA_STORE_WRITE_ENABLED;
+
 @Singleton
-@Requires(missingProperty = "dpr.operational.data.store.write.enabled")
+@Requires(property = OPERATIONAL_DATA_STORE_WRITE_ENABLED, notEquals = StringUtils.TRUE)
 public class DisabledOperationalDataStoreService implements OperationalDataStoreService {
     private static final Logger logger = LoggerFactory.getLogger(DisabledOperationalDataStoreService.class);
 
