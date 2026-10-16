@@ -18,11 +18,13 @@ import uk.gov.justice.digital.config.SparkTestBase;
 import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.config.JobProperties;
 import uk.gov.justice.digital.datahub.model.SourceReference;
+import uk.gov.justice.digital.exception.RawArchiveVersioningException;
 import uk.gov.justice.digital.exception.SchemaNotFoundException;
 import uk.gov.justice.digital.exception.TableDiscoveryException;
 import uk.gov.justice.digital.job.batchprocessing.ReloadDiffProcessor;
 import uk.gov.justice.digital.provider.SparkSessionProvider;
 import uk.gov.justice.digital.service.DmsOrchestrationService;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.SourceReferenceService;
 import uk.gov.justice.digital.service.TableDiscoveryService;
 
@@ -45,6 +47,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.test.Fixtures.fixedClock;
@@ -102,6 +105,8 @@ class CreateReloadDiffJobTest extends SparkTestBase {
     private ReloadDiffProcessor reloadDiffProcessor;
     @Mock
     private SourceReferenceService sourceReferenceService;
+    @Mock
+    private RawArchiveLocationService rawArchiveLocationService;
     @Captor
     private ArgumentCaptor<String> outputPathCaptor;
     @Captor
@@ -121,8 +126,10 @@ class CreateReloadDiffJobTest extends SparkTestBase {
                 tableDiscoveryService,
                 dmsOrchestrationService,
                 reloadDiffProcessor,
-                sourceReferenceService
+                sourceReferenceService,
+                rawArchiveLocationService
         );
+        when(rawArchiveLocationService.isVersioningEnabled()).thenReturn(false);
 
         underTest = new CreateReloadDiffJob(
                 arguments,
@@ -133,8 +140,18 @@ class CreateReloadDiffJobTest extends SparkTestBase {
                 dmsOrchestrationService,
                 reloadDiffProcessor,
                 sourceReferenceService,
-                fixedClock
+                fixedClock,
+                rawArchiveLocationService
         );
+    }
+
+    @Test
+    void shouldFailWhenRawArchiveVersioningIsEnabled() {
+        when(rawArchiveLocationService.isVersioningEnabled()).thenReturn(true);
+
+        assertThrows(RawArchiveVersioningException.class, () -> underTest.runJob(spark));
+
+        verifyNoInteractions(reloadDiffProcessor);
     }
 
     @Test

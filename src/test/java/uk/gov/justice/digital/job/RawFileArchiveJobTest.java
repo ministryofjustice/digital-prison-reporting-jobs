@@ -15,6 +15,7 @@ import uk.gov.justice.digital.config.JobArguments;
 import uk.gov.justice.digital.datahub.model.FileLastModifiedDate;
 import uk.gov.justice.digital.service.CheckpointReaderService;
 import uk.gov.justice.digital.service.ConfigService;
+import uk.gov.justice.digital.service.RawArchiveLocationService;
 import uk.gov.justice.digital.service.S3FileService;
 
 import java.time.Duration;
@@ -24,9 +25,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.eq;
@@ -50,12 +53,16 @@ class RawFileArchiveJobTest extends SparkTestBase {
     CheckpointReaderService mockCheckpointReaderService;
     @Mock
     JobArguments mockJobArguments;
+    @Mock
+    RawArchiveLocationService mockRawArchiveLocationService;
     @Captor
     ArgumentCaptor<List<String>> filesToArchiveCaptor;
     @Captor
     ArgumentCaptor<List<String>> filesToDeleteCaptor;
     @Captor
     ArgumentCaptor<List<String>> savedArchivedKeysCaptor;
+    @Captor
+    ArgumentCaptor<Function<String, String>> destinationKeyMapperCaptor;
 
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String DESTINATION_BUCKET = "destination-bucket";
@@ -77,9 +84,11 @@ class RawFileArchiveJobTest extends SparkTestBase {
 
     @BeforeEach
     void setup() {
-        reset(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments);
+        reset(mockConfigService, mockS3Service, mockCheckpointReaderService, mockJobArguments, mockRawArchiveLocationService);
 
-        underTest = new RawFileArchiveJob(mockConfigService, mockS3Service, mockCheckpointReaderService, fixedClock, mockJobArguments);
+        underTest = new RawFileArchiveJob(
+                mockConfigService, mockS3Service, mockCheckpointReaderService, fixedClock, mockJobArguments, mockRawArchiveLocationService
+        );
     }
 
     @Test
@@ -114,7 +123,7 @@ class RawFileArchiveJobTest extends SparkTestBase {
                 .thenReturn(Stream.concat(oldRawFiles.stream(), recentRawFiles.stream()).toList());
         when(mockS3Service.deleteObjects(filesToDeleteCaptor.capture(), eq(SOURCE_BUCKET)))
                 .thenReturn(Collections.emptySet());
-        when(mockS3Service.copyObjects(any(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
+        when(mockS3Service.copyObjects(any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET), eq(false), any()))
                 .thenReturn(Collections.emptySet());
 
         underTest.run();
@@ -152,7 +161,7 @@ class RawFileArchiveJobTest extends SparkTestBase {
                 .thenReturn(lastArchivedKeys);
         when(mockS3Service.deleteObjects(any(), eq(SOURCE_BUCKET)))
                 .thenReturn(Collections.emptySet());
-        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
+        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET), eq(false), any()))
                 .thenReturn(Collections.emptySet());
         doNothing().when(mockS3Service).saveArchivedKeys(eq(JOBS_BUCKET), eq(CONFIG_KEY), savedArchivedKeysCaptor.capture());
 
@@ -172,6 +181,30 @@ class RawFileArchiveJobTest extends SparkTestBase {
 
         assertThat(filesToArchiveCaptor.getValue(), containsInAnyOrder(expectedFilesToArchive.toArray()));
         assertThat(savedArchivedKeysCaptor.getValue(), containsInAnyOrder(expectedSavedArchivedKeys.toArray()));
+    }
+
+    @Test
+    void shouldArchiveFilesToTheKeyBuiltByRawArchiveLocationService() {
+        ImmutablePair<String, String> configuredTable1 = ImmutablePair.of("source", "table-1");
+        ImmutableSet<ImmutablePair<String, String>> configuredTables = ImmutableSet.of(configuredTable1);
+
+        List<FileLastModifiedDate> rawFiles = new ArrayList<>();
+        rawFiles.add(new FileLastModifiedDate(COMMITTED_FILE_1));
+
+        mockJobArguments();
+        when(mockConfigService.getConfiguredTables(CONFIG_KEY)).thenReturn(configuredTables);
+        when(mockCheckpointReaderService.getCommittedFilesForTable(configuredTable1)).thenReturn(Collections.emptySet());
+        when(mockS3Service.listFilesBeforePeriod(SOURCE_BUCKET, "", configuredTables, parquetFileRegex, Duration.ZERO))
+                .thenReturn(rawFiles);
+        when(mockS3Service.getPreviousArchivedKeys(JOBS_BUCKET, CONFIG_KEY)).thenReturn(Collections.emptySet());
+        when(mockS3Service.deleteObjects(any(), eq(SOURCE_BUCKET))).thenReturn(Collections.emptySet());
+        when(mockS3Service.copyObjects(any(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET), eq(false), destinationKeyMapperCaptor.capture()))
+                .thenReturn(Collections.emptySet());
+        when(mockRawArchiveLocationService.applyVersionToKey(COMMITTED_FILE_1)).thenReturn("source/table-1/v2/" + COMMITTED_FILE_1);
+
+        underTest.run();
+
+        assertEquals("source/table-1/v2/" + COMMITTED_FILE_1, destinationKeyMapperCaptor.getValue().apply(COMMITTED_FILE_1));
     }
 
     @Test
@@ -200,7 +233,7 @@ class RawFileArchiveJobTest extends SparkTestBase {
                 .thenReturn(alreadyArchivedFiles);
         when(mockS3Service.deleteObjects(any(), eq(SOURCE_BUCKET)))
                 .thenReturn(Collections.singleton(COMMITTED_OLD_FILE_4)); // This file failed to be deleted
-        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
+        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET), eq(false), any()))
                 .thenReturn(Collections.emptySet());
         doNothing().when(mockS3Service).saveArchivedKeys(eq(JOBS_BUCKET), eq(CONFIG_KEY), savedArchivedKeysCaptor.capture());
 
@@ -236,7 +269,7 @@ class RawFileArchiveJobTest extends SparkTestBase {
                 .thenReturn(rawFiles);
         when(mockS3Service.getPreviousArchivedKeys(JOBS_BUCKET, CONFIG_KEY))
                 .thenReturn(Collections.emptySet());
-        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
+        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET), eq(false), any()))
                 .thenReturn(Collections.singleton(COMMITTED_FILE_1));
 
         underTest.run();
@@ -258,7 +291,7 @@ class RawFileArchiveJobTest extends SparkTestBase {
                 .thenReturn(Collections.emptyList());
         when(mockS3Service.deleteObjects(filesToDeleteCaptor.capture(), eq(SOURCE_BUCKET)))
                 .thenReturn(Collections.emptySet());
-        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(""), eq(DESTINATION_BUCKET), eq(""), eq(false)))
+        when(mockS3Service.copyObjects(filesToArchiveCaptor.capture(), eq(SOURCE_BUCKET), eq(DESTINATION_BUCKET), eq(false), any()))
                 .thenReturn(Collections.emptySet());
 
         underTest.run();
