@@ -68,7 +68,7 @@ class SwitchHiveTableJobTest extends SparkTestBase {
         when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
         when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(expectedTables));
-        when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), argumentCaptor.capture())).thenReturn(Collections.emptySet());
+        when(mockHiveTableService.switchReportingTableDataSource(any(SparkSession.class), argumentCaptor.capture())).thenReturn(Collections.emptySet());
 
         assertDoesNotThrow(() -> underTest.run());
 
@@ -83,7 +83,7 @@ class SwitchHiveTableJobTest extends SparkTestBase {
         when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
         when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(failedTables));
-        when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), any())).thenReturn(failedTables);
+        when(mockHiveTableService.switchReportingTableDataSource(any(SparkSession.class), any())).thenReturn(failedTables);
 
         assertThatCallsSystemExit(() -> underTest.run());
     }
@@ -96,7 +96,7 @@ class SwitchHiveTableJobTest extends SparkTestBase {
         when(mockJobProperties.getSparkDriverMemory()).thenReturn("2g");
         when(mockJobProperties.getSparkExecutorMemory()).thenReturn("2g");
         when(mockConfigService.getConfiguredTables(TEST_CONFIG_KEY)).thenReturn(ImmutableSet.copyOf(table));
-        when(mockHiveTableService.switchPrisonsTableDataSource(any(SparkSession.class), any())).thenThrow(new HiveSchemaServiceException("Schema service exception"));
+        when(mockHiveTableService.switchReportingTableDataSource(any(SparkSession.class), any())).thenThrow(new HiveSchemaServiceException("Schema service exception"));
 
         assertThatCallsSystemExit(() -> underTest.run());
     }

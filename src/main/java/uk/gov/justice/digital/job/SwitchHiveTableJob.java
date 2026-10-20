@@ -55,7 +55,7 @@ public class SwitchHiveTableJob implements Runnable {
             ImmutableSet<ImmutablePair<String, String>> configuredTables = configService
                     .getConfiguredTables(jobArguments.getConfigKey());
 
-            Set<ImmutablePair<String, String>> failedTables = hiveTableService.switchPrisonsTableDataSource(spark, configuredTables);
+            Set<ImmutablePair<String, String>> failedTables = hiveTableService.switchReportingTableDataSource(spark, configuredTables);
 
             if (!failedTables.isEmpty()) {
                 logger.error("Not all schemas were processed");

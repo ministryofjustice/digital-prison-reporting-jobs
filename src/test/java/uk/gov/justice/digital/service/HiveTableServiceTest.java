@@ -81,7 +81,7 @@ class HiveTableServiceTest extends SparkTestBase {
     private static final String RAW_ARCHIVE_DATABASE = "raw_archive";
     private static final String STRUCTURED_DATABASE = "structured";
     private static final String CURATED_DATABASE = "curated";
-    private static final String PRISONS_DATABASE = "prisons";
+    private static final String REPORTING_DATABASE = "prisons";
 
     private static final String SCHEMA_NAME = "test_schema";
     private static final String TABLE = "test_table";
@@ -130,11 +130,11 @@ class HiveTableServiceTest extends SparkTestBase {
         expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedDeleteDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedDeleteDatabaseArgs.add(CURATED_DATABASE);
-        expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
+        expectedDeleteDatabaseArgs.add(REPORTING_DATABASE);
         expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
         expectedDeleteDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedDeleteDatabaseArgs.add(CURATED_DATABASE);
-        expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
+        expectedDeleteDatabaseArgs.add(REPORTING_DATABASE);
 
         List<String> expectedDeleteTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 0, 0, 1, 1, 1, 1));
 
@@ -151,10 +151,10 @@ class HiveTableServiceTest extends SparkTestBase {
         List<String> expectedCreateSymlinkDatabaseArgs = new ArrayList<>();
         expectedCreateSymlinkDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(CURATED_DATABASE);
-        expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
+        expectedCreateSymlinkDatabaseArgs.add(REPORTING_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(CURATED_DATABASE);
-        expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
+        expectedCreateSymlinkDatabaseArgs.add(REPORTING_DATABASE);
 
         List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 0, 1, 1, 1));
 
@@ -225,25 +225,25 @@ class HiveTableServiceTest extends SparkTestBase {
     }
 
     @Test
-    void switchPrisonsTableDataSourceShouldFailWhenThereAreNoSchemas() {
+    void switchReportingTableDataSourceShouldFailWhenThereAreNoSchemas() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(Collections.emptyList());
 
-        assertThrows(HiveSchemaServiceException.class, () -> underTest.switchPrisonsTableDataSource(spark, schemaGroup));
+        assertThrows(HiveSchemaServiceException.class, () -> underTest.switchReportingTableDataSource(spark, schemaGroup));
     }
 
     @Test
-    void switchPrisonsTableDataSourceShouldFailWhenSourceReferenceServiceThrowsAndException() {
+    void switchReportingTableDataSourceShouldFailWhenSourceReferenceServiceThrowsAndException() {
         ImmutableSet<ImmutablePair<String, String>> schemaGroup = ImmutableSet.of(ImmutablePair.of(SCHEMA_NAME, TABLE_NAME));
 
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenThrow(new RuntimeException("Source reference error"));
 
-        assertThrows(RuntimeException.class, () -> underTest.switchPrisonsTableDataSource(spark, schemaGroup));
+        assertThrows(RuntimeException.class, () -> underTest.switchReportingTableDataSource(spark, schemaGroup));
     }
 
     @Test
-    void switchPrisonsTableDataSourceShouldLinkPrisonsTableToSpecifiedSource() {
+    void switchReportingTableDataSourceShouldLinkReportingTableToSpecifiedSource() {
         Set<ImmutablePair<String, String>> schemaGroupSet = Stream.of(0, 1)
                 .map(index -> ImmutablePair.of(createSchemaName(index), createTableName(index)))
                 .collect(Collectors.toSet());
@@ -257,14 +257,14 @@ class HiveTableServiceTest extends SparkTestBase {
         List<SourceReference.PrimaryKey> expectedPrimaryKeyArgs = createPrimaryKeys(Stream.of(0, 1));
 
         List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
-        expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
-        expectedDeleteDatabaseArgs.add(PRISONS_DATABASE);
+        expectedDeleteDatabaseArgs.add(REPORTING_DATABASE);
+        expectedDeleteDatabaseArgs.add(REPORTING_DATABASE);
 
         List<String> expectedDeleteTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 1));
 
         List<String> expectedCreateSymlinkDatabaseArgs = new ArrayList<>();
-        expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
-        expectedCreateSymlinkDatabaseArgs.add(PRISONS_DATABASE);
+        expectedCreateSymlinkDatabaseArgs.add(REPORTING_DATABASE);
+        expectedCreateSymlinkDatabaseArgs.add(REPORTING_DATABASE);
 
         List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 1));
 
@@ -274,12 +274,12 @@ class HiveTableServiceTest extends SparkTestBase {
         String tablePath1 = createPath(TEMP_RELOAD_BUCKET, 1);
         expectedCreateSymlinkPathArgs.add(tablePath1);
 
-        when(mockJobArguments.getPrisonsDataSwitchTargetS3Path()).thenReturn(TEMP_RELOAD_BUCKET);
-        when(mockJobArguments.getPrisonsDatabase()).thenReturn(PRISONS_DATABASE);
+        when(mockJobArguments.getReportingDataSwitchTargetS3Path()).thenReturn(TEMP_RELOAD_BUCKET);
+        when(mockJobArguments.getReportingDatabase()).thenReturn(REPORTING_DATABASE);
         when(mockSourceReferenceService.getAllSourceReferences(any())).thenReturn(sourceReferences);
         doNothing().when(mockStorageService).updateDeltaManifestForTable(eq(spark), updateManifestTablePathCaptor.capture());
 
-        assertThat((Collection<ImmutablePair<String, String>>) underTest.switchPrisonsTableDataSource(spark, schemaGroup), is(empty()));
+        assertThat((Collection<ImmutablePair<String, String>>) underTest.switchReportingTableDataSource(spark, schemaGroup), is(empty()));
 
         // verify configured Hive tables get deleted
         verify(mockGlueClient, times(2))
@@ -408,7 +408,7 @@ class HiveTableServiceTest extends SparkTestBase {
         when(mockJobArguments.getRawArchiveDatabase()).thenReturn(RAW_ARCHIVE_DATABASE);
         when(mockJobArguments.getStructuredDatabase()).thenReturn(STRUCTURED_DATABASE);
         when(mockJobArguments.getCuratedDatabase()).thenReturn(CURATED_DATABASE);
-        when(mockJobArguments.getPrisonsDatabase()).thenReturn(PRISONS_DATABASE);
+        when(mockJobArguments.getReportingDatabase()).thenReturn(REPORTING_DATABASE);
     }
 
     private static void assertPrimaryKeysMatch(List<SourceReference.PrimaryKey> actual, List<SourceReference.PrimaryKey> expected) {
