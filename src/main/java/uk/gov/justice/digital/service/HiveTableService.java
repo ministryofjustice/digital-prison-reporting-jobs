@@ -75,7 +75,7 @@ public class HiveTableService {
                 String curatedPath = createValidatedPath(jobArguments.getCuratedS3Path(), sourceName, tableName);
                 replaceSymlinkInputTables(jobArguments.getCuratedDatabase(), hiveTableName, curatedPath, schema, primaryKey);
 
-                replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, curatedPath, schema, primaryKey);
+                replaceSymlinkInputTables(jobArguments.getReportingDatabase(), hiveTableName, curatedPath, schema, primaryKey);
             } catch (Exception e) {
                 logger.error("Failed to replace Hive table {}", hiveTableName, e);
                 failedTables.add(ImmutablePair.of(sourceName, tableName));
@@ -86,7 +86,7 @@ public class HiveTableService {
         return failedTables;
     }
 
-    public Set<ImmutablePair<String, String>> switchPrisonsTableDataSource(SparkSession spark, ImmutableSet<ImmutablePair<String, String>> tables) {
+    public Set<ImmutablePair<String, String>> switchReportingTableDataSource(SparkSession spark, ImmutableSet<ImmutablePair<String, String>> tables) {
 
         Set<ImmutablePair<String, String>> failedTables = new HashSet<>();
         List<SourceReference> sourceReferences = getSourceReferences(tables);
@@ -96,7 +96,7 @@ public class HiveTableService {
             String tableName = sourceReference.getTable();
 
             String hiveTableName = sourceName + "_" + tableName;
-            String targetS3Path = jobArguments.getPrisonsDataSwitchTargetS3Path();
+            String targetS3Path = jobArguments.getReportingDataSwitchTargetS3Path();
 
             logger.info("Processing {}", hiveTableName);
             try {
@@ -106,7 +106,7 @@ public class HiveTableService {
 
                 String dataPath = createValidatedPath(targetS3Path, sourceName, tableName);
 
-                replaceSymlinkInputTables(jobArguments.getPrisonsDatabase(), hiveTableName, dataPath, schema, primaryKey);
+                replaceSymlinkInputTables(jobArguments.getReportingDatabase(), hiveTableName, dataPath, schema, primaryKey);
                 storageService.updateDeltaManifestForTable(spark, dataPath);
             } catch (Exception e) {
                 logger.error("Failed to point Hive table {} to {}", hiveTableName, targetS3Path, e);

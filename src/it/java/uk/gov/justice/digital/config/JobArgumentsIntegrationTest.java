@@ -51,7 +51,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.CONFIG_KEY, "test-config" },
             { JobArguments.AWS_REGION, "test-region" },
             { JobArguments.CURATED_S3_PATH, "s3://somepath/curated" },
-            { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/target" },
+            { JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/target" },
             { JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, "true" },
             { JobArguments.PROCESSED_RAW_FILES_PATH, "processed/raw/files" },
             { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, "SomeDomainCatalogName" },
@@ -69,7 +69,7 @@ class JobArgumentsIntegrationTest {
             { JobArguments.RAW_ARCHIVE_DATABASE, "raw_archive" },
             { JobArguments.STRUCTURED_DATABASE, "structured" },
             { JobArguments.CURATED_DATABASE, "curated" },
-            { JobArguments.PRISONS_DATABASE, "prisons" },
+            { JobArguments.REPORTING_DATABASE, "prisons" },
             { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, "https://dynamodb.example.com" },
             { JobArguments.CONTRACT_REGISTRY_NAME, "SomeContractRegistryName" },
             { JobArguments.SCHEMA_CACHE_MAX_SIZE, "0" },
@@ -129,7 +129,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.AWS_DYNAMODB_ENDPOINT_URL, validArguments.getAwsDynamoDBEndpointUrl() },
                 { JobArguments.AWS_REGION, validArguments.getAwsRegion() },
                 { JobArguments.CURATED_S3_PATH, validArguments.getCuratedS3Path() },
-                { JobArguments.PRISONS_DATA_SWITCH_TARGET_S3_PATH, validArguments.getPrisonsDataSwitchTargetS3Path() },
+                { JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH, validArguments.getReportingDataSwitchTargetS3Path() },
                 { JobArguments.ENABLE_STREAMING_SOURCE_ARCHIVING, validArguments.enableStreamingSourceArchiving() },
                 { JobArguments.PROCESSED_RAW_FILES_PATH, validArguments.getProcessedRawFilesPath() },
                 { JobArguments.DOMAIN_CATALOG_DATABASE_NAME, validArguments.getDomainCatalogDatabaseName() },
@@ -147,7 +147,7 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.RAW_ARCHIVE_DATABASE, validArguments.getRawArchiveDatabase() },
                 { JobArguments.STRUCTURED_DATABASE, validArguments.getStructuredDatabase() },
                 { JobArguments.CURATED_DATABASE, validArguments.getCuratedDatabase() },
-                { JobArguments.PRISONS_DATABASE, validArguments.getPrisonsDatabase() },
+                { JobArguments.REPORTING_DATABASE, validArguments.getReportingDatabase() },
                 { JobArguments.CONTRACT_REGISTRY_NAME, validArguments.getContractRegistryName() },
                 { JobArguments.SCHEMA_CACHE_MAX_SIZE, validArguments.getSchemaCacheMaxSize() },
                 { JobArguments.SCHEMA_CACHE_EXPIRY_IN_MINUTES, validArguments.getSchemaCacheExpiryInMinutes() },
@@ -203,6 +203,39 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.READ_CONFIG_FROM_S3);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertFalse(jobArguments.readConfigFromS3());
+    }
+
+    @Test
+    void reportingArgumentsShouldFallBackToTheirLegacyPrisonsNames() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.REPORTING_DATABASE);
+        args.remove(JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH);
+        args.put(JobArguments.LEGACY_PRISONS_DATABASE, "prisons");
+        args.put(JobArguments.LEGACY_PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/legacy-target");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("prisons", jobArguments.getReportingDatabase());
+        assertEquals("s3://somepath/legacy-target", jobArguments.getReportingDataSwitchTargetS3Path());
+    }
+
+    @Test
+    void reportingArgumentsShouldPreferTheNewNamesOverTheLegacyPrisonsNames() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.REPORTING_DATABASE, "probation");
+        args.put(JobArguments.LEGACY_PRISONS_DATABASE, "prisons");
+        args.put(JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/target");
+        args.put(JobArguments.LEGACY_PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/legacy-target");
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals("probation", jobArguments.getReportingDatabase());
+        assertEquals("s3://somepath/target", jobArguments.getReportingDataSwitchTargetS3Path());
+    }
+
+    @Test
+    void reportingArgumentsShouldThrowNamingTheNewArgumentWhenNeitherNameIsSet() {
+        IllegalStateException databaseException = assertThrows(IllegalStateException.class, emptyArguments::getReportingDatabase);
+        assertEquals("Argument: " + JobArguments.REPORTING_DATABASE + " required but not set", databaseException.getMessage());
+
+        IllegalStateException switchPathException = assertThrows(IllegalStateException.class, emptyArguments::getReportingDataSwitchTargetS3Path);
+        assertEquals("Argument: " + JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH + " required but not set", switchPathException.getMessage());
     }
 
     @Test
