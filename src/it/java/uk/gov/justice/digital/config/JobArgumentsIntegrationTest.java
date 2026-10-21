@@ -206,39 +206,6 @@ class JobArgumentsIntegrationTest {
     }
 
     @Test
-    void reportingArgumentsShouldFallBackToTheirLegacyPrisonsNames() {
-        HashMap<String, String> args = cloneTestArguments();
-        args.remove(JobArguments.REPORTING_DATABASE);
-        args.remove(JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH);
-        args.put(JobArguments.LEGACY_PRISONS_DATABASE, "prisons");
-        args.put(JobArguments.LEGACY_PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/legacy-target");
-        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals("prisons", jobArguments.getReportingDatabase());
-        assertEquals("s3://somepath/legacy-target", jobArguments.getReportingDataSwitchTargetS3Path());
-    }
-
-    @Test
-    void reportingArgumentsShouldPreferTheNewNamesOverTheLegacyPrisonsNames() {
-        HashMap<String, String> args = cloneTestArguments();
-        args.put(JobArguments.REPORTING_DATABASE, "probation");
-        args.put(JobArguments.LEGACY_PRISONS_DATABASE, "prisons");
-        args.put(JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/target");
-        args.put(JobArguments.LEGACY_PRISONS_DATA_SWITCH_TARGET_S3_PATH, "s3://somepath/legacy-target");
-        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
-        assertEquals("probation", jobArguments.getReportingDatabase());
-        assertEquals("s3://somepath/target", jobArguments.getReportingDataSwitchTargetS3Path());
-    }
-
-    @Test
-    void reportingArgumentsShouldThrowNamingTheNewArgumentWhenNeitherNameIsSet() {
-        IllegalStateException databaseException = assertThrows(IllegalStateException.class, emptyArguments::getReportingDatabase);
-        assertEquals("Argument: " + JobArguments.REPORTING_DATABASE + " required but not set", databaseException.getMessage());
-
-        IllegalStateException switchPathException = assertThrows(IllegalStateException.class, emptyArguments::getReportingDataSwitchTargetS3Path);
-        assertEquals("Argument: " + JobArguments.REPORTING_DATA_SWITCH_TARGET_S3_PATH + " required but not set", switchPathException.getMessage());
-    }
-
-    @Test
     void shouldSetBatchDuration() {
         HashMap<String, String> args = cloneTestArguments();
         args.put(JobArguments.BATCH_DURATION_SECONDS, "30");

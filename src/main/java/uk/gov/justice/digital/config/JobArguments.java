@@ -50,8 +50,6 @@ public class JobArguments {
     public static final String SCHEMA_CACHE_EXPIRY_IN_MINUTES = "dpr.schema.cache.expiry.minutes";
     public static final String CURATED_S3_PATH = "dpr.curated.s3.path";
     public static final String REPORTING_DATA_SWITCH_TARGET_S3_PATH = "dpr.reporting.data.switch.target.s3.path";
-    // Old name for dpr.reporting.data.switch.target.s3.path, still accepted until nothing passes it.
-    public static final String LEGACY_PRISONS_DATA_SWITCH_TARGET_S3_PATH = "dpr.prisons.data.switch.target.s3.path";
     // Raw files that have been processed by the streaming job are moved to this location before being archived.
     // Spark structured streaming only allows moving processed files to a location outside the source to avoid recycling the files.
     // It should be noted that the processed files can only be moved to a location within the same s3 bucket.
@@ -78,8 +76,6 @@ public class JobArguments {
     public static final String STRUCTURED_DATABASE = "dpr.structured.database";
     public static final String CURATED_DATABASE = "dpr.curated.database";
     public static final String REPORTING_DATABASE = "dpr.reporting.database";
-    // Old name for dpr.reporting.database, still accepted until nothing passes it.
-    public static final String LEGACY_PRISONS_DATABASE = "dpr.prisons.database";
     public static final String MAINTENANCE_TABLES_ROOT_PATH = "dpr.maintenance.root.path";
     public static final String MAINTENANCE_LIST_TABLE_RECURSE_MAX_DEPTH = "dpr.maintenance.listtable.recurseMaxDepth";
     // The Domain layer only has a depth of 2, with tables nested under domains
@@ -323,7 +319,7 @@ public class JobArguments {
     }
 
     public String getReportingDatabase() {
-        return getArgumentWithFallback(REPORTING_DATABASE, LEGACY_PRISONS_DATABASE);
+        return getArgument(REPORTING_DATABASE);
     }
 
     public String getCuratedS3Path() {
@@ -331,7 +327,7 @@ public class JobArguments {
     }
 
     public String getReportingDataSwitchTargetS3Path() {
-        return getArgumentWithFallback(REPORTING_DATA_SWITCH_TARGET_S3_PATH, LEGACY_PRISONS_DATA_SWITCH_TARGET_S3_PATH);
+        return getArgument(REPORTING_DATA_SWITCH_TARGET_S3_PATH);
     }
 
     public boolean enableStreamingSourceArchiving() {
@@ -719,13 +715,6 @@ public class JobArguments {
     private String getArgument(String argumentName) {
         return Optional
                 .ofNullable(config.get(argumentName))
-                .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
-    }
-
-    private String getArgumentWithFallback(String argumentName, String fallbackArgumentName) {
-        return Optional
-                .ofNullable(config.get(argumentName))
-                .or(() -> Optional.ofNullable(config.get(fallbackArgumentName)))
                 .orElseThrow(() -> new IllegalStateException("Argument: " + argumentName + " required but not set"));
     }
 
