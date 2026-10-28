@@ -14,8 +14,8 @@ class CurrentStateTotalCountsTest {
     void shouldBeFailureIfAnyResultHasMismatchedCounts() {
         // Exhaustive testing of different cases is included in the tests for CurrentStateTableCount
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
-        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L));
-        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 999L, 1L, 1L, 1L));
+        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
+        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 999L, 1L, 1L));
 
         assertFalse(underTest.isSuccess());
     }
@@ -23,8 +23,8 @@ class CurrentStateTotalCountsTest {
     @Test
     void shouldBeSuccessIfAllResultsHaveMatchedCounts() {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
-        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L));
-        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 2L, 2L, 2L));
+        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
+        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 2L, 2L));
 
         assertTrue(underTest.isSuccess());
     }
@@ -38,28 +38,28 @@ class CurrentStateTotalCountsTest {
     @Test
     void shouldSummariseResultsIfTheyDoNotMatch() {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
-        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L));
-        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 2L, 2L, 1L));
+        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
+        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 2L, 1L));
 
         String expected = "Current State Total Counts DO NOT MATCH:\n" +
                 "For table table2:\n" +
-                "\tData Source: 2, Structured Zone: 2, Curated Zone: 1, Operational DataStore: skipped\t - MISMATCH\n" +
+                "\tData Source: 2, Curated Zone: 1, Operational DataStore: skipped\t - MISMATCH\n" +
                 "For table table1:\n" +
-                "\tData Source: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
+                "\tData Source: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
         assertEquals(expected, underTest.summary());
     }
 
     @Test
     void shouldSummariseResultsIfTheyMatch() {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
-        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L));
-        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 2L, 2L, 2L));
+        underTest.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
+        underTest.put("table2", new CurrentStateTableCount(0.0, 0L, 2L, 2L));
 
         String expected = "Current State Total Counts MATCH:\n" +
                 "For table table2:\n" +
-                "\tData Source: 2, Structured Zone: 2, Curated Zone: 2, Operational DataStore: skipped\t - MATCH\n" +
+                "\tData Source: 2, Curated Zone: 2, Operational DataStore: skipped\t - MATCH\n" +
                 "For table table1:\n" +
-                "\tData Source: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
+                "\tData Source: 1, Curated Zone: 1, Operational DataStore: 1\t - MATCH\n";
         assertEquals(expected, underTest.summary());
     }
 
@@ -70,7 +70,7 @@ class CurrentStateTotalCountsTest {
         CurrentStateTotalCounts underTest = new CurrentStateTotalCounts();
         assertNull(underTest.get(tableName));
 
-        CurrentStateTableCount currentStateTableCount = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L);
+        CurrentStateTableCount currentStateTableCount = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L);
         underTest.put(tableName, currentStateTableCount);
 
         assertEquals(currentStateTableCount, underTest.get(tableName));
@@ -83,8 +83,8 @@ class CurrentStateTotalCountsTest {
         CurrentStateTotalCounts underTest1 = new CurrentStateTotalCounts();
         CurrentStateTotalCounts underTest2 = new CurrentStateTotalCounts();
 
-        underTest1.put(tableName, new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L));
-        underTest2.put(tableName, new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L));
+        underTest1.put(tableName, new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
+        underTest2.put(tableName, new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
 
         assertEquals(underTest1, underTest2);
     }
@@ -96,8 +96,8 @@ class CurrentStateTotalCountsTest {
         CurrentStateTotalCounts underTest1 = new CurrentStateTotalCounts();
         CurrentStateTotalCounts underTest2 = new CurrentStateTotalCounts();
 
-        underTest1.put(tableName, new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L));
-        underTest2.put(tableName, new CurrentStateTableCount(0.0, 0L, 2L, 1L, 1L, 1L));
+        underTest1.put(tableName, new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
+        underTest2.put(tableName, new CurrentStateTableCount(0.0, 0L, 2L, 1L, 1L));
 
         assertNotEquals(underTest1, underTest2);
     }
@@ -108,7 +108,7 @@ class CurrentStateTotalCountsTest {
         CurrentStateTotalCounts underTest1 = new CurrentStateTotalCounts();
         CurrentStateTotalCounts underTest2 = new CurrentStateTotalCounts();
 
-        CurrentStateTableCount count = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L, 1L);
+        CurrentStateTableCount count = new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L);
         underTest1.put("table1", count);
         underTest2.put("table2", count);
 

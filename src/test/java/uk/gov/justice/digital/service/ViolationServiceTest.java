@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
 import static uk.gov.justice.digital.service.ViolationService.ZoneName.RAW;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
 
 @ExtendWith(MockitoExtension.class)
@@ -68,8 +68,8 @@ class ViolationServiceTest extends SparkTestBase {
     @Test
     void handleRetriesExhaustedShouldWriteViolations() {
         Dataset<Row> inputDf = inserts(spark);
-        underTest.handleRetriesExhausted(spark, inputDf, "source", "table", mockCause, STRUCTURED_LOAD);
-        verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
+        underTest.handleRetriesExhausted(spark, inputDf, "source", "table", mockCause, CURATED_CDC);
+        verify(mockDataStorage).append(eq("s3://some-path/curated/source/table"), any());
         verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
     }
 
@@ -84,14 +84,14 @@ class ViolationServiceTest extends SparkTestBase {
     void handleRetriesExhaustedShouldWriteMetrics() {
         Dataset<Row> inputDf = inserts(spark);
         long violationRowCount = inputDf.count();
-        underTest.handleRetriesExhausted(spark, inputDf, "source", "table", mockCause, STRUCTURED_LOAD);
+        underTest.handleRetriesExhausted(spark, inputDf, "source", "table", mockCause, CURATED_CDC);
         verify(cloudwatchMetricReportingService).reportViolationCount(violationRowCount);
     }
 
     @Test
     void handleNoSchemaFoundShouldWriteViolations() {
-        underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
-        verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
+        underTest.handleNoSchemaFound(spark, testInputDataframe(), "source", "table", CURATED_CDC);
+        verify(mockDataStorage).append(eq("s3://some-path/curated/source/table"), any());
         verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
     }
 
@@ -99,27 +99,27 @@ class ViolationServiceTest extends SparkTestBase {
     void handleNoSchemaFoundShouldThrowIfWriteFails() {
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
         Dataset<Row> df = testInputDataframe();
-        assertThrows(DataStorageException.class, () -> underTest.handleNoSchemaFound(spark, df, "source", "table", STRUCTURED_LOAD));
+        assertThrows(DataStorageException.class, () -> underTest.handleNoSchemaFound(spark, df, "source", "table", CURATED_CDC));
     }
 
     @Test
     void handleNoSchemaFoundShouldWriteMetrics() {
         Dataset<Row> inputDf = testInputDataframe();
         long violationRowCount = inputDf.count();
-        underTest.handleNoSchemaFound(spark, inputDf, "source", "table", STRUCTURED_LOAD);
+        underTest.handleNoSchemaFound(spark, inputDf, "source", "table", CURATED_CDC);
         verify(cloudwatchMetricReportingService).reportViolationCount(violationRowCount);
     }
 
     @Test
     void handleViolationShouldWriteViolations() {
-        underTest.handleViolation(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
-        verify(mockDataStorage).append(eq("s3://some-path/structured/source/table"), any());
+        underTest.handleViolation(spark, testInputDataframe(), "source", "table", CURATED_CDC);
+        verify(mockDataStorage).append(eq("s3://some-path/curated/source/table"), any());
         verify(mockDataStorage).updateDeltaManifestForTable(any(), any());
     }
 
     @Test
     void handleViolationShouldWriteViolationsUsingCommonSchema() {
-        underTest.handleViolation(spark, testInputDataframe(), "source", "table", STRUCTURED_LOAD);
+        underTest.handleViolation(spark, testInputDataframe(), "source", "table", CURATED_CDC);
         verify(mockDataStorage).append(any(), argumentCaptor.capture());
 
         Dataset<Row> result = argumentCaptor.getValue();
@@ -137,14 +137,14 @@ class ViolationServiceTest extends SparkTestBase {
     void handleViolationShouldThrowIfWriteFails() {
         doThrow(DataStorageException.class).when(mockDataStorage).append(any(), any());
         Dataset<Row> df = testInputDataframe();
-        assertThrows(DataStorageException.class, () -> underTest.handleViolation(spark, df, "source", "table", STRUCTURED_LOAD));
+        assertThrows(DataStorageException.class, () -> underTest.handleViolation(spark, df, "source", "table", CURATED_CDC));
     }
 
     @Test
     void handleViolationShouldWriteMetrics() {
         Dataset<Row> inputDf = testInputDataframe();
         long violationRowCount = inputDf.count();
-        underTest.handleViolation(spark, inputDf, "source", "table", STRUCTURED_LOAD);
+        underTest.handleViolation(spark, inputDf, "source", "table", CURATED_CDC);
         verify(cloudwatchMetricReportingService).reportViolationCount(violationRowCount);
     }
 

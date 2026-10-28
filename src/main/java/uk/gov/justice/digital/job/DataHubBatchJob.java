@@ -33,7 +33,7 @@ import java.util.Optional;
 
 import static uk.gov.justice.digital.common.CommonDataFields.withCheckpointField;
 import static uk.gov.justice.digital.common.CommonDataFields.withMetadataFields;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_LOAD;
 
 @Singleton
 @CommandLine.Command(name = "DataHubBatchJob")
@@ -107,7 +107,7 @@ public class DataHubBatchJob implements Runnable {
         }
 
         // Some configured tables have no raw files at all, so they're missing from pathsByTable entirely.
-        // Process those too, passing no file paths, so their curated/structured tables still get created.
+        // Process those too, passing no file paths, so their curated tables still get created.
         for (val configuredTable: tableDiscoveryService.discoverTablesToProcess()) {
             boolean alreadyProcessedAbove = pathsByTable.containsKey(configuredTable);
             if (!alreadyProcessedAbove) {
@@ -124,7 +124,7 @@ public class DataHubBatchJob implements Runnable {
 
     /**
      * Processes a single configured table for this run: from its raw files if it has any, or - so its
-     * curated/structured Delta tables still get created with the correct schema - as an empty table if not.
+     * curated Delta tables still get created with the correct schema - as an empty table if not.
      */
     private void processTable(SparkSession sparkSession, String schema, String table, List<String> filePaths) throws DataStorageException {
         val tableStartTime = clock.millis();
@@ -137,7 +137,7 @@ public class DataHubBatchJob implements Runnable {
     }
 
     /**
-     * Runs an empty, but correctly schema'd, DataFrame through the batch processor so the structured/curated
+     * Runs an empty, but correctly schema'd, DataFrame through the batch processor so the curated
      * Delta tables are still created (with no rows) for a table that has no raw batch files this run.
      */
     private void processEmptyTable(SparkSession sparkSession, String schema, String table, long tableStartTime) {
@@ -174,7 +174,7 @@ public class DataHubBatchJob implements Runnable {
                 logger.info("Processed table {}.{} in {}ms", schema, table, clock.millis() - tableStartTime);
             } else {
                 logger.warn("No source reference for table {}.{} - writing all data to violations", schema, table);
-                violationService.handleNoSchemaFound(sparkSession, dataFrame, schema, table, STRUCTURED_LOAD);
+                violationService.handleNoSchemaFound(sparkSession, dataFrame, schema, table, CURATED_LOAD);
             }
         } catch (DataProviderFailedMergingSchemasException e) {
             String msg = String.format("Violation - Incompatible schemas across multiple files for %s.%s", schema, table);

@@ -55,7 +55,6 @@ public class E2ETestBase extends SparkTestBase {
     protected Path testRoot;
     protected String rawPath;
     protected String rawArchivePath;
-    protected String structuredPath;
     protected String curatedPath;
     protected String violationsPath;
     protected String tempReloadPath;
@@ -65,13 +64,11 @@ public class E2ETestBase extends SparkTestBase {
     protected void givenPathsAreConfigured(JobArguments arguments) {
         rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
         rawArchivePath = testRoot.resolve("rawArchive").toAbsolutePath().toString();
-        structuredPath = testRoot.resolve("structured").toAbsolutePath().toString();
         curatedPath = testRoot.resolve("curated").toAbsolutePath().toString();
         violationsPath = testRoot.resolve("violations").toAbsolutePath().toString();
         tempReloadPath = testRoot.resolve("tempReload").toAbsolutePath().toString();
         when(arguments.getRawS3Path()).thenReturn(rawPath);
         lenient().when(arguments.getRawArchiveS3Path()).thenReturn(rawArchivePath);
-        lenient().when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
         lenient().when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
         lenient().when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
         lenient().when(arguments.getTempReloadS3Path()).thenReturn(tempReloadPath);
@@ -162,18 +159,18 @@ public class E2ETestBase extends SparkTestBase {
         whenDataIsAddedToPathForTable(table, input, rawPath);
     }
 
-    protected void thenStructuredCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey, Connection testQueryConnection) throws SQLException {
-        assertStructuredAndCuratedForTableContainForPK(structuredPath, curatedPath, inputSchemaName, table, data, primaryKey);
+    protected void thenCuratedAndOperationalDataStoreContainForPK(String table, String data, int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertCuratedForTableContainForPK(curatedPath, inputSchemaName, table, data, primaryKey);
         assertOperationalDataStoreContainsForPK(namespace, operationalDataStoreTableName(inputSchemaName, table), data, primaryKey, testQueryConnection);
     }
 
-    protected void thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey, Connection testQueryConnection) throws SQLException {
-        assertStructuredAndCuratedForTableDoNotContainPK(structuredPath, curatedPath, inputSchemaName, table, primaryKey);
+    protected void thenCuratedAndOperationalDataStoreDoNotContainPK(String table, int primaryKey, Connection testQueryConnection) throws SQLException {
+        assertCuratedForTableDoNotContainPK(curatedPath, inputSchemaName, table, primaryKey);
         assertOperationalDataStoreDoesNotContainPK(namespace, operationalDataStoreTableName(inputSchemaName, table), primaryKey, testQueryConnection);
     }
 
-    protected void thenStructuredViolationsContainsForPK(String table, String data, int primaryKey) {
-        String violationsTablePath = Paths.get(violationsPath).resolve("structured").resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
+    protected void thenViolationsContainsForPK(String table, String data, int primaryKey) {
+        String violationsTablePath = Paths.get(violationsPath).resolve("curated").resolve(inputSchemaName).resolve(table).toAbsolutePath().toString();
         assertViolationsTableContainsForPK(violationsTablePath, data, primaryKey);
     }
 }

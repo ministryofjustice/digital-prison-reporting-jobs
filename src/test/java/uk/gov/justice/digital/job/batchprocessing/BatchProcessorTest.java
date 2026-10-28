@@ -15,7 +15,6 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,15 +32,13 @@ import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Delete;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_LOAD;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 
 @ExtendWith(MockitoExtension.class)
 class BatchProcessorTest extends SparkTestBase {
 
-    private static final String table = "table";
-    private static final String source = "source";
     private static final List<Row> inputRows = Arrays.asList(
             createRow(1, "2023-11-13 10:00:00.000000", Insert, "1"),
             createRow(2, "2023-11-13 10:00:00.000000", Insert, "2"),
@@ -57,8 +54,6 @@ class BatchProcessorTest extends SparkTestBase {
 
     @Mock
     private Dataset<Row> curatedDfMock;
-    @Mock
-    private StructuredZoneLoad structuredZoneLoad;
     @Mock
     private CuratedZoneLoad curatedZoneLoad;
     @Mock
@@ -80,42 +75,25 @@ class BatchProcessorTest extends SparkTestBase {
 
     @BeforeEach
     void setUp() {
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        underTest = new BatchProcessor(curatedZoneLoad, validationService, operationalDataStoreService);
     }
 
     @Test
     void shouldStillProcessZonesForEmptyDataframeToEnsureTablesAreCreated() {
         Dataset<Row> emptyDf = spark.createDataFrame(Collections.<Row>emptyList(), TEST_DATA_SCHEMA);
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), any(), eq(STRUCTURED_LOAD))).thenReturn(emptyDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(emptyDf);
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), any(), eq(CURATED_LOAD))).thenReturn(emptyDf);
         when(curatedZoneLoad.process(any(), any(), any())).thenReturn(emptyDf);
 
         underTest.processBatch(spark, sourceReference, emptyDf);
 
-        verify(structuredZoneLoad, times(1)).process(any(), any(), any());
         verify(curatedZoneLoad, times(1)).process(any(), any(), any());
         verify(operationalDataStoreService, times(0)).overwriteData(any(), any());
     }
 
     @Test
-    void shouldProcessStructured() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD))).thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
-
-        underTest.processBatch(spark, sourceReference, inputDf);
-
-        verify(structuredZoneLoad, times(1)).process(any(), argumentCaptor.capture(), eq(sourceReference));
-        List<Row> result = argumentCaptor.getValue().collectAsList();
-        assertEquals(validatedRows.size(), result.size());
-        assertTrue(result.containsAll(validatedRows));
-
-    }
-
-    @Test
     void shouldProcessCurated() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(CURATED_LOAD)))
                 .thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
         underTest.processBatch(spark, sourceReference, inputDf);
 
@@ -127,9 +105,8 @@ class BatchProcessorTest extends SparkTestBase {
 
     @Test
     void shouldWriteCuratedOutputToOperationalDataStore() {
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(CURATED_LOAD)))
                 .thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
         when(curatedZoneLoad.process(any(), any(), any())).thenReturn(curatedDfMock);
 
         underTest.processBatch(spark, sourceReference, inputDf);
@@ -143,15 +120,15 @@ class BatchProcessorTest extends SparkTestBase {
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Update.getName())))
                 .unionAll(validatedDf.withColumn(OPERATION, lit(Delete.getName())));
 
-        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD)))
+        when(validationService.handleValidation(any(), any(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(CURATED_LOAD)))
                 .thenReturn(validatedDf);
-        when(structuredZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
+        when(curatedZoneLoad.process(any(), any(), any())).thenReturn(validatedDf);
 
 
         underTest.processBatch(spark, sourceReference, mixedOperations);
 
         verify(validationService, times(1))
-                .handleValidation(any(), argumentCaptor.capture(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(STRUCTURED_LOAD));
+                .handleValidation(any(), argumentCaptor.capture(), eq(sourceReference), eq(TEST_DATA_SCHEMA), eq(CURATED_LOAD));
         List<Row> result = argumentCaptor.getValue().collectAsList();
         assertEquals(validatedRows.size(), result.size());
         assertTrue(result.containsAll(validatedRows));

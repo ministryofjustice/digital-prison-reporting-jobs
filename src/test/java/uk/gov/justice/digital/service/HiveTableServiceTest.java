@@ -75,11 +75,9 @@ class HiveTableServiceTest extends SparkTestBase {
     private HiveTableService underTest;
 
     private static final String RAW_ARCHIVE_BUCKET = "s3://raw-archive";
-    private static final String STRUCTURED_ZONE_BUCKET = "s3://structured-zone";
     private static final String CURATED_ZONE_BUCKET = "s3://curated-zone";
     private static final String TEMP_RELOAD_BUCKET = "s3://temp-reload";
     private static final String RAW_ARCHIVE_DATABASE = "raw_archive";
-    private static final String STRUCTURED_DATABASE = "structured";
     private static final String CURATED_DATABASE = "curated";
     private static final String REPORTING_DATABASE = "prisons";
 
@@ -124,19 +122,17 @@ class HiveTableServiceTest extends SparkTestBase {
 
         val expectedCreateArchivePrimaryKeyArgs = createPrimaryKeys(Stream.of(0, 1));
         val expectedCreateArchiveSensitiveColumnsArgs = createSensitiveColumns(Stream.of(0, 1));
-        val expectedSymlinkPrimaryKeyArgs = createPrimaryKeys(Stream.of(0, 0, 0, 1, 1, 1));
+        val expectedSymlinkPrimaryKeyArgs = createPrimaryKeys(Stream.of(0, 0, 1, 1));
 
         List<String> expectedDeleteDatabaseArgs = new ArrayList<>();
         expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
-        expectedDeleteDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedDeleteDatabaseArgs.add(CURATED_DATABASE);
         expectedDeleteDatabaseArgs.add(REPORTING_DATABASE);
         expectedDeleteDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
-        expectedDeleteDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedDeleteDatabaseArgs.add(CURATED_DATABASE);
         expectedDeleteDatabaseArgs.add(REPORTING_DATABASE);
 
-        List<String> expectedDeleteTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 0, 0, 1, 1, 1, 1));
+        List<String> expectedDeleteTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 0, 1, 1, 1));
 
         List<String> expectedCreateArchiveDatabaseArgs = new ArrayList<>();
         expectedCreateArchiveDatabaseArgs.add(RAW_ARCHIVE_DATABASE);
@@ -149,20 +145,16 @@ class HiveTableServiceTest extends SparkTestBase {
         expectedCreateArchivePathArgs.add(createPath(RAW_ARCHIVE_BUCKET, 1));
 
         List<String> expectedCreateSymlinkDatabaseArgs = new ArrayList<>();
-        expectedCreateSymlinkDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(CURATED_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(REPORTING_DATABASE);
-        expectedCreateSymlinkDatabaseArgs.add(STRUCTURED_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(CURATED_DATABASE);
         expectedCreateSymlinkDatabaseArgs.add(REPORTING_DATABASE);
 
-        List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 0, 1, 1, 1));
+        List<String> expectedCreateSymlinkTableArgs = createExpectedTableArgsFromSequence(Stream.of(0, 0, 1, 1));
 
         List<String> expectedCreateSymlinkPathArgs = new ArrayList<>();
-        expectedCreateSymlinkPathArgs.add(createPath(STRUCTURED_ZONE_BUCKET, 0));
         expectedCreateSymlinkPathArgs.add(createPath(CURATED_ZONE_BUCKET, 0));
         expectedCreateSymlinkPathArgs.add(createPath(CURATED_ZONE_BUCKET, 0));
-        expectedCreateSymlinkPathArgs.add(createPath(STRUCTURED_ZONE_BUCKET, 1));
         expectedCreateSymlinkPathArgs.add(createPath(CURATED_ZONE_BUCKET, 1));
         expectedCreateSymlinkPathArgs.add(createPath(CURATED_ZONE_BUCKET, 1));
 
@@ -172,7 +164,7 @@ class HiveTableServiceTest extends SparkTestBase {
         assertThat((Collection<ImmutablePair<String, String>>) underTest.replaceTables(schemaGroup), is(empty()));
 
         // verify all Hive tables get deleted
-        verify(mockGlueClient, times(8))
+        verify(mockGlueClient, times(6))
                 .deleteTable(deleteDatabaseArgCaptor.capture(), deleteTableArgCaptor.capture());
 
         assertThat(deleteDatabaseArgCaptor.getAllValues(), containsTheSameElementsInOrderAs(expectedDeleteDatabaseArgs));
@@ -202,8 +194,8 @@ class HiveTableServiceTest extends SparkTestBase {
                 createArchiveSensitiveColumnsCaptor
         );
 
-        // verify structured, curated and prisons tables are created with symlink format
-        verify(mockGlueClient, times(6))
+        // verify curated and prisons tables are created with symlink format
+        verify(mockGlueClient, times(4))
                 .createTableWithSymlink(
                         createSymlinkDatabaseArgCaptor.capture(),
                         createSymlinkTableArgCaptor.capture(),
@@ -402,11 +394,9 @@ class HiveTableServiceTest extends SparkTestBase {
 
     private void mockJobArgumentCalls() {
         when(mockJobArguments.getRawArchiveS3Path()).thenReturn(RAW_ARCHIVE_BUCKET);
-        when(mockJobArguments.getStructuredS3Path()).thenReturn(STRUCTURED_ZONE_BUCKET);
         when(mockJobArguments.getCuratedS3Path()).thenReturn(CURATED_ZONE_BUCKET);
 
         when(mockJobArguments.getRawArchiveDatabase()).thenReturn(RAW_ARCHIVE_DATABASE);
-        when(mockJobArguments.getStructuredDatabase()).thenReturn(STRUCTURED_DATABASE);
         when(mockJobArguments.getCuratedDatabase()).thenReturn(CURATED_DATABASE);
         when(mockJobArguments.getReportingDatabase()).thenReturn(REPORTING_DATABASE);
     }

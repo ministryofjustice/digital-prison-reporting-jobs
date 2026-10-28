@@ -23,7 +23,7 @@ import javax.inject.Singleton;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
 
 @Singleton
 public class TableStreamingQueryProvider {
@@ -89,7 +89,7 @@ public class TableStreamingQueryProvider {
     TableStreamingQuery noSchemaFoundQuery(SparkSession spark, String inputSourceName, String inputTableName) throws NoSchemaNoDataException {
         Dataset<Row> sourceData = s3DataProvider.getStreamingSourceDataWithSchemaInference(spark, inputSourceName, inputTableName);
         VoidFunction2<Dataset<Row>, Long> batchProcessingFunc = withIncompatibleSchemaHandling(inputSourceName, inputTableName,
-                (df, batchId) -> violationService.handleNoSchemaFound(spark, df, inputSourceName, inputTableName, STRUCTURED_CDC)
+                (df, batchId) -> violationService.handleNoSchemaFound(spark, df, inputSourceName, inputTableName, CURATED_CDC)
         );
 
         return new TableStreamingQuery(

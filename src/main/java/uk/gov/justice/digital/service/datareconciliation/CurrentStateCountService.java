@@ -60,7 +60,7 @@ public class CurrentStateCountService {
 
     /**
      * Retrieve record counts from data stores that contain current state
-     * (the source datastore, structured and curated, and possibly the OperationalDataStore).
+     * (the source datastore and curated, and possibly the OperationalDataStore).
      */
     CurrentStateTableCount currentStateCountForTable(SparkSession sparkSession, SourceReference sourceReference) {
         String sourceName = sourceReference.getSource();
@@ -69,11 +69,8 @@ public class CurrentStateCountService {
 
         long sourceDataStoreCount = getSourceDataStoreCount(tableName);
 
-        String structuredTablePath = tablePath(jobArguments.getStructuredS3Path(), sourceName, tableName);
-        long structuredCount = getStructuredCount(sparkSession, structuredTablePath, sourceName, tableName);
-
         String curatedTablePath = tablePath(jobArguments.getCuratedS3Path(), sourceName, tableName);
-        long curatedCount = getCuratedCount(sparkSession, curatedTablePath, sourceName, tableName, structuredTablePath);
+        long curatedCount = getCuratedCount(sparkSession, curatedTablePath, sourceName, tableName);
 
         String operationalDataStoreFullTableName = sourceReference.getFullOperationalDataStoreTableNameWithSchema();
         Long operationalDataStoreCount = getOperationalDataStoreCount(sourceReference, operationalDataStoreFullTableName);
@@ -82,7 +79,7 @@ public class CurrentStateCountService {
         double relativeTolerance = jobArguments.getReconciliationCurrentStateCountsToleranceRelativePercentage();
         long absoluteTolerance = jobArguments.getReconciliationCurrentStateCountsToleranceAbsolute();
 
-        return new CurrentStateTableCount(relativeTolerance, absoluteTolerance, sourceDataStoreCount, structuredCount, curatedCount, operationalDataStoreCount);
+        return new CurrentStateTableCount(relativeTolerance, absoluteTolerance, sourceDataStoreCount, curatedCount, operationalDataStoreCount);
     }
 
     private long getSourceDataStoreCount(String tableName) {
@@ -97,24 +94,7 @@ public class CurrentStateCountService {
         return sourceDataStoreCount;
     }
 
-    private long getStructuredCount(SparkSession sparkSession, String structuredTablePath, String sourceName, String tableName) {
-        long structuredCount;
-        try {
-            Dataset<Row> structured = s3DataProvider.getBatchDeltaTableData(sparkSession, structuredTablePath);
-            logger.info("Reading Structured count for table {}/{}", sourceName, tableName);
-            structuredCount = structured.count();
-        } catch (Exception e) {
-            if (isPathDoesNotExistException(e)) {
-                logger.warn("Structured table does not exist at {} so will set count to zero", structuredTablePath, e);
-                structuredCount = 0L;
-            } else {
-                throw e;
-            }
-        }
-        return structuredCount;
-    }
-
-    private long getCuratedCount(SparkSession sparkSession, String curatedTablePath, String sourceName, String tableName, String structuredTablePath) {
+    private long getCuratedCount(SparkSession sparkSession, String curatedTablePath, String sourceName, String tableName) {
         long curatedCount;
         try {
             Dataset<Row> curated = s3DataProvider.getBatchDeltaTableData(sparkSession, curatedTablePath);
@@ -122,7 +102,7 @@ public class CurrentStateCountService {
             curatedCount = curated.count();
         } catch (Exception e) {
             if (isPathDoesNotExistException(e)) {
-                logger.warn("Structured table does not exist at {} so will set count to zero", structuredTablePath, e);
+                logger.warn("Curated table does not exist at {} so will set count to zero", curatedTablePath, e);
                 curatedCount = 0L;
             } else {
                 throw e;

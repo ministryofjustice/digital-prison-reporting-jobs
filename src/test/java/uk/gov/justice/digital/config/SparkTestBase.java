@@ -128,17 +128,13 @@ public class SparkTestBase {
 		}
 	}
 
-	protected static void assertStructuredAndCuratedForTableContainForPK(String structuredPath, String curatedPath, String schemaName, String tableName, String data, int primaryKey) {
-		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
+	protected static void assertCuratedForTableContainForPK(String curatedPath, String schemaName, String tableName, String data, int primaryKey) {
 		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
-		assertDeltaTableContainsForPK(structuredTablePath, data, primaryKey);
 		assertDeltaTableContainsForPK(curatedTablePath, data, primaryKey);
 	}
 
-	protected static void assertStructuredAndCuratedForTableDoNotContainPK(String structuredPath, String curatedPath, String schemaName, String tableName, int primaryKey) {
-		String structuredTablePath = Paths.get(structuredPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
+	protected static void assertCuratedForTableDoNotContainPK(String curatedPath, String schemaName, String tableName, int primaryKey) {
 		String curatedTablePath = Paths.get(curatedPath).resolve(schemaName).resolve(tableName).toAbsolutePath().toString();
-		assertDeltaTableDoesNotContainPK(structuredTablePath, primaryKey);
 		assertDeltaTableDoesNotContainPK(curatedTablePath, primaryKey);
 	}
 

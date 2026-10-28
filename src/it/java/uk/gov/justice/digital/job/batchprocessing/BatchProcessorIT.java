@@ -29,7 +29,6 @@ import uk.gov.justice.digital.service.operationaldatastore.dataaccess.Operationa
 import uk.gov.justice.digital.test.BaseMinimalDataIntegrationTest;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.sql.Connection;
 import java.util.Arrays;
@@ -96,7 +95,7 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
     }
 
     @Test
-    void shouldWriteInsertsToStructuredCuratedAndOperationalDataStore() throws Exception {
+    void shouldWriteInsertsToCuratedAndOperationalDataStore() throws Exception {
         Dataset<Row> input = spark.createDataFrame(Arrays.asList(
                 createRow(pk1, "2023-11-13 10:50:00.123456", Insert, "data1"),
                 createRow(pk2, "2023-11-13 10:50:00.123456", Insert, "data2"),
@@ -109,11 +108,11 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, input);
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data2", pk2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK("data2", pk2, testQueryConnection);
 
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk4, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk4, testQueryConnection);
     }
 
     @Test
@@ -129,11 +128,11 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, input);
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
 
-        thenStructuredViolationsContainsForPK("data2", pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenViolationsContainsForPK("data2", pk2);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
     }
 
     @Test
@@ -149,12 +148,12 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
-        thenStructuredViolationsContainsPK(pk1);
-        thenStructuredViolationsContainsPK(pk2);
-        thenStructuredViolationsContainsPK(pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
+        thenViolationsContainsPK(pk1);
+        thenViolationsContainsPK(pk2);
+        thenViolationsContainsPK(pk3);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     @Test
@@ -171,12 +170,12 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
-        thenStructuredViolationsContainsPK(pk1);
-        thenStructuredViolationsContainsPK(pk2);
-        thenStructuredViolationsContainsPK(pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
+        thenViolationsContainsPK(pk1);
+        thenViolationsContainsPK(pk2);
+        thenViolationsContainsPK(pk3);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     @Test
@@ -192,12 +191,12 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
-        thenStructuredViolationsContainsPK(pk1);
-        thenStructuredViolationsContainsPK(pk2);
-        thenStructuredViolationsContainsPK(pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
+        thenViolationsContainsPK(pk1);
+        thenViolationsContainsPK(pk2);
+        thenViolationsContainsPK(pk3);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     @Test
@@ -213,12 +212,12 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
-        thenStructuredViolationsContainsPK(pk1);
-        thenStructuredViolationsContainsPK(pk2);
-        thenStructuredViolationsContainsPK(pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
+        thenViolationsContainsPK(pk1);
+        thenViolationsContainsPK(pk2);
+        thenViolationsContainsPK(pk3);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     @Test
@@ -234,12 +233,12 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, dfWithMisMatchingSchema);
 
-        thenStructuredViolationsContainsPK(pk1);
-        thenStructuredViolationsContainsPK(pk2);
-        thenStructuredViolationsContainsPK(pk3);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
+        thenViolationsContainsPK(pk1);
+        thenViolationsContainsPK(pk2);
+        thenViolationsContainsPK(pk3);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk3, testQueryConnection);
     }
 
     @Test
@@ -256,11 +255,11 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, dfNullNonNullableCols);
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK("data1", pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK("data3", pk3, testQueryConnection);
 
-        thenStructuredViolationsContainsForPK("data2", pk2);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
+        thenViolationsContainsForPK("data2", pk2);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk2, testQueryConnection);
         // The 2nd bad dataframe will be written to violations with another, incompatible schema
         Dataset<Row> schemaChanged = spark.createDataFrame(Arrays.asList(
                         createRow(pk4, "2023-11-13 10:50:00.123456", Insert, "data1"),
@@ -272,12 +271,12 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
 
         underTest.processBatch(spark, sourceReference, schemaChanged);
 
-        thenStructuredViolationsContainsPK(pk4);
-        thenStructuredViolationsContainsPK(pk5);
-        thenStructuredViolationsContainsPK(pk6);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk4, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk5, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(pk6, testQueryConnection);
+        thenViolationsContainsPK(pk4);
+        thenViolationsContainsPK(pk5);
+        thenViolationsContainsPK(pk6);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk4, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk5, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(pk6, testQueryConnection);
     }
 
     private void givenSettingsAreConfigured() {
@@ -296,7 +295,6 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
         ViolationService violationService =
                 new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
         ValidationService validationService = new ValidationService(violationService);
-        StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
@@ -306,15 +304,13 @@ class BatchProcessorIT extends BaseMinimalDataIntegrationTest {
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
-        underTest = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        underTest = new BatchProcessor(curatedZoneLoad, validationService, operationalDataStoreService);
     }
 
     private void givenPathsAreConfigured() {
         rawPath = testRoot.resolve("raw").toAbsolutePath().toString();
-        structuredPath = testRoot.resolve("structured").toAbsolutePath().toString();
         curatedPath = testRoot.resolve("curated").toAbsolutePath().toString();
         violationsPath = testRoot.resolve("violations").toAbsolutePath().toString();
-        when(arguments.getStructuredS3Path()).thenReturn(structuredPath);
         when(arguments.getCuratedS3Path()).thenReturn(curatedPath);
         lenient().when(arguments.getViolationsS3Path()).thenReturn(violationsPath);
     }

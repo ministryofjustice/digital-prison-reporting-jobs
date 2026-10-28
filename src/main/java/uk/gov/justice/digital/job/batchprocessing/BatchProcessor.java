@@ -12,14 +12,13 @@ import uk.gov.justice.digital.datahub.model.SourceReference;
 import uk.gov.justice.digital.service.ValidationService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import javax.inject.Singleton;
 
 import static org.apache.spark.sql.functions.col;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_LOAD;
 
 /**
  * Responsible for processing batches of DMS records.
@@ -31,19 +30,16 @@ public class BatchProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(BatchProcessor.class);
 
-    private final StructuredZoneLoad structuredZoneLoad;
     private final CuratedZoneLoad curatedZoneLoad;
     private final ValidationService validationService;
     private final OperationalDataStoreService operationalDataStoreService;
 
     @Inject
     public BatchProcessor(
-            StructuredZoneLoad structuredZoneLoad,
             CuratedZoneLoad curatedZoneLoad,
             ValidationService validationService,
             OperationalDataStoreService operationalDataStoreService) {
         logger.info("Initializing S3BatchProcessor");
-        this.structuredZoneLoad = structuredZoneLoad;
         this.curatedZoneLoad = curatedZoneLoad;
         this.validationService = validationService;
         this.operationalDataStoreService = operationalDataStoreService;
@@ -66,9 +62,8 @@ public class BatchProcessor {
 
         val filteredDf = dataFrame.where(col(OPERATION).equalTo(Insert.getName()));
         StructType inferredSchema = filteredDf.schema();
-        val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, STRUCTURED_LOAD);
-        val structuredLoadDf = structuredZoneLoad.process(spark, validRows, sourceReference);
-        val curatedLoadDf = curatedZoneLoad.process(spark, structuredLoadDf, sourceReference);
+        val validRows = validationService.handleValidation(spark, filteredDf, sourceReference, inferredSchema, CURATED_LOAD);
+        val curatedLoadDf = curatedZoneLoad.process(spark, validRows, sourceReference);
 
         if (hasData) {
             operationalDataStoreService.overwriteData(curatedLoadDf, sourceReference);

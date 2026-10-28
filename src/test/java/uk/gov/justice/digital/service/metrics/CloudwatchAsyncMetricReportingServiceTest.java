@@ -176,31 +176,6 @@ class CloudwatchAsyncMetricReportingServiceTest {
     }
 
     @Test
-    void reportStreamingThroughputWrittenToStructuredShouldPutMetrics() {
-        when(clock.instant()).thenReturn(timestamp);
-        long expectedCount = 100L;
-        underTest.reportStreamingThroughputWrittenToStructured(expectedCount);
-        underTest.flush();
-
-        verify(cloudwatchClient, times(1)).putMetrics(eq(NAMESPACE), metricDatumCaptor.capture());
-
-        Collection<MetricDatum> sentMetrics = metricDatumCaptor.getValue();
-
-        assertEquals(1, sentMetrics.size());
-        MetricDatum datum = sentMetrics.iterator().next();
-
-        assertEquals("GlueJobStreamingThroughputStructuredCount", datum.metricName());
-        assertEquals(expectedCount, datum.value());
-        assertEquals(StandardUnit.COUNT, datum.unit());
-        assertEquals(timestamp, datum.timestamp());
-        List<Dimension> dimensions = datum.dimensions();
-        assertEquals(1, dimensions.size());
-        Dimension dimension = dimensions.get(0);
-        assertEquals("JobName", dimension.name());
-        assertEquals(JOB, dimension.value());
-    }
-
-    @Test
     void reportStreamingThroughputWrittenToCuratedShouldPutMetrics() {
         when(clock.instant()).thenReturn(timestamp);
 
