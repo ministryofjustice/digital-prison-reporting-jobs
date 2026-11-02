@@ -40,8 +40,8 @@ public class SparkSessionProvider {
         sparkConf
                 .set("spark.driver.memory", driverMemory)
                 .set("spark.executor.memory", executorMemory)
-                .set("spark.databricks.delta.autoCompact.enabled", "true")
-                .set("spark.databricks.delta.optimizeWrite.enabled", "true")
+                .set("spark.databricks.delta.autoCompact.enabled", String.valueOf(arguments.isDeltaAutoCompactEnabled()))
+                .set("spark.databricks.delta.optimizeWrite.enabled", String.valueOf(arguments.isDeltaOptimizeWriteEnabled()))
                 .set("spark.databricks.delta.schema.autoMerge.enabled", "true")
                 .set("spark.databricks.delta.properties.defaults.targetFileSize", "67110000")
                 .set("spark.sql.broadcastTimeout", arguments.getBroadcastTimeoutSeconds().toString())

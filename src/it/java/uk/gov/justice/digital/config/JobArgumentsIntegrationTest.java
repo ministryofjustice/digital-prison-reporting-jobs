@@ -115,6 +115,8 @@ class JobArgumentsIntegrationTest {
             { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, "50000" },
             { JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, "false" },
             { JobArguments.VACUUM_PARALLEL_DELETION, "false" },
+            { JobArguments.DELTA_OPTIMIZE_WRITE_ENABLED, "false" },
+            { JobArguments.DELTA_AUTO_COMPACT_ENABLED, "false" },
     }).collect(Collectors.toMap(e -> e[0], e -> e[1]));
 
     private static final JobArguments validArguments = new JobArguments(givenAContextWithArguments(testArguments));
@@ -192,6 +194,8 @@ class JobArgumentsIntegrationTest {
                 { JobArguments.SPARK_SQL_MAX_RECORDS_PER_FILE, Integer.toString(validArguments.getSparkSqlMaxRecordsPerFile()) },
                 { JobArguments.FILE_TRANSFER_USE_DEFAULT_PARALLELISM, validArguments.fileTransferUseDefaultParallelism() },
                 { JobArguments.VACUUM_PARALLEL_DELETION, validArguments.vacuumParallelDeletion() },
+                { JobArguments.DELTA_OPTIMIZE_WRITE_ENABLED, validArguments.isDeltaOptimizeWriteEnabled() },
+                { JobArguments.DELTA_AUTO_COMPACT_ENABLED, validArguments.isDeltaAutoCompactEnabled() },
         }).collect(Collectors.toMap(entry -> entry[0].toString(), entry -> entry[1].toString()));
 
         assertEquals(testArguments, actualArguments);
@@ -1013,6 +1017,33 @@ class JobArgumentsIntegrationTest {
         args.remove(JobArguments.VACUUM_PARALLEL_DELETION);
         JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
         assertTrue(jobArguments.vacuumParallelDeletion());
+    }
+
+    @Test
+    void deltaOptimizeWriteShouldDefaultToTrue() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DELTA_OPTIMIZE_WRITE_ENABLED);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertTrue(jobArguments.isDeltaOptimizeWriteEnabled());
+    }
+
+    @Test
+    void deltaAutoCompactShouldDefaultToTrue() {
+        HashMap<String, String> args = cloneTestArguments();
+        args.remove(JobArguments.DELTA_AUTO_COMPACT_ENABLED);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertTrue(jobArguments.isDeltaAutoCompactEnabled());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, true", "false, false", "True, true", "False, false" })
+    void deltaAutoOptimizeFlagsShouldUseProvidedValue(String input, Boolean expected) {
+        HashMap<String, String> args = cloneTestArguments();
+        args.put(JobArguments.DELTA_OPTIMIZE_WRITE_ENABLED, input);
+        args.put(JobArguments.DELTA_AUTO_COMPACT_ENABLED, input);
+        JobArguments jobArguments = new JobArguments(givenAContextWithArguments(args));
+        assertEquals(expected, jobArguments.isDeltaOptimizeWriteEnabled());
+        assertEquals(expected, jobArguments.isDeltaAutoCompactEnabled());
     }
 
     private static ApplicationContext givenAContextWithArguments(Map<String, String> m) {

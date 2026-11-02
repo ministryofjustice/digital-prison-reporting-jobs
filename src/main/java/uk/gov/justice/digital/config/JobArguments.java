@@ -215,6 +215,10 @@ public class JobArguments {
     static final long CLOUDWATCH_METRICS_SHUTDOWN_FLUSH_TIMEOUT_SECONDS_DEFAULT = 5L;
     static final String VACUUM_PARALLEL_DELETION = "dpr.vacuum.parallel.deletion";
     static final boolean VACUUM_PARALLEL_DELETION_DEFAULT = true;
+    static final String DELTA_OPTIMIZE_WRITE_ENABLED = "dpr.delta.optimize.write.enabled";
+    static final boolean DELTA_OPTIMIZE_WRITE_ENABLED_DEFAULT = true;
+    static final String DELTA_AUTO_COMPACT_ENABLED = "dpr.delta.auto.compact.enabled";
+    static final boolean DELTA_AUTO_COMPACT_ENABLED_DEFAULT = true;
     private final Map<String, String> config;
 
     @Inject
@@ -710,6 +714,14 @@ public class JobArguments {
 
     public boolean vacuumParallelDeletion() {
         return getArgument(VACUUM_PARALLEL_DELETION, VACUUM_PARALLEL_DELETION_DEFAULT);
+    }
+
+    public boolean isDeltaOptimizeWriteEnabled() {
+        return getArgument(DELTA_OPTIMIZE_WRITE_ENABLED, DELTA_OPTIMIZE_WRITE_ENABLED_DEFAULT);
+    }
+
+    public boolean isDeltaAutoCompactEnabled() {
+        return getArgument(DELTA_AUTO_COMPACT_ENABLED, DELTA_AUTO_COMPACT_ENABLED_DEFAULT);
     }
 
     private String getArgument(String argumentName) {
