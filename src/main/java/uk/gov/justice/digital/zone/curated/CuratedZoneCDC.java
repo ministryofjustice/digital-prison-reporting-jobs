@@ -16,7 +16,7 @@ import uk.gov.justice.digital.service.ViolationService;
 import uk.gov.justice.digital.zone.Zone;
 
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
 
 @Singleton
 public class CuratedZoneCDC implements Zone {
@@ -54,7 +54,7 @@ public class CuratedZoneCDC implements Zone {
             return dataFrame;
         } catch (DataStorageRetriesExhaustedException e) {
             logger.warn("Curated zone cdc retries exhausted", e);
-            violationService.handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e, STRUCTURED_CDC);
+            violationService.handleRetriesExhausted(spark, dataFrame, sourceName, tableName, e, CURATED_CDC);
             return spark.emptyDataFrame();
         }
     }

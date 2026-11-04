@@ -27,11 +27,6 @@ public class DisabledMetricReportingService implements MetricReportingService {
     }
 
     @Override
-    public void reportStreamingThroughputWrittenToStructured(long count) {
-        // No op
-    }
-
-    @Override
     public void reportStreamingThroughputWrittenToCurated(long count) {
         // No op
     }

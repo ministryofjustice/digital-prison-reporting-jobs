@@ -29,7 +29,6 @@ import uk.gov.justice.digital.service.operationaldatastore.dataaccess.Operationa
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneLoad;
-import uk.gov.justice.digital.zone.structured.StructuredZoneLoad;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -123,22 +122,22 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1", 1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1", 1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1", 1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1", 1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1", 1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1", 1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1", 1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1", 1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1", 1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1", 1, testQueryConnection);
 
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2", 2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2", 2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2", 2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2", 2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2", 2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2", 2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2", 2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2", 2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2", 2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2", 2, testQueryConnection);
 
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 2, testQueryConnection);
-        thenStructuredViolationsContainsForPK(offendersTable, "1", 1);
-        thenStructuredViolationsContainsForPK(offendersTable, "2", 2);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, 2, testQueryConnection);
+        thenViolationsContainsForPK(offendersTable, "1", 1);
+        thenViolationsContainsForPK(offendersTable, "2", 2);
     }
 
     private void givenSettingsAreConfigured() {
@@ -166,7 +165,6 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
         ViolationService violationService =
                 new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, new DisabledMetricReportingService());
         ValidationService validationService = new ValidationService(violationService);
-        StructuredZoneLoad structuredZoneLoad = new StructuredZoneLoad(arguments, storageService, violationService);
         CuratedZoneLoad curatedZoneLoad = new CuratedZoneLoad(arguments, storageService, violationService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
@@ -176,7 +174,7 @@ class DataHubBatchJobE2ESmokeIT extends E2ETestBase {
                 new OperationalDataStoreDataAccessService(arguments, connectionDetailsService, connectionPoolProvider, operationalDataStoreRepository);
         OperationalDataStoreService operationalDataStoreService =
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
-        BatchProcessor batchProcessor = new BatchProcessor(structuredZoneLoad, curatedZoneLoad, validationService, operationalDataStoreService);
+        BatchProcessor batchProcessor = new BatchProcessor(curatedZoneLoad, validationService, operationalDataStoreService);
         DisabledMetricReportingService disabledMetricReportingService = new DisabledMetricReportingService();
         underTest = new DataHubBatchJob(
                 arguments,

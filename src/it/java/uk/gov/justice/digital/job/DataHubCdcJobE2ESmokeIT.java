@@ -33,7 +33,6 @@ import uk.gov.justice.digital.service.operationaldatastore.dataaccess.Operationa
 import uk.gov.justice.digital.service.operationaldatastore.dataaccess.OperationalDataStoreRepository;
 import uk.gov.justice.digital.test.InMemoryOperationalDataStore;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
-import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -144,20 +143,20 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
 
         whenTheJobRuns();
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1a", pk1, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1a", pk1, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1a", pk1, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1a", pk1, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1a", pk1, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1a", pk1, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1a", pk1, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "1a", pk1, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "1a", pk1, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "1a", pk1, testQueryConnection));
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2a", pk2, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2a", pk2, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2a", pk2, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2a", pk2, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2a", pk2, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "2a", pk2, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "2a", pk2, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(movementReasonsTable, "2a", pk2, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "2a", pk2, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(offenderBookingsTable, "2a", pk2, testQueryConnection));
 
-        thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "1a", pk1));
-        thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "2a", pk2));
+        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "1a", pk1));
+        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "2a", pk2));
 
         whenUpdateOccursForTableAndPK(agencyInternalLocationsTable, pk1, "1b", "20260205124524000000000000050700001");
         whenUpdateOccursForTableAndPK(agencyLocationsTable, pk1, "1b", "20260205124524000000000000050700001");
@@ -168,19 +167,19 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
         whenInsertOccursForTableAndPK(offenderExternalMovementsTable, pk3, "3a", "20260205124524000000000000050700001");
         whenInsertOccursForTableAndPK(offendersTable, pk3, "3a", "20260205124524000000000000050700001");
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1b", pk1, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1b", pk1, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(agencyInternalLocationsTable, "1b", pk1, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(agencyLocationsTable, "1b", pk1, testQueryConnection));
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(movementReasonsTable, pk2, testQueryConnection));
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offenderBookingsTable, pk2, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreDoNotContainPK(movementReasonsTable, pk2, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreDoNotContainPK(offenderBookingsTable, pk2, testQueryConnection));
 
-        thenEventually(() -> thenStructuredCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "3a", pk3, testQueryConnection));
+        thenEventually(() -> thenCuratedAndOperationalDataStoreContainForPK(offenderExternalMovementsTable, "3a", pk3, testQueryConnection));
 
-        thenEventually(() -> thenStructuredViolationsContainsForPK(offendersTable, "3a", pk3));
+        thenEventually(() -> thenViolationsContainsForPK(offendersTable, "3a", pk3));
 
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk1, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk2, testQueryConnection);
-        thenStructuredCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk3, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk1, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk2, testQueryConnection);
+        thenCuratedAndOperationalDataStoreDoNotContainPK(offendersTable, pk3, testQueryConnection);
     }
 
     private void givenSettingsAreConfigured() throws IOException {
@@ -216,7 +215,6 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
                 new ViolationService(arguments, storageService, dataProvider, tableDiscoveryService, disabledMetricReportingService);
         ValidationService validationService = new ValidationService(violationService);
         CuratedZoneCDC curatedZone = new CuratedZoneCDC(arguments, violationService, storageService);
-        StructuredZoneCDC structuredZone = new StructuredZoneCDC(arguments, violationService, storageService);
         OperationalDataStoreTransformation operationalDataStoreTransformation = new OperationalDataStoreTransformation();
         ConnectionPoolProvider connectionPoolProvider = new ConnectionPoolProvider();
         OperationalDataStoreRepository operationalDataStoreRepository =
@@ -227,7 +225,6 @@ class DataHubCdcJobE2ESmokeIT extends E2ETestBase {
                 new OperationalDataStoreServiceImpl(arguments, operationalDataStoreTransformation, operationalDataStoreDataAccessService);
         CdcBatchProcessor batchProcessor = new CdcBatchProcessor(
                 validationService,
-                structuredZone,
                 curatedZone,
                 dataProvider,
                 operationalDataStoreService,

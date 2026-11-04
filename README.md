@@ -58,7 +58,6 @@ Authenticate your AWS account and then set the following CLI arguments, e.g. in 
 ```
 --checkpoint.location ./.checkpoints/
 --dpr.curated.s3.path s3a://dpr-curated-zone-development/
---dpr.structured.s3.path s3a://dpr-structured-zone-development/
 --dpr.violations.s3.path s3a://dpr-violation-development/
 --dpr.aws.dynamodb.endpointUrl https://dynamodb.eu-west-2.amazonaws.com
 --dpr.aws.region eu-west-2

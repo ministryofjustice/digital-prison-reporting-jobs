@@ -69,9 +69,6 @@ public class HiveTableService {
                 StructType rawSchema = withCheckpointField(withMetadataFields(schema));
                 replaceParquetInputTables(jobArguments.getRawArchiveDatabase(), hiveTableName, rawArchivePath, rawSchema, primaryKey, sensitiveColumns);
 
-                String structuredPath = createValidatedPath(jobArguments.getStructuredS3Path(), sourceName, tableName);
-                replaceSymlinkInputTables(jobArguments.getStructuredDatabase(), hiveTableName, structuredPath, schema, primaryKey);
-
                 String curatedPath = createValidatedPath(jobArguments.getCuratedS3Path(), sourceName, tableName);
                 replaceSymlinkInputTables(jobArguments.getCuratedDatabase(), hiveTableName, curatedPath, schema, primaryKey);
 

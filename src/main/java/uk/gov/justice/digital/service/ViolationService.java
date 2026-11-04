@@ -33,8 +33,8 @@ import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
 import static uk.gov.justice.digital.common.ResourcePath.createValidatedPath;
 import static uk.gov.justice.digital.common.ResourcePath.ensureEndsWithSlash;
 import static uk.gov.justice.digital.common.ResourcePath.tablePath;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_LOAD;
 
 @Singleton
 public class ViolationService {
@@ -52,8 +52,6 @@ public class ViolationService {
      */
     public enum ZoneName {
         RAW("Raw", "raw"),
-        STRUCTURED_LOAD("Structured Load", "structured"),
-        STRUCTURED_CDC("Structured CDC", "structured"),
         CURATED_LOAD("Curated Load", "curated"),
         CURATED_CDC("Curated CDC", "curated");
 
@@ -120,13 +118,13 @@ public class ViolationService {
      * Writes all CDC data in the table's input directory to violations.
      */
     public void writeCdcDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
-        writeDataToViolations(spark, source, table, errorMessage, arguments.getCdcFileGlobPattern(), STRUCTURED_CDC);
+        writeDataToViolations(spark, source, table, errorMessage, arguments.getCdcFileGlobPattern(), CURATED_CDC);
     }
     /**
      * Writes all Batch data in the table's input directory to violations.
      */
     public void writeBatchDataToViolations(SparkSession spark, String source, String table, String errorMessage) throws DataStorageException {
-        writeDataToViolations(spark, source, table, errorMessage, arguments.getBatchLoadFileGlobPattern(), STRUCTURED_LOAD);
+        writeDataToViolations(spark, source, table, errorMessage, arguments.getBatchLoadFileGlobPattern(), CURATED_LOAD);
     }
     private void writeDataToViolations(
             SparkSession spark,

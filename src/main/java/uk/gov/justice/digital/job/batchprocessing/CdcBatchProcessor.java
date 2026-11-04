@@ -21,7 +21,6 @@ import uk.gov.justice.digital.service.metrics.LatencyStatistics;
 import uk.gov.justice.digital.service.metrics.MetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
-import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.time.Clock;
 
@@ -29,7 +28,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.row_number;
 import static uk.gov.justice.digital.common.CommonDataFields.CHECKPOINT_COL;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
 
 /**
  * Encapsulates logic for processing a single micro-batch of CDC events for a single table.
@@ -39,7 +38,6 @@ import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURE
 public class CdcBatchProcessor {
     private static final Logger logger = LoggerFactory.getLogger(CdcBatchProcessor.class);
     private final ValidationService validationService;
-    private final StructuredZoneCDC structuredZone;
     private final CuratedZoneCDC curatedZone;
     private final S3DataProvider dataProvider;
     private final OperationalDataStoreService operationalDataStoreService;
@@ -50,7 +48,6 @@ public class CdcBatchProcessor {
     @Inject
     public CdcBatchProcessor(
             ValidationService validationService,
-            StructuredZoneCDC structuredZone,
             CuratedZoneCDC curatedZone,
             S3DataProvider dataProvider,
             OperationalDataStoreService operationalDataStoreService,
@@ -59,7 +56,6 @@ public class CdcBatchProcessor {
             Clock clock
     ) {
         this.validationService = validationService;
-        this.structuredZone = structuredZone;
         this.curatedZone = curatedZone;
         this.dataProvider = dataProvider;
         this.operationalDataStoreService = operationalDataStoreService;
@@ -79,13 +75,10 @@ public class CdcBatchProcessor {
             metricReportingService.reportStreamingThroughputInput(df.count());
 
             StructType inferredSchema = dataProvider.inferSchema(df.sparkSession(), sourceReference.getSource(), sourceReference.getTable());
-            val validRows = validationService.handleValidation(spark, df, sourceReference, inferredSchema, STRUCTURED_CDC);
+            val validRows = validationService.handleValidation(spark, df, sourceReference, inferredSchema, CURATED_CDC);
             val latestCDCRecordsByPK = latestRecords(validRows, sourceReference.getPrimaryKey());
 
-            val structuredDf = structuredZone.process(spark, latestCDCRecordsByPK, sourceReference);
-            metricReportingService.reportStreamingThroughputWrittenToStructured(structuredDf.count());
-
-            val curatedDf = curatedZone.process(spark, structuredDf, sourceReference);
+            val curatedDf = curatedZone.process(spark, latestCDCRecordsByPK, sourceReference);
             long curatedWriteEndTime = clock.millis();
             long curatedCount = curatedDf.count();
 

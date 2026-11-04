@@ -31,7 +31,7 @@ import static uk.gov.justice.digital.common.CommonDataFields.ERROR;
 import static uk.gov.justice.digital.common.CommonDataFields.ERROR_RAW;
 import static uk.gov.justice.digital.common.CommonDataFields.OPERATION;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_LOAD;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_LOAD;
 import static uk.gov.justice.digital.test.MinimalTestData.DATA_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY_COLUMN;
 import static uk.gov.justice.digital.test.MinimalTestData.inserts;
@@ -106,16 +106,16 @@ class ViolationServiceIT extends SparkTestBase {
     void shouldWriteDataWithIncompatibleSchemasSoThatItCanBeReadBackAgainUsingSpark() {
         when(arguments.getViolationsS3Path()).thenReturn(violationsRoot.toString());
 
-        underTest.handleViolation(spark, original, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, anExtraColumn, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, missingAColumn, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, stringColumnChangedToInt, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, intColumnChangedToString, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, intColumnChangedToLong, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, tsAndInt1, source, table, STRUCTURED_LOAD);
-        underTest.handleViolation(spark, tsAndInt2, source, table, STRUCTURED_LOAD);
+        underTest.handleViolation(spark, original, source, table, CURATED_LOAD);
+        underTest.handleViolation(spark, anExtraColumn, source, table, CURATED_LOAD);
+        underTest.handleViolation(spark, missingAColumn, source, table, CURATED_LOAD);
+        underTest.handleViolation(spark, stringColumnChangedToInt, source, table, CURATED_LOAD);
+        underTest.handleViolation(spark, intColumnChangedToString, source, table, CURATED_LOAD);
+        underTest.handleViolation(spark, intColumnChangedToLong, source, table, CURATED_LOAD);
+        underTest.handleViolation(spark, tsAndInt1, source, table, CURATED_LOAD);
+        underTest.handleViolation(spark, tsAndInt2, source, table, CURATED_LOAD);
 
-        Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
+        Dataset<Row> errorRawAsJson = readViolationsJson();
         errorRawAsJson.show(30, false);
 
         long expectedCount = original.count();
@@ -154,7 +154,7 @@ class ViolationServiceIT extends SparkTestBase {
         putFilesInRaw(tsAndInt2);
         underTest.writeCdcDataToViolations(spark, source, table, "error msg");
 
-        Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
+        Dataset<Row> errorRawAsJson = readViolationsJson();
 
         long expectedCount = original.count();
 
@@ -185,7 +185,7 @@ class ViolationServiceIT extends SparkTestBase {
         putFilesInRaw(tsAndInt2);
         underTest.writeBatchDataToViolations(spark, source, table, "error msg");
 
-        Dataset<Row> errorRawAsJson = readStructuredViolationsJson();
+        Dataset<Row> errorRawAsJson = readViolationsJson();
 
         long expectedCount = original.count();
 
@@ -200,9 +200,9 @@ class ViolationServiceIT extends SparkTestBase {
 
     }
 
-    private Dataset<Row> readStructuredViolationsJson() {
+    private Dataset<Row> readViolationsJson() {
         Dataset<Row> result = spark.read().format("delta")
-                .load(violationsRoot.resolve(STRUCTURED_LOAD.getPath()).resolve(source).resolve(table).toString());
+                .load(violationsRoot.resolve(CURATED_LOAD.getPath()).resolve(source).resolve(table).toString());
         Dataset<Row> errorRawAsJson = spark.read().json(result.select(ERROR_RAW).as(Encoders.STRING()));
         return errorRawAsJson;
     }

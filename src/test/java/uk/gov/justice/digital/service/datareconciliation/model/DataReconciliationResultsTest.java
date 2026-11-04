@@ -23,8 +23,8 @@ class DataReconciliationResultsTest {
 
     @BeforeAll
     static void setUpSharedTestData() {
-        matchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L, 1L));
-        notMatchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 2L, 3L));
+        matchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 1L));
+        notMatchingCurrentStateTotalCounts.put("table1", new CurrentStateTableCount(0.0, 0L, 1L, 3L));
         changeDataTableCountMap1.put("table1", new ChangeDataTableCount(0.0, 0L, 1L, 1L, 1L));
         changeDataTableCountMap2.put("table1", new ChangeDataTableCount(0.0, 0L, 1L, 2L, 1L));
     }
@@ -81,7 +81,7 @@ class DataReconciliationResultsTest {
                 new DataReconciliationResults(Arrays.asList(matchingCurrentStateTotalCounts, allMatchingChangeDataTotalCounts));
         String expected = "\n\nCurrent State Total Counts MATCH:\n" +
                 "For table table1:\n" +
-                "\tData Source: 1, Structured Zone: 1, Curated Zone: 1, Operational DataStore: skipped\t - MATCH\n" +
+                "\tData Source: 1, Curated Zone: 1, Operational DataStore: skipped\t - MATCH\n" +
                 "\n" +
                 "\n" +
                 "Change Data Total Counts MATCH:\n" +

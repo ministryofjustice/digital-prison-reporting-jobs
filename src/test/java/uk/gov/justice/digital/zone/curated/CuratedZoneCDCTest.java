@@ -70,7 +70,7 @@ class CuratedZoneCDCTest extends SparkTestBase {
         underTest.process(spark, df, sourceReference);
 
         verify(violationService, times(1)).handleRetriesExhausted(
-                any(), any(), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.STRUCTURED_CDC)
+                any(), any(), eq("source"), eq("table"), eq(thrown), eq(ViolationService.ZoneName.CURATED_CDC)
         );
     }
 

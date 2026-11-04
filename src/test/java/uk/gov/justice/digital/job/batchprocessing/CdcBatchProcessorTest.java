@@ -19,7 +19,6 @@ import uk.gov.justice.digital.service.metrics.LatencyStatistics;
 import uk.gov.justice.digital.service.metrics.MetricReportingService;
 import uk.gov.justice.digital.service.operationaldatastore.OperationalDataStoreService;
 import uk.gov.justice.digital.zone.curated.CuratedZoneCDC;
-import uk.gov.justice.digital.zone.structured.StructuredZoneCDC;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -28,7 +27,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,12 +35,11 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Insert;
 import static uk.gov.justice.digital.common.CommonDataFields.ShortOperationCode.Update;
 import static uk.gov.justice.digital.common.CommonDataFields.TIMESTAMP;
-import static uk.gov.justice.digital.service.ViolationService.ZoneName.STRUCTURED_CDC;
+import static uk.gov.justice.digital.service.ViolationService.ZoneName.CURATED_CDC;
 import static uk.gov.justice.digital.test.MinimalTestData.PRIMARY_KEY;
 import static uk.gov.justice.digital.test.MinimalTestData.TEST_DATA_SCHEMA;
 import static uk.gov.justice.digital.test.MinimalTestData.createRow;
 import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkDfSameTimestamp;
-import static uk.gov.justice.digital.test.MinimalTestData.manyRowsPerPkSameTimestampLatest;
 import static uk.gov.justice.digital.test.MinimalTestData.rowPerPkDfSameTimestamp;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,8 +53,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
     @Mock
     private ValidationService mockValidationService;
     @Mock
-    private StructuredZoneCDC mockStructuredZone;
-    @Mock
     private CuratedZoneCDC mockCuratedZone;
     @Mock
     private SourceReference mockSourceReference;
@@ -70,13 +65,9 @@ class CdcBatchProcessorTest extends SparkTestBase {
     @Mock
     private LatencyService mockLatencyService;
     @Mock
-    private Dataset<Row> outputOfStructuredDf;
-    @Mock
     private Dataset<Row> outputOfCuratedDf;
     @Mock
     private Clock clock;
-    @Captor
-    private ArgumentCaptor<Dataset<Row>> structuredArgumentCaptor;
     @Captor
     private ArgumentCaptor<Dataset<Row>> curatedArgumentCaptor;
 
@@ -91,7 +82,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
     void setUp() {
         underTest = new CdcBatchProcessor(
                 mockValidationService,
-                mockStructuredZone,
                 mockCuratedZone,
                 mockDataProvider,
                 mockOperationalDataStoreService,
@@ -106,7 +96,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
         underTest.processBatch(mockSourceReference, spark, spark.emptyDataFrame(), batchId);
 
         verifyNoInteractions(mockValidationService);
-        verifyNoInteractions(mockStructuredZone);
         verifyNoInteractions(mockCuratedZone);
         verifyNoInteractions(mockOperationalDataStoreService);
         verifyNoInteractions(mockMetricReportingService);
@@ -119,52 +108,16 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
 
         verify(mockValidationService, times(1))
-                .handleValidation(spark, rowPerPk, mockSourceReference, TEST_DATA_SCHEMA, STRUCTURED_CDC);
+                .handleValidation(spark, rowPerPk, mockSourceReference, TEST_DATA_SCHEMA, CURATED_CDC);
     }
 
     @Test
-    void shouldPassDataForStructuredZoneProcessing() {
-        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
-        when(mockSourceReference.getSource()).thenReturn("source");
-        when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
-        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
-        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
-
-        underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
-
-        verify(mockStructuredZone, times(1)).process(any(), structuredArgumentCaptor.capture(), eq(mockSourceReference));
-
-        List<Row> expected = rowPerPk.collectAsList();
-        List<Row> result = structuredArgumentCaptor.getValue().collectAsList();
-        assertEquals(expected.size(), result.size());
-        assertTrue(result.containsAll(expected));
-    }
-
-    @Test
-    void shouldCallCuratedWithOutputOfStructured() {
-        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
-        when(mockSourceReference.getSource()).thenReturn("source");
-        when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
-        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
-        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
-
-        underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
-
-        verify(mockCuratedZone, times(1)).process(any(), eq(outputOfStructuredDf), eq(mockSourceReference));
-    }
-
-    @Test
-    void shouldCallStructuredWithLatestRecordsByPK() {
+    void shouldCallCuratedWithLatestRecordsByPK() {
 
         Dataset<Row> df = spark.createDataFrame(Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", "20260205124524000000000000050700870"),
@@ -178,21 +131,20 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(df);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(df);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(df);
 
         underTest.processBatch(mockSourceReference, spark, df, batchId);
 
-        verify(mockStructuredZone, times(1)).process(any(), structuredArgumentCaptor.capture(), eq(mockSourceReference));
+        verify(mockCuratedZone, times(1)).process(any(), curatedArgumentCaptor.capture(), eq(mockSourceReference));
 
         List<Row> expected = Arrays.asList(
                 createRow(1, "2023-11-13 10:49:28.123456", Update, "1b", "20260205124524000000000000050700870"),
                 createRow(2, "2023-11-13 10:49:28.123456", Insert, "2a", "20260205124524000000000000050700123")
         );
 
-        List<Row> structuredActual = structuredArgumentCaptor.getValue().collectAsList();
-        assertEquals(expected.size(), structuredActual.size());
-        assertTrue(structuredActual.containsAll(expected));
+        List<Row> curatedActual = curatedArgumentCaptor.getValue().collectAsList();
+        assertEquals(expected.size(), curatedActual.size());
+        assertTrue(curatedActual.containsAll(expected));
     }
 
     @Test
@@ -202,7 +154,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), eq(rowPerPk), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, rowPerPk, batchId);
@@ -217,28 +168,10 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
         verify(mockMetricReportingService, times(1)).reportStreamingThroughputInput(manyRowsPerPk.count());
-    }
-
-    @Test
-    void shouldReportStructuredThroughputCount() {
-        when(mockSourceReference.getPrimaryKey()).thenReturn(PRIMARY_KEY);
-        when(mockSourceReference.getSource()).thenReturn("source");
-        when(mockSourceReference.getTable()).thenReturn("table");
-        when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
-        when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
-        when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
-
-        long expectedCount = 200L;
-        when(outputOfStructuredDf.count()).thenReturn(expectedCount);
-
-        underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
-        verify(mockMetricReportingService, times(1)).reportStreamingThroughputWrittenToStructured(expectedCount);
     }
 
     @Test
@@ -248,7 +181,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         long expectedCount = 200L;
@@ -267,7 +199,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
 
         underTest.processBatch(mockSourceReference, spark, manyRowsPerPk, batchId);
@@ -284,7 +215,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
         long curatedRowCount = 2L;
         when(outputOfCuratedDf.count()).thenReturn(curatedRowCount);
@@ -305,7 +235,6 @@ class CdcBatchProcessorTest extends SparkTestBase {
         when(mockSourceReference.getTable()).thenReturn("table");
         when(mockValidationService.handleValidation(any(), any(), any(), any(), any())).thenReturn(rowPerPk);
         when(mockDataProvider.inferSchema(any(), any(), any())).thenReturn(TEST_DATA_SCHEMA);
-        when(mockStructuredZone.process(any(), any(), any())).thenReturn(outputOfStructuredDf);
         when(mockCuratedZone.process(any(), any(), any())).thenReturn(outputOfCuratedDf);
         when(outputOfCuratedDf.count()).thenReturn(0L);
 
